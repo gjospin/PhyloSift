@@ -8,7 +8,13 @@ AMPHORA 2 has several new features over AMPHORA
 -The number of markers is being expanded from the original 31 Bacteria only markers to many more from Archaea and Bacteria (and possibly Eukaryotes and viruses)
 -HMMER 3 replaces the older, slower, HMMER 2
 -Use of Pplacer from Erick Matsen to place the reads on the reference trees
+-Use of BioPerl 1.6.1
 -...more to come
+
+
+
+**** OLD README ****
+
 
 CITATION
 ==============================================================
