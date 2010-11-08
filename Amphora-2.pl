@@ -58,7 +58,9 @@ if($custom ne ""){
 #	push(@markers, $_);
 #    }
 #    close(customIN);
-    `perl $workingDir/run_blast.pl $custom $readsFile`;
+    `cp $custom $workingDir/markers.list`;
+    
+#    `perl $workingDir/run_blast.pl $custom $readsFile`;
 
 
 }else{
@@ -72,10 +74,15 @@ if($custom ne ""){
 	print markersOUT "$1\n";
     }
     close(markersOUT);
-    `perl $workingDir/run_blast.pl $workingDir/markers.list $readsFile`;
+    
 }
 
 
+#run Blast
+`perl $workingDir/run_blast.pl $workingDir/markers.list $readsFile`;
+
+#Align Markers
+`perl $workingDir/MarkerAlign.pl $workingDir/markers.list`;
 
 
 #TODO : read blast file
