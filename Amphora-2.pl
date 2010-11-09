@@ -61,7 +61,7 @@ if($custom ne ""){
     #gather all markers
     #LATER : add differentiation for euk - bac - arc
     open(markersOUT,">$workingDir/markers.list");
-    my @files = <$workingDir/Markers/*.faa>;
+    my @files = <$workingDir/markers/*.faa>;
     foreach my $file (@files){
 	$file =~ m/\/(\w+).faa/;
 	push(@markers,$1);

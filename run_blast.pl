@@ -90,8 +90,8 @@ foreach my $marker (@markers){
 close(repOUT);
 
 
-get_blast_hits();
-exit;
+#get_blast_hits();
+#exit;
 
 #make a blastable DB
 `makeblastdb -in $workingDir/Amph_temp/Blast_run/rep.faa -dbtype prot -title RepDB`;
@@ -99,7 +99,7 @@ exit;
 
 #print "Processing $coreReadsName\n";
 #blast the reads to the DB
-`blastp -query $readsFile -evalue 0.1 -num_descriptions 50000 -num_alignments 50000 -db $workingDir/Amph_temp/Blast_run/rep.faa -out $workingDir/amph_temp/Blast_run/$readsCore.blastp -outfmt 0 -num_threads $threadNum`;
+`blastp -query $readsFile -evalue 0.1 -num_descriptions 50000 -num_alignments 50000 -db $workingDir/Amph_temp/Blast_run/rep.faa -out $workingDir/Amph_temp/Blast_run/$readsCore.blastp -outfmt 0 -num_threads $threadNum`;
 
 
 get_blast_hits();
