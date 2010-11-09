@@ -52,12 +52,6 @@ my @markers = ();
 
 if($custom ne ""){
     #gather a custom list of makers
-    #open(customIN,"$custom") or die "Couldn't open the custom markers file\n";
-    #while(<customIN>){
-#	chomp($_);
-#	push(@markers, $_);
-#    }
-#    close(customIN);
     `cp $custom $workingDir/markers.list`;
     
 #    `perl $workingDir/run_blast.pl $custom $readsFile`;

@@ -58,20 +58,36 @@ foreach my $marker (@markers){
 	print STDERR "Couldn't find $workingDir/Amph_temp/Blast_run/$marker.candidate";
 	next;
     }
+    
 
     #need to convert the "seed" alignment to stockholm format due to the --mapali requirement
-    my $fastaAli = new Bio::AlignIO( -file   => "$workingDir/markers/$marker.ali",
-				    -format => "fasta");
-    my $stockAli = new Bio::AlignIO( -file   => ">$workingDir/Amph_temp/alignments/$marker.seed.stock",
-				     -format => "stockholm");
+#    my $fastaAli = new Bio::AlignIO( -file   => "$workingDir/markers/$marker.ali",
+#				    -format => 'fasta');
+
+
+#    my $stockAli = new Bio::AlignIO( -file   => ">$workingDir/Amph_temp/alignments/$marker.seed.stock",
+#				     -format => 'stockholm');
 #				     -flush  => 0); # go as fast as we can!
 				
-    while($seq = $fastaAli->next_aln) { $stockAli->write_aln($seq) };
+#    while(my $aln = $fastaAli->next_aln() ) { $stockAli->write_aln($aln) };
 
 
+#    `perl $workingDir/fasta2stockholm.pl $workingDir/markers/$marker.ali > $workingDir/Amph_temp/alignments/$marker.seed.stock`;
 
-    `hmmalign --outformat afa -o $workingDir/Amph_temp/alignments/$marker.aln --mapali $workingDir/Amph_temp/alignments/$marker.seed.stock $workingDir/markers/$marker.hmm $workingDir/Amph_temp/Blast_run/$marker.candidate`;
+#    `hmmalign --informat afa --outformat afa -o $workingDir/Amph_temp/alignments/$marker.aln --mapali $workingDir/Amph_temp/alignments/$marker.seed.stock $workingDir/markers/$marker.hmm $workingDir/Amph_temp/Blast_run/$marker.candidate`;
+    
+    #check the file size, if no hits for the marker, the file size will be 0.
+    my $candidateSize = -s "$workingDir/Amph_temp/Blast_run/$marker.candidate";
+    print $marker."\t".$candidateSize."\n";
+    if($candidateSize != 0){
+	`hmmalign --outformat afa -o $workingDir/Amph_temp/alignments/$marker.hits_ali $workingDir/markers/$marker.hmm $workingDir/Amph_temp/Blast_run/$marker.candidate`;
 
-    #`hmmalign --outformat afa -o $workingDir/Amph_temp/alignments/$marker.aln --mapali $workingDir/markers/$marker.ali $workingDir/markers/$marker.hmm $workingDir/Amph_temp/Blast_run/$marker.candidate`;
-    exit;
+	my $refAli = new Bio::AlignIO(-file => "$workingDir/markers/$marker.ali", -format => 'fasta');
+	my $hitAli = new Bio::AlignIO(-file => "$workingDir/Amph_temp/alignments/$marker.hits_ali", -format => 'fasta');
+	my $totalAli = new Bio::AlignIO(-file => ">$workingDir/Amph_temp/alignments/$marker.all_ali", -format =>'fasta');
+	while(my $aln = $refAli->next_aln() ) { $totalAli->write_aln($aln) };
+	while(my $aln = $hitAli->next_aln() ) { $totalAli->write_aln($aln) };
+    }
 }
+
+
