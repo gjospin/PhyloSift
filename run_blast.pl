@@ -94,7 +94,7 @@ get_blast_hits();
 exit;
 
 #make a blastable DB
-`makeblastDB -in $workingDir/Amph_temp/Blast_run/rep.faa -dbtype prot -title RepDB`;
+`makeblastdb -in $workingDir/Amph_temp/Blast_run/rep.faa -dbtype prot -title RepDB`;
 
 
 #print "Processing $coreReadsName\n";
