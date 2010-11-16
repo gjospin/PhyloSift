@@ -68,41 +68,41 @@ if(-e "$workingDir/Amph_temp/Blast_run/rep.faa"){ `rm $workingDir/Amph_temp/Blas
 
 
 
-#change the sequences to include the marker name as part of the ID
+#change the sequences to include the marker name as part of the ID (NOW as part of building the representatives file for each marker)
 #also makes 1 large file with all the marker sequences
-open(repOUT,">$workingDir/Amph_temp/Blast_run/rep.faa");
+
 foreach my $marker (@markers){
+    #if a marker candidate file exists remove it
+    if(-e "$workingDir/Amph_temp/Blast_run/$marker.candidate"){
+	`rm $workingDir/Amph_temp/Blast_run/$marker.candidate`;
+    }
+
     #initiate the hash table for all markers incase 1 marker doesn't have a single hit, it'll still be in the results
     $markerHits{$marker}="";
-    open(repIN,"$workingDir/markers/$marker.faa") or die "Couldn't open $marker.faa\n";
-    while(<repIN>){
-	chomp($_);
-	if($_ =~ /^>(\S+)(\s.*)/){
-	    print repOUT ">$1_$marker $2\n";
-	    #	exit;
-	}
-	else{
-	    print repOUT $_."\n";
-	}
-    }
-    close(repIN);
+    
+    #append the rep sequences for all the markers included in the study to the rep.faa file
+    `cat $workingDir/markers/representatives/$marker.rep >> $workingDir/Amph_temp/Blast_run/rep.faa`
+
 }
-close(repOUT);
 
 
 #get_blast_hits();
 #exit;
 
 #make a blastable DB
-`makeblastdb -in $workingDir/Amph_temp/Blast_run/rep.faa -dbtype prot -title RepDB`;
-
+if(!-e "$workingDir/Amph_temp/Blast_run/rep.faa.psq" ||  !-e "$workingDir/Amph_temp/Blast_run/rep.faa.pin" || !-e "$workingDir/Amph_temp/Blast_run/rep.faa.phr"){
+    `makeblastdb -in $workingDir/Amph_temp/Blast_run/rep.faa -dbtype prot -title RepDB`;
+}
 
 #print "Processing $coreReadsName\n";
 #blast the reads to the DB
-`blastp -query $readsFile -evalue 0.1 -num_descriptions 50000 -num_alignments 50000 -db $workingDir/Amph_temp/Blast_run/rep.faa -out $workingDir/Amph_temp/Blast_run/$readsCore.blastp -outfmt 0 -num_threads $threadNum`;
-
+if(!-e "$workingDir/Amph_temp/Blast_run/$readsCore.blastp"){
+    `blastp -query $readsFile -evalue 0.1 -num_descriptions 50000 -num_alignments 50000 -db $workingDir/Amph_temp/Blast_run/rep.faa -out $workingDir/Amph_temp/Blast_run/$readsCore.blastp -outfmt 0 -num_threads $threadNum`;
+}
 
 get_blast_hits();
+
+my %topscore = ();
 
 sub get_blast_hits{
     #parsing the blast file
@@ -127,6 +127,7 @@ sub get_blast_hits{
 		}#else do nothing
 	    }#else do nothing
 	}
+	$topscore{$result->query_name}=$topScore;
 #	$markerHits{$topFamily}{$result->query_name}=1;
 
     }
@@ -141,9 +142,9 @@ sub get_blast_hits{
 	if(exists $hits{$seq->id}){
 	    #print "\'".$hits{$seq->id}."\'\n";
 	    if(exists  $markerHits{$hits{$seq->id}}){
-		$markerHits{$hits{$seq->id}} .= ">".$seq->id."\n".$seq->seq."\n";
+		$markerHits{$hits{$seq->id}} .= ">".$seq->id."_$topscore{$seq->id}\n".$seq->seq."\n";
 	    }else{
-		$markerHits{$hits{$seq->id}} = ">".$seq->id."\n".$seq->seq."\n";
+		$markerHits{$hits{$seq->id}} = ">".$seq->id."_$topscore{$seq->id}\n".$seq->seq."\n";
 	    }
 	}
     }
