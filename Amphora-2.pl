@@ -21,6 +21,8 @@ my $arc = 0;
 my $bac = 0;
 my $custom = "";
 
+
+
 GetOptions("threaded=i" => \$threadNum,
 	   "clean" => \$clean,
 	   "euk" => \$euk,
@@ -40,9 +42,19 @@ my $readsFile = $ARGV[0];
 my %seq =();
 #check the input file exists
 print "$readsFile was not found \n" unless (-e "$workingDir/$readsFile" || -e "$readsFile");
-
+#my $fileName = "";
+my $position = rindex($readsFile,"/");
+my $fileName = substr($readsFile,$position+1,length($readsFile)-$position-1);
+my $tempDir = "$workingDir/Amph_temp";
+my $fileDir = "$tempDir/$fileName";
 #check if the temporary directory exists, if it doesn't create it.
-`mkdir $workingDir/Amph_temp` unless (-e "$workingDir/Amph_temp");
+`mkdir $tempDir` unless (-e "$tempDir");
+
+#create a directory for the Reads file being processed.
+`mkdir $fileDir` unless (-e "$fileDir");
+#clear the directory of the fileName already exists
+`rm -r $fileDir/*` unless (-e "$fileDir/*");
+
 
 #make a blastable DB for all markers (If the blast time is too long, pick representatives, possible to add as an option)
 
@@ -52,7 +64,7 @@ my @markers = ();
 
 if($custom ne ""){
     #gather a custom list of makers
-    `cp $custom $workingDir/markers.list`;
+    `cp $custom $fileDir/markers.list`;
     
 #    `perl $workingDir/run_blast.pl $custom $readsFile`;
 
@@ -60,7 +72,7 @@ if($custom ne ""){
 }else{
     #gather all markers
     #LATER : add differentiation for euk - bac - arc
-    open(markersOUT,">$workingDir/markers.list");
+    open(markersOUT,">$fileDir/markers.list");
     my @files = <$workingDir/markers/*.faa>;
     foreach my $file (@files){
 	$file =~ m/\/(\w+).faa/;
@@ -73,24 +85,19 @@ if($custom ne ""){
 
 
 #run Blast
-`perl $workingDir/run_blast.pl $workingDir/markers.list $readsFile`;
+
+`perl $workingDir/run_blast.pl --threaded=$threadNum $fileDir/markers.list $readsFile`;
 
 #Align Markers
-`perl $workingDir/MarkerAlign.pl $workingDir/markers.list`;
+`perl $workingDir/MarkerAlign.pl --threaded=$threadNum $fileDir/markers.list $readsFile`;
+
+# Run Pplacer
+`perl $workingDir/Run_Pplacer.pl --threaded=$threadNum $fileDir/markers.list $readsFile`
 
 
-#TODO : read blast file
-#get_blast_hits();
+#TODO : 
 
-
-#for each marker
-# run HMMer scan for the hits Vs Hmms
-# make an alignment
-# place the reads on the Tree using Pplacer
-
-    
-
-
-#$hit->id =~m/(\w+)(_\w+)$/;
-#	    print $1."\t".$2."\n";
-#	    exit;
+# set  up alternate blast parameters if dealing with short reads (add an option or by default check the size)
+# add in a 6 frame translation module (ask aaron) if nucleotides are supplied
+# set up check points in case the pipeline stops
+# allow for a parallel use

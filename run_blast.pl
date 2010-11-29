@@ -35,11 +35,22 @@ GetOptions("threaded=i" => \$threadNum,
 
 
 die $usage unless ($ARGV[0] && $ARGV[1]);
-
-my $workingDir = getcwd;
 my $readsFile = $ARGV[1];
 my $markersFile = $ARGV[0];
 my %markerHits = ();
+
+
+
+my $position = rindex($readsFile,"/");
+my $fileName = substr($readsFile,$position+1,length($readsFile)-$position-1);
+
+my $workingDir = getcwd;
+my $tempDir = "$workingDir/Amph_temp";
+my $fileDir = "$tempDir/$fileName";
+my $blastDir = "$fileDir/Blast_run";
+
+
+
 
 $readsFile =~ m/(\w+)\.(\w+)$/;
 my $readsCore = $1;
@@ -54,17 +65,25 @@ while(<markersIN>){
 }
 close(markersIN);
 
+#my $position = rindex($readsFile,"/");
+#my $fileName = substr($readsFile,$position+1,length($readsFile)-$position-1);
+
+
+
 #check the input file exists
 print "$readsFile was not found \n" unless (-e "$workingDir/$readsFile" || -e "$readsFile");
 
 #check if the temporary directory exists, if it doesn't create it.
-`mkdir $workingDir/Amph_temp` unless (-e "$workingDir/Amph_temp");
+`mkdir $tempDir` unless (-e "$tempDir");
+
+#create a directory for the Reads file being processed.
+`mkdir $fileDir` unless (-e "$fileDir");
 
 #check if the Blast_run directory exists, if it doesn't create it.
-`mkdir $workingDir/Amph_temp/Blast_run` unless (-e "$workingDir/Amph_temp/Blast_run");
+`mkdir $blastDir` unless (-e "$blastDir");
 
 #remove rep.faa if it already exists
-if(-e "$workingDir/Amph_temp/Blast_run/rep.faa"){ `rm $workingDir/Amph_temp/Blast_run/rep.faa`;}
+if(-e "$blastDir/rep.faa"){ `rm $blastDir/rep.faa`;}
 
 
 
@@ -73,15 +92,15 @@ if(-e "$workingDir/Amph_temp/Blast_run/rep.faa"){ `rm $workingDir/Amph_temp/Blas
 
 foreach my $marker (@markers){
     #if a marker candidate file exists remove it
-    if(-e "$workingDir/Amph_temp/Blast_run/$marker.candidate"){
-	`rm $workingDir/Amph_temp/Blast_run/$marker.candidate`;
+    if(-e "$blastDir/$marker.candidate"){
+	`rm $blastDir/$marker.candidate`;
     }
 
     #initiate the hash table for all markers incase 1 marker doesn't have a single hit, it'll still be in the results
     $markerHits{$marker}="";
     
     #append the rep sequences for all the markers included in the study to the rep.faa file
-    `cat $workingDir/markers/representatives/$marker.rep >> $workingDir/Amph_temp/Blast_run/rep.faa`
+    `cat $workingDir/markers/representatives/$marker.rep >> $blastDir/rep.faa`
 
 }
 
@@ -90,14 +109,14 @@ foreach my $marker (@markers){
 #exit;
 
 #make a blastable DB
-if(!-e "$workingDir/Amph_temp/Blast_run/rep.faa.psq" ||  !-e "$workingDir/Amph_temp/Blast_run/rep.faa.pin" || !-e "$workingDir/Amph_temp/Blast_run/rep.faa.phr"){
-    `makeblastdb -in $workingDir/Amph_temp/Blast_run/rep.faa -dbtype prot -title RepDB`;
+if(!-e "$blastDir/rep.faa.psq" ||  !-e "$blastDir/rep.faa.pin" || !-e "$blastDir/rep.faa.phr"){
+    `makeblastdb -in $blastDir/rep.faa -dbtype prot -title RepDB`;
 }
 
 #print "Processing $coreReadsName\n";
 #blast the reads to the DB
-if(!-e "$workingDir/Amph_temp/Blast_run/$readsCore.blastp"){
-    `blastp -query $readsFile -evalue 0.1 -num_descriptions 50000 -num_alignments 50000 -db $workingDir/Amph_temp/Blast_run/rep.faa -out $workingDir/Amph_temp/Blast_run/$readsCore.blastp -outfmt 0 -num_threads $threadNum`;
+if(!-e "$blastDir/$readsCore.blastp"){
+    `blastp -query $readsFile -evalue 0.1 -num_descriptions 50000 -num_alignments 50000 -db $blastDir/rep.faa -out $blastDir/$readsCore.blastp -outfmt 0 -num_threads $threadNum`;
 }
 
 get_blast_hits();
@@ -107,7 +126,7 @@ my %topscore = ();
 sub get_blast_hits{
     #parsing the blast file
     my %hits = ();
-    my $in = new Bio::SearchIO('-format'=>'blast','-file' => "$workingDir/Amph_temp/Blast_run/$readsCore.blastp");
+    my $in = new Bio::SearchIO('-format'=>'blast','-file' => "$blastDir/$readsCore.blastp");
     while (my $result = $in->next_result) {
 	#hit name is a markerName
 	#print "Getting HIT \n";
@@ -132,11 +151,11 @@ sub get_blast_hits{
 
     }
     unless (%markerHits) {
-	system("rm $workingDir/Amph_temp/Blast_run/$readsCore.blastp");
+	system("rm $blastDir/$readsCore.blastp");
 	exit(1);
     }
     #read the readFile and grab the sequences for all the hits and assign them to the right marker using a hash table
-    my $seqin = new Bio::SeqIO('-file'=>"$workingDir/$readsFile");
+    my $seqin = new Bio::SeqIO('-file'=>"$readsFile");
     while (my $seq = $seqin->next_seq) {
 	
 	if(exists $hits{$seq->id}){
@@ -156,7 +175,7 @@ sub get_blast_hits{
 	#`cp $workingDir/markers/$marker.faa $workingDir/Amph_temp/Blast_run/$marker.candidate`;
 
 	#append the hits to the candidate files
-	open(fileOUT,">>$workingDir/Amph_temp/Blast_run/$marker.candidate")or die "Couldn't open $workingDir/Amph_temp/Blast_run/$marker.candidate for writing\n";
+	open(fileOUT,">>$blastDir/$marker.candidate")or die "Couldn't open $blastDir/$marker.candidate for writing\n";
 
 	print fileOUT $markerHits{$marker};
 
