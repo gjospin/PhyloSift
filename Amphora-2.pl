@@ -77,8 +77,7 @@ if($custom ne ""){
 	push(@markers,$1);
 	print markersOUT "$1\n";
     }
-    close(markersOUT);
-    
+    close(markersOUT);    
 }
 
 
@@ -94,7 +93,12 @@ if($custom ne ""){
 
 #TODO : 
 
+
+# transform the .place files into tree files.
 # set  up alternate blast parameters if dealing with short reads (add an option or by default check the size)
-# add in a 6 frame translation module (ask aaron) if nucleotides are supplied
 # set up check points in case the pipeline stops
-# allow for a parallel use (done for Pplacer using ForkManager)
+# add a summary file (number of hits per markers, total hits, total reads, Nucl Vs AA, time stamps for the various steps)
+# allow for a parallel use (done for Pplacer using ForkManager, other parts are fast enough that it may not be needed)
+# look into write my own blast parser and use -m6 instead of -m0 to save on temporary file sizes.  Had issues with bioperl and using the -m6 or -m7 formats from the newest blast.
+
+
