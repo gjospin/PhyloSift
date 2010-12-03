@@ -11,6 +11,16 @@ AMPHORA 2 has several new features over AMPHORA
 -Use of BioPerl 1.6.1
 -...more to come
 
+Usage
+==========================================
+$ perl Amphora-2.pl <options> <sequence_file>
+
+Options Available at this time : 
+   -custom <file>      Reads a custom marker list from a file otherwise use all the markers from the markers directory
+   -threaded <Number>  Runs Blast and Hmmer using the number of processors sepcified
+                       Runs 1 Pplacer per processor specified
+		       (DEFAULT : 1)
+   -clean              Cleans the temporary files created by Amphora (NOT YET IMPLEMENTED)
 
 Requirements
 ==========================================
@@ -19,9 +29,10 @@ Requirements
       run_blast.pl
       MarkerAlign.pl
       Run_Pplacer.pl
-      fasta2stockholm.pl
+      fasta2stockholm.pl (from https://github.com/jhbadger/scripts)
       translateSixFrame
       Marker information (not yet available on github)
+- Perl available at http://www.perl.org/
 - Bioperl available at https://github.com/bioperl/bioperl-live
 - Pplacer by Erick Matsen available at http://matsen.fhcrc.org/pplacer/
 - Hmmer3 available at http://hmmer.janelia.org/
