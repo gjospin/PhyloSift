@@ -12,6 +12,22 @@ AMPHORA 2 has several new features over AMPHORA
 -...more to come
 
 
+Requirements
+==========================================
+- The Amphora-2 package that includes :
+      Amphora-2.pl
+      run_blast.pl
+      MarkerAlign.pl
+      Run_Pplacer.pl
+      fasta2stockholm.pl
+      translateSixFrame
+      Marker information (not yet available on github)
+- Bioperl available at https://github.com/bioperl/bioperl-live
+- Pplacer by Erick Matsen available at http://matsen.fhcrc.org/pplacer/
+- Hmmer3 available at http://hmmer.janelia.org/
+- Blast 2.2.24 (or later) available at ftp://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST/
+
+
 
 **** OLD README ****
 
