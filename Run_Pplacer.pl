@@ -81,8 +81,20 @@ foreach my $marker(@markers){
     print STDERR "Done !\n";
     #Pplacer write its output to the directory it is called from. Need to move the output to the trees directory
     if(-e "$workingDir/$marker.aln_hmmer3.trim.place"){
-	`mv $workingDir/$marker.aln_hmmer3.trim.place $workingDir/Amph_temp/$fileName/trees`;
+	`mv $workingDir/$marker.aln_hmmer3.trim.place $treeDir`;
     }
+
+    #Transform the .place file into a tree file
+    if(-e "$treeDir/$marker.aln_hmmer3.trim.place"){
+	`placeviz --tog -p $treeDir/$marker.aln_hmmer3.trim.place`
+    }
+
+
+    #placeviz writes its output to the directory it was called from, need to move the output to the trees directory
+    if(-e "$workingDir/$marker.aln_hmmer3.trim.PP.num.tre"){
+	`mv $workingDir/$marker.* $treeDir`;
+    }
+
     $pm->finish
 }
 $pm->wait_all_children;
