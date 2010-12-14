@@ -15,6 +15,8 @@ Usage
 ==========================================
 $ perl Amphora-2.pl <options> <sequence_file>
 
+   sequence_file needs to be in fasta format
+
 Options Available at this time : 
    -custom <file>      Reads a custom marker list from a file otherwise use all the markers from the markers directory
    -threaded <Number>  Runs Blast and Hmmer using the number of processors sepcified
