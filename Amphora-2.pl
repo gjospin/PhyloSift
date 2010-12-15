@@ -42,7 +42,15 @@ my $workingDir = getcwd;
 my $readsFile = $ARGV[0];
 
 #check the input file exists
-print "$readsFile was not found \n" unless (-e "$workingDir/$readsFile" || -e "$readsFile");
+if(!-e "$workingDir/$readsFile" || !-e "$readsFile"){
+    die "$readsFile was not found \n";
+}
+#check if the input file is a file and not a directory
+if(!-f "$workingDir/$readsFile" || !-e "$readsFile"){
+    die "$readsFile is not a plain file, could be a directory\n";
+}
+
+#die "$readsFile was not found \n" unless (-e "$workingDir/$readsFile" || -e "$readsFile");
 #get the filename in case a filepath is included
 my $position = rindex($readsFile,"/");
 my $fileName = substr($readsFile,$position+1,length($readsFile)-$position-1);
@@ -57,7 +65,7 @@ my $fileDir = "$tempDir/$fileName";
 #create a directory for the Reads file being processed.
 `mkdir $fileDir` unless (-e "$fileDir");
 #clear the directory of the fileName already exists
-`rm -r $fileDir/*` unless (-e "$fileDir/*");
+`rm -r $fileDir/*` unless (!-e "$fileDir/*");
 
 
 #create a file with a list of markers called markers.list
