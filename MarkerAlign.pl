@@ -18,9 +18,11 @@
 
 
 use Cwd;
+use warnings;
+use strict;
 use Getopt::Long;
 use Bio::AlignIO;
-use Parallel::ForkManager;
+#use Parallel::ForkManager;
 
 
 my $usage = qq~
@@ -97,7 +99,7 @@ foreach my $marker (@markers){
     #find out all the indexes that have a . in the reference sequences
     my $originAli = new Bio::AlignIO(-file=>"$workingDir/markers/$marker.trimfinal", -format=>'fasta');
     my %referenceSeqs = ();
-    $refAliLength = 0;
+   
     while(my $aln = $originAli->next_aln()){
 	foreach my $seq($aln->each_seq()){
 	    $referenceSeqs{$seq->id}=1;
