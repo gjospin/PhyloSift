@@ -36,7 +36,7 @@ Requirements
       Marker information (available for download from http://edhar.genomecenter.ucdavis.edu/~mlangill/markers.tgz)
 - Perl available at http://www.perl.org/
 - Bioperl available at https://github.com/bioperl/bioperl-live
-- Pplacer by Erick Matsen available at http://matsen.fhcrc.org/pplacer/
+- Pplacer AND placeviz by Erick Matsen available at http://matsen.fhcrc.org/pplacer/
 - Hmmer3 available at http://hmmer.janelia.org/
 - Blast 2.2.24 (or later) available at ftp://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST/
 
