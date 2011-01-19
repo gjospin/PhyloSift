@@ -33,7 +33,7 @@ Requirements
       Run_Pplacer.pl
       fasta2stockholm.pl (from https://github.com/jhbadger/scripts)
       translateSixFrame
-      Marker information (not yet available on github)
+      Marker information (available for download from http://edhar.genomecenter.ucdavis.edu/~mlangill/markers.tgz)
 - Perl available at http://www.perl.org/
 - Bioperl available at https://github.com/bioperl/bioperl-live
 - Pplacer by Erick Matsen available at http://matsen.fhcrc.org/pplacer/
