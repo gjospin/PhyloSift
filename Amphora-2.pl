@@ -21,7 +21,7 @@ my $euk = 0;
 my $arc = 0;
 my $bac = 0;
 my $custom = "";
-
+my $force=0;
 
 
 GetOptions("threaded=i" => \$threadNum,
@@ -30,6 +30,7 @@ GetOptions("threaded=i" => \$threadNum,
 	   "bac" => \$bac,
 	   "arc" => \$arc,
 	   "custom=s" => \$custom, #need a file containing the marker names to use without extensions ** marker names shouldn't contain '_'
+	   "f" => \$force, #overrides a previous run otherwise stop
     ) || die $usage;
 
 #euk, bac and arc represent which markers to run depending on their domain - run all by default
@@ -40,6 +41,7 @@ die $usage unless ($ARGV[0]);
 
 my $workingDir = getcwd;
 my $readsFile = $ARGV[0];
+
 
 #check the input file exists
 if(!-e "$workingDir/$readsFile" || !-e "$readsFile"){
@@ -59,6 +61,15 @@ my $fileName = substr($readsFile,$position+1,length($readsFile)-$position-1);
 my $tempDir = "$workingDir/Amph_temp";
 #where everything will be written when running Amphora-2 using this file
 my $fileDir = "$tempDir/$fileName";
+
+#remove the directory from a previous run
+if($force){
+    print "deleting an old run\n";
+    `rm -rf $fileDir`;
+}elsif(-e "$fileDir"){
+    print STDERR "A previous run was found aborting the current run\n";
+    exit;
+}
 
 #check if the temporary directory exists, if it doesn't create it.
 `mkdir $tempDir` unless (-e "$tempDir");
