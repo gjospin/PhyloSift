@@ -43,6 +43,16 @@ my $workingDir = getcwd;
 my $readsFile = $ARGV[0];
 
 
+#check if the various programs used in this pipeline are installed on the machine
+my $progCheck = system("perl $workingDir/progChecks.pl");
+if($progCheck!=0){
+    print STDERR "A required program was not found during the checks aborting\n";
+    exit();
+}elsif($progCheck==0){
+    print STDERR "All systems are good to go, continuing the screening\n";
+}
+
+
 #check the input file exists
 if(!-e "$workingDir/$readsFile" || !-e "$readsFile"){
     die "$readsFile was not found \n";
@@ -67,7 +77,7 @@ if($force){
     print "deleting an old run\n";
     `rm -rf $fileDir`;
 }elsif(-e "$fileDir"){
-    print STDERR "A previous run was found aborting the current run\n";
+    print STDERR "A previous run was found using the same file name aborting the current run\n";
     exit;
 }
 
