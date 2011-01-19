@@ -11,6 +11,7 @@ use warnings;
 eval 'require Bio::Seq;';
 if ($@) {
     print STDERR "Bioperl was NOT found\n";
+    exit(1);
 }
 
 
