@@ -102,9 +102,31 @@ if(!-e "$blastDir/rep.faa.psq" ||  !-e "$blastDir/rep.faa.pin" || !-e "$blastDir
 }
 
 
-#blast the reads to the DB
-if(!-e "$blastDir/$readsCore.blastp"){
-    `blastp -query $readsFile -evalue 0.1 -num_descriptions 50000 -num_alignments 50000 -db $blastDir/rep.faa -out $blastDir/$readsCore.blastp -outfmt 0 -num_threads $threadNum`;
+#check if a 6frame translation is needed
+open(readCheck,$readsFile) or die "Couldn't open $readsFile\n";
+my ($totalCount,$seqCount) =0;
+while(<readCheck>){
+    chomp($_);
+    if($_=~m/^>/){
+	next;
+    }
+    $seqCount++ while ($_ =~ /[atcgATCG]/g);
+    $totalCount += length($_);
+}
+close(readCheck);
+print STDERR "DNA % ".$seqCount/$totalCount."\n";
+if($seqCount/$totalCount >0.8){
+    print STDERR "Doing a six frame translation\n";
+    #found DNA, translate in 6 frames
+    `$workingDir/translateSixFrame $readsFile > $blastDir/$fileName-6frame`;
+    if(!-e "$blastDir/$readsCore.blastp"){
+	`blastp -query $blastDir/$fileName-6frame -evalue 0.1 -num_descriptions 50000 -num_alignments 50000 -db $blastDir/rep.faa -out $blastDir/$readsCore.blastp -outfmt 0 -num_threads $threadNum`;
+    }
+}else{
+    #blast the reads to the DB
+    if(!-e "$blastDir/$readsCore.blastp"){
+	`blastp -query $readsFile -evalue 0.1 -num_descriptions 50000 -num_alignments 50000 -db $blastDir/rep.faa -out $blastDir/$readsCore.blastp -outfmt 0 -num_threads $threadNum`;
+    }
 }
 
 get_blast_hits();
