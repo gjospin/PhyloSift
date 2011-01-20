@@ -148,17 +148,21 @@ sub get_blast_hits{
 	    #print $result->query_name."\t".$hit->name()."\t".$hit->raw_score."\t";
 	    $hit->name() =~ m/([^_]+)$/;
 	    my $markerHit = $1;
-	    if($topFamily ne $markerHit){
+#	    if($topFamily ne $markerHit){
 		#compare the previous value
 		#only keep the top hit
-		if($topScore < $hit->raw_score){
-		    $topFamily = $markerHit;
-		    $topScore = $hit->raw_score;
-		    $hits{$result->query_name}=$topFamily;
-		}#else do nothing
-	    }#else do nothing
+#		if($topScore < $hit->raw_score){
+#		    $topFamily = $markerHit;
+#		    $topScore = $hit->raw_score;
+#		    $hits{$result->query_name}=$topFamily;
+ 
+#		}#else do nothing
+#	    }#else do nothing
+
+	    #now keeping all the marker hits and not only the top one.
+	    $hits{$result->query_name}{$markerHit}=1;
 	}
-	$topscore{$result->query_name}=$topScore;
+#	$topscore{$result->query_name}=$topScore;
 #	$markerHits{$topFamily}{$result->query_name}=1;
 
     }
@@ -168,15 +172,27 @@ sub get_blast_hits{
 	exit(1);
     }
     #read the readFile and grab the sequences for all the hit IDs and assign them to the right marker using a hash table
+    #test to make sure all hits are being used
+#    foreach my $seqID (keys %hits){
+#	print STDERR $seqID."\t";
+#	foreach my $markerHit (keys %{$hits{$seqID}}){
+#	    print STDERR $markerHit."\t";
+#	}
+#	print STDERR "\n";
+#    }
+
+
     my $seqin = new Bio::SeqIO('-file'=>"$readsFile");
     while (my $seq = $seqin->next_seq) {
 	if(exists $hits{$seq->id}){
-	    #print "\'".$hits{$seq->id}."\'\n";
-	    #create a new string or append to an existing string for each marker
-	    if(exists  $markerHits{$hits{$seq->id}}){
-		$markerHits{$hits{$seq->id}} .= ">".$seq->id."_$topscore{$seq->id}\n".$seq->seq."\n";
-	    }else{
-		$markerHits{$hits{$seq->id}} = ">".$seq->id."_$topscore{$seq->id}\n".$seq->seq."\n";
+	    foreach my $markerHit(keys %{$hits{$seq->id}}){
+		#print "\'".$hits{$seq->id}."\'\n";
+		#create a new string or append to an existing string for each marker
+		if(exists  $markerHits{$markerHit}){
+		    $markerHits{$markerHit} .= ">".$seq->id."\n".$seq->seq."\n";
+		}else{
+		    $markerHits{$markerHit} = ">".$seq->id."\n".$seq->seq."\n";
+		}
 	    }
 	}
     }
