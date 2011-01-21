@@ -1,4 +1,4 @@
-#!/usr/bin/env perl -w
+#!/usr/bin/env perl
 
 my $usage = "Usage: $0 <gapped FASTA alignment file(s)>\n";
 
