@@ -172,6 +172,8 @@ sub get_blast_hits{
 	exit(1);
     }
     #read the readFile and grab the sequences for all the hit IDs and assign them to the right marker using a hash table
+
+
     #test to make sure all hits are being used
 #    foreach my $seqID (keys %hits){
 #	print STDERR $seqID."\t";
