@@ -78,6 +78,7 @@ if($force){
     `rm -rf $fileDir`;
 }elsif(-e "$fileDir"){
     print STDERR "A previous run was found using the same file name aborting the current run\n";
+    print STDERR "Either delete that run from $fileDir, or force overwrite with the -f command-line option\n";
     exit;
 }
 
