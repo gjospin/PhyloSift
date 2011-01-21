@@ -84,7 +84,7 @@ foreach my $marker (@markers){
     }
     
     #converting the marker's reference alignments from Fasta to Stockholm (required by Hmmer3)
-    `perl $workingDir/fasta2stockholm.pl $workingDir/markers/$marker.trimfinal > $alignDir/$marker.seed.stock`;
+    `fasta2stockholm.pl $workingDir/markers/$marker.trimfinal > $alignDir/$marker.seed.stock`;
 
     #build the Hmm for the marker using Hmmer3
     if(!-e "$alignDir/$marker.stock.hmm"){

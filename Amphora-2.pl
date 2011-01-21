@@ -44,7 +44,7 @@ my $readsFile = $ARGV[0];
 
 
 #check if the various programs used in this pipeline are installed on the machine
-my $progCheck = system("perl $workingDir/progChecks.pl");
+my $progCheck = system("progChecks.pl");
 if($progCheck!=0){
     print STDERR "A required program was not found during the checks aborting\n";
     exit();
@@ -78,6 +78,7 @@ if($force){
     `rm -rf $fileDir`;
 }elsif(-e "$fileDir"){
     print STDERR "A previous run was found using the same file name aborting the current run\n";
+    print STDERR "Either delete that run from $fileDir, or force overwrite with the -f command-line option\n";
     exit;
 }
 
@@ -111,13 +112,13 @@ if($custom ne ""){
 
 
 #run Blast
-`perl $workingDir/run_blast.pl --threaded=$threadNum $fileDir/markers.list $readsFile`;
+`run_blast.pl --threaded=$threadNum $fileDir/markers.list $readsFile`;
 
 #Align Markers
-`perl $workingDir/MarkerAlign.pl --threaded=$threadNum $fileDir/markers.list $readsFile`;
+`MarkerAlign.pl --threaded=$threadNum $fileDir/markers.list $readsFile`;
 
 # Run Pplacer
-`perl $workingDir/Run_Pplacer.pl --threaded=$threadNum $fileDir/markers.list $readsFile`
+`Run_Pplacer.pl --threaded=$threadNum $fileDir/markers.list $readsFile`
 
 
 #TODO : 
