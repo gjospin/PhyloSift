@@ -6,7 +6,10 @@ my $markerDir = $ARGV[0];
 open( NT, "/tmp/amphora.name.table" );
 while( my $line = <NT> ){
 	my $commonName;
-	if($line =~ /\[(.+)\]$/){
+	if($line =~ /\{(.+)\}.+\[.+\]/){
+		$commonName = $1;
+		$commonName =~ s/[\.\,\/\\\(\)\:\;\'\"\{\}\$\%\^\&\*\+\-\=\s]/_/g;
+	}elsif($line =~ /\[(.+)\]$/){
 		$commonName = $1;
 		$commonName =~ s/[\.\,\/\\\(\)\:\;\'\"\{\}\$\%\^\&\*\+\-\=\s]/_/g;
 	}
