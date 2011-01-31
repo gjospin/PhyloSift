@@ -25,10 +25,10 @@ use Bio::AlignIO;
 #use Parallel::ForkManager;
 
 
-my $usage = qq~
+my $usage = qq{
 Usage : $0 <options> <marker.list> <readsFile>
 
-~;
+};
 
 my $threadNum=1;
 GetOptions("threaded=i" => \$threadNum,
@@ -48,7 +48,6 @@ my $tempDir = "$workingDir/Amph_temp";
 my $fileDir = "$tempDir/$fileName";
 my $blastDir = "$fileDir/Blast_run";
 my $alignDir = "$fileDir/alignments";
-
 
 my @markers = ();
 #reading the list of markers
@@ -108,34 +107,31 @@ foreach my $marker (@markers){
     my %insertHash=();
     #reading the 
     my $aliIN = new Bio::AlignIO(-file =>"$alignDir/$marker.aln_hmmer3.fasta", -format=>'fasta');
+    my $masqseq;
     while(my $aln = $aliIN->next_aln()){
+	# mask out the columns that didn't align to the marker, we'll want to remove
+	# them below
+	$masqseq = "\0" x $aln->length;
 	foreach my $seq ($aln->each_seq()){
 	    if(exists $referenceSeqs{$seq->id}){
-		#split a sequence into individual characters to find all the '.'
-		my $i =0;
-		my @characters = split(//,$seq->seq());
-		foreach my $char (@characters){
-		    #a hash value of 1 means a . was found at that index in all reference sequences
-		    #a hash value of 0 means in at least 1 reference sequence a non . was found at that index
-		    if ($char eq '.'){
-			if(!exists $insertHash{$i}){
-			    $insertHash{$i}=1;
-			}else{
-			    $insertHash{$i} = $insertHash{$i}*1; #if all . have been found at that index, then the end will be 1
-			}
-		    }else{
-			if(!exists $insertHash{$i}){
-			    $insertHash{$i}=0;
-			}else{
-			    $insertHash{$i}= $insertHash{$i}*0;#if 1 non . character has been found at this index then it'll turn to 0
-			}
-		    }#else do nothing
-		    $i++;
-		}
+		my $curseq = $seq->seq();
+		my $ch1 = "\1";
+		$curseq =~ s/\./$ch1/g;
+		$curseq =~ s/\w/\0/g;
+		$curseq =~ s/[\-\*]/\0/g;
+		$masqseq |= $curseq;
 	    }#else do nothing
 	}
     }
-    #reading and trimming the alignment from Hmmalign (Hmmer3)
+	# figure out which columns have the first and last marker data
+	# nonmarker columns contain a . and were masked above
+	my $firstCol = length($masqseq);
+	my $ch1 = "\1";
+	$masqseq =~ s/^$ch1+//g;
+	$firstCol -= length($masqseq);
+	$masqseq =~ s/$ch1//g;
+	my $collen = length($masqseq);
+    # reading and trimming out non-marker alignment columns from Hmmalign output (Hmmer3)
     my $hmmer3Ali = new Bio::AlignIO(-file =>"$alignDir/$marker.aln_hmmer3.fasta",-format=>'fasta');
     open(aliOUT,">$alignDir/$marker.aln_hmmer3.trim")or die "Couldn't open $alignDir/$marker.aln_hmmer3.trim for writting\n";
     while(my $aln = $hmmer3Ali->next_aln()){
@@ -144,23 +140,9 @@ foreach my $marker (@markers){
             my @characters=();
 	    #if the sequence isn't a reference sequence remove all the characters at the indices that have a 1 value in the %insertHash
 	    if(!exists $referenceSeqs{$seq->id}){
-		my $i =0;
-                @characters = split(//,$seq->seq());
-		my $strlength = scalar(@characters);
-#		print "STRlength : $strlength\t";
-		while($i < $strlength){
-		    if($insertHash{$i}==1){
-			$characters[$i]='';
-		    }
-		    $i++;
-                }
-		#make a new sequence
-		my $newSeq = "@characters";
-		#remove the spaces introduced from the previous line
-		$newSeq =~ s/\s//g;
-		#transform . and * into -
-		$newSeq =~ s/[\.\*]/\-/g;
-		
+		# strip out all the columns that had a . (indicated by masqseq)
+		my $newSeq = $seq->seq();
+		$newSeq = substr($newSeq, $firstCol, $collen);
 		my $newIDs = $seq->id;
 		#subsitute all the non letter or number characters into _ in the IDs to avoid parsing issues in tree viewing programs or others
 		$newIDs =~ s/[^\w\d]/_/g;
@@ -175,7 +157,6 @@ foreach my $marker (@markers){
 }
 
 #$pm->wait_all_children;
-
 
 #rewrite the marker.list for the markers that have hits (the markers with no hits are removed from the list at this point)
 open(markersOUT,">$fileDir/markers.list")or die "Couldn't open $fileDir/markers.list\n";

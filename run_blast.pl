@@ -1,4 +1,4 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl
 
 #Run blast on a list of families for a set of Reads
 #
@@ -14,23 +14,27 @@
 #
 
 
-
-
+use warnings;
+use strict;
 use Getopt::Long;
 use Cwd;
 use Bio::SearchIO;
 use Bio::SeqIO;
 
-my $usage = qq~
+my $usage = qq{
 Usage: $0 <options> <marker.list> <reads_file>
 
-~;
+};
 
 my $clean = 0; #option set up, but not used for later
 my $threadNum = 1; #default value runs on 1 processor only.
+my $isolateMode=0; # set to 1 if running on an isolate assembly instead of raw reads
+my $bestHitsBitScoreRange=30; # all hits with a bit score within this amount of the best will be used
 
 GetOptions("threaded=i" => \$threadNum,
 	   "clean" => \$clean,
+	   "isolate" => \$isolateMode,
+	   "bestHitBitScoreRange" => \$bestHitsBitScoreRange,
     ) || die $usage;
 
 
@@ -135,36 +139,60 @@ my %topscore = ();
 
 sub get_blast_hits{
     #parsing the blast file
+    my $in;
+	# parse once to get the top scores for each marker
+	my %markerTopScores;
+	if($isolateMode==1){
+		$in = new Bio::SearchIO('-format'=>'blast','-file' => "$blastDir/$readsCore.blastp");
+		while (my $result = $in->next_result) {
+			while( my $hit = $result->next_hit ) {
+				my @marker = split(/\_/, $hit->name());
+				my $markerName = $marker[$#marker];
+				if( !defined($markerTopScores{$markerName}) || $markerTopScores{$markerName} < $hit->bits ){
+					$markerTopScores{$markerName} = $hit->bits;
+				}
+			}
+		}
+	}
     my %hits = ();
-    my $in = new Bio::SearchIO('-format'=>'blast','-file' => "$blastDir/$readsCore.blastp");
+    $in = new Bio::SearchIO('-format'=>'blast','-file' => "$blastDir/$readsCore.blastp");
     while (my $result = $in->next_result) {
-	#hit name is a markerName
-	#print "Getting HIT \n";
-
 	#keep track of the top family and score for each query
 	my $topFamily="";
 	my $topScore=0;
-	while( my $hit = $result->next_hit ) {
-	    #print $result->query_name."\t".$hit->name()."\t".$hit->raw_score."\t";
+	my $topRead;
+	my @hits = $result->hits;
+	foreach my $hit(@hits){
 	    $hit->name() =~ m/([^_]+)$/;
 	    my $markerHit = $1;
-#	    if($topFamily ne $markerHit){
-		#compare the previous value
-		#only keep the top hit
-#		if($topScore < $hit->raw_score){
-#		    $topFamily = $markerHit;
-#		    $topScore = $hit->raw_score;
-#		    $hits{$result->query_name}=$topFamily;
- 
-#		}#else do nothing
-#	    }#else do nothing
+		if($isolateMode==1){
+			# running on a genome assembly
+			# allow more than one marker per sequence
+			# require all hits to the marker to have bit score within some range of the top hit
+			my @marker = split(/_/, $hit->name);
+			my $markerName = $marker[$#marker];
+			if($markerTopScores{$markerName} < $hit->bits + $bestHitsBitScoreRange){
+				$hits{$result->query_name}{$markerHit}=1;
+			}
+		}else{
+			# running on reads
+			# just do one marker per read
+			if($topFamily ne $markerHit){
+				#compare the previous value
+				#only keep the top hit
+				if($topScore <= $hit->raw_score){
+					$topFamily = $markerHit;
+					$hits{$result->query_name}=$topFamily;
 
-	    #now keeping all the marker hits and not only the top one.
-	    $hits{$result->query_name}{$markerHit}=1;
+				}#else do nothing
+			}#else do nothing
+		}
+
 	}
-#	$topscore{$result->query_name}=$topScore;
-#	$markerHits{$topFamily}{$result->query_name}=1;
-
+	if(!$isolateMode){
+		$topscore{$result->query_name}=$topScore;
+		$markerHits{$topFamily}{$result->query_name}=1;
+	}
     }
     #if there are no hits, remove the blast file and exit (remnant from Martin's script)
     unless (%markerHits) {
