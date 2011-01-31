@@ -140,20 +140,20 @@ my %topscore = ();
 sub get_blast_hits{
     #parsing the blast file
     my $in;
-	# parse once to get the top scores for each marker
-	my %markerTopScores;
-	if($isolateMode==1){
-		$in = new Bio::SearchIO('-format'=>'blast','-file' => "$blastDir/$readsCore.blastp");
-		while (my $result = $in->next_result) {
-			while( my $hit = $result->next_hit ) {
-				my @marker = split(/\_/, $hit->name());
-				my $markerName = $marker[$#marker];
-				if( !defined($markerTopScores{$markerName}) || $markerTopScores{$markerName} < $hit->bits ){
-					$markerTopScores{$markerName} = $hit->bits;
-				}
-			}
+    # parse once to get the top scores for each marker
+    my %markerTopScores;
+    if($isolateMode==1){
+	$in = new Bio::SearchIO('-format'=>'blast','-file' => "$blastDir/$readsCore.blastp");
+	while (my $result = $in->next_result) {
+	    while( my $hit = $result->next_hit ) {
+		my @marker = split(/\_/, $hit->name());
+		my $markerName = $marker[$#marker];
+		if( !defined($markerTopScores{$markerName}) || $markerTopScores{$markerName} < $hit->bits ){
+		    $markerTopScores{$markerName} = $hit->bits;
 		}
+	    }
 	}
+    }
     my %hits = ();
     $in = new Bio::SearchIO('-format'=>'blast','-file' => "$blastDir/$readsCore.blastp");
     while (my $result = $in->next_result) {
@@ -162,43 +162,47 @@ sub get_blast_hits{
 	my $topScore=0;
 	my $topRead;
 	my @hits = $result->hits;
+	print STDERR "Number of hits for ".$result->query_name."\t".scalar(@hits)."\t";
 	foreach my $hit(@hits){
 	    $hit->name() =~ m/([^_]+)$/;
 	    my $markerHit = $1;
-		if($isolateMode==1){
-			# running on a genome assembly
-			# allow more than one marker per sequence
-			# require all hits to the marker to have bit score within some range of the top hit
-			my @marker = split(/_/, $hit->name);
-			my $markerName = $marker[$#marker];
-			if($markerTopScores{$markerName} < $hit->bits + $bestHitsBitScoreRange){
-				$hits{$result->query_name}{$markerHit}=1;
-			}
-		}else{
-			# running on reads
-			# just do one marker per read
-			if($topFamily ne $markerHit){
-				#compare the previous value
-				#only keep the top hit
-				if($topScore <= $hit->raw_score){
-					$topFamily = $markerHit;
-					$hits{$result->query_name}=$topFamily;
-
-				}#else do nothing
-			}#else do nothing
+	    if($isolateMode==1){
+		# running on a genome assembly
+		# allow more than one marker per sequence
+		# require all hits to the marker to have bit score within some range of the top hit
+		my @marker = split(/_/, $hit->name);
+		my $markerName = $marker[$#marker];
+		if($markerTopScores{$markerName} < $hit->bits + $bestHitsBitScoreRange){
+		    $hits{$result->query_name}{$markerHit}=1;
 		}
-
-	}
+	    }else{
+		# running on reads
+		# just do one marker per read
+		if($topFamily ne $markerHit){
+		    #compare the previous value
+		    #only keep the top hit
+		    if($topScore <= $hit->raw_score){
+			$topFamily = $markerHit;
+#			$hits{$result->query_name}{$topFamily}=1;
+			
+		    }#else do nothing
+		}#else do nothing
+	    }
+	}    
 	if(!$isolateMode){
-		$topscore{$result->query_name}=$topScore;
-		$markerHits{$topFamily}{$result->query_name}=1;
+	    $topscore{$result->query_name}=$topScore;
+	    #$markerHits{$topFamily}{$result->query_name}=1;
+	    print STDERR "Top family : $topFamily\n";
+	    $hits{$result->query_name}{$topFamily}=1;;
 	}
+	
+	
     }
     #if there are no hits, remove the blast file and exit (remnant from Martin's script)
-    unless (%markerHits) {
-	system("rm $blastDir/$readsCore.blastp");
-	exit(1);
-    }
+#    unless (%markerHits) {
+#	system("rm $blastDir/$readsCore.blastp");
+#	exit(1);
+#    }
     #read the readFile and grab the sequences for all the hit IDs and assign them to the right marker using a hash table
 
 
@@ -229,7 +233,7 @@ sub get_blast_hits{
     #write the read+ref_seqs for each markers in the list
     foreach my $marker (keys %markerHits){
 	#writing the hits to the candidate file
-	open(fileOUT,">$blastDir/$marker.candidate")or die "Couldn't open $blastDir/$marker.candidate for writing\n";
+	open(fileOUT,">$blastDir/$marker.candidate")or die " Couldn't open $blastDir/$marker.candidate for writing\n";
 	print fileOUT $markerHits{$marker};
 	close(fileOUT);
     }
