@@ -162,7 +162,6 @@ sub get_blast_hits{
 	my $topScore=0;
 	my $topRead;
 	my @hits = $result->hits;
-	print STDERR "Number of hits for ".$result->query_name."\t".scalar(@hits)."\t";
 	foreach my $hit(@hits){
 	    $hit->name() =~ m/([^_]+)$/;
 	    my $markerHit = $1;
@@ -192,7 +191,6 @@ sub get_blast_hits{
 	if(!$isolateMode){
 	    $topscore{$result->query_name}=$topScore;
 	    #$markerHits{$topFamily}{$result->query_name}=1;
-	    print STDERR "Top family : $topFamily\n";
 	    $hits{$result->query_name}{$topFamily}=1;;
 	}
 	
