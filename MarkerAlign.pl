@@ -143,6 +143,8 @@ foreach my $marker (@markers){
 		# strip out all the columns that had a . (indicated by masqseq)
 		my $newSeq = $seq->seq();
 		$newSeq = substr($newSeq, $firstCol, $collen);
+		#change the remaining . into - for pplacer to not complain
+		$newSeq =~ s/\./-/g;
 		my $newIDs = $seq->id;
 		#subsitute all the non letter or number characters into _ in the IDs to avoid parsing issues in tree viewing programs or others
 		$newIDs =~ s/[^\w\d]/_/g;
