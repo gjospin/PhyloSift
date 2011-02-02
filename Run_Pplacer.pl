@@ -91,12 +91,16 @@ foreach my $marker(@markers){
 
 
     #placeviz writes its output to the directory it was called from, need to move the output to the trees directory
-    if(-e "$workingDir/$marker.aln_hmmer3.trim.PP.tog.tre"){
+    if(-e "$workingDir/$marker.aln_hmmer3.trim.tog.tre"){
+	`mv $workingDir/$marker.* $treeDir`;
+    }elsif(-e "$workingDir/$marker.aln_hmmer3.trim.PP.tog.tre"){
 	`mv $workingDir/$marker.* $treeDir`;
     }
-
+    #added the .PP. check to accomodate for what pplacer names its files (tax branch or master branch)
     # transform the taxon names in the tree file
-    if(-e "$treeDir/$marker.aln_hmmer3.trim.PP.tog.tre"){
+    if(-e "$treeDir/$marker.aln_hmmer3.trim.tog.tre"){
+	nameTaxa("$treeDir/$marker.aln_hmmer3.trim.tog.tre");
+    }elsif(-e "$treeDir/$marker.aln_hmmer.trim.PP.tog.tre"){
 	nameTaxa("$treeDir/$marker.aln_hmmer3.trim.PP.tog.tre");
     }
 

@@ -134,8 +134,8 @@ if($seqCount/$totalCount >0.8){
 }
 
 get_blast_hits();
-
-my %topscore = ();
+my (%hitsStart,%hitsEnd, %topscore)=();
+#my %topscore = ();
 
 sub get_blast_hits{
     #parsing the blast file
@@ -150,6 +150,8 @@ sub get_blast_hits{
 		my $markerName = $marker[$#marker];
 		if( !defined($markerTopScores{$markerName}) || $markerTopScores{$markerName} < $hit->bits ){
 		    $markerTopScores{$markerName} = $hit->bits;
+		    $hitsStart{$result->query_name}{$markerName} = $hit->start('query');
+		    $hitsEnd{$result->query_name}{$markerName}=$hit->end('query');
 		}
 	    }
 	}
@@ -160,6 +162,8 @@ sub get_blast_hits{
 	#keep track of the top family and score for each query
 	my $topFamily="";
 	my $topScore=0;
+	my $topStart=0;
+	my $topEnd=0;
 	my $topRead;
 	my @hits = $result->hits;
 	foreach my $hit(@hits){
@@ -173,6 +177,9 @@ sub get_blast_hits{
 		my $markerName = $marker[$#marker];
 		if($markerTopScores{$markerName} < $hit->bits + $bestHitsBitScoreRange){
 		    $hits{$result->query_name}{$markerHit}=1;
+
+		    $hitsStart{$result->query_name}{$markerName} = $hit->start('query');
+                    $hitsEnd{$result->query_name}{$markerName}=$hit->end('query');
 		}
 	    }else{
 		# running on reads
@@ -183,18 +190,26 @@ sub get_blast_hits{
 		    if($topScore <= $hit->raw_score){
 			$topFamily = $markerHit;
 #			$hits{$result->query_name}{$topFamily}=1;
-			
+#			print STDERR $result->query_name."\t".$hit->start('query')."\t".$hit->end('query')."\t";
+			$topStart= $hit->start('query');
+			$topEnd = $hit->end('query');
 		    }#else do nothing
 		}#else do nothing
+#		$hitsStart{$result->query_name}{$hit->name} = $hit->start('query');
+#		$hitsEnd{$result->query_name}{$hit->name}= $hit->end('query');
 	    }
 	}    
 	if(!$isolateMode){
-	    $topscore{$result->query_name}=$topScore;
-	    #$markerHits{$topFamily}{$result->query_name}=1;
-	    $hits{$result->query_name}{$topFamily}=1;;
+	    if($topFamily ne ""){
+		$topscore{$result->query_name}=$topScore;
+		#$markerHits{$topFamily}{$result->query_name}=1;
+		$hits{$result->query_name}{$topFamily}=1;
+		$hitsStart{$result->query_name}{$topFamily} = $topStart;
+		$hitsEnd{$result->query_name}{$topFamily}= $topEnd;
+		
+#		print STDERR $result->query_name."\t".$topFamily."\ttopStart\t$topStart\ttopEnd\t$topEnd\n";
+	    }
 	}
-	
-	
     }
     #if there are no hits, remove the blast file and exit (remnant from Martin's script)
 #    unless (%markerHits) {
@@ -220,10 +235,25 @@ sub get_blast_hits{
 	    foreach my $markerHit(keys %{$hits{$seq->id}}){
 		#print "\'".$hits{$seq->id}."\'\n";
 		#create a new string or append to an existing string for each marker
+
+		#pre-trimming for the query + 150 residues before and after (for very long queries)
+		my $start = $hitsStart{$seq->id}{$markerHit}-150;
+		if($start < 0){
+		    $start=0;
+		}
+		my $end = $hitsEnd{$seq->id}{$markerHit}+150;
+		my $seqLength = length($seq->seq);
+		if($end >= $seqLength){
+		    $end=$seqLength;
+		}
+		my $newSeq = substr($seq->seq,$start,$end-$start);
+
+#		print STDERR "$start\t$end\t$seqLength\t\t".$hitsStart{$seq->id}{$markerHit}."\t".$hitsEnd{$seq->id}{$markerHit}."\n";
+
 		if(exists  $markerHits{$markerHit}){
-		    $markerHits{$markerHit} .= ">".$seq->id."\n".$seq->seq."\n";
+		    $markerHits{$markerHit} .= ">".$seq->id."\n".$newSeq."\n";
 		}else{
-		    $markerHits{$markerHit} = ">".$seq->id."\n".$seq->seq."\n";
+		    $markerHits{$markerHit} = ">".$seq->id."\n".$newSeq."\n";
 		}
 	    }
 	}
