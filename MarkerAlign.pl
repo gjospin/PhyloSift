@@ -145,6 +145,9 @@ foreach my $marker (@markers){
 		$newSeq = substr($newSeq, $firstCol, $collen);
 		#change the remaining . into - for pplacer to not complain
 		$newSeq =~ s/\./-/g;
+		my $gapCount=0;
+		$gapCount++ while $newSeq =~ m/-/g;
+		next if $collen == $gapCount;
 		my $newIDs = $seq->id;
 		#subsitute all the non letter or number characters into _ in the IDs to avoid parsing issues in tree viewing programs or others
 		$newIDs =~ s/[^\w\d]/_/g;

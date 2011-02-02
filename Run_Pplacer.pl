@@ -85,7 +85,7 @@ foreach my $marker(@markers){
     }
 
     #Transform the .place file into a tree file
-    if(-e "$treeDir/$marker.aln_hmmer3.trim.place" && !-e "$treeDir/$marker.aln_hmmer3.trim.tolg.tree"){
+    if(-e "$treeDir/$marker.aln_hmmer3.trim.place" && !-e "$treeDir/$marker.aln_hmmer3.trim.tog.tree"){
 	`placeviz --tog -p $treeDir/$marker.aln_hmmer3.trim.place`
     }
 
@@ -93,11 +93,15 @@ foreach my $marker(@markers){
     #placeviz writes its output to the directory it was called from, need to move the output to the trees directory
     if(-e "$workingDir/$marker.aln_hmmer3.trim.tog.tre"){
 	`mv $workingDir/$marker.* $treeDir`;
+    }elsif(-e "$workingDir/$marker.aln_hmmer3.trim.PP.tog.tre"){
+	`mv $workingDir/$marker.* $treeDir`;
     }
-
+    #added the .PP. check to accomodate for what pplacer names its files (tax branch or master branch)
     # transform the taxon names in the tree file
     if(-e "$treeDir/$marker.aln_hmmer3.trim.tog.tre"){
 	nameTaxa("$treeDir/$marker.aln_hmmer3.trim.tog.tre");
+    }elsif(-e "$treeDir/$marker.aln_hmmer.trim.PP.tog.tre"){
+	nameTaxa("$treeDir/$marker.aln_hmmer3.trim.PP.tog.tre");
     }
 
     $pm->finish
@@ -107,35 +111,35 @@ $pm->wait_all_children;
 
 
 sub nameTaxa {
-	my $filename = shift;
+    my $filename = shift;
 
-	# read in the taxon name map
-	my %namemap;
-	open(NAMETABLE, "$workingDir/markers/name.table");
-	while( my $line = <NAMETABLE> ){
-		chomp $line;
-		my @pair = split(/\t/, $line);
-		$namemap{$pair[0]} = $pair[1];
+    # read in the taxon name map
+    my %namemap;
+    open(NAMETABLE, "$workingDir/markers/name.table")or die "Couldn't open $workingDir/markers/name.table\n";
+    while( my $line = <NAMETABLE> ){
+	chomp $line;
+	my @pair = split(/\t/, $line);
+	$namemap{$pair[0]} = $pair[1];
+    }
+    
+    # parse the tree file to get leaf node names
+    # replace leaf node names with taxon labels
+    open( TREEFILE, $filename );
+    my @treedata = <TREEFILE>;
+    close TREEFILE;
+    open( TREEFILE, ">$filename" );
+    foreach my $tree(@treedata){
+	my @taxanames = split( /[\(\)\,]/, $tree );
+	foreach my $taxon( @taxanames ){
+	    next if $taxon =~ /^\:/;        # internal node, no taxon label
+	    my @taxondata = split( /\:/, $taxon );
+	    next unless @taxondata > 0;
+	    if(defined($namemap{$taxondata[0]})){
+		my $commonName = $namemap{$taxondata[0]}."-".$taxondata[0];
+		$tree =~ s/$taxondata[0]/$commonName/g;
+	    }
 	}
-
-	# parse the tree file to get leaf node names
-	# replace leaf node names with taxon labels
-	open( TREEFILE, $filename );
-	my @treedata = <TREEFILE>;
-	close TREEFILE;
-	open( TREEFILE, ">$filename" );
-	foreach my $tree(@treedata){
-		my @taxanames = split( /[\(\)\,]/, $tree );
-		foreach my $taxon( @taxanames ){
-			next if $taxon =~ /^\:/;        # internal node, no taxon label
-			my @taxondata = split( /\:/, $taxon );
-			next unless @taxondata > 0;
-			if(defined($namemap{$taxondata[0]})){
-				my $commonName = $namemap{$taxondata[0]}."-".$taxondata[0];
-				$tree =~ s/$taxondata[0]/$commonName/g;
-			}
-		}
-		print TREEFILE $tree;
-	}
+	print TREEFILE $tree;
+    }
 }
 
