@@ -85,19 +85,19 @@ foreach my $marker(@markers){
     }
 
     #Transform the .place file into a tree file
-    if(-e "$treeDir/$marker.aln_hmmer3.trim.place" && !-e "$treeDir/$marker.aln_hmmer3.trim.tolg.tree"){
+    if(-e "$treeDir/$marker.aln_hmmer3.trim.place" && !-e "$treeDir/$marker.aln_hmmer3.trim.tog.tree"){
 	`placeviz --tog -p $treeDir/$marker.aln_hmmer3.trim.place`
     }
 
 
     #placeviz writes its output to the directory it was called from, need to move the output to the trees directory
-    if(-e "$workingDir/$marker.aln_hmmer3.trim.tog.tre"){
+    if(-e "$workingDir/$marker.aln_hmmer3.trim.PP.tog.tre"){
 	`mv $workingDir/$marker.* $treeDir`;
     }
 
     # transform the taxon names in the tree file
     if(-e "$treeDir/$marker.aln_hmmer3.trim.PP.tog.tre"){
-	nameTaxa("$treeDir/$marker.aln_hmmer3.trim.tog.tre");
+	nameTaxa("$treeDir/$marker.aln_hmmer3.trim.PP.tog.tre");
     }
 
     $pm->finish
