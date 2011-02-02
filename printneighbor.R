@@ -1,4 +1,9 @@
 #!/usr/bin/Rscript
+#
+# (c) 2011 Aaron Darling
+# Very simplistic script to read a tree, find any leaf nodes with a name
+# like 1_at_*, and report their nearest neighbors 
+#
 
 printNeighborName <- function(treefile){
 	# read the tree
@@ -8,7 +13,7 @@ printNeighborName <- function(treefile){
 	# compute all pairwise distances to other nodes
 	# find the closest node to our target
 	pairdists<-cophenetic(ttt)
-	lapply(tnodes, minNeighbor, pairdists)
+	sapply(tnodes, minNeighbor, pairdists)
 }
 
 minNeighbor<- function(tnode, pairdists){
@@ -16,9 +21,17 @@ minNeighbor<- function(tnode, pairdists){
 }
 
 
+# get command-line options
 options <- commandArgs(trailingOnly = T)
-library("ape")
+# need the ape library, download and install it if
+# it's not already available
+if(!library("ape", logical.return=TRUE)){
+	install.packages("ape", repos="http://cran.r-project.org")
+	library("ape")
+}
 
-lapply(options, printNeighborName)
+# run printNeighborName on all the tree files
+result<-unlist(lapply(lapply(options, printNeighborName), names))
+write(result,file="",ncolumns=1)
 
 
