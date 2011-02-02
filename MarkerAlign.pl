@@ -147,7 +147,6 @@ foreach my $marker (@markers){
 		$newSeq =~ s/\./-/g;
 		my $gapCount=0;
 		$gapCount++ while $newSeq =~ m/-/g;
-		print STDERR "$gapCount\t$collen\t".length($newSeq)."\n";
 		next if $collen == $gapCount;
 		my $newIDs = $seq->id;
 		#subsitute all the non letter or number characters into _ in the IDs to avoid parsing issues in tree viewing programs or others
