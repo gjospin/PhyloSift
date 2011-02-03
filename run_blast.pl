@@ -126,6 +126,7 @@ if($seqCount/$totalCount >0.8){
     if(!-e "$blastDir/$readsCore.blastp"){
 	`blastp -query $blastDir/$fileName-6frame -evalue 0.1 -num_descriptions 50000 -num_alignments 50000 -db $blastDir/rep.faa -out $blastDir/$readsCore.blastp -outfmt 0 -num_threads $threadNum`;
     }
+    $readsFile="$blastDir/$fileName-6frame";
 }else{
     #blast the reads to the DB
     if(!-e "$blastDir/$readsCore.blastp"){
@@ -233,6 +234,16 @@ sub get_blast_hits{
     while (my $seq = $seqin->next_seq) {
 	if(exists $hits{$seq->id}){
 	    foreach my $markerHit(keys %{$hits{$seq->id}}){
+
+		print STDERR $seq->id."\t".$seq->description."\n";
+		
+		#checking if a 6frame translation was done and the suffix was appended to the description and not the sequence ID
+		my $newID = $seq->id;
+
+		if($seq->description =~ m/(_[fr][012])$/ && $seq->id !~m/(_[fr][012])$/){
+		    $newID.=$1;
+		}
+
 		#print "\'".$hits{$seq->id}."\'\n";
 		#create a new string or append to an existing string for each marker
 
@@ -251,9 +262,9 @@ sub get_blast_hits{
 #		print STDERR "$start\t$end\t$seqLength\t\t".$hitsStart{$seq->id}{$markerHit}."\t".$hitsEnd{$seq->id}{$markerHit}."\n";
 
 		if(exists  $markerHits{$markerHit}){
-		    $markerHits{$markerHit} .= ">".$seq->id."\n".$newSeq."\n";
+		    $markerHits{$markerHit} .= ">".$newID."\n".$newSeq."\n";
 		}else{
-		    $markerHits{$markerHit} = ">".$seq->id."\n".$newSeq."\n";
+		    $markerHits{$markerHit} = ">".$newID."\n".$newSeq."\n";
 		}
 	    }
 	}
