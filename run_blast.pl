@@ -235,7 +235,7 @@ sub get_blast_hits{
 	if(exists $hits{$seq->id}){
 	    foreach my $markerHit(keys %{$hits{$seq->id}}){
 
-		print STDERR $seq->id."\t".$seq->description."\n";
+		#print STDERR $seq->id."\t".$seq->description."\n";
 		
 		#checking if a 6frame translation was done and the suffix was appended to the description and not the sequence ID
 		my $newID = $seq->id;
