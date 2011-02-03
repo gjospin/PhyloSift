@@ -2,6 +2,8 @@ AMPHORA 2
 
 AMPHORA is an Automated Phylogenomic Inference Pipeline for bacterial sequences. From a given a set of protein sequences, it automatically identifies various phylogenetic marker genes. It then generates high-quality multiple sequence alignments for these genes and make tree-based phylotype assignments.
 
+
+
 NEW VERSION
 =============================================================
 AMPHORA 2 has several new features over AMPHORA
@@ -34,12 +36,18 @@ Requirements
       fasta2stockholm.pl (from https://github.com/jhbadger/scripts)
       translateSixFrame
       Marker information (available for download from http://edhar.genomecenter.ucdavis.edu/~mlangill/markers.tgz)
+      /bin directory includes the executables (pplacer, placeviz, blastp, makeblastdb, hmmalign, hmmpress, translateSixFrame, hmmbuild, fasta2stockholm.pl) for a  Linux 2.6.32-23-server #37-Ubuntu machine
 - Perl available at http://www.perl.org/
 - Bioperl available at https://github.com/bioperl/bioperl-live
 - Pplacer AND placeviz by Erick Matsen available at http://matsen.fhcrc.org/pplacer/
 - Hmmer3 available at http://hmmer.janelia.org/
 - Blast 2.2.24 (or later) available at ftp://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST/
+- R available at http://www.r-project.org/
+    Users will need to install the "ape" library (included in printneighbor.R)
+    
+    *** Alternative method manually installing within R
 
+    > install.packages("ape", repos="http://cran.r-project.org")
 
 
 **** OLD README ****
