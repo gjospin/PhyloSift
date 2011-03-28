@@ -9,15 +9,24 @@ printNeighborName <- function(treefile){
 	# read the tree
 	ttt <- read.tree(treefile)
 	# find the target seq
-	tnodes <- grep("1_at_", ttt$tip.label)
+	tnodes <- grep('\\d+_at_', ttt$tip.label, perl=TRUE)
+
+	#grep all special nodes
+
 	# compute all pairwise distances to other nodes
 	# find the closest node to our target
 	pairdists<-cophenetic(ttt)
-	sapply(tnodes, minNeighbor, pairdists)
+
+	#set all pairs with both members in tnodes to something big
+	pairdists[tnodes,tnodes]<-max(pairdists)+1
+	unlist(sapply(tnodes, minNeighbor, pairdists,ttt))
 }
 
-minNeighbor<- function(tnode, pairdists){
-	which(pairdists[tnode,pairdists[tnode,]>0]==min(pairdists[tnode,pairdists[tnode,]>0]))
+minNeighbor<- function(tnode, pairdists,ttt){
+	min_tnode <- which(pairdists[tnode,pairdists[tnode,]>0]==min(pairdists[tnode,pairdists[tnode,]>0]))
+	split_txt <-unlist(strsplit(ttt$tip.label[tnode],"_"))
+	repeat_node<-as.numeric(split_txt[1])
+	rep(min_tnode,repeat_node)     
 }
 
 
