@@ -4,6 +4,25 @@
 # Very simplistic script to read a tree, find any leaf nodes with a name
 # like 1_at_*, and report their nearest neighbors 
 #
+# function to remove tree nodes with more than some num descendants
+depthfilter <- function(ttt, tnodes){
+  filterdepth <- 60 # set this to the max descendants
+	j <- 0
+	filtnodes <- vector()
+	for(i in 1:length(tnodes)){
+		tedge <- which(ttt$edge[,2]==tnodes[i])
+		tttr <- root(ttt, node=ttt$edge[tedge,1], resolve.root=TRUE)
+		rootedge <- which( tttr$edge[,2]==max(tttr$edge[,2]) )
+		tbalance <- balance(tttr)
+		if(min(tbalance[tttr$edge[rootedge,1] - tttr$Nnode,]) < filterdepth){
+			#filtnodes[j] <- tnodes[i]
+      filtnodes <- c(filtnodes,tnodes[i])
+		}
+	}
+	filtnodes
+}
+
+
 
 printNeighborName <- function(treefile){
 	# read the tree
@@ -11,8 +30,9 @@ printNeighborName <- function(treefile){
 	# find the target seq
 	tnodes <- grep('\\d+_at_', ttt$tip.label, perl=TRUE)
 
-	#grep all special nodes
-
+  	#filter nodes
+  	#tnodes<-depthfilter(ttt,tnodes)  
+	
 	# compute all pairwise distances to other nodes
 	# find the closest node to our target
 	pairdists<-cophenetic(ttt)
