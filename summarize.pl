@@ -1,23 +1,22 @@
-#!/usr/bin/perl -w
-use strict;
+#!/usr/bin/perl
 
-if(@ARGV!=1){
-	print STDERR "Usage: summarize.pl <amphora output>\n";
-}
+use warnings;
+use strict;
+use autodie;
 
 my $markerdir = "markers";
-open( NAMETABLE, "$markerdir/name.table" );
+open( my $NAMETABLE, "$markerdir/name.table" );
 my %namemap;
-while( my $line = <NAMETABLE> ){
+while( my $line = <$NAMETABLE> ){
 	chomp $line;
 	my @vals = split( /\t/, $line );
 	$namemap{$vals[0]}=homogenizeNameAlaDongying($vals[1]);
 }
 
-open( TAXIDS, "ncbi/names.dmp" );
+open( my $TAXIDS, "ncbi/names.dmp" );
 my %nameidmap;
 my %idnamemap;
-while( my $line = <TAXIDS> ){
+while( my $line = <$TAXIDS> ){
 	chomp $line;
 	if(($line =~ /scientific name/) || ($line =~ /synonym/) || ($line =~ /misspelling/)){
 		my @vals = split( /\s+\|\s+/, $line );
@@ -26,19 +25,17 @@ while( my $line = <TAXIDS> ){
 	}
 }
 
-open( TAXSTRUCTURE, "ncbi/nodes.dmp" );
-my @parent;
-while( my $line = <TAXSTRUCTURE> ){
+open( my $TAXSTRUCTURE, "ncbi/nodes.dmp" );
+my %parent;
+while( my $line = <$TAXSTRUCTURE> ){
 	chomp $line;
 	my @vals = split( /\s+\|\s+/, $line );
-	$parent[$vals[0]] = $vals[1];
+	$parent{$vals[0]} = [$vals[1],$vals[2]];
 }
-
-open( TAXACALLS, $ARGV[0] );
 
 my %hitcounter;
 my $readcount = 0;
-while( my $line = <TAXACALLS> ){
+while( my $line = <> ){
 	chomp $line;
 	$line =~ s/\s+$//g;
 	$line =~ s/^\s+//g;
@@ -58,20 +55,22 @@ while( my $line = <TAXACALLS> ){
 		}else{
 			$hitcounter{$tid}=1;
 		}
-		$tid = $parent[$tid];
+		$tid = $parent{$tid}->[0];
 	}
 	$readcount++;
 }
 
 my %hitvals;
 foreach my $tid(keys(%hitcounter)){
-	my $frac = $hitcounter{$tid}/$readcount;
-	$hitvals{$idnamemap{$tid}} = $frac;
-}
-my @sorted = reverse sort { $hitvals{$a} cmp $hitvals{$b} } keys %hitvals; 
+	my $frac = sprintf("%.4f",$hitcounter{$tid}/$readcount);
+#	$hitvals{$idnamemap{$tid}} = $frac;
+    $hitvals{$idnamemap{$tid}}=[$hitcounter{$tid},$parent{$tid}->[1],$frac];
 
-foreach my $names(@sorted){
-	print "$names\t".$hitvals{$names}."\n";
+}
+my @sorted = reverse sort { $hitvals{$a}->[0] <=> $hitvals{$b}->[0] } keys %hitvals; 
+
+foreach my $names (@sorted){
+    print join("\t",$hitvals{$names}->[1],$names,$hitvals{$names}->[0],$hitvals{$names}->[2]),"\n";
 }
 
 
