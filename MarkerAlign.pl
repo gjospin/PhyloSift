@@ -22,6 +22,8 @@ use warnings;
 use strict;
 use Getopt::Long;
 use Bio::AlignIO;
+use Bio::SearchIO;
+use Bio::SeqIO;
 #use Parallel::ForkManager;
 
 
@@ -74,14 +76,22 @@ foreach my $marker (@markers){
 #    $pm->start and next;
     $index++;
     if(!-e "$blastDir/$marker.candidate" ){
-	print STDERR "Couldn't find $blastDir/$marker.candidate";
+	print STDERR "Couldn't find $blastDir/$marker.candidate\n";
 	next;
     }if(-s "$blastDir/$marker.candidate" == 0){
 	print STDERR "WARNING : the candidate file for $marker is empty\n";
 	delete $markers[$index];
 	next;
     }
-    
+
+    #Running hmmsearch for the candidates against the HMM profile for the marker
+#    `hmmsearch $workingDir/markers/$marker.hmm`;
+
+    # aligning the candidates to each other using muscle
+#    `muscle -in $blastDir/$marker.candidate -out $alignDir/$marker.candidate.aln`;
+    #aligning the candidate alignment to the reference alignments using muscle
+#    `muscle -profile -in1 $workingDir/markers/$marker.trimfinal -in2 $alignDir/$marker.candidate.aln -out $alignDir/$marker.muscle.fasta`;
+
     #converting the marker's reference alignments from Fasta to Stockholm (required by Hmmer3)
     `fasta2stockholm.pl $workingDir/markers/$marker.trimfinal > $alignDir/$marker.seed.stock`;
 
@@ -90,8 +100,47 @@ foreach my $marker (@markers){
 	`hmmbuild $alignDir/$marker.stock.hmm $alignDir/$marker.seed.stock`;
     }
 
+    #Running hmmsearch for the candidates against the HMM profile for the marker
+    `hmmsearch -E 0.1 --tblout $alignDir/$marker.hmmsearch.tblout $alignDir/$marker.stock.hmm $blastDir/$marker.candidate > $alignDir/$marker.hmmsearch.out`;
+    my %hmmHits=();
+    open(tbloutIN,"$alignDir/$marker.hmmsearch.tblout");
+    open(tblOUT,">>$alignDir/test.tblout");
+    while(<tbloutIN>){
+	chomp($_);
+	if($_ =~ m/^(\S+)\s+-\s+(\S+)\s+-\s+(\S+)\s+(\S)/){
+	    print tblOUT "HIT : $1\tEVAL : $3\n";
+	    $hmmHits{$1}=1;
+	}
+    }
+    close(tblOUT);
+    close(tbloutIN);
+
+    #reading the Hmmsearch output file
+    #my $alnIO = Bio::AlignIO->new(-format => "fasta", -file=>">$alignDir/$marker.newaln.faa");
+
+#    my $hmmsearchOUT = new Bio::SearchIO->new(-format => 'hmmer', -file => "$alignDir/$marker.hmmsearch.out");
+#    while(my $result = $hmmsearchOUT->next_hit){
+#	while( my $hit=$result->next_hit){
+#	    while(my $hsp = $hit->next_hsp){
+#		my $aln = $hsp->get_aln;
+#		my $alnIO = Bio::AlignIO->new(-format => "fasta", -file =>">$alignDir/$marker.newaln.faa");
+#		$alnIO->write_aln($aln);
+#	    }
+
+#	}
+
+#    }
+    open(newCandidate,">$alignDir/$marker.newCandidate");
+    my $seqin = new Bio::SeqIO('-file'=>"$blastDir/$marker.candidate");
+    while(my $sequence = $seqin->next_seq){
+	if(exists $hmmHits{$sequence->id}){
+	    print newCandidate ">".$sequence->id."\n".$sequence->seq."\n";
+	}
+    }
+    close(newCandidate);
+
     #Align the hits to the reference alignment using Hmmer3
-    `hmmalign --outformat afa -o $alignDir/$marker.aln_hmmer3.fasta --mapali $alignDir/$marker.seed.stock $alignDir/$marker.stock.hmm $blastDir/$marker.candidate`;
+    `hmmalign --outformat afa -o $alignDir/$marker.aln_hmmer3.fasta --mapali $alignDir/$marker.seed.stock $alignDir/$marker.stock.hmm $alignDir/$marker.newCandidate`;
 
     #trimming the alignment
     
