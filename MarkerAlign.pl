@@ -51,6 +51,9 @@ my $fileDir = "$tempDir/$fileName";
 my $blastDir = "$fileDir/Blast_run";
 my $alignDir = "$fileDir/alignments";
 
+# markers with less than this fraction aligning to the model will be discarded
+my $alnLengthCutoff = 0.4;
+
 my @markers = ();
 #reading the list of markers
 open(markersIN,"$markersFile") or die "Couldn't open the markers file\n";
@@ -196,7 +199,7 @@ foreach my $marker (@markers){
 		$newSeq =~ s/\./-/g;
 		my $gapCount=0;
 		$gapCount++ while $newSeq =~ m/-/g;
-		next if $collen == $gapCount;
+		next if ($gapCount / $collen > 1-$alnLengthCutoff);
 		my $newIDs = $seq->id;
 		#subsitute all the non letter or number characters into _ in the IDs to avoid parsing issues in tree viewing programs or others
 		$newIDs =~ s/[^\w\d]/_/g;
