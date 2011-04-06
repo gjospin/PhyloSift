@@ -8,7 +8,7 @@
 #
 # output : An alignment file for each marker listed in the input file
 #
-# Option : -threaeded = #    Runs Hmmalign using multiple processors.
+# Option : -threaded = #    Runs Hmmalign using multiple processors.
 #
 #
 #
@@ -52,7 +52,7 @@ my $blastDir = "$fileDir/Blast_run";
 my $alignDir = "$fileDir/alignments";
 
 # markers with less than this fraction aligning to the model will be discarded
-my $alnLengthCutoff = 0.4;
+my $alnLengthCutoff = 0.3;
 
 my @markers = ();
 #reading the list of markers
@@ -106,13 +106,25 @@ foreach my $marker (@markers){
     #Running hmmsearch for the candidates against the HMM profile for the marker
     `hmmsearch -E 0.1 --tblout $alignDir/$marker.hmmsearch.tblout $alignDir/$marker.stock.hmm $blastDir/$marker.candidate > $alignDir/$marker.hmmsearch.out`;
     my %hmmHits=();
+    my %hmmScores=();
     open(tbloutIN,"$alignDir/$marker.hmmsearch.tblout");
     open(tblOUT,">>$alignDir/test.tblout");
     while(<tbloutIN>){
 	chomp($_);
-	if($_ =~ m/^(\S+)\s+-\s+(\S+)\s+-\s+(\S+)\s+(\S)/){
+	if($_ =~ m/^(\S+)\s+-\s+(\S+)\s+-\s+(\S+)\s+(\S+)/){
 	    print tblOUT "HIT : $1\tEVAL : $3\n";
-	    $hmmHits{$1}=1;
+		my $hitname = $1;
+		my $basehitname = $1;
+		my $hitscore = $4;
+		# in case we're using 6-frame translation
+		$basehitname =~ s/_[fr][123]$//g;
+		if(!defined($hmmScores{$basehitname}) || $hmmScores{$basehitname} < $hitscore ){
+			$hmmScores{$basehitname}=$hitscore;
+			$hmmHits{$basehitname}=$hitname;
+			print STDERR "Marker $marker : Adding $basehitname for $hitname with score $hitscore\n";
+		}else{
+			print STDERR "Skipping $hitname because it's low scoring\n";
+		}
 	}
     }
     close(tblOUT);
@@ -136,8 +148,13 @@ foreach my $marker (@markers){
     open(newCandidate,">$alignDir/$marker.newCandidate");
     my $seqin = new Bio::SeqIO('-file'=>"$blastDir/$marker.candidate");
     while(my $sequence = $seqin->next_seq){
-	if(exists $hmmHits{$sequence->id}){
+	my $baseid = $sequence->id;
+	$baseid =~ s/_[fr][123]$//g;
+	if(exists $hmmHits{$baseid} && $hmmHits{$baseid} eq $sequence->id){
 	    print newCandidate ">".$sequence->id."\n".$sequence->seq."\n";
+	}else{
+		print STDERR "skipping baseid $baseid seqid ".$sequence->id."\n";
+		print STDERR $hmmHits{$baseid}." was the top hit\n" if(exists $hmmHits{$baseid});
 	}
     }
     close(newCandidate);
