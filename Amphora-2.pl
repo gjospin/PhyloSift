@@ -33,6 +33,10 @@ GetOptions("threaded=i" => \$threadNum,
 	   "f" => \$force, #overrides a previous run otherwise stop
     ) || die $usage;
 
+
+my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst)=localtime(time);
+printf STDERR  "START : %4d-%02d-%02d %02d:%02d:%02d\n",$year+1900,$mon+1,$mday,$hour,$min,$sec;
+
 #euk, bac and arc represent which markers to run depending on their domain - run all by default
 #custom overrides the 3 previous options (currently  only read the custom marker list)
 
@@ -74,7 +78,7 @@ my $fileDir = "$tempDir/$fileName";
 
 #remove the directory from a previous run
 if($force){
-    print "deleting an old run\n";
+    print STDERR "deleting an old run\n";
     `rm -rf $fileDir`;
 }elsif(-e "$fileDir"){
     print STDERR "A previous run was found using the same file name aborting the current run\n";
@@ -114,13 +118,22 @@ if($custom ne ""){
 #run Blast
 `run_blast.pl --threaded=$threadNum $fileDir/markers.list $readsFile`;
 
+($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst)=localtime(time);
+printf STDERR "Before Alignments for Markers %4d-%02d-%02d %02d:%02d:%02d\n",$year+1900,$mon+1,$mday,$hour,$min,$sec;
 #Align Markers
 `MarkerAlign.pl --threaded=$threadNum $fileDir/markers.list $readsFile`;
+($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst)=localtime(time);
+printf STDERR "After Alignments %4d-%02d-%02d %02d:%02d:%02d\n",$year+1900,$mon+1,$mday,$hour,$min,$sec;
+
 
 # Run Pplacer
-`Run_Pplacer.pl --threaded=$threadNum $fileDir/markers.list $readsFile`
+`Run_Pplacer.pl --threaded=$threadNum $fileDir/markers.list $readsFile`;
+($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst)=localtime(time);
+printf STDERR "After PPlacer %4d-%02d-%02d %02d:%02d:%02d\n",$year+1900,$mon+1,$mday,$hour,$min,$sec;
 
-
+# Taxonomy assignemnts
+`/home/gjospin/Amphora-2/printneighbor.R $fileDir/trees/*.num.tre > $fileDir/neighbortaxa.txt`;
+`/home/gjospin/Amphora-2/summarize.pl $fileDir/neighbortaxa.txt > $fileDir/taxasummary.txt`;
 #TODO : 
 
 
