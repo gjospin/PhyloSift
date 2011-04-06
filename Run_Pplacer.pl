@@ -40,16 +40,16 @@ my $treeDir = "$fileDir/trees";
 
 
 my $markers=();
-
+print STDERR "checking\n";
 #reading the list of markers
 open(markersIN,"$markersFile") or die "Couldn't open the markers file\n";
 while(<markersIN>){
     chomp($_);
-    #print "\'$_\'\n";
+    next if(-z  "$alignDir/$_.aln_hmmer3.trim.fasta");
     push(@markers, $_);
 }
 close(markersIN);
-
+exit;
 
 #check if the temporary directory exists, if it doesn't create it.
 `mkdir $tempDir` unless (-e "$tempDir");
