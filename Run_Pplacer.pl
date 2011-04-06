@@ -45,7 +45,7 @@ print STDERR "checking\n";
 open(markersIN,"$markersFile") or die "Couldn't open the markers file\n";
 while(<markersIN>){
     chomp($_);
-    next if(-z  "$alignDir/$_.aln_hmmer3.trim.fasta");
+    next if(-z  "$alignDir/$_.aln_hmmer3.trim");
     push(@markers, $_);
 }
 close(markersIN);
