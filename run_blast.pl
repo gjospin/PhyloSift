@@ -53,7 +53,7 @@ my $tempDir = "$workingDir/Amph_temp";
 my $fileDir = "$tempDir/$fileName";
 my $blastDir = "$fileDir/Blast_run";
 
-$readsFile =~ m/(\w+)\.(\w+)$/;
+$readsFile =~ m/(\w+)\.?(\w*)$/;
 my $readsCore = $1;
 
 my @markers = ();
@@ -105,7 +105,8 @@ if(!-e "$blastDir/rep.faa.psq" ||  !-e "$blastDir/rep.faa.pin" || !-e "$blastDir
     `makeblastdb -in $blastDir/rep.faa -dbtype prot -title RepDB`;
 }
 
-
+my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst)=localtime(time);
+printf STDERR "BEFORE 6Frame translation %4d-%02d-%02d %02d:%02d:%02d\n",$year+1900,$mon+1,$mday,$hour,$min,$sec;
 #check if a 6frame translation is needed
 open(readCheck,$readsFile) or die "Couldn't open $readsFile\n";
 my ($totalCount,$seqCount) =0;
@@ -122,7 +123,11 @@ print STDERR "DNA % ".$seqCount/$totalCount."\n";
 if($seqCount/$totalCount >0.8){
     print STDERR "Doing a six frame translation\n";
     #found DNA, translate in 6 frames
+    ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst)=localtime(time);
+    printf STDERR "Before 6Frame %4d-%02d-%02d %02d:%02d:%02d\n",$year+1900,$mon+1,$mday,$hour,$min,$sec;
     `$workingDir/translateSixFrame $readsFile > $blastDir/$fileName-6frame`;
+    ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst)=localtime(time);
+    printf STDERR "After 6Frame %4d-%02d-%02d %02d:%02d:%02d\n",$year+1900,$mon+1,$mday,$hour,$min,$sec;
     if(!-e "$blastDir/$readsCore.blastp"){
 	`blastp -query $blastDir/$fileName-6frame -evalue 0.1 -num_descriptions 50000 -num_alignments 50000 -db $blastDir/rep.faa -out $blastDir/$readsCore.blastp -outfmt 0 -num_threads $threadNum`;
     }
@@ -133,10 +138,14 @@ if($seqCount/$totalCount >0.8){
 	`blastp -query $readsFile -evalue 0.1 -num_descriptions 50000 -num_alignments 50000 -db $blastDir/rep.faa -out $blastDir/$readsCore.blastp -outfmt 0 -num_threads $threadNum`;
     }
 }
-
+($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst)=localtime(time);
+printf STDERR "After Blast %4d-%02d-%02d %02d:%02d:%02d\n",$year+1900,$mon+1,$mday,$hour,$min,$sec;
 get_blast_hits();
 my (%hitsStart,%hitsEnd, %topscore)=();
 #my %topscore = ();
+($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst)=localtime(time);
+printf STDERR "After Blast Parse %4d-%02d-%02d %02d:%02d:%02d\n",$year+1900,$mon+1,$mday,$hour,$min,$sec;
+
 
 sub get_blast_hits{
     #parsing the blast file
@@ -160,6 +169,12 @@ sub get_blast_hits{
     my %hits = ();
     $in = new Bio::SearchIO('-format'=>'blast','-file' => "$blastDir/$readsCore.blastp");
     while (my $result = $in->next_result) {
+	#making sure the query_name isn't truncated by bioperl
+	my $hitName = $result->query_name;
+	if($result->query_description =~ m/(_[fr][012])$/ && $result->query_name !~m/(_[fr][012])$/){
+	    print STDERR "fixing the query_name in Blast parsing\n";
+	    $hitName.=$1;
+	}
 	#keep track of the top family and score for each query
 	my $topFamily="";
 	my $topScore=0;
@@ -177,10 +192,9 @@ sub get_blast_hits{
 		my @marker = split(/_/, $hit->name);
 		my $markerName = $marker[$#marker];
 		if($markerTopScores{$markerName} < $hit->bits + $bestHitsBitScoreRange){
-		    $hits{$result->query_name}{$markerHit}=1;
-
-		    $hitsStart{$result->query_name}{$markerName} = $hit->start('query');
-                    $hitsEnd{$result->query_name}{$markerName}=$hit->end('query');
+		    $hits{$hitName}{$markerHit}=1;
+		    $hitsStart{$hitName}{$markerName} = $hit->start('query');
+                    $hitsEnd{$hitName}{$markerName}=$hit->end('query');
 		}
 	    }else{
 		# running on reads
@@ -202,12 +216,10 @@ sub get_blast_hits{
 	}    
 	if(!$isolateMode){
 	    if($topFamily ne ""){
-		$topscore{$result->query_name}=$topScore;
-		#$markerHits{$topFamily}{$result->query_name}=1;
-		$hits{$result->query_name}{$topFamily}=1;
-		$hitsStart{$result->query_name}{$topFamily} = $topStart;
-		$hitsEnd{$result->query_name}{$topFamily}= $topEnd;
-		
+		$topscore{$hitName}=$topScore;
+		$hits{$hitName}{$topFamily}=1;
+		$hitsStart{$hitName}{$topFamily} = $topStart;
+		$hitsEnd{$hitName}{$topFamily}= $topEnd;
 #		print STDERR $result->query_name."\t".$topFamily."\ttopStart\t$topStart\ttopEnd\t$topEnd\n";
 	    }
 	}
