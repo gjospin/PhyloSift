@@ -49,7 +49,7 @@ while(<markersIN>){
     push(@markers, $_);
 }
 close(markersIN);
-exit;
+
 
 #check if the temporary directory exists, if it doesn't create it.
 `mkdir $tempDir` unless (-e "$tempDir");
