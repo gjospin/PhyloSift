@@ -20,11 +20,14 @@ $ perl Amphora-2.pl <options> <sequence_file>
    sequence_file needs to be in fasta format
 
 Options Available at this time : 
-   -custom <file>      Reads a custom marker list from a file otherwise use all the markers from the markers directory
-   -threaded <Number>  Runs Blast and Hmmer using the number of processors sepcified
-                       Runs 1 Pplacer per processor specified
-		       (DEFAULT : 1)
-   -clean              Cleans the temporary files created by Amphora (NOT YET IMPLEMENTED)
+   -custom <file>       Reads a custom marker list from a file otherwise use all the markers from the markers directory
+   --threaded=<Number>  Runs Blast and Hmmer using the number of processors sepcified
+                        Runs 1 Pplacer per processor specified
+		        (DEFAULT : 1)
+   -clean               Cleans the temporary files created by Amphora (NOT YET IMPLEMENTED)
+   -paired              Looks for 2 input files (paired end sequencing) in FastQ format.  
+   			Reversing the sequences for the second file listed 
+			and appending to the corresponding pair from the first file listed.
 
 Requirements
 ==========================================
