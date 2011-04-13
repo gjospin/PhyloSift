@@ -13,7 +13,9 @@ my $usage = qq~
 Usage: $0 <options> <reads_file>
 
 ~;
-
+my $usage2 = qq~
+Usage: $0 <options> -paired <reads_file_1> <reads_file_2>
+~;
 #euk,arc,bac,clean don't do anything at this time
 my $threadNum = 1;
 my $clean = 0;
@@ -22,13 +24,14 @@ my $arc = 0;
 my $bac = 0;
 my $custom = "";
 my $force=0;
-
+my $pair =0;
 
 GetOptions("threaded=i" => \$threadNum,
 	   "clean" => \$clean,
 	   "euk" => \$euk,
 	   "bac" => \$bac,
 	   "arc" => \$arc,
+	   "paired" => \$pair, # used for paired fastQ input split in 2 different files
 	   "custom=s" => \$custom, #need a file containing the marker names to use without extensions ** marker names shouldn't contain '_'
 	   "f" => \$force, #overrides a previous run otherwise stop
     ) || die $usage;
@@ -41,10 +44,17 @@ printf STDERR  "START : %4d-%02d-%02d %02d:%02d:%02d\n",$year+1900,$mon+1,$mday,
 #custom overrides the 3 previous options (currently  only read the custom marker list)
 
 #check for an input file on the command line
-die $usage unless ($ARGV[0]);
-
+my $readsFile_2="";
+if($pair ==0){
+    die $usage unless ($ARGV[0]);
+}else{
+    die $usage2 unless ($ARGV[0] && $ARGV[1]);
+    $readsFile_2= $ARGV[1];
+}
 my $workingDir = getcwd;
 my $readsFile = $ARGV[0];
+
+
 
 
 #check if the various programs used in this pipeline are installed on the machine
@@ -65,6 +75,15 @@ if(!-e "$workingDir/$readsFile" || !-e "$readsFile"){
 if(!-f "$workingDir/$readsFile" || !-e "$readsFile"){
     die "$readsFile is not a plain file, could be a directory\n";
 }
+#check the input file exists
+if(!-e "$workingDir/$readsFile_2" || !-e "$readsFile_2"){
+    die "$readsFile_2 was not found \n";
+}
+#check if the input file is a file and not a directory
+if(!-f "$workingDir/$readsFile_2" || !-e "$readsFile_2"){
+    die "$readsFile_2 is not a plain file, could be a directory\n";
+}
+
 
 #die "$readsFile was not found \n" unless (-e "$workingDir/$readsFile" || -e "$readsFile");
 #get the filename in case a filepath is included
@@ -116,7 +135,12 @@ if($custom ne ""){
 
 
 #run Blast
-`run_blast.pl --threaded=$threadNum $fileDir/markers.list $readsFile`;
+if($pair == 0){
+    `run_blast.pl --threaded=$threadNum $fileDir/markers.list $readsFile`;
+}elsif($pair == 1){
+    print STDERR "Starting run_blast.pl with 2 fastQ files\n";
+    `run_blast.pl --threaded=$threadNum -paired $fileDir/markers.list $readsFile $readsFile_2`;
+}
 
 ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst)=localtime(time);
 printf STDERR "Before Alignments for Markers %4d-%02d-%02d %02d:%02d:%02d\n",$year+1900,$mon+1,$mday,$hour,$min,$sec;
