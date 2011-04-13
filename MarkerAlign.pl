@@ -87,14 +87,6 @@ foreach my $marker (@markers){
 	next;
     }
 
-    #Running hmmsearch for the candidates against the HMM profile for the marker
-#    `hmmsearch $workingDir/markers/$marker.hmm`;
-
-    # aligning the candidates to each other using muscle
-#    `muscle -in $blastDir/$marker.candidate -out $alignDir/$marker.candidate.aln`;
-    #aligning the candidate alignment to the reference alignments using muscle
-#    `muscle -profile -in1 $workingDir/markers/$marker.trimfinal -in2 $alignDir/$marker.candidate.aln -out $alignDir/$marker.muscle.fasta`;
-
     #converting the marker's reference alignments from Fasta to Stockholm (required by Hmmer3)
     `fasta2stockholm.pl $workingDir/markers/$marker.trimfinal > $alignDir/$marker.seed.stock`;
 
@@ -109,26 +101,35 @@ foreach my $marker (@markers){
     my %hmmScores=();
     open(tbloutIN,"$alignDir/$marker.hmmsearch.tblout");
     open(tblOUT,">>$alignDir/test.tblout");
+    my $countHits = 0;
     while(<tbloutIN>){
 	chomp($_);
 	if($_ =~ m/^(\S+)\s+-\s+(\S+)\s+-\s+(\S+)\s+(\S+)/){
+	    $countHits++;
 	    print tblOUT "HIT : $1\tEVAL : $3\n";
-		my $hitname = $1;
-		my $basehitname = $1;
-		my $hitscore = $4;
-		# in case we're using 6-frame translation
-		$basehitname =~ s/_[fr][123]$//g;
-		if(!defined($hmmScores{$basehitname}) || $hmmScores{$basehitname} < $hitscore ){
-			$hmmScores{$basehitname}=$hitscore;
-			$hmmHits{$basehitname}=$hitname;
-			print STDERR "Marker $marker : Adding $basehitname for $hitname with score $hitscore\n";
-		}else{
-			print STDERR "Skipping $hitname because it's low scoring\n";
-		}
+	    my $hitname = $1;
+	    my $basehitname = $1;
+	    my $hitscore = $4;
+	    # in case we're using 6-frame translation
+	    $basehitname =~ s/_[fr][123]$//g;
+	    if(!defined($hmmScores{$basehitname}) || $hmmScores{$basehitname} < $hitscore ){
+		$hmmScores{$basehitname}=$hitscore;
+		$hmmHits{$basehitname}=$hitname;
+		print STDERR "Marker $marker : Adding $basehitname for $hitname with score $hitscore\n";
+	    }else{
+		print STDERR "Skipping $hitname because it's low scoring\n";
+	    }
 	}
     }
     close(tblOUT);
     close(tbloutIN);
+    
+    # added a check if the hmmsearch found hits to prevent the masking and aligning from failing
+    if($countHits==0){
+	print STDERR "WARNING : The hmmsearch for $marker found 0 hits, removing marker from the list to process\n";
+	delete $markers[$index];
+	next;
+    }
 
     #reading the Hmmsearch output file
     #my $alnIO = Bio::AlignIO->new(-format => "fasta", -file=>">$alignDir/$marker.newaln.faa");
@@ -153,8 +154,8 @@ foreach my $marker (@markers){
 	if(exists $hmmHits{$baseid} && $hmmHits{$baseid} eq $sequence->id){
 	    print newCandidate ">".$sequence->id."\n".$sequence->seq."\n";
 	}else{
-		print STDERR "skipping baseid $baseid seqid ".$sequence->id."\n";
-		print STDERR $hmmHits{$baseid}." was the top hit\n" if(exists $hmmHits{$baseid});
+	    print STDERR "skipping baseid $baseid seqid ".$sequence->id."\n";
+	    print STDERR $hmmHits{$baseid}." was the top hit\n" if(exists $hmmHits{$baseid});
 	}
     }
     close(newCandidate);

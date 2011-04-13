@@ -75,13 +75,15 @@ if(!-e "$workingDir/$readsFile" || !-e "$readsFile"){
 if(!-f "$workingDir/$readsFile" || !-e "$readsFile"){
     die "$readsFile is not a plain file, could be a directory\n";
 }
+if($pair !=0){
 #check the input file exists
-if(!-e "$workingDir/$readsFile_2" || !-e "$readsFile_2"){
-    die "$readsFile_2 was not found \n";
-}
+    if(!-e "$workingDir/$readsFile_2" || !-e "$readsFile_2"){
+	die "$readsFile_2 was not found\n";
+    }
 #check if the input file is a file and not a directory
-if(!-f "$workingDir/$readsFile_2" || !-e "$readsFile_2"){
-    die "$readsFile_2 is not a plain file, could be a directory\n";
+    if(!-f "$workingDir/$readsFile_2" || !-e "$readsFile_2"){
+	die "$readsFile_2 is not a plain file, could be a directory\n";
+    }
 }
 
 
