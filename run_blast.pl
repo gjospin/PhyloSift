@@ -306,10 +306,10 @@ sub get_blast_hits{
 	}
 	close(blastIN);
     }else{
-	foreach my $queryID (keys %topScore){
-	    $hits{$queryID}{$topScore{$queryID}}=1;
-	    $hitsStart{$queryID}{$topScore{$queryID}}=$topStart{$queryID};
-	    $hitsEnd{$queryID}{$topScore{$queryID}}=$topEnd{$queryID};
+	foreach my $queryID (keys %topFamily){
+	    $hits{$queryID}{$topFamily{$queryID}}=1;
+	    $hitsStart{$queryID}{$topFamily{$queryID}}=$topStart{$queryID};
+	    $hitsEnd{$queryID}{$topFamily{$queryID}}=$topEnd{$queryID};
 	}
     }
 
