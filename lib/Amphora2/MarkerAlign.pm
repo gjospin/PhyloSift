@@ -1,4 +1,5 @@
-#!/usr/bin/perl -w
+package Amphora2::MarkerAlign;
+
 use Cwd;
 use warnings;
 use strict;

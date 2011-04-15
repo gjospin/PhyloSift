@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+package Amphora2::Summarize;
 
 use warnings;
 use strict;

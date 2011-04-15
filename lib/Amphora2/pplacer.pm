@@ -1,4 +1,4 @@
-#!/usr/bin/perl -w
+package Amphora2::pplacer;
 
 use Cwd;
 use Getopt::Long;

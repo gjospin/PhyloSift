@@ -10,7 +10,7 @@ use Cwd;
 use File::Basename;
 use Amphora2::Utilities;
 use Amphora2::MarkerAlign;
-use Amphora2::blast;
+use Amphora2::blast qw(RunBlast);
 use Amphora2::pplacer;
 use Amphora2::Summarize;
 

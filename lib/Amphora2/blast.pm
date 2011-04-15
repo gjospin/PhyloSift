@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+package Amphora2::blast;
 
 use warnings;
 use strict;
@@ -46,6 +46,25 @@ if you don't export anything, such as for a purely object-oriented module.
 
 =cut
 
+my $clean = 0; #option set up, but not used for later
+my $threadNum = 1; #default value runs on 1 processor only.
+my $isolateMode=0; # set to 1 if running on an isolate assembly instead of raw reads
+my $bestHitsBitScoreRange=30; # all hits with a bit score within this amount of the best will be used
+my $pair=0; #used if using paired FastQ files
+
+my $readsFile;
+my $markersFile;
+my %markerHits;
+my $position;
+my $fileName;
+my $workingDir;
+my $tempDir;
+my $fileDir;
+my $blastDir;
+my $readsCore;
+my @markers;
+my (%hitsStart,%hitsEnd, %topscore, %hits)=();
+
 sub RunBlast {
 
 	my $usage = qq{
@@ -58,11 +77,6 @@ sub RunBlast {
 
 	};
 
-	my $clean = 0; #option set up, but not used for later
-	my $threadNum = 1; #default value runs on 1 processor only.
-	my $isolateMode=0; # set to 1 if running on an isolate assembly instead of raw reads
-	my $bestHitsBitScoreRange=30; # all hits with a bit score within this amount of the best will be used
-	my $pair=0; #used if using paired FastQ files
 	GetOptions("threaded=i" => \$threadNum,
 		   "clean" => \$clean,
 		   "isolate" => \$isolateMode,
@@ -78,23 +92,23 @@ sub RunBlast {
 	    $readsFile_2 = $ARGV[2];
 	}
 	#set up filenames and directory variables
-	my $readsFile = $ARGV[1];
-	my $markersFile = $ARGV[0];
+	$readsFile = $ARGV[1];
+	$markersFile = $ARGV[0];
 
-	my %markerHits = ();
+	%markerHits = ();
 
-	my $position = rindex($readsFile,"/");
-	my $fileName = substr($readsFile,$position+1,length($readsFile)-$position-1);
+	$position = rindex($readsFile,"/");
+	$fileName = substr($readsFile,$position+1,length($readsFile)-$position-1);
 
-	my $workingDir = getcwd;
-	my $tempDir = "$workingDir/Amph_temp";
-	my $fileDir = "$tempDir/$fileName";
-	my $blastDir = "$fileDir/Blast_run";
+	$workingDir = getcwd;
+	$tempDir = "$workingDir/Amph_temp";
+	$fileDir = "$tempDir/$fileName";
+	$blastDir = "$fileDir/Blast_run";
 
 	$readsFile =~ m/(\w+)\.?(\w*)$/;
-	my $readsCore = $1;
+	$readsCore = $1;
 
-	my @markers = ();
+	@markers = ();
 	#reading the list of markers
 	open(markersIN,"$markersFile") or die "Couldn't open the markers file\n";
 	while(<markersIN>){
@@ -245,7 +259,6 @@ sub RunBlast {
 	($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst)=localtime(time);
 	printf STDERR "After Blast %4d-%02d-%02d %02d:%02d:%02d\n",$year+1900,$mon+1,$mday,$hour,$min,$sec;
 	get_blast_hits();
-	my (%hitsStart,%hitsEnd, %topscore, %hits)=();
 	#my %topscore = ();
 	($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst)=localtime(time);
 	printf STDERR "After Blast Parse %4d-%02d-%02d %02d:%02d:%02d\n",$year+1900,$mon+1,$mday,$hour,$min,$sec;
