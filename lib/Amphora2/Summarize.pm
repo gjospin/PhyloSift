@@ -32,6 +32,9 @@ if you don't export anything, such as for a purely object-oriented module.
 
 =cut
 
+my %nameidmap;
+my %idnamemap;
+
 sub summarize {
 	my $markerdir = "markers";
 	open( my $NAMETABLE, "$markerdir/name.table" );
@@ -43,8 +46,6 @@ sub summarize {
 	}
 
 	open( my $TAXIDS, "ncbi/names.dmp" );
-	my %nameidmap;
-	my %idnamemap;
 	while( my $line = <$TAXIDS> ){
 		chomp $line;
 		if(($line =~ /scientific name/) || ($line =~ /synonym/) || ($line =~ /misspelling/)){

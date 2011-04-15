@@ -3,6 +3,7 @@ package Amphora2::Utilities;
 use 5.006;
 use strict;
 use warnings;
+use Carp;
 
 =head1 NAME
 
@@ -46,19 +47,19 @@ returns 1 or 0 depending on success of failure.
 sub programChecks {
 	eval 'require Bio::Seq;';
 	if ($@) {
-	    print STDERR "Bioperl was NOT found\n";
-	    exit(1);
+	    carp "Bioperl was NOT found\n";
+	    return 1;
 	}
 
 
 	my $pplacercheck = `which pplacer`;
 	if($pplacercheck eq ""){
 	    #program not found return;
-	    exit(1);
-	    die("pplacer v1.1.alpha00 not found");
+	    carp("pplacer v1.1.alpha00 not found");
+	    return 1;
 	}elsif(`pplacer -help` !~ m/v1.1.alpha00/){
 	    # pplacer was found but the version doens't match the one tested with Amphora
-	    print STDERR "Warning : a different version of pplacer was found. Amphora-2 was tested with pplacer v1.1.alpha00\n";
+	    carp("Warning : a different version of pplacer was found. Amphora-2 was tested with pplacer v1.1.alpha00\n");
 	}else{
 	    #program found and the correct version is installed
 	}
@@ -66,11 +67,11 @@ sub programChecks {
 	my $hmmercheck = `which hmmalign`;
 	if($hmmercheck eq ""){
 	    #program not found return;
-	    exit(1);
-	    die("HMMER3 not found");
+	    carp("HMMER3 not found");
+	    return 1;
 	}elsif(`hmmalign -h` !~ m/HMMER 3.0rc1/){
 	    # pplacer was found but the version doens't match the one tested with Amphora
-	    print STDERR "Warning : a different version of HMMER was found. Amphora-2 was tested with HMMER 3.0rc1\n";
+	    carp "Warning : a different version of HMMER was found. Amphora-2 was tested with HMMER 3.0rc1\n";
 	}else{
 	    #program found and the correct version is installed
 	}
@@ -79,11 +80,11 @@ sub programChecks {
 	my $blastcheck = `which blastp`;
 	if($blastcheck eq ""){
 	    #program not found return;
-	    exit(1);
-	    die("Blast 2.2.24+ not found");
+	    carp("Blast 2.2.24+ not found");
+	    return 1;
 	}elsif(`blastp -help` !~ m/BLAST 2.2.24+/){
 	    # pplacer was found but the version doens't match the one tested with Amphora
-	    print STDERR "Warning : a different version of Blast was found. Amphora-2 was tested with BLAST 2.2.24+\n";
+	    carp "Warning : a different version of Blast was found. Amphora-2 was tested with BLAST 2.2.24+\n";
 	}else{
 	    #program found and the correct version is installed
 	}
@@ -96,6 +97,7 @@ Convert a bunch of fasta files to stockholm format
 =cut
 
 sub fasta2stockholm {
+	my $usage = "Usage: $0 <gapped FASTA alignment file(s)>\n";
 	my @arguments = shift;
 	my @argv;
 	while (@arguments) {
@@ -119,7 +121,7 @@ sub fasta2stockholm {
 	    while (<FASTA>) {
 		if (/^\s*>\s*(\S+)/) {
 		    $name = $1;
-		    die "Duplicate name: $name" if defined $seq{$name};
+		    croak "Duplicate name: $name" if defined $seq{$name};
 		    push @name, $name;
 		} else {
 		    if (/\S/ && !defined $name) {
@@ -138,7 +140,7 @@ sub fasta2stockholm {
 	    foreach my $name (@name) {
 		my $l = length $seq{$name};
 		if (defined $length) {
-		    die "Sequences not all same length ($lname is $length, $name is $l)" unless $length == $l;
+		    croak "Sequences not all same length ($lname is $length, $name is $l)" unless $length == $l;
 		} else {
 		    $length = length $seq{$name};
 		    $lname = $name;
@@ -200,7 +202,7 @@ automatically be notified of progress on your bug as I make changes.
 
 You can find documentation for this module with the perldoc command.
 
-    perldoc Amphora2::Amphora2
+    perldoc Amphora2::Utilities
 
 
 You can also look for information at:
@@ -242,4 +244,4 @@ See http://dev.perl.org/licenses/ for more information.
 
 =cut
 
-1; # End of Amphora2::Amphora2
+1; # End of Amphora2::Utilities

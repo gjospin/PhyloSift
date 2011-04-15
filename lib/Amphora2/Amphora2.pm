@@ -8,6 +8,11 @@ use Bio::SeqIO;
 use Getopt::Long;
 use Cwd;
 use File::Basename;
+use Amphora2::Utilities;
+use Amphora2::MarkerAlign;
+use Amphora2::blast;
+use Amphora2::pplacer;
+use Amphora2::Summarize;
 
 =head1 NAME
 
@@ -97,7 +102,7 @@ sub run {
 
 
 	#check if the various programs used in this pipeline are installed on the machine
-	my $progCheck = system("progChecks.pl");
+	my $progCheck = Amphora2::Utilities::programChecks();
 	if($progCheck!=0){
 	    print STDERR "A required program was not found during the checks aborting\n";
 	    exit();
@@ -177,8 +182,10 @@ sub run {
 
 	#run Blast
 	if($pair == 0){
-	    `run_blast.pl --threaded=$threadNum $fileDir/markers.list $readsFile`;
+		Amphora2::blast::RunBlast();
+#	    `run_blast.pl --threaded=$threadNum $fileDir/markers.list $readsFile`;
 	}elsif($pair == 1){
+		Amphora2::blast::RunBlast();
 	    print STDERR "Starting run_blast.pl with 2 fastQ files\n";
 	    `run_blast.pl --threaded=$threadNum -paired $fileDir/markers.list $readsFile $readsFile_2`;
 	}
@@ -186,19 +193,22 @@ sub run {
 	($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst)=localtime(time);
 	printf STDERR "Before Alignments for Markers %4d-%02d-%02d %02d:%02d:%02d\n",$year+1900,$mon+1,$mday,$hour,$min,$sec;
 	#Align Markers
-	`MarkerAlign.pl --threaded=$threadNum $fileDir/markers.list $readsFile`;
+	Amphora2::MarkerAlign::MarkerAlign();
+#	`MarkerAlign.pl --threaded=$threadNum $fileDir/markers.list $readsFile`;
 	($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst)=localtime(time);
 	printf STDERR "After Alignments %4d-%02d-%02d %02d:%02d:%02d\n",$year+1900,$mon+1,$mday,$hour,$min,$sec;
 
 
 	# Run Pplacer
-	`Run_Pplacer.pl --threaded=$threadNum $fileDir/markers.list $readsFile`;
+	Amphora2::MarkerAlign::pplacer();
+#	`Run_Pplacer.pl --threaded=$threadNum $fileDir/markers.list $readsFile`;
 	($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst)=localtime(time);
 	printf STDERR "After PPlacer %4d-%02d-%02d %02d:%02d:%02d\n",$year+1900,$mon+1,$mday,$hour,$min,$sec;
 
 	# Taxonomy assignemnts
 	`/home/gjospin/Amphora-2/printneighbor.R $fileDir/trees/*.num.tre > $fileDir/neighbortaxa.txt`;
-	`/home/gjospin/Amphora-2/summarize.pl $fileDir/neighbortaxa.txt > $fileDir/taxasummary.txt`;
+	Amphora2::Summarize::summarize();
+#	`/home/gjospin/Amphora-2/summarize.pl $fileDir/neighbortaxa.txt > $fileDir/taxasummary.txt`;
 	#TODO : 
 
 
