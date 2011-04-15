@@ -6,7 +6,7 @@ use Getopt::Long;
 use Cwd;
 use Bio::SearchIO;
 use Bio::SeqIO;
-
+use Carp;
 
 =head1 NAME
 
@@ -67,6 +67,7 @@ my (%hitsStart,%hitsEnd, %topscore, %hits)=();
 
 sub RunBlast {
 
+	@ARGV = @_;
 	my $usage = qq{
 	Usage: $0 <options> <marker.list> <reads_file>
 
@@ -82,13 +83,13 @@ sub RunBlast {
 		   "isolate" => \$isolateMode,
 		   "bestHitBitScoreRange" => \$bestHitsBitScoreRange,
 		   "paired" => \$pair,
-	    ) || die $usage;
+	    ) || carp $usage;
 
 	my $readsFile_2 = "";
 	if($pair ==0){
-	    die $usage unless ($ARGV[0] && $ARGV[1]);
+	    croak $usage unless ($ARGV[0] && $ARGV[1]);
 	}elsif($pair != 0){
-	    die $usage2 unless ($ARGV[0] && $ARGV[1] && $ARGV[2]);
+	    croak $usage2 unless ($ARGV[0] && $ARGV[1] && $ARGV[2]);
 	    $readsFile_2 = $ARGV[2];
 	}
 	#set up filenames and directory variables

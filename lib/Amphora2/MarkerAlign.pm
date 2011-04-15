@@ -56,6 +56,7 @@ if you don't export anything, such as for a purely object-oriented module.
 
 sub MarkerAlign {
 
+	@ARGV = @_;
 	my $usage = qq{
 	Usage : $0 <options> <marker.list> <readsFile>
 

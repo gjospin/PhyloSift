@@ -182,7 +182,7 @@ sub run {
 
 	#run Blast
 	if($pair == 0){
-		Amphora2::blast::RunBlast();
+		Amphora2::blast::RunBlast( ("--threaded=$threadNum", "$fileDir/markers.list", "$readsFile" ) );
 #	    `run_blast.pl --threaded=$threadNum $fileDir/markers.list $readsFile`;
 	}elsif($pair == 1){
 		Amphora2::blast::RunBlast();
@@ -193,14 +193,14 @@ sub run {
 	($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst)=localtime(time);
 	printf STDERR "Before Alignments for Markers %4d-%02d-%02d %02d:%02d:%02d\n",$year+1900,$mon+1,$mday,$hour,$min,$sec;
 	#Align Markers
-	Amphora2::MarkerAlign::MarkerAlign();
+	Amphora2::MarkerAlign::MarkerAlign( ("--threaded=$threadNum", "$fileDir/markers.list", "$readsFile" ) );
 #	`MarkerAlign.pl --threaded=$threadNum $fileDir/markers.list $readsFile`;
 	($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst)=localtime(time);
 	printf STDERR "After Alignments %4d-%02d-%02d %02d:%02d:%02d\n",$year+1900,$mon+1,$mday,$hour,$min,$sec;
 
 
 	# Run Pplacer
-	Amphora2::MarkerAlign::pplacer();
+	Amphora2::MarkerAlign::pplacer( ("--threaded=$threadNum", "$fileDir/markers.list", "$readsFile") );
 #	`Run_Pplacer.pl --threaded=$threadNum $fileDir/markers.list $readsFile`;
 	($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst)=localtime(time);
 	printf STDERR "After PPlacer %4d-%02d-%02d %02d:%02d:%02d\n",$year+1900,$mon+1,$mday,$hour,$min,$sec;

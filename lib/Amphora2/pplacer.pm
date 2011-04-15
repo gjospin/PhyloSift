@@ -38,6 +38,8 @@ if you don't export anything, such as for a purely object-oriented module.
 =cut
 
 sub pplacer {
+
+	@ARGV = @_;
 	my $usage = qq~
 	Usage : $0 <options> <marker.list> <ReadsFile>
 
