@@ -250,136 +250,142 @@ sub RunBlast {
 	($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst)=localtime(time);
 	printf STDERR "After Blast Parse %4d-%02d-%02d %02d:%02d:%02d\n",$year+1900,$mon+1,$mday,$hour,$min,$sec;
 
+}
 
-	sub get_blast_hits{
-	    #parsing the blast file
-	    # parse once to get the top scores for each marker
-	    my %markerTopScores;
-	    my %topFamily=();
-	    my %topScore=();
-	    my %topStart=();
-	    my %topEnd=();
-	    open(blastIN,"$blastDir/$readsCore.blastp")or die "Couldn't open $blastDir/$readsCore.blastp\n";    
-	    while(<blastIN>){
-		chomp($_);
-		my @values = split(/\t/,$_);
-		my $query = $values[0];
-		my $subject = $values[1];
-		my $query_start = $values[6];
-		my $query_end = $values[7];
-		my $bitScore = $values[11];
-		my @marker = split(/\_/, $subject);
-		my $markerName = $marker[$#marker];
-		#parse once to get the top score for each marker (if isolate is ON, parse again to check the bitscore ranges)
-		if($isolateMode==1){
-		    # running on a genome assembly
-		    # allow only 1 marker per sequence (TOP hit)
-		    if( !defined($markerTopScores{$markerName}) || $markerTopScores{$markerName} < $bitScore ){
-			$markerTopScores{$markerName} = $bitScore;
-			$hitsStart{$query}{$markerName} = $query_start;
-			$hitsEnd{$query}{$markerName}=$query_end;
-		    }
-	#	}
-	#	if($isolateMode==1){
-		    # running on a genome assembly
-		    # allow more than one marker per sequence
-		    # require all hits to the marker to have bit score within some range of the top hit
-	#	    if($markerTopScores{$markerName} < $hit->bits + $bestHitsBitScoreRange){
-	#		$hits{$hitName}{$markerHit}=1;
-	#		$hitsStart{$hitName}{$markerName} = $query_start;
-	#		$hitsEnd{$hitName}{$markerName} = $query_end;
-	#	    }
-		}else{
-		    # running on reads
-		    # just do one marker per read
-		    if(!exists $topFamily{$query}){
-			$topFamily{$query}=$markerName;
-			$topStart{$query}=$query_start;
-			$topEnd{$query}=$query_end;
-			$topScore{$query}=$bitScore;
-		    }else{
-			#only keep the top hit
-			if($topScore{$query} <= $bitScore){
-			    $topFamily{$query}= $markerName;
-			    $topStart{$query}=$query_start;
-			    $topEnd{$query}=$query_end;
-			    $topScore{$query}=$bitScore;
-			}#else do nothing
-		    }#else do nothing
-		}
+=head2 get_blast_hits
+
+parse the blast file
+
+=cut
+
+
+sub get_blast_hits{
+    #parsing the blast file
+    # parse once to get the top scores for each marker
+    my %markerTopScores;
+    my %topFamily=();
+    my %topScore=();
+    my %topStart=();
+    my %topEnd=();
+    open(blastIN,"$blastDir/$readsCore.blastp")or die "Couldn't open $blastDir/$readsCore.blastp\n";    
+    while(<blastIN>){
+	chomp($_);
+	my @values = split(/\t/,$_);
+	my $query = $values[0];
+	my $subject = $values[1];
+	my $query_start = $values[6];
+	my $query_end = $values[7];
+	my $bitScore = $values[11];
+	my @marker = split(/\_/, $subject);
+	my $markerName = $marker[$#marker];
+	#parse once to get the top score for each marker (if isolate is ON, parse again to check the bitscore ranges)
+	if($isolateMode==1){
+	    # running on a genome assembly
+	    # allow only 1 marker per sequence (TOP hit)
+	    if( !defined($markerTopScores{$markerName}) || $markerTopScores{$markerName} < $bitScore ){
+		$markerTopScores{$markerName} = $bitScore;
+		$hitsStart{$query}{$markerName} = $query_start;
+		$hitsEnd{$query}{$markerName}=$query_end;
 	    }
-	    close(blastIN);
-	    if($isolateMode ==1){
-		# reading the output a second to check the bitscore ranges from the top score
-		open(blastIN,"$blastDir/$readsCore.blastp")or die "Couldn't open $blastDir/$readsCore.blastp\n";
-		# running on a genome assembly
-		# allow more than one marker per sequence
-		# require all hits to the marker to have bit score within some range of the top hit
-		while(<blastIN>){
-		    chomp($_);
-		    my @values = split(/\t/,$_);
-		    my $query = $values[0];
-		    my $subject = $values[1];
-		    my $query_start = $values[6];
-		    my $query_end = $values[7];
-		    my $bitScore = $values[11];
-		    my @marker = split(/\_/, $subject);
-		    my $markerName = $marker[$#marker];
-		    if($markerTopScores{$markerName} < $bitScore + $bestHitsBitScoreRange){
-			$hits{$query}{$markerName}=1;
-			$hitsStart{$query}{$markerName} = $query_start;
-			$hitsEnd{$query}{$markerName} = $query_end;
-		    }
-		}
-		close(blastIN);
+#	}
+#	if($isolateMode==1){
+	    # running on a genome assembly
+	    # allow more than one marker per sequence
+	    # require all hits to the marker to have bit score within some range of the top hit
+#	    if($markerTopScores{$markerName} < $hit->bits + $bestHitsBitScoreRange){
+#		$hits{$hitName}{$markerHit}=1;
+#		$hitsStart{$hitName}{$markerName} = $query_start;
+#		$hitsEnd{$hitName}{$markerName} = $query_end;
+#	    }
+	}else{
+	    # running on reads
+	    # just do one marker per read
+	    if(!exists $topFamily{$query}){
+		$topFamily{$query}=$markerName;
+		$topStart{$query}=$query_start;
+		$topEnd{$query}=$query_end;
+		$topScore{$query}=$bitScore;
 	    }else{
-		foreach my $queryID (keys %topFamily){
-		    $hits{$queryID}{$topFamily{$queryID}}=1;
-		    $hitsStart{$queryID}{$topFamily{$queryID}}=$topStart{$queryID};
-		    $hitsEnd{$queryID}{$topFamily{$queryID}}=$topEnd{$queryID};
-		}
-	    }
-
-	    my $seqin = new Bio::SeqIO('-file'=>"$readsFile");
-	    while (my $seq = $seqin->next_seq) {
-		if(exists $hits{$seq->id}){
-		    foreach my $markerHit(keys %{$hits{$seq->id}}){
-			#print STDERR $seq->id."\t".$seq->description."\n";
-			#checking if a 6frame translation was done and the suffix was appended to the description and not the sequence ID
-			my $newID = $seq->id;
-			if($seq->description =~ m/(_[fr][012])$/ && $seq->id !~m/(_[fr][012])$/){
-			    $newID.=$1;
-			}
-			#create a new string or append to an existing string for each marker
-
-			#pre-trimming for the query + 150 residues before and after (for very long queries)
-			my $start = $hitsStart{$seq->id}{$markerHit}-150;
-			if($start < 0){
-			    $start=0;
-			}
-			my $end = $hitsEnd{$seq->id}{$markerHit}+150;
-			my $seqLength = length($seq->seq);
-			if($end >= $seqLength){
-			    $end=$seqLength;
-			}
-			my $newSeq = substr($seq->seq,$start,$end-$start);
-			if(exists  $markerHits{$markerHit}){
-			    $markerHits{$markerHit} .= ">".$newID."\n".$newSeq."\n";
-			}else{
-			    $markerHits{$markerHit} = ">".$newID."\n".$newSeq."\n";
-			}
-		    }
-		}
-	    }
-	    #write the read+ref_seqs for each markers in the list
-	    foreach my $marker (keys %markerHits){
-		#writing the hits to the candidate file
-		open(fileOUT,">$blastDir/$marker.candidate")or die " Couldn't open $blastDir/$marker.candidate for writing\n";
-		print fileOUT $markerHits{$marker};
-		close(fileOUT);
+		#only keep the top hit
+		if($topScore{$query} <= $bitScore){
+		    $topFamily{$query}= $markerName;
+		    $topStart{$query}=$query_start;
+		    $topEnd{$query}=$query_end;
+		    $topScore{$query}=$bitScore;
+		}#else do nothing
+	    }#else do nothing
+	}
+    }
+    close(blastIN);
+    if($isolateMode ==1){
+	# reading the output a second to check the bitscore ranges from the top score
+	open(blastIN,"$blastDir/$readsCore.blastp")or die "Couldn't open $blastDir/$readsCore.blastp\n";
+	# running on a genome assembly
+	# allow more than one marker per sequence
+	# require all hits to the marker to have bit score within some range of the top hit
+	while(<blastIN>){
+	    chomp($_);
+	    my @values = split(/\t/,$_);
+	    my $query = $values[0];
+	    my $subject = $values[1];
+	    my $query_start = $values[6];
+	    my $query_end = $values[7];
+	    my $bitScore = $values[11];
+	    my @marker = split(/\_/, $subject);
+	    my $markerName = $marker[$#marker];
+	    if($markerTopScores{$markerName} < $bitScore + $bestHitsBitScoreRange){
+		$hits{$query}{$markerName}=1;
+		$hitsStart{$query}{$markerName} = $query_start;
+		$hitsEnd{$query}{$markerName} = $query_end;
 	    }
 	}
+	close(blastIN);
+    }else{
+	foreach my $queryID (keys %topFamily){
+	    $hits{$queryID}{$topFamily{$queryID}}=1;
+	    $hitsStart{$queryID}{$topFamily{$queryID}}=$topStart{$queryID};
+	    $hitsEnd{$queryID}{$topFamily{$queryID}}=$topEnd{$queryID};
+	}
+    }
 
+    my $seqin = new Bio::SeqIO('-file'=>"$readsFile");
+    while (my $seq = $seqin->next_seq) {
+	if(exists $hits{$seq->id}){
+	    foreach my $markerHit(keys %{$hits{$seq->id}}){
+		#print STDERR $seq->id."\t".$seq->description."\n";
+		#checking if a 6frame translation was done and the suffix was appended to the description and not the sequence ID
+		my $newID = $seq->id;
+		if($seq->description =~ m/(_[fr][012])$/ && $seq->id !~m/(_[fr][012])$/){
+		    $newID.=$1;
+		}
+		#create a new string or append to an existing string for each marker
+
+		#pre-trimming for the query + 150 residues before and after (for very long queries)
+		my $start = $hitsStart{$seq->id}{$markerHit}-150;
+		if($start < 0){
+		    $start=0;
+		}
+		my $end = $hitsEnd{$seq->id}{$markerHit}+150;
+		my $seqLength = length($seq->seq);
+		if($end >= $seqLength){
+		    $end=$seqLength;
+		}
+		my $newSeq = substr($seq->seq,$start,$end-$start);
+		if(exists  $markerHits{$markerHit}){
+		    $markerHits{$markerHit} .= ">".$newID."\n".$newSeq."\n";
+		}else{
+		    $markerHits{$markerHit} = ">".$newID."\n".$newSeq."\n";
+		}
+	    }
+	}
+    }
+    #write the read+ref_seqs for each markers in the list
+    foreach my $marker (keys %markerHits){
+	#writing the hits to the candidate file
+	open(fileOUT,">$blastDir/$marker.candidate")or die " Couldn't open $blastDir/$marker.candidate for writing\n";
+	print fileOUT $markerHits{$marker};
+	close(fileOUT);
+    }
 }
 
 =head1 AUTHOR

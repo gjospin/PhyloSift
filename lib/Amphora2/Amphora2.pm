@@ -112,11 +112,11 @@ sub run {
 
 
 	#check the input file exists
-	if(!-e "$workingDir/$readsFile" || !-e "$readsFile"){
+	if(!-e "$workingDir/$readsFile" && !-e "$readsFile"){
 	    die "$readsFile was not found \n";
 	}
 	#check if the input file is a file and not a directory
-	if(!-f "$workingDir/$readsFile" || !-e "$readsFile"){
+	if(!-f "$workingDir/$readsFile" && !-f "$readsFile"){
 	    die "$readsFile is not a plain file, could be a directory\n";
 	}
 	if($pair !=0){

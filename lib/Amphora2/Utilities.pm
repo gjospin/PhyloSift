@@ -88,6 +88,7 @@ sub programChecks {
 	}else{
 	    #program found and the correct version is installed
 	}
+	return 0;
 }
 
 =head2 fasta2stockholm
