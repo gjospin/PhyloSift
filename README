@@ -53,33 +53,44 @@ Requirements
     > install.packages("ape", repos="http://cran.r-project.org")
 
 
-**** OLD README ****
+INSTALLATION
+
+To install this module, run the following commands:
+
+	perl Makefile.PL
+	make
+	make test
+	make install
+
+SUPPORT AND DOCUMENTATION
+
+After installing, you can find documentation for this module with the
+perldoc command.
+
+    perldoc Amphora2::Amphora2
+
+You can also look for information at:
+
+    RT, CPAN's request tracker (report bugs here)
+        http://rt.cpan.org/NoAuth/Bugs.html?Dist=Amphora2-Amphora2
+
+    AnnoCPAN, Annotated CPAN documentation
+        http://annocpan.org/dist/Amphora2-Amphora2
+
+    CPAN Ratings
+        http://cpanratings.perl.org/d/Amphora2-Amphora2
+
+    Search CPAN
+        http://search.cpan.org/dist/Amphora2-Amphora2/
 
 
-CITATION
-==============================================================
-Please cite AMPHORA as: Martin Wu and Jonathan A Eisen. A simple, fast, and accurate method of phylogenomic inference Genome Biology 2008, 9:R151
+LICENSE AND COPYRIGHT
 
-SYSTEM REQUIREMENT
-============================================================== 
-Linux OS (kernel version 2.6 or later)
+Copyright (C) 2011 Aaron Darling
 
-The following software is required by the AMPHORA package. They need to be downloaded and installed separately from AMPHORA. 
-1. Perl 5.8.8 or later (www.perl.org) 
-2. Bioperl core package 1.5.2 or later  (www.bioperl.org) 
-3. HMMER (hmmer.janelia.org) 
-4. BLAST ()
+This program is free software; you can redistribute it and/or modify it
+under the terms of either: the GNU General Public License as published
+by the Free Software Foundation; or the Artistic License.
 
-The following software is included in the AMPHORA distribution. Their source codes have been slightly modified to suit the needs of AMPHORA. 
-1. seqboot (evolution.genetics.washington.edu/phylip) 
-2. quicktree (www.sanger.ac.uk/Software/analysis/quicktree) 
-3. raxml (icwww.epfl.ch/~stamatak/index-Dateien/Page443.htm)
+See http://dev.perl.org/licenses/ for more information.
 
-LICENSE
-==============================================================
-AMPHORA Copyright 2008 by Martin Wu
-
-AMPHORA is free software: you may redistribute it and/or modify its under the terms of the GNU General Public License as published by the Free Software Foundation; either version 2 of the License, or any later version.
-
-AMPHORA is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details 
-(http://www.gnu.org/licenses/).
