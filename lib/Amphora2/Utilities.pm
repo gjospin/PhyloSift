@@ -185,6 +185,7 @@ sub makeNameTable {
 =head1 AUTHOR
 
 Aaron Darling, C<< <aarondarling at ucdavis.edu> >>
+Guillaume Jospin, C<< <gjospin at ucdavis.edu> >>
 
 =head1 BUGS
 

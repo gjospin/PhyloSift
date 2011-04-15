@@ -40,11 +40,11 @@ if you don't export anything, such as for a purely object-oriented module.
 
 =head1 SUBROUTINES/METHODS
 
-=head2 function1
+=head2 run
 
 =cut
 
-sub Amphora2 {
+sub run {
 
 	#message to output if the script isn't called properly
 	my $usage = qq~
@@ -229,6 +229,7 @@ sub readAmphora2Config {
 =head1 AUTHOR
 
 Aaron Darling, C<< <aarondarling at ucdavis.edu> >>
+Guillaume Jospin, C<< <gjospin at ucdavis.edu> >>
 
 =head1 BUGS
 

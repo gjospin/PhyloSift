@@ -3,7 +3,7 @@
 use warnings;
 use strict;
 
-use Amphora2::Amphora2;
+use Amphora2::Amphora2 qw(Amphora2);
 
-Amphora2(@ARGV)
+Amphora2::Amphora2::run(@ARGV);
 
