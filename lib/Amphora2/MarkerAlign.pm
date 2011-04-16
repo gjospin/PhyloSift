@@ -118,15 +118,15 @@ sub MarkerAlign {
 	    }
 
 	    #converting the marker's reference alignments from Fasta to Stockholm (required by Hmmer3)
-	    `fasta2stockholm.pl $workingDir/markers/$marker.trimfinal > $alignDir/$marker.seed.stock`;
+		Amphora2::Utilities::fasta2stockholm( "$workingDir/markers/$marker.trimfinal", "$alignDir/$marker.seed.stock" );
 
 	    #build the Hmm for the marker using Hmmer3
 	    if(!-e "$alignDir/$marker.stock.hmm"){
-		`hmmbuild $alignDir/$marker.stock.hmm $alignDir/$marker.seed.stock`;
+		`$Amphora2::Utilities::hmmbuild $alignDir/$marker.stock.hmm $alignDir/$marker.seed.stock`;
 	    }
 
 	    #Running hmmsearch for the candidates against the HMM profile for the marker
-	    `hmmsearch -E 0.1 --tblout $alignDir/$marker.hmmsearch.tblout $alignDir/$marker.stock.hmm $blastDir/$marker.candidate > $alignDir/$marker.hmmsearch.out`;
+	    `$Amphora2::Utilities::hmmsearch -E 0.1 --tblout $alignDir/$marker.hmmsearch.tblout $alignDir/$marker.stock.hmm $blastDir/$marker.candidate > $alignDir/$marker.hmmsearch.out`;
 	    my %hmmHits=();
 	    my %hmmScores=();
 	    open(tbloutIN,"$alignDir/$marker.hmmsearch.tblout");
@@ -191,7 +191,7 @@ sub MarkerAlign {
 	    close(newCandidate);
 
 	    #Align the hits to the reference alignment using Hmmer3
-	    `hmmalign --outformat afa -o $alignDir/$marker.aln_hmmer3.fasta --mapali $alignDir/$marker.seed.stock $alignDir/$marker.stock.hmm $alignDir/$marker.newCandidate`;
+	    `$Amphora2::Utilities::hmmalign --outformat afa -o $alignDir/$marker.aln_hmmer3.fasta --mapali $alignDir/$marker.seed.stock $alignDir/$marker.stock.hmm $alignDir/$marker.newCandidate`;
 
 	    #trimming the alignment
 	    

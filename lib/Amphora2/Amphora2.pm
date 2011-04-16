@@ -200,15 +200,14 @@ sub run {
 
 
 	# Run Pplacer
-	Amphora2::MarkerAlign::pplacer( ("--threaded=$threadNum", "$fileDir/markers.list", "$readsFile") );
+	Amphora2::pplacer::pplacer( ("--threaded=$threadNum", "$fileDir/markers.list", "$readsFile") );
 #	`Run_Pplacer.pl --threaded=$threadNum $fileDir/markers.list $readsFile`;
 	($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst)=localtime(time);
 	printf STDERR "After PPlacer %4d-%02d-%02d %02d:%02d:%02d\n",$year+1900,$mon+1,$mday,$hour,$min,$sec;
 
 	# Taxonomy assignemnts
-	`/home/gjospin/Amphora-2/printneighbor.R $fileDir/trees/*.num.tre > $fileDir/neighbortaxa.txt`;
-	Amphora2::Summarize::summarize();
-#	`/home/gjospin/Amphora-2/summarize.pl $fileDir/neighbortaxa.txt > $fileDir/taxasummary.txt`;
+	`$Amphora2::Utilities::printneighbor $fileDir/trees/*.num.tre > $fileDir/neighbortaxa.txt`;
+	Amphora2::Summarize::summarize( ("$fileDir/neighbortaxa.txt") );
 	#TODO : 
 
 
@@ -232,7 +231,7 @@ sub readAmphora2Config {
 	# try first a config in the script dir, in case we're running from
 	# a dev directory.  then config in system dir, then user's home.
 	# let each one override its predecessor.
-	{ package Amphora2Settings; do "$scriptpath/amphora2rc"; do "$scriptpath/../etc/amphora2rc"; do "$ENV{HOME}/.amphora2rc" }
+	{ package Amphora2::Settings; do "$scriptpath/amphora2rc"; do "$scriptpath/../etc/amphora2rc"; do "$ENV{HOME}/.amphora2rc" }
 }
 
 

@@ -243,17 +243,17 @@ sub RunBlast {
 		#found DNA, translate in 6 frames
 		($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst)=localtime(time);
 		printf STDERR "Before 6Frame %4d-%02d-%02d %02d:%02d:%02d\n",$year+1900,$mon+1,$mday,$hour,$min,$sec;
-		`$workingDir/translateSixFrame $readsFile > $blastDir/$fileName-6frame`;   
+		`$Amphora2::Utilities::translateSixFrame $readsFile > $blastDir/$fileName-6frame`;   
 		($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst)=localtime(time);
 		printf STDERR "After 6Frame %4d-%02d-%02d %02d:%02d:%02d\n",$year+1900,$mon+1,$mday,$hour,$min,$sec;
 		if(!-e "$blastDir/$readsCore.blastp"){
-		    `blastp -query $blastDir/$fileName-6frame -evalue 0.1 -num_descriptions 50000 -num_alignments 50000 -db $blastDir/rep.faa -out $blastDir/$readsCore.blastp -outfmt 6 -num_threads $threadNum`;
+		    `$Amphora2::Utilities::blastp -query $blastDir/$fileName-6frame -evalue 0.1 -num_descriptions 50000 -num_alignments 50000 -db $blastDir/rep.faa -out $blastDir/$readsCore.blastp -outfmt 6 -num_threads $threadNum`;
 		}
 		$readsFile="$blastDir/$fileName-6frame";
 	    }else{
 	    #blast the reads to the DB
 		if(!-e "$blastDir/$readsCore.blastp"){
-		    `blastp -query $readsFile -evalue 0.1 -num_descriptions 50000 -num_alignments 50000 -db $blastDir/rep.faa -out $blastDir/$readsCore.blastp -outfmt 6 -num_threads $threadNum`;
+		    `$Amphora2::Utilities::blastp -query $readsFile -evalue 0.1 -num_descriptions 50000 -num_alignments 50000 -db $blastDir/rep.faa -out $blastDir/$readsCore.blastp -outfmt 6 -num_threads $threadNum`;
 		}
 	    }
 	}

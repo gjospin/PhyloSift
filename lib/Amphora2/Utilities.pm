@@ -44,6 +44,30 @@ returns 1 or 0 depending on success of failure.
 
 =cut
 
+sub get_program_path {
+	my $progname = shift;
+	my $progpath = shift;
+	my $progcheck = "";
+	if( defined($progpath) && $progpath ne "" && -x $progpath."/".$progname ){
+		$progcheck = $progpath."/".$progname;
+	}else{
+		$progcheck = `which $progname`;
+		chomp $progcheck;
+	}
+	return $progcheck;
+}
+
+# external programs used by Amphora2
+our $pplacer = "";
+our $hmmalign = "";
+our $hmmscan = "";
+our $hmmbuild = "";
+our $blastp = "";
+our $makeblastdb = "";
+our $translateSixFrame = "";
+our $printneighbor = "";
+our $Rscript = "";
+
 sub programChecks {
 	eval 'require Bio::Seq;';
 	if ($@) {
@@ -51,43 +75,64 @@ sub programChecks {
 	    return 1;
 	}
 
-
-	my $pplacercheck = `which pplacer`;
-	if($pplacercheck eq ""){
+	$pplacer = get_program_path("pplacer", $Amphora2Settings::pplacer_path);
+	if($pplacer eq ""){
 	    #program not found return;
 	    carp("pplacer v1.1.alpha00 not found");
 	    return 1;
-	}elsif(`pplacer -help` !~ m/v1.1.alpha00/){
+	}elsif(`$pplacer -help` !~ m/v1.1.alpha00/){
 	    # pplacer was found but the version doens't match the one tested with Amphora
 	    carp("Warning : a different version of pplacer was found. Amphora-2 was tested with pplacer v1.1.alpha00\n");
-	}else{
-	    #program found and the correct version is installed
 	}
 
-	my $hmmercheck = `which hmmalign`;
-	if($hmmercheck eq ""){
+	$hmmalign = get_program_path("hmmalign", $Amphora2Settings::hmmer3_path);
+	if($hmmalign eq ""){
 	    #program not found return;
 	    carp("HMMER3 not found");
 	    return 1;
-	}elsif(`hmmalign -h` !~ m/HMMER 3.0rc1/){
+	}elsif(`$hmmalign -h` !~ m/HMMER 3.0rc1/){
 	    # pplacer was found but the version doens't match the one tested with Amphora
 	    carp "Warning : a different version of HMMER was found. Amphora-2 was tested with HMMER 3.0rc1\n";
 	}else{
 	    #program found and the correct version is installed
 	}
+	$hmmscan = get_program_path("hmmscan", $Amphora2Settings::hmmer3_path);
+	$hmmbuild = get_program_path("hmmbuild", $Amphora2Settings::hmmer3_path);
 
 
-	my $blastcheck = `which blastp`;
-	if($blastcheck eq ""){
+	$blastp = get_program_path("blastp", $Amphora2Settings::blast_path);
+	if($blastp eq ""){
 	    #program not found return;
 	    carp("Blast 2.2.24+ not found");
 	    return 1;
-	}elsif(`blastp -help` !~ m/BLAST 2.2.24+/){
+	}elsif(`$blastp -help` !~ m/BLAST 2.2.24+/){
 	    # pplacer was found but the version doens't match the one tested with Amphora
 	    carp "Warning : a different version of Blast was found. Amphora-2 was tested with BLAST 2.2.24+\n";
 	}else{
 	    #program found and the correct version is installed
 	}
+
+	# use makeblastdb from the same location as blastall
+	$makeblastdb = get_program_path("makeblastdb", $Amphora2Settings::blast_path);
+	if($makeblastdb eq ""){
+	    carp("makeblastdb from Blast+ not found");
+	    return 1;
+	}
+
+	$translateSixFrame = get_program_path("translateSixFrame", $Amphora2Settings::a2_path);
+	if($translateSixFrame eq ""){
+	    carp("Amphora2 translateSixFrame program not found");
+	    return 1;
+	}
+
+	$printneighbor = get_program_path("printneighbor.R", $Amphora2::Settings::a2_path);
+	if($printneighbor eq ""){
+	    carp("Amphora2 printneighbor program not found");
+	    return 1;
+	}
+
+	$Rscript = get_program_path("Rscript", $Amphora2Settings::R_path);
+
 	return 0;
 }
 
@@ -98,22 +143,9 @@ Convert a bunch of fasta files to stockholm format
 =cut
 
 sub fasta2stockholm {
-	my $usage = "Usage: $0 <gapped FASTA alignment file(s)>\n";
-	my @arguments = shift;
-	my @argv;
-	while (@arguments) {
-	    my $arg = shift;
-	    if ($arg =~ /^-/) {
-		if ($arg eq "-h") { print $usage; exit }
-		else { die $usage }
-	    } else {
-		push @argv, $arg;
-	    }
-	}
-	push @argv, "-" unless @argv;
-
-	# loop through FASTA files
-	foreach my $fasta (@argv) {
+	my $fasta = shift;
+	my $output = shift;
+	open( STOCKOUT, ">$output" );
 	# read FASTA file
 	    my %seq;
 	    my @name;
@@ -149,12 +181,11 @@ sub fasta2stockholm {
 	    }
 
 	# print Stockholm output
-	    print "# STOCKHOLM 1.0\n";
+	    print STOCKOUT "# STOCKHOLM 1.0\n";
 	    foreach my $name (@name) {
-		print $name, " ", $seq{$name}, "\n";
+		print STOCKOUT $name, " ", $seq{$name}, "\n";
 	    }
-	    print "//\n";
-	}
+	    print STOCKOUT "//\n";
 }
 
 =head2 makeNameTable
