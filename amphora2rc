@@ -1,24 +1,25 @@
 #
 # configuration file for Amphora2
-# 
+# Global config lives in $PREFIX/etc/amphora2rc, e.g. /usr/local/etc/amphora2rc
+# User config lives in $HOME/.amphora2rc, e.g. /home/koadman/.amphora2rc
 #
 
 #
-# paths to various required programs
+# paths to directories containing various required programs
 # leave these blank to use whatever is found in $PATH
 #
-$hmmer3_path="";
-$blast_path="";
-$R_path="";
-$pplacer_path="";
-$a2_path="";
+# $hmmer3_path="";
+# $blast_path="";
+# $R_path="";
+# $pplacer_path="";
+# $a2_path="";
 
 #
 # paths to required datasets
 # leave these blank to use whatever is in $prefix/share/amphora2
 #
-$marker_path="";
-$ncbi_path="";
+# $marker_path="";
+# $ncbi_path="";
 
 # default settings for Amphora2 behavior
 #
