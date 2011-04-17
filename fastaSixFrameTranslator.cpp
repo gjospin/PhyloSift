@@ -14,7 +14,10 @@ using namespace genome;
 
 int main(int argc, char* argv[])
 {
-
+	if(argc < 2){
+		cerr << "Usage: fastaSixFrameTranslator <FastA file>\n";
+		return -1;
+	}
 	gnSequence gns;
 	try{
 		gns.LoadSource( argv[1] );
