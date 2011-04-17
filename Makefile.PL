@@ -5,12 +5,10 @@ use ExtUtils::MakeMaker;
 
 WriteMakefile(
     NAME                => 'Amphora2::Amphora2',
-    AUTHOR              => q{Aaron Darling <aarondarling@ucdavis.edu>},
+    AUTHOR              => q{Aaron Darling <aarondarling@ucdavis.edu> and Guillaume Jospin <gjospin@ucdavis.edu>},
     VERSION_FROM        => 'lib/Amphora2/Amphora2.pm',
     ABSTRACT_FROM       => 'lib/Amphora2/Amphora2.pm',
-    ($ExtUtils::MakeMaker::VERSION >= 6.3002
-      ? ('LICENSE'=> 'perl')
-      : ()),
+    LICENSE		=> 'GPL',
     PL_FILES            => {},
     PREREQ_PM => {
         'Test::More' => 0,
