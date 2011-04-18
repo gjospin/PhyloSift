@@ -253,7 +253,7 @@ sub MarkerAlign {
 			my $alignCount=0;
 			$alignCount++ while $newSeq =~ m/[^-]/g;
 			my $minRatio = min ($alignCount / $collen),($alignCount / $seqLen);
-			print STDERR $seq->id."\t$minRatio\t$alignCount\n";
+#			print STDERR $seq->id."\t$minRatio\t$alignCount\n";
 			next if ($minRatio < $alnLengthCutoff && $alignCount < $minAlignedResidues);
 			my $newIDs = $seq->id;
 			#subsitute all the non letter or number characters into _ in the IDs to avoid parsing issues in tree viewing programs or others
