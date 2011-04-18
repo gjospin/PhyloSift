@@ -84,7 +84,7 @@ sub MarkerAlign {
 
 	# markers with less than this fraction aligning to the model will be discarded
 	my $alnLengthCutoff = 0.4;
-	my $minAlignedResides = 20;
+	my $minAlignedResidues = 20;
 
 	my @markers = ();
 	#reading the list of markers
@@ -254,7 +254,7 @@ sub MarkerAlign {
 			$alignCount++ while $newSeq =~ m/[^-]/g;
 			my $minRatio = min ($alignCount / $collen),($alignCount / $seqLen);
 			print STDERR $seq->id."\t$minRatio\t$alignCount\n";
-			next if ($minRatio < $alnLengthCutoff || $alignCount < 20);
+			next if ($minRatio < $alnLengthCutoff && $alignCount < $minAlignedResidues);
 			my $newIDs = $seq->id;
 			#subsitute all the non letter or number characters into _ in the IDs to avoid parsing issues in tree viewing programs or others
 			$newIDs =~ s/[^\w\d]/_/g;
