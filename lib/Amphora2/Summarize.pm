@@ -36,73 +36,76 @@ my %nameidmap;
 my %idnamemap;
 
 sub summarize {
-	my $markerdir = "markers";
-	open( my $NAMETABLE, "$markerdir/name.table" );
-	my %namemap;
-	while( my $line = <$NAMETABLE> ){
-		chomp $line;
-		my @vals = split( /\t/, $line );
-		$namemap{$vals[0]}=homogenizeNameAlaDongying($vals[1]);
+    @ARGV = @_;
+    my $markerdir = "markers";
+    open( my $NAMETABLE, "$markerdir/name.table" );
+    my %namemap;
+    while( my $line = <$NAMETABLE> ){
+	chomp $line;
+	my @vals = split( /\t/, $line );
+	$namemap{$vals[0]}=homogenizeNameAlaDongying($vals[1]);
+    }
+    
+    open( my $TAXIDS, "ncbi/names.dmp" );
+    while( my $line = <$TAXIDS> ){
+	chomp $line;
+	if(($line =~ /scientific name/) || ($line =~ /synonym/) || ($line =~ /misspelling/)){
+	    my @vals = split( /\s+\|\s+/, $line );
+	    $nameidmap{homogenizeNameAlaDongying($vals[1])}=$vals[0];
+	    $idnamemap{$vals[0]}=homogenizeNameAlaDongying($vals[1]) if($line =~ /scientific name/);
 	}
-
-	open( my $TAXIDS, "ncbi/names.dmp" );
-	while( my $line = <$TAXIDS> ){
-		chomp $line;
-		if(($line =~ /scientific name/) || ($line =~ /synonym/) || ($line =~ /misspelling/)){
-			my @vals = split( /\s+\|\s+/, $line );
-			$nameidmap{homogenizeNameAlaDongying($vals[1])}=$vals[0];
-			$idnamemap{$vals[0]}=homogenizeNameAlaDongying($vals[1]) if($line =~ /scientific name/);
-		}
-	}
-
-	open( my $TAXSTRUCTURE, "ncbi/nodes.dmp" );
-	my %parent;
-	while( my $line = <$TAXSTRUCTURE> ){
-		chomp $line;
-		my @vals = split( /\s+\|\s+/, $line );
-		$parent{$vals[0]} = [$vals[1],$vals[2]];
-	}
-
-	my %hitcounter;
-	my $readcount = 0;
-	while( my $line = <> ){
-		chomp $line;
-		$line =~ s/\s+$//g;
-		$line =~ s/^\s+//g;
+    }
+    
+    open( my $TAXSTRUCTURE, "ncbi/nodes.dmp" );
+    my %parent;
+    while( my $line = <$TAXSTRUCTURE> ){
+	chomp $line;
+	my @vals = split( /\s+\|\s+/, $line );
+	$parent{$vals[0]} = [$vals[1],$vals[2]];
+    }
+    
+    my %hitcounter;
+    my $readcount = 0;
+    open(neighborIN, $ARGV[0]);
+    
+    while( my $line = <neighborIN> ){
+	chomp $line;
+	$line =~ s/\s+$//g;
+	$line =~ s/^\s+//g;
 	#	next unless length($line) > 12;
-		next unless( defined($namemap{$line}) );
-		my ($tid,$name) = dongyingFindNameInTaxaDb($namemap{$line});
-		if($tid eq "ERROR"){
-			print STDERR "Error! Could not find $line in name map\n" if length($line) > 12;
-			next;
-		}
+	next unless( defined($namemap{$line}) );
+	my ($tid,$name) = dongyingFindNameInTaxaDb($namemap{$line});
+	if($tid eq "ERROR"){
+	    print STDERR "Error! Could not find $line in name map\n" if length($line) > 12;
+	    next;
+	}
 	
 		#got the taxon id, now walk to root tallying everything we hit
-		next unless(defined($tid));
-		while( $tid != 1 ){
-			if(defined($hitcounter{$tid})){
-				$hitcounter{$tid}++;
-			}else{
-				$hitcounter{$tid}=1;
-			}
-			$tid = $parent{$tid}->[0];
-		}
-		$readcount++;
+	next unless(defined($tid));
+	while( $tid != 1 ){
+	    if(defined($hitcounter{$tid})){
+		$hitcounter{$tid}++;
+	    }else{
+		$hitcounter{$tid}=1;
+	    }
+	    $tid = $parent{$tid}->[0];
 	}
-
-	my %hitvals;
-	foreach my $tid(keys(%hitcounter)){
-		my $frac = sprintf("%.4f",$hitcounter{$tid}/$readcount);
+	$readcount++;
+    }
+    close(neighborIN);
+    my %hitvals;
+    foreach my $tid(keys(%hitcounter)){
+	my $frac = sprintf("%.4f",$hitcounter{$tid}/$readcount);
 	#	$hitvals{$idnamemap{$tid}} = $frac;
-	    $hitvals{$idnamemap{$tid}}=[$hitcounter{$tid},$parent{$tid}->[1],$frac];
-
-	}
-	my @sorted = reverse sort { $hitvals{$a}->[0] <=> $hitvals{$b}->[0] } keys %hitvals; 
-
-	foreach my $names (@sorted){
-	    print join("\t",$hitvals{$names}->[1],$names,$hitvals{$names}->[0],$hitvals{$names}->[2]),"\n";
-	}
-
+	$hitvals{$idnamemap{$tid}}=[$hitcounter{$tid},$parent{$tid}->[1],$frac];
+	
+    }
+    my @sorted = reverse sort { $hitvals{$a}->[0] <=> $hitvals{$b}->[0] } keys %hitvals; 
+    open(taxaOUT,">$ARGV[1]");
+    foreach my $names (@sorted){
+	print taxaOUT join("\t",$hitvals{$names}->[1],$names,$hitvals{$names}->[0],$hitvals{$names}->[2]),"\n";
+    }
+    close(taxaOUT);
 }
 
 =head2 dongyingFindNameInTaxaDb
@@ -110,36 +113,36 @@ sub summarize {
 =cut
 
 sub homogenizeNameAlaDongying {
-	my $inName = shift;
-	$inName=~s/^\s+//;
-	$inName=~s/\s+$//;
-	$inName=~s/\s+/ /g;
-	$inName=~s/,//g;
-	$inName=uc $inName;
-	return $inName;
+    my $inName = shift;
+    $inName=~s/^\s+//;
+    $inName=~s/\s+$//;
+    $inName=~s/\s+/ /g;
+    $inName=~s/,//g;
+    $inName=uc $inName;
+    return $inName;
 }
 
 =head2 dongyingFindNameInTaxaDb
-
+    
 =cut
-
+    
 sub dongyingFindNameInTaxaDb {
-	my $name = shift;
-	$name=~s/^\s+//;
-	my @t=split(/\s+/, $name);
-	my $input_name=join(" ",@t);
-	my $q_name=$input_name;
-	my $id="ERROR";
-	while(@t>=1){
-		$q_name=join(" ",@t);
-		$q_name=uc $q_name;
-		if(defined($nameidmap{$q_name})){
-			$id=$nameidmap{$q_name};
-			last;
-		}
-		pop @t;
+    my $name = shift;
+    $name=~s/^\s+//;
+    my @t=split(/\s+/, $name);
+    my $input_name=join(" ",@t);
+    my $q_name=$input_name;
+    my $id="ERROR";
+    while(@t>=1){
+	$q_name=join(" ",@t);
+	$q_name=uc $q_name;
+	if(defined($nameidmap{$q_name})){
+	    $id=$nameidmap{$q_name};
+	    last;
 	}
-	return ($id,$q_name);
+	pop @t;
+    }
+    return ($id,$q_name);
 }
 
 
