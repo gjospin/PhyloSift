@@ -53,11 +53,11 @@ sub run {
 
 	#message to output if the script isn't called properly
 	my $usage = qq~
-	Usage: $0 <options> <reads_file>
+	Usage: $0 <mode> <options> <reads_file>
 
 	~;
 	my $usage2 = qq~
-	Usage: $0 <options> -paired <reads_file_1> <reads_file_2>
+	Usage: $0 <mode> <options> -paired <reads_file_1> <reads_file_2>
 	~;
 	#euk,arc,bac,clean don't do anything at this time
 	my $threadNum = 1;
@@ -68,6 +68,9 @@ sub run {
 	my $custom = "";
 	my $force=0;
 	my $pair =0;
+	my $continue=0;
+	# Modes supported : all, blast, align, placer, summary
+	
 
 	GetOptions("threaded=i" => \$threadNum,
 		   "clean" => \$clean,
@@ -77,6 +80,8 @@ sub run {
 		   "paired" => \$pair, # used for paired fastQ input split in 2 different files
 		   "custom=s" => \$custom, #need a file containing the marker names to use without extensions ** marker names shouldn't contain '_'
 		   "f" => \$force, #overrides a previous run otherwise stop
+		   "continue" => \$continue, #when a mode different than all is used, continue the rest of Amphora after the section 
+                                             #specified by the mode is finished
 	    ) || die $usage;
 
 	readAmphora2Config();
@@ -84,21 +89,25 @@ sub run {
 	my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst)=localtime(time);
 	printf STDERR  "START : %4d-%02d-%02d %02d:%02d:%02d\n",$year+1900,$mon+1,$mday,$hour,$min,$sec;
 
+	#print STDERR "$ARGV[0]\t$ARGV[1]\n";
+        #exit;
+
+
 	#euk, bac and arc represent which markers to run depending on their domain - run all by default
 	#custom overrides the 3 previous options (currently  only read the custom marker list)
 
 	#check for an input file on the command line
 	my $readsFile_2="";
 	if($pair ==0){
-	    die $usage unless ($ARGV[0]);
+	    die $usage unless ($ARGV[0] && $ARGV[1]);
 	}else{
-	    die $usage2 unless ($ARGV[0] && $ARGV[1]);
-	    $readsFile_2= $ARGV[1];
+	    die $usage2 unless ($ARGV[0] && $ARGV[1] && $ARGV[2]);
+	    $readsFile_2= $ARGV[2];
 	}
 	my $workingDir = getcwd;
-	my $readsFile = $ARGV[0];
+	my $readsFile = $ARGV[1];
 
-
+	my $mode = $ARGV[0];
 
 
 	#check if the various programs used in this pipeline are installed on the machine
@@ -140,12 +149,18 @@ sub run {
 	my $tempDir = "$workingDir/Amph_temp";
 	#where everything will be written when running Amphora-2 using this file
 	my $fileDir = "$tempDir/$fileName";
+	# blast output directory
+	my $blastDir = "$fileDir/Blast_run";
+	# alignment output directory
+	my $alignDir = "$fileDir/alignments";
+	# tree output directory
+	my $treeDir = "$fileDir/trees";
 
 	#remove the directory from a previous run
-	if($force){
+	if($force && $mode eq 'all'){
 	    print STDERR "deleting an old run\n";
 	    `rm -rf $fileDir`;
-	}elsif(-e "$fileDir"){
+	}elsif(-e "$fileDir" && $mode eq 'all'){
 	    print STDERR "A previous run was found using the same file name aborting the current run\n";
 	    print STDERR "Either delete that run from $fileDir, or force overwrite with the -f command-line option\n";
 	    exit;
@@ -155,8 +170,11 @@ sub run {
 	`mkdir $tempDir` unless (-e "$tempDir");
 	#create a directory for the Reads file being processed.
 	`mkdir $fileDir` unless (-e "$fileDir");
+	`mkdir $blastDir` unless (-e "$blastDir");
+	`mkdir $alignDir` unless (-e "$alignDir");
+	`mkdir $treeDir` unless (-e "$treeDir");
 	#clear the directory of the fileName already exists
-	`rm -r $fileDir/*` unless (!-e "$fileDir/*");
+	#`rm -r $fileDir/*` unless (!-e "$fileDir/*");
 
 
 	#create a file with a list of markers called markers.list
@@ -164,8 +182,7 @@ sub run {
 
 	if($custom ne ""){
 	    #gather a custom list of makers
-	    `cp $custom $fileDir/markers.list`;
-	    
+	    `cp $custom $fileDir/markers.list`;    
 	}else{
 	    #gather all markers
 	    #LATER (maybe) : add differentiation for euk - bac - arc
@@ -179,45 +196,56 @@ sub run {
 	    close(markersOUT);    
 	}
 
-
-	#run Blast
-	if($pair == 0){
+	if($mode eq 'blast' || $mode eq 'all'){
+	    # clearing the blast directory
+	    `rm $blastDir/*` unless(!-e "$blastDir");
+		
+	    #run Blast
+	    if($pair == 0){
 		Amphora2::blast::RunBlast( ("--threaded=$threadNum", "$fileDir/markers.list", "$readsFile" ) );
-#	    `run_blast.pl --threaded=$threadNum $fileDir/markers.list $readsFile`;
-	}elsif($pair == 1){
+		#`run_blast.pl --threaded=$threadNum $fileDir/markers.list $readsFile`;
+	    }elsif($pair != 0){
 		Amphora2::blast::RunBlast();
-	    print STDERR "Starting run_blast.pl with 2 fastQ files\n";
-	    `run_blast.pl --threaded=$threadNum -paired $fileDir/markers.list $readsFile $readsFile_2`;
+		print STDERR "Starting run_blast.pl with 2 fastQ files\n";
+		#`run_blast.pl --threaded=$threadNum -paired $fileDir/markers.list $readsFile $readsFile_2`;
+	    }
+	    if($continue != 0){
+		$mode = 'align';
+	    }
+	}
+	if($mode eq 'align' || $mode eq 'all'){
+	    ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst)=localtime(time);
+	    printf STDERR "Before Alignments for Markers %4d-%02d-%02d %02d:%02d:%02d\n",$year+1900,$mon+1,$mday,$hour,$min,$sec;
+
+	    #clearing the alignment directory if needed
+	    `rm $alignDir/*` unless(!-e "$alignDir");
+
+	    #Align Markers
+	    Amphora2::MarkerAlign::MarkerAlign( ("--threaded=$threadNum", "$fileDir/markers.list", "$readsFile" ) );
+#	`MarkerAlign.pl --threaded=$threadNum $fileDir/markers.list $readsFile`;
+	    ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst)=localtime(time);
+	    printf STDERR "After Alignments %4d-%02d-%02d %02d:%02d:%02d\n",$year+1900,$mon+1,$mday,$hour,$min,$sec;
+	    if($continue != 0){
+		$mode = 'placer';
+	    }
+	}
+	if($mode eq 'placer' || $mode eq 'all'){
+	    `rm $treeDir/*` unless(!-e "$treeDir");
+	    # Run Pplacer
+	    Amphora2::pplacer::pplacer( ("--threaded=$threadNum", "$fileDir/markers.list", "$readsFile") );
+#	`Run_Pplacer.pl --threaded=$threadNum $fileDir/markers.list $readsFile`;
+	    ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst)=localtime(time);
+	    printf STDERR "After PPlacer %4d-%02d-%02d %02d:%02d:%02d\n",$year+1900,$mon+1,$mday,$hour,$min,$sec;
+	    if($continue != 0){
+		$mode = 'summary';
+	    }
 	}
 
-	($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst)=localtime(time);
-	printf STDERR "Before Alignments for Markers %4d-%02d-%02d %02d:%02d:%02d\n",$year+1900,$mon+1,$mday,$hour,$min,$sec;
-	#Align Markers
-	Amphora2::MarkerAlign::MarkerAlign( ("--threaded=$threadNum", "$fileDir/markers.list", "$readsFile" ) );
-#	`MarkerAlign.pl --threaded=$threadNum $fileDir/markers.list $readsFile`;
-	($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst)=localtime(time);
-	printf STDERR "After Alignments %4d-%02d-%02d %02d:%02d:%02d\n",$year+1900,$mon+1,$mday,$hour,$min,$sec;
-
-
-	# Run Pplacer
-	Amphora2::pplacer::pplacer( ("--threaded=$threadNum", "$fileDir/markers.list", "$readsFile") );
-#	`Run_Pplacer.pl --threaded=$threadNum $fileDir/markers.list $readsFile`;
-	($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst)=localtime(time);
-	printf STDERR "After PPlacer %4d-%02d-%02d %02d:%02d:%02d\n",$year+1900,$mon+1,$mday,$hour,$min,$sec;
-
-	# Taxonomy assignemnts
-	`$Amphora2::Utilities::printneighbor $fileDir/trees/*.num.tre > $fileDir/neighbortaxa.txt`;
-	Amphora2::Summarize::summarize( ("$fileDir/neighbortaxa.txt") );
-	#TODO : 
-
-
-	# transform the .place files into tree files.
-	# set  up alternate blast parameters if dealing with short reads (add an option or by default check the size)
-	# set up check points in case the pipeline stops
-	# add a summary file (number of hits per markers, total hits, total reads, Nucl Vs AA, time stamps for the various steps)
-	# allow for a parallel use (done for Pplacer using ForkManager, other parts are fast enough that it may not be needed)
-	# look into write my own blast parser and use -m6 instead of -m0 to save on temporary file sizes.  Had issues with bioperl and using the -m6 or -m7 formats from the newest blast.
-
+	if($mode eq 'summary' || $mode eq 'all'){
+	    # Taxonomy assignemnts
+	    `$Amphora2::Utilities::printneighbor $fileDir/trees/*.num.tre > $fileDir/neighbortaxa.txt`;
+	    Amphora2::Summarize::summarize( ("$fileDir/neighbortaxa.txt") );
+	}
 }
 
 =head2 function2

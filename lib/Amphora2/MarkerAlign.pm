@@ -7,6 +7,7 @@ use Getopt::Long;
 use Bio::AlignIO;
 use Bio::SearchIO;
 use Bio::SeqIO;
+use List::Util qw(min);
 #use Parallel::ForkManager;
 
 
@@ -82,7 +83,8 @@ sub MarkerAlign {
 	my $alignDir = "$fileDir/alignments";
 
 	# markers with less than this fraction aligning to the model will be discarded
-	my $alnLengthCutoff = 0.3;
+	my $alnLengthCutoff = 0.4;
+	my $minAlignedResidues = 20;
 
 	my @markers = ();
 	#reading the list of markers
@@ -242,12 +244,17 @@ sub MarkerAlign {
 		    if(!exists $referenceSeqs{$seq->id}){
 			# strip out all the columns that had a . (indicated by masqseq)
 			my $newSeq = $seq->seq();
+			my $seqLen= 0;
+			#sequence length before masking
+			$seqLen++ while $newSeq =~ m/[^-\.]/g;
 			$newSeq = substr($newSeq, $firstCol, $collen);
 			#change the remaining . into - for pplacer to not complain
 			$newSeq =~ s/\./-/g;
-			my $gapCount=0;
-			$gapCount++ while $newSeq =~ m/-/g;
-			next if ($gapCount / $collen > 1-$alnLengthCutoff);
+			my $alignCount=0;
+			$alignCount++ while $newSeq =~ m/[^-]/g;
+			my $minRatio = min ($alignCount / $collen),($alignCount / $seqLen);
+#			print STDERR $seq->id."\t$minRatio\t$alignCount\n";
+			next if ($minRatio < $alnLengthCutoff && $alignCount < $minAlignedResidues);
 			my $newIDs = $seq->id;
 			#subsitute all the non letter or number characters into _ in the IDs to avoid parsing issues in tree viewing programs or others
 			$newIDs =~ s/[^\w\d]/_/g;

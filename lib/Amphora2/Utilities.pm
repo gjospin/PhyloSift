@@ -60,7 +60,7 @@ sub get_program_path {
 # external programs used by Amphora2
 our $pplacer = "";
 our $hmmalign = "";
-our $hmmscan = "";
+our $hmmsearch = "";
 our $hmmbuild = "";
 our $blastp = "";
 our $makeblastdb = "";
@@ -96,7 +96,7 @@ sub programChecks {
 	}else{
 	    #program found and the correct version is installed
 	}
-	$hmmscan = get_program_path("hmmscan", $Amphora2Settings::hmmer3_path);
+	$hmmsearch = get_program_path("hmmsearch", $Amphora2Settings::hmmer3_path);
 	$hmmbuild = get_program_path("hmmbuild", $Amphora2Settings::hmmer3_path);
 
 
