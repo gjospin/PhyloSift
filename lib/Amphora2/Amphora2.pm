@@ -198,7 +198,7 @@ sub run {
 
 	if($mode eq 'blast' || $mode eq 'all'){
 	    # clearing the blast directory
-	    `rm $blastDir/*` unless(!-e "$blastDir");
+	    `rm $blastDir/*` if(<$blastDir/*>);
 		
 	    #run Blast
 	    if($pair == 0){
@@ -218,7 +218,7 @@ sub run {
 	    printf STDERR "Before Alignments for Markers %4d-%02d-%02d %02d:%02d:%02d\n",$year+1900,$mon+1,$mday,$hour,$min,$sec;
 
 	    #clearing the alignment directory if needed
-	    `rm $alignDir/*` unless(!-e "$alignDir");
+	    `rm $alignDir/*` if(<$alignDir/*>);
 
 	    #Align Markers
 	    Amphora2::MarkerAlign::MarkerAlign( ("--threaded=$threadNum", "$fileDir/markers.list", "$readsFile" ) );
@@ -230,7 +230,7 @@ sub run {
 	    }
 	}
 	if($mode eq 'placer' || $mode eq 'all'){
-	    `rm $treeDir/*` unless(!-e "$treeDir");
+	    `rm $treeDir/*` if (<$treeDir/*>);
 	    # Run Pplacer
 	    Amphora2::pplacer::pplacer( ("--threaded=$threadNum", "$fileDir/markers.list", "$readsFile") );
 #	`Run_Pplacer.pl --threaded=$threadNum $fileDir/markers.list $readsFile`;
