@@ -120,7 +120,7 @@ sub MarkerAlign {
 	    }
 
 	    #converting the marker's reference alignments from Fasta to Stockholm (required by Hmmer3)
-		Amphora2::Utilities::fasta2stockholm( "$workingDir/markers/$marker.trimfinal", "$alignDir/$marker.seed.stock" );
+		Amphora2::Utilities::fasta2stockholm( "$Amphora2::Utilities::marker_dir/$marker.trimfinal", "$alignDir/$marker.seed.stock" );
 
 	    #build the Hmm for the marker using Hmmer3
 	    if(!-e "$alignDir/$marker.stock.hmm"){
@@ -198,7 +198,7 @@ sub MarkerAlign {
 	    #trimming the alignment
 	    
 	    #find out all the indexes that have a . in the reference sequences
-	    my $originAli = new Bio::AlignIO(-file=>"$workingDir/markers/$marker.trimfinal", -format=>'fasta');
+	    my $originAli = new Bio::AlignIO(-file=>"$Amphora2::Utilities::marker_dir/$marker.trimfinal", -format=>'fasta');
 	    my %referenceSeqs = ();
 	   
 	    while(my $aln = $originAli->next_aln()){
