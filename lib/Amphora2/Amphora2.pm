@@ -118,7 +118,8 @@ sub run {
 	}elsif($progCheck==0){
 	    print STDERR "All systems are good to go, continuing the screening\n";
 	}
-
+	
+	Amphora2::Utilities::dataChecks();
 
 	#check the input file exists
 	if(!-e "$workingDir/$readsFile" && !-e "$readsFile"){
@@ -187,7 +188,7 @@ sub run {
 	    #gather all markers
 	    #LATER (maybe) : add differentiation for euk - bac - arc
 	    open(markersOUT,">$fileDir/markers.list");
-	    my @files = <$workingDir/markers/*.faa>;
+	    my @files = <$Amphora2::Utilities::marker_dir/*.faa>;
 	    foreach my $file (@files){
 		$file =~ m/\/(\w+).faa/;
 		push(@markers,$1);
