@@ -15,9 +15,20 @@ AMPHORA 2 has several new features over AMPHORA
 
 Usage
 ==========================================
-$ perl Amphora-2.pl <options> <sequence_file>
+$ perl Amphora-2.pl <Mode> <options> <sequence_file>
 
    sequence_file needs to be in fasta format
+
+$ perl Amphora-2.pl <Mode> <options> -paired <sequence_file_1> <sequence_file_2>
+
+   sequence_file_1 and _2 need to be in fastq format
+
+Mode : Only execute a specific step in the pipeline
+  all - execute all the steps
+  blast - only execute the blast + write candidate files
+  align - hmmsearch + hmmalign + trims + coverage filters
+  placer - run pplacer on the results from the align step
+  summary - run the taxonomy assignment steps
 
 Options Available at this time : 
    -custom <file>       Reads a custom marker list from a file otherwise use all the markers from the markers directory
@@ -28,6 +39,8 @@ Options Available at this time :
    -paired              Looks for 2 input files (paired end sequencing) in FastQ format.  
    			Reversing the sequences for the second file listed 
 			and appending to the corresponding pair from the first file listed.
+   -continue            Enables the pipeline to continue to subsequent steps when not using the 'all' mode
+			
 
 Requirements
 ==========================================
