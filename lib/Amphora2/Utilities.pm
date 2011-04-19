@@ -75,7 +75,7 @@ sub programChecks {
 	    return 1;
 	}
 
-	$pplacer = get_program_path("pplacer", $Amphora2Settings::pplacer_path);
+	$pplacer = get_program_path("pplacer", $Amphora2::Settings::pplacer_path);
 	if($pplacer eq ""){
 	    #program not found return;
 	    carp("pplacer v1.1.alpha00 not found");
@@ -85,7 +85,7 @@ sub programChecks {
 	    carp("Warning : a different version of pplacer was found. Amphora-2 was tested with pplacer v1.1.alpha00\n");
 	}
 
-	$hmmalign = get_program_path("hmmalign", $Amphora2Settings::hmmer3_path);
+	$hmmalign = get_program_path("hmmalign", $Amphora2::Settings::hmmer3_path);
 	if($hmmalign eq ""){
 	    #program not found return;
 	    carp("HMMER3 not found");
@@ -93,14 +93,12 @@ sub programChecks {
 	}elsif(`$hmmalign -h` !~ m/HMMER 3.0rc1/){
 	    # pplacer was found but the version doens't match the one tested with Amphora
 	    carp "Warning : a different version of HMMER was found. Amphora-2 was tested with HMMER 3.0rc1\n";
-	}else{
-	    #program found and the correct version is installed
 	}
-	$hmmsearch = get_program_path("hmmsearch", $Amphora2Settings::hmmer3_path);
-	$hmmbuild = get_program_path("hmmbuild", $Amphora2Settings::hmmer3_path);
+	$hmmsearch = get_program_path("hmmsearch", $Amphora2::Settings::hmmer3_path);
+	$hmmbuild = get_program_path("hmmbuild", $Amphora2::Settings::hmmer3_path);
 
 
-	$blastp = get_program_path("blastp", $Amphora2Settings::blast_path);
+	$blastp = get_program_path("blastp", $Amphora2::Settings::blast_path);
 	if($blastp eq ""){
 	    #program not found return;
 	    carp("Blast 2.2.24+ not found");
@@ -113,13 +111,13 @@ sub programChecks {
 	}
 
 	# use makeblastdb from the same location as blastall
-	$makeblastdb = get_program_path("makeblastdb", $Amphora2Settings::blast_path);
+	$makeblastdb = get_program_path("makeblastdb", $Amphora2::Settings::blast_path);
 	if($makeblastdb eq ""){
 	    carp("makeblastdb from Blast+ not found");
 	    return 1;
 	}
 
-	$translateSixFrame = get_program_path("translateSixFrame", $Amphora2Settings::a2_path);
+	$translateSixFrame = get_program_path("translateSixFrame", $Amphora2::Settings::a2_path);
 	if($translateSixFrame eq ""){
 	    carp("Amphora2 translateSixFrame program not found");
 	    return 1;
@@ -131,9 +129,71 @@ sub programChecks {
 	    return 1;
 	}
 
-	$Rscript = get_program_path("Rscript", $Amphora2Settings::R_path);
+	$Rscript = get_program_path("Rscript", $Amphora2::Settings::R_path);
+
+	#ensure we have a place to put any R packages that might need to be downloaded
+	my $amphora_r_lib_path = $ENV{"HOME"}."/.amphora2_rlibs";
+	`mkdir -p $amphora_r_lib_path`;
+	unless( $ENV{"R_LIBS_USER"}=~/amphora2/ ){
+		$ENV{"R_LIBS_USER"} .= ":$amphora_r_lib_path";
+	}
 
 	return 0;
+}
+
+
+=head2 dataChecks
+
+Check for requisite Amphora-2 marker datasets
+
+=cut
+
+our $marker_dir = "";
+our $ncbi_dir = "";
+
+sub get_data_path {
+	my $dataname = shift;
+	my $datapath = shift;
+	my $datacheck = "";
+	if( defined($datapath) && $datapath ne "" && -x $datapath."/".$dataname ){
+		$datacheck = $datapath."/".$dataname;
+	}else{
+		my $scriptpath = dirname($0);
+		$scriptpath =~ s/bin\/?$//g;
+		$datacheck = $scriptpath."/share/amphora2/".$dataname;
+		return $datacheck if ( -x $datacheck );
+		# if the system data dir doesn't exist, default to the user's home
+		$datacheck = $ENV{"HOME"}."/share/amphora2/".$dataname;
+	}
+	return $datacheck;
+}
+
+sub download_data {
+	my $url = shift;
+	my $destination = shift;
+	`mkdir -p $destination`;
+	# FIXME this is insecure!
+	`wget $url -O $destination/../amphora_data.tar.gz`;
+	`cd $destination/../ ; tar xzf amphora_data.tar.gz`;
+	`rm $destination/../amphora_data.tar.gz`;
+}
+
+my $marker_update_url = "http://edhar.genomecenter.ucdavis.edu/~mlangille/markers.tgz";
+my $ncbi_url = "http://edhar.genomecenter.ucdavis.edu/~koadman/ncbi.tgz";
+
+sub dataChecks {
+	$marker_dir = get_data_path( "markers", $Amphora2::Settings::marker_path );
+	unless( -x $marker_dir ){
+		warn "Unable to find marker data!\n";
+		warn "Downloading from $marker_update_url\n";
+		download_data( $marker_update_url, $marker_dir );
+	}
+	$ncbi_dir = get_data_path( "ncbi", $Amphora2::Settings::ncbi_path );
+	unless( -x $ncbi_dir ){
+		warn "Unable to find NCBI taxonomy data!\n";
+		warn "Downloading from $ncbi_url\n";
+		download_data( $ncbi_url, $ncbi_dir );
+	}
 }
 
 =head2 fasta2stockholm
@@ -170,20 +230,20 @@ sub fasta2stockholm {
 	# check all seqs are same length
 	    my $length;
 	    my $lname;
-	    foreach my $name (@name) {
-		my $l = length $seq{$name};
+	    foreach my $nname (@name) {
+		my $l = length $seq{$nname};
 		if (defined $length) {
-		    croak "Sequences not all same length ($lname is $length, $name is $l)" unless $length == $l;
+		    croak "Sequences not all same length ($lname is $length, $nname is $l)" unless $length == $l;
 		} else {
-		    $length = length $seq{$name};
-		    $lname = $name;
+		    $length = length $seq{$nname};
+		    $lname = $nname;
 		}
 	    }
 
 	# print Stockholm output
 	    print STOCKOUT "# STOCKHOLM 1.0\n";
-	    foreach my $name (@name) {
-		print STOCKOUT $name, " ", $seq{$name}, "\n";
+	    foreach my $nname (@name) {
+		print STOCKOUT $nname, " ", $seq{$nname}, "\n";
 	    }
 	    print STOCKOUT "//\n";
 }
@@ -195,26 +255,26 @@ Requires a marker directory as an argument
 
 =cut
 
-sub makeNameTable {
-
+sub readNameTable {
 	my $markerDir = shift;
-	`grep ">" $markerDir/*.ali > /tmp/amphora.name.table`;
-	`perl -p -i -e "s/.+\:\>//g" /tmp/amphora.name.table`;
+	my %result;
+	open(ALINAMES, "grep \">\" $markerDir/*.ali |");
+	`perl -p -i -e "" /tmp/amphora.name.table`;
 	open( NT, "/tmp/amphora.name.table" );
-	while( my $line = <NT> ){
+	while( my $line = <ALINAMES> ){
+		$line =~ s/.+\:\>//g;
 		my $commonName;
 		if($line =~ /\{(.+)\}.+\[.+\]/){
 			$commonName = $1;
-	#		$commonName =~ s/[\.\,\/\\\(\)\:\;\'\"\{\}\$\%\^\&\*\+\-\=\s]/_/g;
 		}elsif($line =~ /\[(.+)\]$/){
 			$commonName = $1;
-	#		$commonName =~ s/[\.\,\/\\\(\)\:\;\'\"\{\}\$\%\^\&\*\+\-\=\s]/_/g;
 		}
 		my @fields = split(/\s+/, $line);
-		print $fields[0]."\t".$commonName."\n";
+		$result{$fields[0]}=$commonName;
 	}
-
+	return %result;
 }
+
 
 =head1 AUTHOR
 

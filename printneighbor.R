@@ -1,4 +1,4 @@
-#!/usr/bin/Rscript
+#!/usr/bin/env Rscript
 #
 # (c) 2011 Aaron Darling
 # Very simplistic script to read a tree, find any leaf nodes with a name

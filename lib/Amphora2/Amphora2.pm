@@ -243,7 +243,7 @@ sub run {
 
 	if($mode eq 'summary' || $mode eq 'all'){
 	    # Taxonomy assignemnts
-	    `$Amphora2::Utilities::printneighbor $fileDir/trees/*.num.tre > $fileDir/neighbortaxa.txt`;
+	    `$Amphora2::Utilities::Rscript $Amphora2::Utilities::printneighbor $fileDir/trees/*.num.tre > $fileDir/neighbortaxa.txt`;
 	    Amphora2::Summarize::summarize( ("$fileDir/neighbortaxa.txt","$fileDir/taxasummary.txt") );
 	}
 }
