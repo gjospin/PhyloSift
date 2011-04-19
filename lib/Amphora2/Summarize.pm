@@ -2,7 +2,6 @@ package Amphora2::Summarize;
 
 use warnings;
 use strict;
-use autodie;
 
 =head1 NAME
 
@@ -37,16 +36,14 @@ my %idnamemap;
 
 sub summarize {
     @ARGV = @_;
-    my $markerdir = "markers";
-    open( my $NAMETABLE, "$markerdir/name.table" );
-    my %namemap;
-    while( my $line = <$NAMETABLE> ){
-	chomp $line;
-	my @vals = split( /\t/, $line );
-	$namemap{$vals[0]}=homogenizeNameAlaDongying($vals[1]);
+    my $markerdir = $Amphora2::Utilities::marker_dir;
+    my %namemap = Amphora2::Utilities::readNameTable();
+    foreach my $key( keys(%namemap) ){
+	$namemap{$key}=homogenizeNameAlaDongying($namemap{$key});
     }
     
-    open( my $TAXIDS, "ncbi/names.dmp" );
+    my $ncbidir = $Amphora2::Utilities::ncbi_dir;
+    open( my $TAXIDS, "$ncbidir/names.dmp" );
     while( my $line = <$TAXIDS> ){
 	chomp $line;
 	if(($line =~ /scientific name/) || ($line =~ /synonym/) || ($line =~ /misspelling/)){
@@ -56,7 +53,7 @@ sub summarize {
 	}
     }
     
-    open( my $TAXSTRUCTURE, "ncbi/nodes.dmp" );
+    open( my $TAXSTRUCTURE, "$ncbidir/nodes.dmp" );
     my %parent;
     while( my $line = <$TAXSTRUCTURE> ){
 	chomp $line;
@@ -108,7 +105,7 @@ sub summarize {
     close(taxaOUT);
 }
 
-=head2 dongyingFindNameInTaxaDb
+=head2 homogenizeNameAlaDongying
 
 =cut
 
