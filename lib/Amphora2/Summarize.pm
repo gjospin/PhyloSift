@@ -66,9 +66,9 @@ sub summarize {
     
     my %hitcounter;
     my $readcount = 0;
-    open(neighborIN, $ARGV[0]);
+    open(my $neighborIN, $ARGV[0]);
     
-    while( my $line = <neighborIN> ){
+    while( my $line = <$neighborIN> ){
 	chomp $line;
 	$line =~ s/\s+$//g;
 	$line =~ s/^\s+//g;
@@ -92,7 +92,7 @@ sub summarize {
 	}
 	$readcount++;
     }
-    close(neighborIN);
+    close($neighborIN);
     my %hitvals;
     foreach my $tid(keys(%hitcounter)){
 	my $frac = sprintf("%.4f",$hitcounter{$tid}/$readcount);
@@ -101,11 +101,11 @@ sub summarize {
 	
     }
     my @sorted = reverse sort { $hitvals{$a}->[0] <=> $hitvals{$b}->[0] } keys %hitvals; 
-    open(taxaOUT,">$ARGV[1]");
+    open(my $taxaOUT,">$ARGV[1]");
     foreach my $names (@sorted){
 	print taxaOUT join("\t",$hitvals{$names}->[1],$names,$hitvals{$names}->[0],$hitvals{$names}->[2]),"\n";
     }
-    close(taxaOUT);
+    close($taxaOUT);
 }
 
 =head2 dongyingFindNameInTaxaDb
