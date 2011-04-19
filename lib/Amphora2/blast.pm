@@ -233,12 +233,12 @@ sub RunBlast {
 		if($_=~m/^>/){
 		    next;
 		}
-		$seqCount++ while ($_ =~ /[atcgATCG]/g);
+		$seqCount++ while ($_ =~ /[atcgATCGnNmMrRwWsSyYkKvVhHdDbB-]/g);
 		$totalCount += length($_);
 	    }
 	    close(readCheck);
 	    print STDERR "DNA % ".$seqCount/$totalCount."\n";
-	    if($seqCount/$totalCount >0.8){
+	    if($seqCount/$totalCount >0.98){
 		print STDERR "Doing a six frame translation\n";
 		#found DNA, translate in 6 frames
 		($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst)=localtime(time);
