@@ -156,7 +156,7 @@ sub nameTaxa {
 
     # read in the taxon name map
     my %namemap;
-    open(NAMETABLE, "$workingDir/markers/name.table")or die "Couldn't open $workingDir/markers/name.table\n";
+    open(NAMETABLE, "$Amphora2::Utilities::marker_dir/name.table")or die "Couldn't open $Amphora2::Utilities::marker_dir/name.table\n";
     while( my $line = <NAMETABLE> ){
 	chomp $line;
 	my @pair = split(/\t/, $line);

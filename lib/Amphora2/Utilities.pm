@@ -156,7 +156,7 @@ sub get_data_path {
 	my $dataname = shift;
 	my $datapath = shift;
 	my $datacheck = "";
-	if( defined($datapath) && $datapath ne "" && -x $datapath."/".$dataname ){
+	if( defined($datapath) && $datapath ne "" ){
 		$datacheck = $datapath."/".$dataname;
 	}else{
 		my $scriptpath = dirname($0);
@@ -179,7 +179,7 @@ sub download_data {
 	`rm $destination/../amphora_data.tar.gz`;
 }
 
-my $marker_update_url = "http://edhar.genomecenter.ucdavis.edu/~mlangille/markers.tgz";
+my $marker_update_url = "http://edhar.genomecenter.ucdavis.edu/~mlangill/markers.tgz";
 my $ncbi_url = "http://edhar.genomecenter.ucdavis.edu/~koadman/ncbi.tgz";
 
 sub dataChecks {

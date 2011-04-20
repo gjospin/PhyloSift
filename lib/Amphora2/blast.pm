@@ -152,7 +152,7 @@ sub RunBlast {
 	    $markerHits{$marker}="";
 	    
 	    #append the rep sequences for all the markers included in the study to the rep.faa file
-	    `cat $workingDir/markers/representatives/$marker.rep >> $blastDir/rep.faa`
+	    `cat $Amphora2::Utilities::marker_dir/representatives/$marker.rep >> $blastDir/rep.faa`
 
 	}
 
