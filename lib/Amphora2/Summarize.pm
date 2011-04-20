@@ -37,7 +37,7 @@ my %idnamemap;
 sub summarize {
     @ARGV = @_;
     my $markerdir = $Amphora2::Utilities::marker_dir;
-    my %namemap = Amphora2::Utilities::readNameTable();
+    my %namemap = Amphora2::Utilities::readNameTable($markerdir);
     foreach my $key( keys(%namemap) ){
 	$namemap{$key}=homogenizeNameAlaDongying($namemap{$key});
     }
@@ -98,11 +98,11 @@ sub summarize {
 	
     }
     my @sorted = reverse sort { $hitvals{$a}->[0] <=> $hitvals{$b}->[0] } keys %hitvals; 
-    open(my $taxaOUT,">$ARGV[1]");
+    open(taxaOUT,">$ARGV[1]");
     foreach my $names (@sorted){
 	print taxaOUT join("\t",$hitvals{$names}->[1],$names,$hitvals{$names}->[0],$hitvals{$names}->[2]),"\n";
     }
-    close($taxaOUT);
+    close(taxaOUT);
 }
 
 =head2 homogenizeNameAlaDongying

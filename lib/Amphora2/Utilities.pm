@@ -4,6 +4,7 @@ use 5.006;
 use strict;
 use warnings;
 use Carp;
+use File::Basename;
 
 =head1 NAME
 
@@ -134,7 +135,7 @@ sub programChecks {
 	#ensure we have a place to put any R packages that might need to be downloaded
 	my $amphora_r_lib_path = $ENV{"HOME"}."/.amphora2_rlibs";
 	`mkdir -p $amphora_r_lib_path`;
-	unless( $ENV{"R_LIBS_USER"}=~/amphora2/ ){
+	unless( defined($ENV{"R_LIBS_USER"}) && $ENV{"R_LIBS_USER"}=~/amphora2/ ){
 		$ENV{"R_LIBS_USER"} .= ":$amphora_r_lib_path";
 	}
 
@@ -259,8 +260,6 @@ sub readNameTable {
 	my $markerDir = shift;
 	my %result;
 	open(ALINAMES, "grep \">\" $markerDir/*.ali |");
-	`perl -p -i -e "" /tmp/amphora.name.table`;
-	open( NT, "/tmp/amphora.name.table" );
 	while( my $line = <ALINAMES> ){
 		$line =~ s/.+\:\>//g;
 		my $commonName;
