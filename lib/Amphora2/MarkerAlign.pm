@@ -147,9 +147,6 @@ sub MarkerAlign {
 		    if(!defined($hmmScores{$basehitname}) || $hmmScores{$basehitname} < $hitscore ){
 			$hmmScores{$basehitname}=$hitscore;
 			$hmmHits{$basehitname}=$hitname;
-			print STDERR "Marker $marker : Adding $basehitname for $hitname with score $hitscore\n";
-		    }else{
-			print STDERR "Skipping $hitname because it's low scoring\n";
 		    }
 		}
 	    }
@@ -185,9 +182,6 @@ sub MarkerAlign {
 		$baseid =~ s/_[fr][123]$//g;
 		if(exists $hmmHits{$baseid} && $hmmHits{$baseid} eq $sequence->id){
 		    print newCandidate ">".$sequence->id."\n".$sequence->seq."\n";
-		}else{
-		    print STDERR "skipping baseid $baseid seqid ".$sequence->id."\n";
-		    print STDERR $hmmHits{$baseid}." was the top hit\n" if(exists $hmmHits{$baseid});
 		}
 	    }
 	    close(newCandidate);
@@ -220,6 +214,7 @@ sub MarkerAlign {
 		    }
 		}
 	    }
+	print $masqseq."\n";
 
 	    # reading and trimming out non-marker alignment columns from Hmmalign output (Hmmer3)
 	    my $hmmer3Ali = new Bio::AlignIO(-file =>"$alignDir/$marker.aln_hmmer3.fasta",-format=>'fasta');
@@ -235,9 +230,8 @@ sub MarkerAlign {
 			my $ctr = 0;
 			for(my $i=0; $i<length($masqseq); $i++){
 				substr($newSeq, $ctr, 1) = "" if substr($masqseq, $i, 1) eq ".";
-				$ctr++ unless substr($masqseq, $i, 1) eq "\1";
+				$ctr++ unless substr($masqseq, $i, 1) eq ".";
 			}
-			$newSeq = substr($newSeq, 0, $collen);
 			my $seqLen= 0;
 			#sequence length before masking
 			$seqLen++ while $newSeq =~ m/[^-\.]/g;
@@ -245,6 +239,7 @@ sub MarkerAlign {
 			$newSeq =~ s/\./-/g;
 			my $alignCount=0;
 			$alignCount++ while $newSeq =~ m/[^-]/g;
+			my $collen = length($newSeq);
 			my $minRatio = min (($alignCount / $collen),($alignCount / $seqLen));
 #			print STDERR $seq->id."\t$minRatio\t$alignCount\n";
 			next if ($minRatio < $alnLengthCutoff && $alignCount < $minAlignedResidues);
