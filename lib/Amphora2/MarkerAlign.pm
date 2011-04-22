@@ -193,7 +193,7 @@ sub MarkerAlign {
 	    close(newCandidate);
 
 	    #Align the hits to the reference alignment using Hmmer3
-	    `$Amphora2::Utilities::hmmalign --outformat afa -o $alignDir/$marker.aln_hmmer3.fasta --mapali $alignDir/$marker.seed.stock $alignDir/$marker.stock.hmm $alignDir/$marker.newCandidate`;
+	    `$Amphora2::Utilities::hmmalign --trim --outformat afa -o $alignDir/$marker.aln_hmmer3.fasta --mapali $alignDir/$marker.seed.stock $alignDir/$marker.stock.hmm $alignDir/$marker.newCandidate`;
 
 	    #trimming the alignment
 	    
@@ -213,26 +213,14 @@ sub MarkerAlign {
 	    while(my $aln = $aliIN->next_aln()){
 		# mask out the columns that didn't align to the marker, we'll want to remove
 		# them below
-		$masqseq = "\0" x $aln->length;
 		foreach my $seq ($aln->each_seq()){
 		    if(exists $referenceSeqs{$seq->id}){
-			my $curseq = $seq->seq();
-			my $ch1 = "\1";
-			$curseq =~ s/\./$ch1/g;
-			$curseq =~ s/\w/\0/g;
-			$curseq =~ s/[\-\*]/\0/g;
-			$masqseq |= $curseq;
-		    }#else do nothing
+			$masqseq = $seq->seq();
+			last;
+		    }
 		}
 	    }
-		# figure out which columns have the first and last marker data
-		# nonmarker columns contain a . and were masked above
-		my $firstCol = length($masqseq);
-		my $ch1 = "\1";
-		$masqseq =~ s/^$ch1+//g;
-		$firstCol -= length($masqseq);
-		$masqseq =~ s/$ch1//g;
-		my $collen = length($masqseq);
+
 	    # reading and trimming out non-marker alignment columns from Hmmalign output (Hmmer3)
 	    my $hmmer3Ali = new Bio::AlignIO(-file =>"$alignDir/$marker.aln_hmmer3.fasta",-format=>'fasta');
 	    open(aliOUT,">$alignDir/$marker.aln_hmmer3.trim")or die "Couldn't open $alignDir/$marker.aln_hmmer3.trim for writting\n";
@@ -244,10 +232,15 @@ sub MarkerAlign {
 		    if(!exists $referenceSeqs{$seq->id}){
 			# strip out all the columns that had a . (indicated by masqseq)
 			my $newSeq = $seq->seq();
+			my $ctr = 0;
+			for(my $i=0; $i<length($masqseq); $i++){
+				substr($newSeq, $ctr, 1) = "" if substr($masqseq, $i, 1) eq ".";
+				$ctr++ unless substr($masqseq, $i, 1) eq "\1";
+			}
+			$newSeq = substr($newSeq, 0, $collen);
 			my $seqLen= 0;
 			#sequence length before masking
 			$seqLen++ while $newSeq =~ m/[^-\.]/g;
-			$newSeq = substr($newSeq, $firstCol, $collen);
 			#change the remaining . into - for pplacer to not complain
 			$newSeq =~ s/\./-/g;
 			my $alignCount=0;
