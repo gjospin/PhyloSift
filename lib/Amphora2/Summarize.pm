@@ -2,7 +2,7 @@ package Amphora2::Summarize;
 
 use warnings;
 use strict;
-
+use Amphora2::Amphora2;
 =head1 NAME
 
 Amphora2::Summarize - Summarize placed reads using the NCBI taxonomy
@@ -35,13 +35,12 @@ my %nameidmap;
 my %idnamemap;
 
 sub summarize {
-    @ARGV = @_;
+    my $self = shift;
     my $markerdir = $Amphora2::Utilities::marker_dir;
     my %namemap = Amphora2::Utilities::readNameTable($markerdir);
     foreach my $key( keys(%namemap) ){
 	$namemap{$key}=homogenizeNameAlaDongying($namemap{$key});
     }
-    
     my $ncbidir = $Amphora2::Utilities::ncbi_dir;
     open( my $TAXIDS, "$ncbidir/names.dmp" );
     while( my $line = <$TAXIDS> ){
@@ -52,7 +51,6 @@ sub summarize {
 	    $idnamemap{$vals[0]}=homogenizeNameAlaDongying($vals[1]) if($line =~ /scientific name/);
 	}
     }
-    
     open( my $TAXSTRUCTURE, "$ncbidir/nodes.dmp" );
     my %parent;
     while( my $line = <$TAXSTRUCTURE> ){
@@ -60,11 +58,9 @@ sub summarize {
 	my @vals = split( /\s+\|\s+/, $line );
 	$parent{$vals[0]} = [$vals[1],$vals[2]];
     }
-    
     my %hitcounter;
     my $readcount = 0;
-    open(my $neighborIN, $ARGV[0]);
-    
+    open(my $neighborIN, $self->{"fileDir"}."/neighbortaxa.txt");
     while( my $line = <$neighborIN> ){
 	chomp $line;
 	$line =~ s/\s+$//g;
@@ -76,8 +72,7 @@ sub summarize {
 	    print STDERR "Error! Could not find $line in name map\n" if length($line) > 12;
 	    next;
 	}
-	
-		#got the taxon id, now walk to root tallying everything we hit
+	#got the taxon id, now walk to root tallying everything we hit
 	next unless(defined($tid));
 	while( $tid != 1 ){
 	    if(defined($hitcounter{$tid})){
@@ -98,7 +93,7 @@ sub summarize {
 	
     }
     my @sorted = reverse sort { $hitvals{$a}->[0] <=> $hitvals{$b}->[0] } keys %hitvals; 
-    open(taxaOUT,">$ARGV[1]");
+    open(taxaOUT,">".$self->{"fileDir"}."/taxasummary.txt");
     foreach my $names (@sorted){
 	print taxaOUT join("\t",$hitvals{$names}->[1],$names,$hitvals{$names}->[0],$hitvals{$names}->[2]),"\n";
     }

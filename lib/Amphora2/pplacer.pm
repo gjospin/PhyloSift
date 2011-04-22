@@ -4,7 +4,7 @@ use Cwd;
 use Getopt::Long;
 use Bio::AlignIO;
 use Parallel::ForkManager;
-
+use Amphora2::Amphora2;
 =head1 NAME
 
 Amphora2::pplacer - place aligned reads onto a phylogenetic tree with pplacer
@@ -38,110 +38,67 @@ if you don't export anything, such as for a purely object-oriented module.
 =cut
 
 sub pplacer {
-
-	@ARGV = @_;
-	my $usage = qq~
-	Usage : $0 <options> <marker.list> <ReadsFile>
-
-	~;
-
-	#variable kept and set to 1 only until the multi thread is implemented.
-	my $threadNum = 1;
-
-	GetOptions("threaded=i" => \$threadNum)|| die $usage;
-
-
-	die $usage unless ($ARGV[0] && $ARGV[1]);
-
-
-	my $workingDir = getcwd;
-	my $markersFile = $ARGV[0];
-	my $readsFile = $ARGV[1];
-	my $position = rindex($readsFile,"/");
-	my $fileName = substr($readsFile,$position+1,length($readsFile)-$position-1);
-
-	my $tempDir = "$workingDir/Amph_temp";
-	my $fileDir = "$tempDir/$fileName";
-	my $blastDir = "$fileDir/Blast_run";
-	my $alignDir = "$fileDir/alignments";
-	my $treeDir = "$fileDir/trees";
-
-
-	my $markers=();
-	print STDERR "checking\n";
-	#reading the list of markers
-	open(markersIN,"$markersFile") or die "Couldn't open the markers file\n";
-	while(<markersIN>){
-	    chomp($_);
-	    next if(-z  "$alignDir/$_.aln_hmmer3.trim");
-	    push(@markers, $_);
+    my $self = shift;
+    my @markers = @_;
+    directoryPrepAndClean($self);
+    foreach my $marker(@markers){
+	# Pplacer requires the alignment files to have a .fasta extension
+	if(!-e $self->{"alignDir"}."/$marker.trimfinal.fasta"){
+	    `cp $Amphora2::Utilities::marker_dir/$marker.trimfinal $self->{"alignDir"}/$marker.trimfinal.fasta`;
 	}
-	close(markersIN);
-
-
-	#check if the temporary directory exists, if it doesn't create it.
-	`mkdir $tempDir` unless (-e "$tempDir");
-
-	#create a directory for the Reads file being processed.
-	`mkdir $fileDir` unless (-e "$fileDir");
-
-	#check if the Blast_run directory exists, if it doesn't create it.
-	`mkdir $treeDir` unless (-e "$treeDir");
-
-	my $pm = new Parallel::ForkManager($threadNum);
-
-	foreach my $marker(@markers){
-	    $pm->start and next;
-	    # Pplacer requires the alignment files to have a .fasta extension
-	    if(!-e "$alignDir/$marker.trimfinal.fasta"){
-		`cp $Amphora2::Utilities::marker_dir/$marker.trimfinal $alignDir/$marker.trimfinal.fasta`;
-	    }
-	    if(!-e "$alignDir/$marker.aln_hmmer3.trim.fasta"){
-		`cp $alignDir/$marker.aln_hmmer3.trim $alignDir/$marker.aln_hmmer3.trim.fasta`;
-	    }
-	    #adding a printed statement to check on the progress
-	    print STDERR "Running Placer on $marker ....\t";
-	    #running Pplacer
-	    if(!-e "$treeDir/$marker.aln_hmmer3.trim.place"){
-		`$Amphora2::Utilities::pplacer -p -r $alignDir/$marker.trimfinal.fasta -t $Amphora2::Utilities::marker_dir/$marker.final.tre -s $Amphora2::Utilities::marker_dir/$marker.in_phyml_stats.txt $alignDir/$marker.aln_hmmer3.trim.fasta`;
-	    }
-	    #adding a printed statement to check on the progress (not really working if using parrallel jobs)
-	    print STDERR "Done !\n";
-	    #Pplacer write its output to the directory it is called from. Need to move the output to the trees directory
-	    if(-e "$workingDir/$marker.aln_hmmer3.trim.place"){
-		`mv $workingDir/$marker.aln_hmmer3.trim.place $treeDir`;
-	    }
-
-	    #Transform the .place file into a tree file
-	    if(-e "$treeDir/$marker.aln_hmmer3.trim.place" && !-e "$treeDir/$marker.aln_hmmer3.trim.tog.tree"){
-		`placeviz --loc -p $treeDir/$marker.aln_hmmer3.trim.place`
-	    }
-
-
-	    #placeviz writes its output to the directory it was called from, need to move the output to the trees directory
-	    my @placevizFiles = <$workingDir/$marker.aln_hmmer3.*>;
-	    if(scalar(@placevizFiles)>0){
-		`mv $workingDir/$marker.* $treeDir`;
-	    }
-	#    if(-e "$workingDir/$marker.aln_hmmer3.*"){
-	#	`mv $workingDir/$marker.* $treeDir`;
-	#    }elsif(-e "$workingDir/$marker.aln_hmmer3.trim.PP.tog.tre"){
-	#	`mv $workingDir/$marker.* $treeDir`;
-	#    }
-
-
-	    #added the .PP. check to accomodate for what pplacer names its files (tax branch or master branch)
-	    # transform the taxon names in the tree file
-	    if(-e "$treeDir/$marker.aln_hmmer3.trim.tog.tre"){
-		nameTaxa("$treeDir/$marker.aln_hmmer3.trim.tog.tre");
-	    }elsif(-e "$treeDir/$marker.aln_hmmer.trim.PP.tog.tre"){
-		nameTaxa("$treeDir/$marker.aln_hmmer3.trim.PP.tog.tre");
-	    }
-
-	    $pm->finish
+	if(!-e $self->{"alignDir"}."/$marker.aln_hmmer3.trim.fasta"){
+	    `cp $self->{"alignDir"}/$marker.aln_hmmer3.trim $self->{"alignDir"}/$marker.aln_hmmer3.trim.fasta`;
 	}
-	$pm->wait_all_children;
+	#adding a printed statement to check on the progress
+	print STDERR "Running Placer on $marker ....\t";
+	#running Pplacer
+	if(!-e $self->{"treeDir"}."/$marker.aln_hmmer3.trim.place"){
+	    `$Amphora2::Utilities::pplacer -p -r $self->{"alignDir"}/$marker.trimfinal.fasta -t $Amphora2::Utilities::marker_dir/$marker.final.tre -s $Amphora2::Utilities::marker_dir/$marker.in_phyml_stats.txt $self->{"alignDir"}/$marker.aln_hmmer3.trim.fasta`;
+	}
+	#adding a printed statement to check on the progress (not really working if using parrallel jobs)
+	print STDERR "Done !\n";
+	#Pplacer write its output to the directory it is called from. Need to move the output to the trees directory
+	if(-e $self->{"workingDir"}."/$marker.aln_hmmer3.trim.place"){
+	    `mv $self->{"workingDir"}/$marker.aln_hmmer3.trim.place $self->{"treeDir"}`;
+	}
+	
+	#Transform the .place file into a tree file
+	if(-e $self->{"treeDir"}."/$marker.aln_hmmer3.trim.place" && !-e $self->{"treeDir"}."/$marker.aln_hmmer3.trim.tog.tree"){
+	    `placeviz --loc -p $self->{"treeDir"}/$marker.aln_hmmer3.trim.place`
+	}
+	
+	
+	#placeviz writes its output to the directory it was called from, need to move the output to the trees directory
+	my $workingDir = $self->{"workingDir"};
+	my @placevizFiles = <$workingDir/$marker.aln_hmmer3.*>;
+	if(scalar(@placevizFiles)>0){
+	    `mv $self->{"workingDir"}/$marker.* $self->{"treeDir"}`;
+	}
+	#added the .PP. check to accomodate for what pplacer names its files (tax branch or master branch)
+	# transform the taxon names in the tree file
+	if(-e $self->{"treeDir"}."/$marker.aln_hmmer3.trim.tog.tre"){
+	    nameTaxa($self->{"treeDir"}."/$marker.aln_hmmer3.trim.tog.tre");
+	}elsif(-e $self->{"treeDir"}."/$marker.aln_hmmer.trim.PP.tog.tre"){
+	    nameTaxa($self->{"treeDir"}."/$marker.aln_hmmer3.trim.PP.tog.tre");
+	}
+	
+    }
 
+}
+
+
+=head2 directoryPrepAndClean
+
+=cut
+
+sub directoryPrepAndClean{
+
+    my $self = shift;
+    my @markers = @_;
+    `mkdir $self->{"tempDir"}` unless (-e $self->{"tempDir"});
+    #create a directory for the Reads file being processed.
+    `mkdir $self->{"fileDir"}` unless (-e $self->{"fileDir"});
+    `mkdir $self->{"treeDir"}` unless (-e $self->{"treeDir"});
 }
 
 =head1 SUBROUTINES/METHODS
