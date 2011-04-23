@@ -85,16 +85,13 @@ sub directoryPrepAndClean{
     #create a directory for the Reads file being processed.
     `mkdir $self->{"fileDir"}` unless (-e $self->{"fileDir"});
     `mkdir $self->{"alignDir"}` unless (-e $self->{"alignDir"});
-    my $index=-1;
-    foreach my $marker (@markers){
+    for( my $index = 0; $index < @markers; $index++){
         #    $pm->start and next;                                                                                                                        
-        $index++;
-        if(!-e $self->{"blastDir"}."/$marker.candidate" ){
-            print STDERR "Couldn't find ".$self->{"blastDir"}."/$marker.candidate\n";
-            next;
-        }if(-s $self->{"blastDir"}."/$marker.candidate" == 0){
+	my $marker = $markers[$index];
+	my $sizer = -s $self->{"blastDir"}."/$marker.candidate"; 
+	if(-z $self->{"blastDir"}."/$marker.candidate"){
             print STDERR "WARNING : the candidate file for $marker is empty\n";
-            delete $markers[$index];
+            splice @markers, $index--, 1;
             next;
         }
     }
@@ -131,9 +128,8 @@ sub hmmsearchParse{
 
     my $self = shift;
     my @markers = @_;
-    my $index = -1;
-    foreach my $marker (@markers){
-	$index ++;
+    for(my $index = 0; $index < @markers; $index++ ){
+	my $marker = $markers[$index];
 	my %hmmHits=();
 	my %hmmScores=();
 	open(tbloutIN,$self->{"alignDir"}."/$marker.hmmsearch.tblout");
@@ -158,7 +154,7 @@ sub hmmsearchParse{
 	# added a check if the hmmsearch found hits to prevent the masking and aligning from failing
 	if($countHits==0){
 	    print STDERR "WARNING : The hmmsearch for $marker found 0 hits, removing marker from the list to process\n";
-	    delete $markers[$index];
+	    splice @markers, $index--, 1;
 	    next;
 	}
 	
