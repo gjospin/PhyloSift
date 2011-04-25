@@ -5,6 +5,8 @@ use strict;
 use warnings;
 use Carp;
 use File::Basename;
+use Bio::AlignIO;
+use Bio::Align::Utilities qw(:all);
 
 =head1 NAME
 
@@ -274,6 +276,73 @@ sub readNameTable {
 	return %result;
 }
 
+=head2 concatenateAlignments
+
+creates a file with a table of name to marker ID mappings
+Requires a marker directory as an argument
+
+=cut
+
+sub concatenateAlignments {
+	my $outputFasta = shift;
+	my $outputMrBayes = shift;
+	my @alignments = @_;
+	my $catobj = 0;
+	open(MRBAYES, ">$outputMrBayes");
+	my $partlist = "partition genes = ".scalar(@alignments).": ";
+	my $prevlen = 0;
+	foreach my $file(@alignments){
+		my $in  = Bio::AlignIO->new(-file => $file , '-format' => 'fasta');
+		while ( my $aln = $in->next_aln() ) {
+			my $csname = $file;
+			$csname =~ s/\..+//g;
+			$partlist .= "," if $catobj != 0;
+			$partlist .= $csname;
+			print MRBAYES "charset $csname = ".($prevlen+1)."-".($prevlen+$aln->length())."\n";
+			$prevlen += $aln->length();
+			my $prevseq = 0;
+			my $newaln = $aln->select(1,1);
+			foreach my $curseq( $aln->each_alphabetically() ){
+				if($prevseq==0){
+					$prevseq = $curseq;
+					next;
+				}
+				if($prevseq->id ne $curseq->id){
+					$newaln->add_seq($curseq);
+				}
+				$prevseq = $curseq;
+			}
+			$aln = $newaln;
+
+			if($catobj == 0){
+				$catobj = $aln;
+				next;
+			}
+			# add any sequences missing from this sequence
+			foreach my $catseq ( $catobj->each_alphabetically() ){
+				if(length( $aln->each_seq_with_id( $catseq->id ) == 0) ){
+					# add this sequence as all gaps
+					my $tmpseq = "-" x $aln->length();
+					my $newseq = Bio::LocatableSeq->new( -seq => $tmpseq, -id => $catseq->id, start=>0, end=>$aln->length());
+					$aln->add_seq($newseq);
+			}
+			}
+			# vice versa
+			foreach my $alnseq ( $aln->each_alphabetically() ){
+				if(length( $catobj->each_seq_with_id( $alnseq->id ) == 0) ){
+					# add this sequence as all gaps
+					my $tmpseq = "-" x $catobj->length();
+					my $newseq = Bio::LocatableSeq->new( -seq => $tmpseq, -id => $alnseq->id, start=>0, end=>$catobj->length());
+					$catobj->add_seq($newseq);
+				}
+			}
+			$catobj = cat( $catobj, $aln );
+		}
+	}
+	print MRBAYES "$partlist;\n";
+	my $out = Bio::AlignIO->new(-file => ">$outputFasta" , '-format' => 'fasta');
+	$out->write_aln($catobj);
+}
 
 =head1 AUTHOR
 

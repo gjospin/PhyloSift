@@ -71,6 +71,9 @@ sub MarkerAlign {
     markerPrepAndRun($self,$markersRef);
     hmmsearchParse($self,$markersRef);
     alignAndMask($self,$markersRef);
+    my @markeralignments = getMarkerAlignmentFiles($self,$markersRef);
+    Amphora2::Utilities::concatenateAlignments($self->{"alignDir"}."/concat.fasta", $self->{"alignDir"}."/mrbayes.nex", @markeralignments);
+
     return $self;
 }
 
@@ -237,6 +240,8 @@ sub alignAndMask{
                     #print STDERR $seq->id."\t$minRatio\t$alignCount\n";
 		    next if ($minRatio < $alnLengthCutoff && $alignCount < $minAlignedResidues);
 		    my $newIDs = $seq->id;
+		    #get rid of reading frame at this stage
+		    $newIDs =~ s/_[fr][012]$//g;
 		    #subsitute all the non letter or number characters into _ in the IDs to avoid parsing issues in tree viewing programs or others
 		    $newIDs =~ s/[^\w\d]/_/g;
                     #print the new trimmed alignment
@@ -255,6 +260,19 @@ sub alignAndMask{
 	}
     }
 }
+
+
+sub getMarkerAlignmentFiles{
+    my $self = shift;
+    my $markRef = shift;
+    my @markeralignments = ();
+    for(my $index=0; $index < @{$markRef}; $index++){
+	my $marker=${$markRef}[$index];
+	push( @markeralignments, $self->{"alignDir"}."/$marker.aln_hmmer3.trim" );
+    }
+    return @markeralignments;
+}
+
 
 =head1 AUTHOR
 
