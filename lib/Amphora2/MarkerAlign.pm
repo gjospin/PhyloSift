@@ -62,15 +62,16 @@ my $minAlignedResidues = 20;
 sub MarkerAlign {
 
     my $self = shift;
-    my @markers = @_;
-
-    @markers = directoryPrepAndClean($self, @markers);
+    my $markersRef = shift;
+    print "@{$markersRef}\n";
+    directoryPrepAndClean($self, $markersRef);
+    print "@{$markersRef}\n";
     my $index =-1;
     
-    markerPrepAndRun($self,@markers);
-    @markers = hmmsearchParse($self,@markers);
-    alignAndMask($self,@markers);
-
+    markerPrepAndRun($self,$markersRef);
+    hmmsearchParse($self,$markersRef);
+    alignAndMask($self,$markersRef);
+    return $self;
 }
 
 
@@ -80,22 +81,22 @@ sub MarkerAlign {
 
 sub directoryPrepAndClean{
     my $self = shift;
-    my @markers = @_;
+    my $markRef = shift;
     `mkdir $self->{"tempDir"}` unless (-e $self->{"tempDir"});
     #create a directory for the Reads file being processed.
     `mkdir $self->{"fileDir"}` unless (-e $self->{"fileDir"});
     `mkdir $self->{"alignDir"}` unless (-e $self->{"alignDir"});
-    for( my $index = 0; $index < @markers; $index++){
+    for( my $index = 0; $index < @{$markRef}; $index++){
         #    $pm->start and next;                                                                                                                        
-	my $marker = $markers[$index];
+	my $marker = ${$markRef}[$index];
 	my $sizer = -s $self->{"blastDir"}."/$marker.candidate"; 
 	if(-z $self->{"blastDir"}."/$marker.candidate"){
             print STDERR "WARNING : the candidate file for $marker is empty\n";
-            splice @markers, $index--, 1;
+            splice @{$markRef}, $index--, 1;
             next;
         }
     }
-    return @markers;
+    return $self;
 }
 
 =head2 markerPrepAndRun
@@ -104,9 +105,10 @@ sub directoryPrepAndClean{
 
 sub markerPrepAndRun{
     my $self = shift;
-    my @markers = @_;
+    my $markRef = shift;
     print "ALIGNDIR : ".$self->{"alignDir"}."\n";
-    foreach my $marker (@markers){
+    foreach my $marker (@{$markRef}){
+	
 	#converting the marker's reference alignments from Fasta to Stockholm (required by Hmmer3)
 	Amphora2::Utilities::fasta2stockholm( "$Amphora2::Utilities::marker_dir/$marker.trimfinal", $self->{"alignDir"}."/$marker.seed.stock" );    
 	#build the Hmm for the marker using Hmmer3
@@ -127,9 +129,9 @@ sub markerPrepAndRun{
 sub hmmsearchParse{
 
     my $self = shift;
-    my @markers = @_;
-    for(my $index = 0; $index < @markers; $index++ ){
-	my $marker = $markers[$index];
+    my $markRef = shift;
+    for(my $index = 0; $index < @{$markRef}; $index++ ){
+	my $marker = ${$markRef}[$index];
 	my %hmmHits=();
 	my %hmmScores=();
 	open(tbloutIN,$self->{"alignDir"}."/$marker.hmmsearch.tblout");
@@ -154,7 +156,7 @@ sub hmmsearchParse{
 	# added a check if the hmmsearch found hits to prevent the masking and aligning from failing
 	if($countHits==0){
 	    print STDERR "WARNING : The hmmsearch for $marker found 0 hits, removing marker from the list to process\n";
-	    splice @markers, $index--, 1;
+	    splice @{$markRef}, $index--, 1;
 	    next;
 	}
 	
@@ -169,7 +171,7 @@ sub hmmsearchParse{
 	}
 	close(newCandidate);
     }
-    return @markers;
+    return $self;
 }
 
 =head2 alignAndMask
@@ -178,8 +180,9 @@ sub hmmsearchParse{
 
 sub alignAndMask{
     my $self = shift;
-    my @markers = @_;
-    foreach my $marker (@markers){
+    my $markRef = shift;
+    for(my $index=0; $index < @{$markRef}; $index++){
+	my $marker=${$markRef}[$index];
 	#Align the hits to the reference alignment using Hmmer3
 	`$Amphora2::Utilities::hmmalign --trim --outformat afa -o $self->{"alignDir"}/$marker.aln_hmmer3.fasta --mapali $self->{"alignDir"}/$marker.seed.stock $self->{"alignDir"}/$marker.stock.hmm $self->{"alignDir"}/$marker.newCandidate`;
 	#find out all the indexes that have a . in the reference sequences
@@ -208,6 +211,7 @@ sub alignAndMask{
 	# reading and trimming out non-marker alignment columns from Hmmalign output (Hmmer3)
 	my $hmmer3Ali = new Bio::AlignIO(-file =>$self->{"alignDir"}."/$marker.aln_hmmer3.fasta",-format=>'fasta');
 	open(aliOUT,">".$self->{"alignDir"}."/$marker.aln_hmmer3.trim")or die "Couldn't open ".$self->{"alignDir"}."/$marker.aln_hmmer3.trim for writting\n";
+	my $seqCount = 0;
 	while(my $aln = $hmmer3Ali->next_aln()){
 	    foreach my $seq ($aln->each_seq()){
 		#initialize empty array
@@ -236,11 +240,20 @@ sub alignAndMask{
 		    #subsitute all the non letter or number characters into _ in the IDs to avoid parsing issues in tree viewing programs or others
 		    $newIDs =~ s/[^\w\d]/_/g;
                     #print the new trimmed alignment
+		    
 		    print aliOUT ">".$newIDs."\n".$newSeq."\n";
+		    $seqCount++;
 		}
 	    }
 	}
 	close(aliOUT);
+	#checking if sequences were written to the marker alignment file
+	if($seqCount ==0){
+	    #removing the marker from the list if no sequences were added to the alignment file
+	    print STDERR "Masking or hmmsearch thresholds failed, removing $marker from the list\n";
+	    splice @{$markRef}, $index--, 1;
+	}
+	print "@{$markRef}\t$index\n";
     }
 }
 

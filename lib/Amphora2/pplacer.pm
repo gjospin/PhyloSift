@@ -39,15 +39,18 @@ if you don't export anything, such as for a purely object-oriented module.
 
 sub pplacer {
     my $self = shift;
-    my @markers = @_;
+    my $markRef = shift;
     directoryPrepAndClean($self);
-    foreach my $marker(@markers){
+    print "PPLACER MARKS\t @{$markRef}\n";
+    foreach my $marker(@{$markRef}){
 	# Pplacer requires the alignment files to have a .fasta extension
-	if(!-e $self->{"alignDir"}."/$marker.trimfinal.fasta"){
+	if(!-e $self->{"alignDir"}."/$marker.trimfinal.fasta" ){
 	    `cp $Amphora2::Utilities::marker_dir/$marker.trimfinal $self->{"alignDir"}/$marker.trimfinal.fasta`;
 	}
-	if(!-e $self->{"alignDir"}."/$marker.aln_hmmer3.trim.fasta"){
+	if(!-e $self->{"alignDir"}."/$marker.aln_hmmer3.trim.fasta"  && -e $self->{"alignDir"}."/$marker.aln_hmmer3.trim"){
 	    `cp $self->{"alignDir"}/$marker.aln_hmmer3.trim $self->{"alignDir"}/$marker.aln_hmmer3.trim.fasta`;
+	}else{
+	    next;
 	}
 	#adding a printed statement to check on the progress
 	print STDERR "Running Placer on $marker ....\t";

@@ -163,10 +163,10 @@ sub run {
 
     print "MODE :: ".$self->{"mode"}."\n";
     if($self->{"mode"} eq 'align' || $self->{"mode"} eq 'all'){
-	$self=$self->runMarkerAlign($continue,@markers);
+	$self=$self->runMarkerAlign($continue,\@markers);
     }
     if($self->{"mode"} eq 'placer' || $self->{"mode"} eq 'all'){
-	$self=$self->runPplacer($continue,@markers);
+	$self=$self->runPplacer($continue,\@markers);
     }
     if($self->{"mode"} eq 'summary' || $self->{"mode"} eq 'all'){
 	$self=$self->taxonomyAssignments();
@@ -341,13 +341,13 @@ sub taxonomyAssignments {
 sub runPplacer{
     my $self = shift;
     my $continue = shift;
-    my @markList = @_;
-    print "PPLACER MARKS @markList\n";
+    my $markListRef = shift;
+    print "PPLACER MARKS @{$markListRef}\n";
     ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst)=localtime(time);
     printf STDERR "Starting runPPlacer %4d-%02d-%02d %02d:%02d:%02d\n",$year+1900,$mon+1,$mday,$hour,$min,$sec;
     my $treeDir =$self->{"treeDir"};
     `rm $treeDir/*` if (<$treeDir/*>);
-    Amphora2::pplacer::pplacer($self,@markList);
+    Amphora2::pplacer::pplacer($self,$markListRef);
     ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst)=localtime(time);
     printf STDERR "After runPPlacer %4d-%02d-%02d %02d:%02d:%02d\n",$year+1900,$mon+1,$mday,$hour,$min,$sec;
     if($continue != 0){
@@ -367,7 +367,7 @@ sub runPplacer{
 sub runMarkerAlign{
     my $self = shift;
     my $continue = shift;
-    my @markList = @_;
+    my $markRef = shift;
     ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst)=localtime(time);
     printf STDERR "Before Alignments for Markers %4d-%02d-%02d %02d:%02d:%02d\n",$year+1900,$mon+1,$mday,$hour,$min,$sec;
     #clearing the alignment directory if needed
@@ -375,7 +375,7 @@ sub runMarkerAlign{
     `rm $alignDir/*` if(<$alignDir/*>);
     #Align Markers
     my $threadNum=1;
-    Amphora2::MarkerAlign::MarkerAlign( $self, @markList );
+    Amphora2::MarkerAlign::MarkerAlign( $self, $markRef );
     ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst)=localtime(time);
     printf STDERR "After Alignments %4d-%02d-%02d %02d:%02d:%02d\n",$year+1900,$mon+1,$mday,$hour,$min,$sec;
     if($continue != 0){

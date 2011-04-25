@@ -82,7 +82,7 @@ sub RunBlast {
     executeBlast($self);
 
     get_blast_hits($self);
-
+    return $self;
 }
 
 =head2 executeBlast
@@ -141,7 +141,7 @@ sub fastqToFasta{
     if($self->{"readsFile_2"} ne ""){
 	print "FILENAME ".$self->{"fileName"}."\n";
 
-	if(!-e $self->{""}.$self->{"fileName"}."fasta"){
+	if(!-e $self->{"blastDir"}."/$readsCore.fasta"){
 	    my %fastQ = ();
 	    my $curr_ID = "";
 	    my $skip = 0;
@@ -183,7 +183,7 @@ sub fastqToFasta{
 	    }
 	    close(FASTQ_2);
 	    print STDERR "Writing ". $self->{"fileName"}.".fasta\n";
-	    open(FastA, ">".$self->{"blastDir"}."/$readsCore.fasta")or die "Couldn't open ".$self->{"blastDir"}."/".$self->{"fileName"}.".fasta for writing in run_blast.pl\n";
+	    open(FastA, ">".$self->{"blastDir"}."/$readsCore.fasta")or die "Couldn't open ".$self->{"blastDir"}."/$readsCore.fasta for writing in run_blast.pl\n";
 	    foreach my $id (keys %fastQ){
 		print FastA ">".$id."\n".$fastQ{$id}."\n";
 	    }
