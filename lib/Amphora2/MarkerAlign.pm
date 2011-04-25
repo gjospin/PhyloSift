@@ -253,7 +253,6 @@ sub alignAndMask{
 	    print STDERR "Masking or hmmsearch thresholds failed, removing $marker from the list\n";
 	    splice @{$markRef}, $index--, 1;
 	}
-	print "@{$markRef}\t$index\n";
     }
 }
 
