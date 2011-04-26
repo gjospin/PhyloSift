@@ -9,6 +9,7 @@ my $threadNum=1;
 my $clean=0;
 my $force=0;
 my $continue=0;
+my $isolate=0;
 my $custom = "";
 my $usage = qq~
   Usage: $0 <mode> <options> <reads_file>                                                                       
@@ -26,6 +27,7 @@ GetOptions("threaded=i" => \$threadNum,
 	   "custom=s" => \$custom, #need a file containing the marker names to use without extensions ** marker names shouldn't contain '_'
 	   "f" => \$force, #overrides a previous run otherwise stop                                               
 	   "continue" => \$continue, #when a mode different than all is used, continue the rest of Amphora after the section
+	   "isolate" => \$isolate, #use when processing one or more isolate genomes
 	   #specified by the mode is finished
     )|| die $usage;
     
@@ -50,6 +52,8 @@ if($pair == 0){
     print "INSIDE paired\n";
     $newObject = $newObject->initialize($ARGV[0],$ARGV[1],$ARGV[2]);
 }
+
+$newObject->{"isolate"} = $isolate;
 
 my $readsFile = $newObject->getReadsFile;
 print "FORCE: ".$force."\n";

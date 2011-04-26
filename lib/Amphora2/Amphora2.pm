@@ -8,6 +8,7 @@ use Bio::SearchIO;
 use Bio::SeqIO;
 use Getopt::Long;
 use Cwd;
+use Carp;
 use File::Basename;
 use Amphora2::Utilities;
 use Amphora2::MarkerAlign;
@@ -124,9 +125,6 @@ my $workingDir = getcwd;
 #where everything will be written when Amphora-2 is running
 
 
-
-
-
 sub run {
     my $self = shift;
     my $force = shift;
@@ -150,6 +148,9 @@ sub run {
     Amphora2::Utilities::dataChecks($self);
     $self->fileCheck();
     $self->directoryPrep($force);
+
+    $self->{"readsFile"} = $self->prepIsolateFiles($self->{"readsFile"}) if $self->{"isolate"}==1;
+
     #create a file with a list of markers called markers.list
     print "CUSTOM = ".$custom."\n";
 
@@ -240,6 +241,37 @@ sub runProgCheck{
     return $self;
 }
 
+=head2 prepIsolateFiles
+
+=item *
+
+Process an input file for isolate mode.  Creates a temporary input file that contains only a single
+sequence entry.  TODO: this could be made more elegant by storing a mapping between sequence entries
+and isolate names in memory and using that at later stages of the pipeline
+
+=back
+
+=cut
+
+sub prepIsolateFiles {
+	my $self = shift;
+	open( OUTFILE, ">".$self->{"fileDir"}."/isolates.fasta" );
+	while(my $file = shift){
+		open( ISOLATEFILE, $file ) || croak("Unable to read $file\n");
+		my $fname = $self->{"fileDir"}."/".basename($file);
+		print "Operating on isolate file $fname\n";
+		print OUTFILE ">".basename($file)."\n";
+		while( my $line = <ISOLATEFILE> ){
+			next if $line =~ /^>/;
+			print OUTFILE $line;
+		}
+		print "\n";
+		close ISOLATEFILE;
+	}
+	close OUTFILE;
+	$self->{"readsFile"} = "isolates.fasta";
+	return $self->{"fileDir"}."/isolates.fasta";
+}
 
 =head2 markerGather
 

@@ -48,7 +48,7 @@ if you don't export anything, such as for a purely object-oriented module.
 =cut
 
 my $clean = 0; #option set up, but not used for later
-my $threadNum = 1; #default value runs on 1 processor only.
+my $threadNum = 4; #default value runs on 1 processor only.
 my $isolateMode=0; # set to 1 if running on an isolate assembly instead of raw reads
 my $bestHitsBitScoreRange=30; # all hits with a bit score within this amount of the best will be used
 my $pair=0; #used if using paired FastQ files
@@ -64,6 +64,7 @@ sub RunBlast {
     my $position = rindex($self->{"readsFile"},"/");
     $self->{"readsFile"} =~ m/(\w+)\.?(\w*)$/;
     $readsCore = $1;
+    $isolateMode = $self->{"isolate"};
     print "before blastprepandclean\n";
     blastPrepAndClean($self);
     if($self->{"readsFile_2"} ne ""){
@@ -94,10 +95,12 @@ sub executeBlast{
     if(!-e $self->{"blastDir"}."/$readsCore.blastp" && -e $self->{"blastDir"}."/$readsCore-6frame"){
 	print "INSIDE 6frame BLAST\n";
 	`$Amphora2::Utilities::blastp -query $self->{"blastDir"}/$readsCore-6frame -evalue 0.1 -num_descriptions 50000 -num_alignments 50000 -db $self->{"blastDir"}/rep.faa -out $self->{"blastDir"}/$readsCore.blastp -outfmt 6 -num_threads $threadNum`;
+#	    `blastall -p blastp -i $self->{"blastDir"}/$readsCore-6frame -e 0.1 -d $self->{"blastDir"}/rep.faa -o $self->{"blastDir"}/$readsCore.blastp -m 8 -a $threadNum`;
     }
     else{
 	if(!-e $self->{"blastDir"}."/$readsCore.blastp"){
 	    `$Amphora2::Utilities::blastp -query $self->{"readsFile"} -evalue 0.1 -num_descriptions 50000 -num_alignments 50000 -db $self->{"blastDir"}/rep.faa -out $self->{"blastDir"}/$readsCore.blastp -outfmt 6 -num_threads $threadNum`;
+#	    `blastall -p blastp -i $self->{"readsFile"} -e 0.1 -d $self->{"blastDir"}/rep.faa -o $self->{"blastDir"}/$readsCore.blastp -m 8 -a $threadNum`;
 	}
     }
     return $self;
