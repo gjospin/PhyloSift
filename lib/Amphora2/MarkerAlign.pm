@@ -63,17 +63,19 @@ sub MarkerAlign {
 
     my $self = shift;
     my $markersRef = shift;
-    print "@{$markersRef}\n";
+    print "beforeDirprepClean @{$markersRef}\n";
     directoryPrepAndClean($self, $markersRef);
-    print "@{$markersRef}\n";
+    print "AFTERdirprepclean @{$markersRef}\n";
     my $index =-1;
     
     markerPrepAndRun($self,$markersRef);
     hmmsearchParse($self,$markersRef);
+    print STDERR "after HMMSEARCH PARSE\n";
     alignAndMask($self,$markersRef);
+    print STDERR "AFTER ALIGN and MASK\n";
     my @markeralignments = getMarkerAlignmentFiles($self,$markersRef);
     Amphora2::Utilities::concatenateAlignments($self->{"alignDir"}."/concat.fasta", $self->{"alignDir"}."/mrbayes.nex", @markeralignments);
-
+    print STDERR "AFTER concatenateALI\n";
     return $self;
 }
 
@@ -113,14 +115,16 @@ sub markerPrepAndRun{
     foreach my $marker (@{$markRef}){
 	
 	#converting the marker's reference alignments from Fasta to Stockholm (required by Hmmer3)
-	Amphora2::Utilities::fasta2stockholm( "$Amphora2::Utilities::marker_dir/$marker.trimfinal", $self->{"alignDir"}."/$marker.seed.stock" );    
+	Amphora2::Utilities::fasta2stockholm( "$Amphora2::Utilities::marker_dir/$marker.trimfinal", "$Amphora2::Utilities::marker_dir/$marker.seed.stock" );    
 	#build the Hmm for the marker using Hmmer3
-	if(!-e $self->{"alignDir"}."/$marker.stock.hmm"){
-	    `$Amphora2::Utilities::hmmbuild $self->{"alignDir"}/$marker.stock.hmm $self->{"alignDir"}/$marker.seed.stock`;
+	if(!-e "$Amphora2::Utilities::marker_dir/$marker.stock.hmm"){
+	    `$Amphora2::Utilities::hmmbuild $Amphora2::Utilities::marker_dir/$marker.stock.hmm $Amphora2::Utilities::marker_dir/$marker.seed.stock`;
 	}
+
 	if(!-e $self->{"alignDir"}."$marker.hmmsearch.out"){
-	    `$Amphora2::Utilities::hmmsearch -E 0.1 --tblout $self->{"alignDir"}/$marker.hmmsearch.tblout $self->{"alignDir"}/$marker.stock.hmm $self->{"blastDir"}/$marker.candidate > $self->{"alignDir"}/$marker.hmmsearch.out`;
+	    `$Amphora2::Utilities::hmmsearch -E 1 --tblout $self->{"alignDir"}/$marker.hmmsearch.tblout $Amphora2::Utilities::marker_dir/$marker.stock.hmm $self->{"blastDir"}/$marker.candidate > $self->{"alignDir"}/$marker.hmmsearch.out`;
 	}
+
     }
     return $self;
 }
@@ -187,7 +191,7 @@ sub alignAndMask{
     for(my $index=0; $index < @{$markRef}; $index++){
 	my $marker=${$markRef}[$index];
 	#Align the hits to the reference alignment using Hmmer3
-	`$Amphora2::Utilities::hmmalign --trim --outformat afa -o $self->{"alignDir"}/$marker.aln_hmmer3.fasta --mapali $self->{"alignDir"}/$marker.seed.stock $self->{"alignDir"}/$marker.stock.hmm $self->{"alignDir"}/$marker.newCandidate`;
+	`$Amphora2::Utilities::hmmalign --trim --outformat afa -o $self->{"alignDir"}/$marker.aln_hmmer3.fasta --mapali $Amphora2::Utilities::marker_dir/$marker.seed.stock $Amphora2::Utilities::marker_dir/$marker.stock.hmm $self->{"alignDir"}/$marker.newCandidate`;
 	#find out all the indexes that have a . in the reference sequences
 	my $originAli = new Bio::AlignIO(-file=>"$Amphora2::Utilities::marker_dir/$marker.trimfinal", -format=>'fasta');
 	my %referenceSeqs = ();
@@ -213,7 +217,7 @@ sub alignAndMask{
 	print $masqseq."\n";
 	# reading and trimming out non-marker alignment columns from Hmmalign output (Hmmer3)
 	my $hmmer3Ali = new Bio::AlignIO(-file =>$self->{"alignDir"}."/$marker.aln_hmmer3.fasta",-format=>'fasta');
-	open(aliOUT,">".$self->{"alignDir"}."/$marker.aln_hmmer3.trim")or die "Couldn't open ".$self->{"alignDir"}."/$marker.aln_hmmer3.trim for writting\n";
+	open(aliOUT,">".$self->{"alignDir"}."/$marker.aln_hmmer3.trim.fasta")or die "Couldn't open ".$self->{"alignDir"}."/$marker.aln_hmmer3.trim.fasta for writting\n";
 	my $seqCount = 0;
 	while(my $aln = $hmmer3Ali->next_aln()){
 	    foreach my $seq ($aln->each_seq()){
@@ -245,7 +249,6 @@ sub alignAndMask{
 		    #subsitute all the non letter or number characters into _ in the IDs to avoid parsing issues in tree viewing programs or others
 		    $newIDs =~ s/[^\w\d]/_/g;
                     #print the new trimmed alignment
-		    
 		    print aliOUT ">".$newIDs."\n".$newSeq."\n";
 		    $seqCount++;
 		}
@@ -268,7 +271,7 @@ sub getMarkerAlignmentFiles{
     my @markeralignments = ();
     for(my $index=0; $index < @{$markRef}; $index++){
 	my $marker=${$markRef}[$index];
-	push( @markeralignments, $self->{"alignDir"}."/$marker.aln_hmmer3.trim" );
+	push( @markeralignments, $self->{"alignDir"}."/$marker.aln_hmmer3.trim.fasta" );
     }
     return @markeralignments;
 }

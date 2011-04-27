@@ -55,10 +55,13 @@ my $pair=0; #used if using paired FastQ files
 my @markers;
 my (%hitsStart,%hitsEnd, %topscore, %hits, %markerHits)=();
 my $readsCore;
-
+my $custom="";
 sub RunBlast {
     my $self = shift;
-    @markers = @_;
+    my $custom = shift;
+    my $isolateMode=shift;
+    my $markersRef = shift;
+    @markers = @{$markersRef};
     print "MARKER       @markers\n";
     %markerHits = ();
     my $position = rindex($self->{"readsFile"},"/");
@@ -92,15 +95,28 @@ sub RunBlast {
 
 sub executeBlast{
     my $self = shift;
-    if(!-e $self->{"blastDir"}."/$readsCore.blastp" && -e $self->{"blastDir"}."/$readsCore-6frame"){
-	print "INSIDE 6frame BLAST\n";
-	`$Amphora2::Utilities::blastp -query $self->{"blastDir"}/$readsCore-6frame -evalue 0.1 -num_descriptions 50000 -num_alignments 50000 -db $self->{"blastDir"}/rep.faa -out $self->{"blastDir"}/$readsCore.blastp -outfmt 6 -num_threads $threadNum`;
+    if($custom ne ""){
+	if(!-e $self->{"blastDir"}."/$readsCore.blastp" && -e $self->{"blastDir"}."/$readsCore-6frame"){
+	    print "INSIDE 6frame BLAST\n";
+	    `$Amphora2::Utilities::blastp -query $self->{"blastDir"}/$readsCore-6frame -evalue 0.1 -num_descriptions 50000 -num_alignments 50000 -db $self->{"blastDir"}/rep.faa -out $self->{"blastDir"}/$readsCore.blastp -outfmt 6 -num_threads $threadNum`;
 #	    `blastall -p blastp -i $self->{"blastDir"}/$readsCore-6frame -e 0.1 -d $self->{"blastDir"}/rep.faa -o $self->{"blastDir"}/$readsCore.blastp -m 8 -a $threadNum`;
-    }
-    else{
-	if(!-e $self->{"blastDir"}."/$readsCore.blastp"){
-	    `$Amphora2::Utilities::blastp -query $self->{"readsFile"} -evalue 0.1 -num_descriptions 50000 -num_alignments 50000 -db $self->{"blastDir"}/rep.faa -out $self->{"blastDir"}/$readsCore.blastp -outfmt 6 -num_threads $threadNum`;
+	}
+	else{
+	    if(!-e $self->{"blastDir"}."/$readsCore.blastp"){
+		`$Amphora2::Utilities::blastp -query $self->{"readsFile"} -evalue 0.1 -num_descriptions 50000 -num_alignments 50000 -db $self->{"blastDir"}/rep.faa -out $self->{"blastDir"}/$readsCore.blastp -outfmt 6 -num_threads $threadNum`;
 #	    `blastall -p blastp -i $self->{"readsFile"} -e 0.1 -d $self->{"blastDir"}/rep.faa -o $self->{"blastDir"}/$readsCore.blastp -m 8 -a $threadNum`;
+	    }
+	}
+    }else{
+	my $dbDir = "$Amphora2::Utilities::marker_dir/representatives";
+	if(!-e $self->{"blastDir"}."/$readsCore.blastp" && -e $self->{"blastDir"}."/$readsCore-6frame"){
+            print "INSIDE 6frame BLAST\n";
+            `$Amphora2::Utilities::blastp -query $self->{"blastDir"}/$readsCore-6frame -evalue 0.1 -num_descriptions 50000 -num_alignments 50000 -db $dbDir/rep.faa -out $self->{"blastDir"}/$readsCore.blastp -outfmt 6 -num_threads $threadNum`;
+        }
+        else{
+            if(!-e $self->{"blastDir"}."/$readsCore.blastp"){
+                `$Amphora2::Utilities::blastp -query $self->{"readsFile"} -evalue 0.1 -num_descriptions 50000 -num_alignments 50000 -db $dbDir/rep.faa -out $self->{"blastDir"}/$readsCore.blastp -outfmt 6 -num_threads $threadNum`;
+            }
 	}
     }
     return $self;
@@ -355,27 +371,44 @@ Generates the blastable database using the marker representatives
 
 sub blastPrepAndClean {
     my $self = shift;
+    print STDERR "blastprepclean MARKERS @markers\n ";
     `mkdir $self->{"tempDir"}` unless (-e $self->{"tempDir"});
     #create a directory for the Reads file being processed.
     `mkdir $self->{"fileDir"}` unless (-e $self->{"fileDir"});
     `mkdir $self->{"blastDir"}` unless (-e $self->{"blastDir"});
-    #remove rep.faa if it already exists (starts clean is a previous job was stopped or crashed or included different markers)
-    if(-e $self->{"blastDir"}."/rep.faa"){ `rm $self->{"blastDir"}/rep.faa`;}
-    #also makes 1 large file with all the marker sequences
-    foreach my $marker (@markers){
-	#if a marker candidate file exists remove it, it is from a previous run and could not be related
-	if(-e $self->{"blastDir"}."/$marker.candidate"){
-	    `rm $self->{"blastDir"}/$marker.candidate`;
+    if($custom ne ""){
+	#remove rep.faa if it already exists (starts clean is a previous job was stopped or crashed or included different markers)
+	if(-e $self->{"blastDir"}."/rep.faa"){ `rm $self->{"blastDir"}/rep.faa`;}
+	#also makes 1 large file with all the marker sequences
+	foreach my $marker (@markers){
+	    #if a marker candidate file exists remove it, it is from a previous run and could not be related
+	    if(-e $self->{"blastDir"}."/$marker.candidate"){
+		`rm $self->{"blastDir"}/$marker.candidate`;
+	    }
+	    #initiate the hash table for all markers incase 1 marker doesn't have a single hit, it'll still be in the results 
+	    #and will yield an empty candidate file
+	    $markerHits{$marker}="";
+	    #append the rep sequences for all the markers included in the study to the rep.faa file
+	    `cat $Amphora2::Utilities::marker_dir/representatives/$marker.rep >> $self->{"blastDir"}/rep.faa`
 	}
-	#initiate the hash table for all markers incase 1 marker doesn't have a single hit, it'll still be in the results 
-	#and will yield an empty candidate file
-	$markerHits{$marker}="";
-	#append the rep sequences for all the markers included in the study to the rep.faa file
-	`cat $Amphora2::Utilities::marker_dir/representatives/$marker.rep >> $self->{"blastDir"}/rep.faa`
-    }
-    #make a blastable DB
-    if(!-e $self->{"blastDir"}."/rep.faa.psq" ||  !-e $self->{"blastDir"}."/rep.faa.pin" || !-e $self->{"blastDir"}."/rep.faa.phr"){
-	`makeblastdb -in $self->{"blastDir"}/rep.faa -dbtype prot -title RepDB`;
+	#make a blastable DB
+	if(!-e $self->{"blastDir"}."/rep.faa.psq" ||  !-e $self->{"blastDir"}."/rep.faa.pin" || !-e $self->{"blastDir"}."/rep.faa.phr"){
+	    `makeblastdb -in $self->{"blastDir"}/rep.faa -dbtype prot -title RepDB`;
+	}
+    }else{
+	#when using the default marker package
+	my $dbDir = "$Amphora2::Utilities::marker_dir/representatives";
+	print STDERR "Using the standard marker package\n";
+	print STDERR "Using $dbDir as default directory\n";
+	if(!-e "$dbDir/rep.faa"){
+	    foreach my $marker (@markers){
+		$markerHits{$marker}="";
+		`cat $dbDir/$marker.rep >> $dbDir/rep.faa`;
+	    }
+	}
+	if(!-e "$dbDir/rep.faa.psq" ||  !-e "$dbDir/rep.faa.pin" || !-e "$dbDir/rep.faa.phr"){
+		`makeblastdb -in $dbDir/rep.faa -dbtype prot -title RepDB`;
+	}
     }
     return $self;
 }

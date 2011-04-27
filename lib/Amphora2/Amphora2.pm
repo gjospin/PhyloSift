@@ -130,6 +130,7 @@ sub run {
     my $force = shift;
     my $custom = shift;
     my $continue = shift;
+    my $isolateMode=shift;
     print "force : $force\n";
     ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst)=localtime(time);
     printf STDERR  "START : %4d-%02d-%02d %02d:%02d:%02d\n",$year+1900,$mon+1,$mday,$hour,$min,$sec;
@@ -158,7 +159,7 @@ sub run {
     print "@markers\n";
     print "MODE :: ".$self->{"mode"}."\n";
     if($self->{"mode"} eq 'blast' || $self->{"mode"} eq 'all'){
-	$self=$self->runBlast($continue,@markers);
+	$self=$self->runBlast($continue,$custom,$isolateMode,\@markers);
 	print "MODE :: ".$self->{"mode"}."\n";
     }
 
@@ -356,7 +357,7 @@ sub taxonomyAssignments {
     ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst)=localtime(time);
     printf STDERR "Before taxonomy assignments %4d-%02d-%02d %02d:%02d:%02d\n",$year+1900,$mon+1,$mday,$hour,$min,$sec;
     # Taxonomy assignemnts
-    `$Amphora2::Utilities::Rscript $Amphora2::Utilities::printneighbor $self->{"treeDir"}/*.num.tre > $self->{"fileDir"}/neighbortaxa.txt`;
+#    `$Amphora2::Utilities::Rscript $Amphora2::Utilities::printneighbor $self->{"treeDir"}/*.num.tre > $self->{"fileDir"}/neighbortaxa.txt`;
     Amphora2::Summarize::summarize( $self );
     ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst)=localtime(time);
     printf STDERR "After taxonomy assignments %4d-%02d-%02d %02d:%02d:%02d\n",$year+1900,$mon+1,$mday,$hour,$min,$sec;
@@ -429,14 +430,16 @@ sub runMarkerAlign{
 sub runBlast {
     my $self = shift;
     my $continue = shift;
-    my @markerList = @_;
+    my $custom = shift;
+    my $isolateMode=shift;
+    my $markerListRef = shift;
     ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst)=localtime(time);
     printf STDERR "Before runBlast %4d-%02d-%02d %02d:%02d:%02d\n",$year+1900,$mon+1,$mday,$hour,$min,$sec;
     #clearing the blast directory
     my $blastDir = $self->{"blastDir"};
     `rm $self->{"blastDir"}/*` if(<$blastDir/*>);
     #run Blast
-    Amphora2::blast::RunBlast($self,@markerList);
+    Amphora2::blast::RunBlast($self,$custom,$isolateMode,$markerListRef);
     
     ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst)=localtime(time);
     printf STDERR "After runBlast %4d-%02d-%02d %02d:%02d:%02d\n",$year+1900,$mon+1,$mday,$hour,$min,$sec;

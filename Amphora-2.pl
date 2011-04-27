@@ -58,7 +58,7 @@ $newObject->{"isolate"} = $isolate;
 my $readsFile = $newObject->getReadsFile;
 print "FORCE: ".$force."\n";
 print "Continue : ".$continue."\n";
-$newObject->run($force,$custom,$continue);
+$newObject->run($force,$custom,$continue,$isolate);
 
 #Amphora2::Amphora2::run(@ARGV);
 
