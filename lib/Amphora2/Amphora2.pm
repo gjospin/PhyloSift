@@ -42,7 +42,8 @@ sub new{
 =head2 initialize
     
     Initializes the variables for the Amphora2 object
-    
+    Using the standard pathnames and the filename
+
 =cut
     
 sub initialize{
@@ -70,18 +71,6 @@ sub initialize{
     return $self;
     
 }
-
-=head2 getReadsFile
-
-=cut
-
-sub getReadsFile{
-
-    my $self = shift;
-    print $self->{"fileName"};
-    return $self->{"fileName"};
-}
-
 
 =head1 NAME
 
@@ -115,6 +104,13 @@ if you don't export anything, such as for a purely object-oriented module.
 =head1 SUBROUTINES/METHODS
 
 =head2 run
+    
+    Args : $force - if used at hte same time as the all mode it removes the temp directory if it already exists
+           $custom - reads in marker names from a custom list. if "" then use all markers in the marker directory
+           $continue - if the mode != all and continue = 1 then finish the pipeline otherwise only execute the step specified
+           $isolateMode - allows sequences to hit multiple markers (used when running isolate genomes)
+
+    Runs the Amphora-2 pipeline according to the functions passed as arguments
 
 =cut
 
@@ -177,6 +173,8 @@ sub run {
 
 =head2 function2
 
+    Reads the Amphora configuration file and assigns the file paths to the required directories
+
 =cut
 
 # reads the Amphora2 configuration file
@@ -193,9 +191,7 @@ sub readAmphora2Config {
 
 =head2 fileCheck
 
-=item *
-
-=back
+    Checks if the files passed to the Amphora object exist and are not empty
 
 =cut
 
@@ -223,9 +219,8 @@ sub fileCheck{
 
 =head2 runProgCheck
 
-=item *
-
-=back
+    Runs a check on the programs that will be used through the pipeline to make sure they are
+    available to the user and are the versions Amphora was tested with.
 
 =cut
 
@@ -278,8 +273,10 @@ sub prepIsolateFiles {
 
 =item *
 
-Reads markers from a file if specified by the user OR gathers all the markers from the markers directory
-Prints a file with marker names to use in the Amphora temporary directory for later use
+    ARGS : $markerFile - file to read the marker names from that will be used in the pipeline.
+    Reads markers from a file if specified by the user OR gathers all the markers from the markers directory
+    The Marker names are stored in an Array
+    If the filename is empty, use all the default markers.
 
 =back
 
@@ -311,9 +308,7 @@ sub markerGather {
 
 =head2 directoryPrep
 
-=item *
-
-=back
+    Prepares the temporary Amphora directory by deleting old runs and/or creating the correct directory structure
     
 =cut
 
@@ -344,11 +339,7 @@ sub directoryPrep {
 
 =head2 taxonomyAssignments
 
-=item * 
-
-performs the appropriate checks before running the taxonomy classification parts of the pipeline
-
-=back
+    performs the appropriate checks before running the taxonomy classification parts of the pipeline
 
 =cut
 
@@ -357,7 +348,7 @@ sub taxonomyAssignments {
     ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst)=localtime(time);
     printf STDERR "Before taxonomy assignments %4d-%02d-%02d %02d:%02d:%02d\n",$year+1900,$mon+1,$mday,$hour,$min,$sec;
     # Taxonomy assignemnts
-#    `$Amphora2::Utilities::Rscript $Amphora2::Utilities::printneighbor $self->{"treeDir"}/*.num.tre > $self->{"fileDir"}/neighbortaxa.txt`;
+    `$Amphora2::Utilities::Rscript $Amphora2::Utilities::printneighbor $self->{"treeDir"}/*.num.tre > $self->{"fileDir"}/neighbortaxa.txt`;
     Amphora2::Summarize::summarize( $self );
     ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst)=localtime(time);
     printf STDERR "After taxonomy assignments %4d-%02d-%02d %02d:%02d:%02d\n",$year+1900,$mon+1,$mday,$hour,$min,$sec;
@@ -365,9 +356,9 @@ sub taxonomyAssignments {
 
 =head2 runPplacer
 
-=item *
+    Performs the appropriate checks before runing the Read placement parts of the pipeline
 
-=back
+    if -continue or all mode are used, then run the next part of the pipeline
 
 =cut
 
@@ -391,9 +382,8 @@ sub runPplacer{
 
 =head2 runMarkerAlign
 
-=item *
-
-=back
+    Run the Hmm hit verification and the hit alignments to prep the hits for Pplacer
+    if -continue or all mode are used, then run the next part of the pipeline
 
 =cut
     
@@ -419,11 +409,11 @@ sub runMarkerAlign{
 
 =head2 runBlast
 
-=item *
-
     runBlast( markerArray, readsFile)
+    
+    Runs reads marker classifiation of the pipeline using Blast
 
-=back
+    if -continue or all mode are used, then run the next part of the pipeline
 
 =cut
 
