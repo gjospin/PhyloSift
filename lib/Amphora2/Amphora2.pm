@@ -72,6 +72,18 @@ sub initialize{
     
 }
 
+=head2 getReadsFile
+
+    returns the file name for the reads
+
+=cut
+
+sub getReadsFile{
+    my $self = shift;
+    return $self->{"readsFile"};
+
+}
+
 =head1 NAME
 
 Amphora2::Amphora2 - Implements core functionality for Amphora2
@@ -348,6 +360,7 @@ sub taxonomyAssignments {
     ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst)=localtime(time);
     printf STDERR "Before taxonomy assignments %4d-%02d-%02d %02d:%02d:%02d\n",$year+1900,$mon+1,$mday,$hour,$min,$sec;
     # Taxonomy assignemnts
+    print STDERR "NEIGHOR TEST \t$Amphora2::Utilities::printneighbor\n";
     `$Amphora2::Utilities::Rscript $Amphora2::Utilities::printneighbor $self->{"treeDir"}/*.num.tre > $self->{"fileDir"}/neighbortaxa.txt`;
     Amphora2::Summarize::summarize( $self );
     ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst)=localtime(time);
