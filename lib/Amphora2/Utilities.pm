@@ -6,8 +6,11 @@ use warnings;
 use Carp;
 use File::Basename;
 use Bio::AlignIO;
-use Bio::Align::Utilities qw(:all);
-
+use Bio::Align::Utilities qw(:all); 
+use POSIX ();
+use WWW::Mechanize;
+use LWP::Simple;
+use File::Fetch;
 =head1 NAME
 
 Amphora2::Utilities - Implements miscellaneous accessory functions for Amphora2
@@ -176,27 +179,58 @@ sub download_data {
 	my $destination = shift;
 	`mkdir -p $destination`;
 	# FIXME this is insecure!
-	`wget $url -O $destination/../amphora_data.tar.gz`;
-	`cd $destination/../ ; tar xzf amphora_data.tar.gz`;
-	`rm $destination/../amphora_data.tar.gz`;
+	my $ff = File::Fetch->new(uri=>$url);
+	$ff->fetch(to=>"$destination/..");
+#	`wget -N -nv $url -O  $destination/../amphora_data.tar.gz`;
+	print "URL : $url\n";
+	$url =~ /\/(\w+)\.tgz/;
+	my $archive = $1;
+	print "ARCHIVE : $archive\n";
+
+	if(-e "$destination/.. "){
+	    `rm -rf $destination/..`;
+	}
+
+	`cd $destination/../ ; tar xzf $archive.tgz ; touch $archive`;
+	`rm $destination/../$archive.tgz`;
 }
+
 
 my $marker_update_url = "http://edhar.genomecenter.ucdavis.edu/~mlangill/markers.tgz";
 my $ncbi_url = "http://edhar.genomecenter.ucdavis.edu/~koadman/ncbi.tgz";
 
 sub dataChecks {
 	$marker_dir = get_data_path( "markers", $Amphora2::Settings::marker_path );
-	unless( -x $marker_dir ){
-		warn "Unable to find marker data!\n";
+	my ($content_type, $document_length, $modified_time, $expires, $server)= head("$marker_update_url");
+	print "TEST REMOTE:".localtime($modified_time)."\n";
+	if(-x $marker_dir){
+	    my $mtime = (stat($ENV{"HOME"}."/share/amphora2/markers"))[9];
+	    print "TEST LOCAL :".localtime($mtime)."\n";	
+	    if($modified_time > $mtime){
+		warn "Found newer version of the marker data\n";
 		warn "Downloading from $marker_update_url\n";
 		download_data( $marker_update_url, $marker_dir );
+	    }
+	}else{
+	    warn "Unable to find marker data!\n";
+	    warn "Downloading from $marker_update_url\n";
+	    download_data($marker_update_url, $marker_dir);
 	}
 	$ncbi_dir = get_data_path( "ncbi", $Amphora2::Settings::ncbi_path );
-	unless( -x $ncbi_dir ){
-		warn "Unable to find NCBI taxonomy data!\n";
+	($content_type, $document_length, $modified_time, $expires, $server)= head("$ncbi_url");
+	if( -x $ncbi_dir ){
+	    my $ncbi_time =(stat($ENV{"HOME"}."/share/amphora2/ncbi"))[9];
+	    if($modified_time > $ncbi_time){
+		warn "Found newer version of NCBI taxonomy data!\n";
 		warn "Downloading from $ncbi_url\n";
 		download_data( $ncbi_url, $ncbi_dir );
+	    }
+	}else{
+	    warn "Unable to find NCBI taxonomy data!\n";
+	    warn "Downloading from $ncbi_url\n";
+	    download_data( $ncbi_url, $ncbi_dir);
 	}
+	exit;
 }
 
 =head2 fasta2stockholm
@@ -292,6 +326,7 @@ sub concatenateAlignments {
 	my $partlist = "partition genes = ".scalar(@alignments).": ";
 	my $prevlen = 0;
 	foreach my $file(@alignments){
+	    print STDERR $file."\n";
 		my $in  = Bio::AlignIO->new(-file => $file , '-format' => 'fasta');
 		while ( my $aln = $in->next_aln() ) {
 			my $csname = $file;
