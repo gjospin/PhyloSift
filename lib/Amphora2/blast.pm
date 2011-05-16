@@ -25,7 +25,7 @@ our $VERSION = '0.01';
 =head1 SYNOPSIS
 
 Run blast on a list of families for a set of Reads
-
+ 
  input : Filename with marker list
          Filename for the reads file
 
@@ -56,6 +56,7 @@ my @markers;
 my (%hitsStart,%hitsEnd, %topscore, %hits, %markerHits)=();
 my $readsCore;
 my $custom="";
+my %duplicates=();
 sub RunBlast {
     my $self = shift;
     my $custom = shift;
@@ -79,7 +80,7 @@ sub RunBlast {
 #	`$Amphora2::Utilities::translateSixFrame $self->{"readsFile"} > $self->{"blastDir"}/$self->{"fileName"}-6frame`
 #    }
     
-    #    $readsFile = "$blastDir/$fileName-6frame";
+        $readsFile = "$blastDir/$fileName-6frame";
     
     sixFrameTranslation($self);
 
@@ -223,6 +224,7 @@ parse the blast file
 
 
 sub get_blast_hits{
+    my %duplicates = ();
     my $self = shift;
     #parsing the blast file
     # parse once to get the top scores for each marker
@@ -240,8 +242,25 @@ sub get_blast_hits{
 	my $query_start = $values[6];
 	my $query_end = $values[7];
 	my $bitScore = $values[11];
-	my @marker = split(/\_/, $subject);
+	my @marker=split(/\_/,$subject);
 	my $markerName = $marker[$#marker];
+#	print "BLAST ".$query."\n";
+	if($query =~ m/(\S+)_([rf][012])/){
+	    print "PARSING BLAST\n";
+	    if(exists $duplicates{$1}{$markerName}){
+		foreach my $suff (keys (%{$duplicates{$1}{$markerName}})){
+		    if($bitScore > $duplicates{$1}{$markerName}{$suff}){
+			delete($duplicates{$1}{$markerName}{$suff});
+			$duplicates{$1}{$markerName}{$2}=$bitScore;
+		    }else{
+			#do nothing;
+		    }
+		}
+	    }else{
+		$duplicates{$1}{$markerName}{$2}=$bitScore;
+	    }
+	}
+
 	#parse once to get the top score for each marker (if isolate is ON, parse again to check the bitscore ranges)
 	if($isolateMode==1){
 	    # running on a genome assembly
@@ -280,6 +299,7 @@ sub get_blast_hits{
 	    }#else do nothing
 	}
     }
+    print "Done parsing\n";
     close(blastIN);
     if($isolateMode ==1){
 	# reading the output a second to check the bitscore ranges from the top score
@@ -323,11 +343,21 @@ sub get_blast_hits{
 		#print STDERR $seq->id."\t".$seq->description."\n";
 		#checking if a 6frame translation was done and the suffix was appended to the description and not the sequence ID
 		my $newID = $seq->id;
+		my $current_suff="";
+		my $current_seq="";
 		if($seq->description =~ m/(_[fr][012])$/ && $seq->id !~m/(_[fr][012])$/){
 		    $newID.=$1;
 		}
 		#create a new string or append to an existing string for each marker
-		
+		if($seq->id =~ m/(\S+)_([fr][012])/){
+		    $current_suff=$2;
+		    $current_seq = $1;
+		}
+		if(!exists $duplicates{$current_seq}{$markerHit}{$current_suff}){
+		   # print "Skipping ".$seq->id."\t".$current_suff.";\n";
+		    next;
+		}
+		#print "not skipping\t";
 		#pre-trimming for the query + 150 residues before and after (for very long queries)
 		my $start = $hitsStart{$seq->id}{$markerHit}-150;
 		if($start < 0){
