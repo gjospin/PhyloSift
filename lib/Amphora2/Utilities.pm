@@ -186,11 +186,9 @@ sub download_data {
 	$url =~ /\/(\w+)\.tgz/;
 	my $archive = $1;
 	print "ARCHIVE : $archive\n";
-
 	if(-e "$destination/.. "){
 	    `rm -rf $destination/..`;
 	}
-
 	`cd $destination/../ ; tar xzf $archive.tgz ; touch $archive`;
 	`rm $destination/../$archive.tgz`;
 }
@@ -230,7 +228,6 @@ sub dataChecks {
 	    warn "Downloading from $ncbi_url\n";
 	    download_data( $ncbi_url, $ncbi_dir);
 	}
-	exit;
 }
 
 =head2 fasta2stockholm
