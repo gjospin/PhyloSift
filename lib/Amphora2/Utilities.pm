@@ -8,7 +8,6 @@ use File::Basename;
 use Bio::AlignIO;
 use Bio::Align::Utilities qw(:all); 
 use POSIX ();
-use WWW::Mechanize;
 use LWP::Simple;
 use File::Fetch;
 =head1 NAME
