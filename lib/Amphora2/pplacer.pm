@@ -44,19 +44,19 @@ sub pplacer {
     print "PPLACER MARKS\t @{$markRef}\n";
     foreach my $marker(@{$markRef}){
 	# Pplacer requires the alignment files to have a .fasta extension
-	if(!-e $self->{"alignDir"}."/$marker.trimfinal.fasta" ){
-	    `cp $Amphora2::Utilities::marker_dir/$marker.trimfinal $self->{"alignDir"}/$marker.trimfinal.fasta`;
+	if(!-e "$Amphora2::Utilities::marker_dir/$marker.trimfinal.fasta" ){
+	    `cp $Amphora2::Utilities::marker_dir/$marker.trimfinal $Amphora2::Utilities::marker_dir/$marker.trimfinal.fasta`;
 	}
-	if(!-e $self->{"alignDir"}."/$marker.aln_hmmer3.trim.fasta"  && -e $self->{"alignDir"}."/$marker.aln_hmmer3.trim"){
-	    `cp $self->{"alignDir"}/$marker.aln_hmmer3.trim $self->{"alignDir"}/$marker.aln_hmmer3.trim.fasta`;
-	}else{
-	    next;
-	}
+#	if(!-e $self->{"alignDir"}."/$marker.aln_hmmer3.trim.fasta"  && -e $self->{"alignDir"}."/$marker.aln_hmmer3.trim"){
+#	    `cp $self->{"alignDir"}/$marker.aln_hmmer3.trim $self->{"alignDir"}/$marker.aln_hmmer3.trim.fasta`;
+#	}else{
+#	    next;
+#	}
 	#adding a printed statement to check on the progress
 	print STDERR "Running Placer on $marker ....\t";
 	#running Pplacer
 	if(!-e $self->{"treeDir"}."/$marker.aln_hmmer3.trim.place"){
-	    `$Amphora2::Utilities::pplacer -p -r $self->{"alignDir"}/$marker.trimfinal.fasta -t $Amphora2::Utilities::marker_dir/$marker.final.tre -s $Amphora2::Utilities::marker_dir/$marker.in_phyml_stats.txt $self->{"alignDir"}/$marker.aln_hmmer3.trim.fasta`;
+	    `$Amphora2::Utilities::pplacer -p -r $Amphora2::Utilities::marker_dir/$marker.trimfinal.fasta -t $Amphora2::Utilities::marker_dir/$marker.final.tre -s $Amphora2::Utilities::marker_dir/$marker.in_phyml_stats.txt $self->{"alignDir"}/$marker.aln_hmmer3.trim.fasta`;
 	}
 	#adding a printed statement to check on the progress (not really working if using parrallel jobs)
 	print STDERR "Done !\n";
