@@ -246,7 +246,7 @@ sub get_blast_hits{
 	my $markerName = $marker[$#marker];
 #	print "BLAST ".$query."\n";
 	if($query =~ m/(\S+)_([rf][012])/){
-	    print "PARSING BLAST\n";
+	    #print "PARSING BLAST\n";
 	    if(exists $duplicates{$1}{$markerName}){
 		foreach my $suff (keys (%{$duplicates{$1}{$markerName}})){
 		    if($bitScore > $duplicates{$1}{$markerName}{$suff}){
