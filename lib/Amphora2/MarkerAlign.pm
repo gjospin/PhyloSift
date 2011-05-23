@@ -74,7 +74,7 @@ sub MarkerAlign {
     alignAndMask($self,$markersRef);
     print STDERR "AFTER ALIGN and MASK\n";
     my @markeralignments = getMarkerAlignmentFiles($self,$markersRef);
-    Amphora2::Utilities::concatenateAlignments($self->{"alignDir"}."/concat.fasta", $self->{"alignDir"}."/mrbayes.nex", @markeralignments);
+    #Amphora2::Utilities::concatenateAlignments($self->{"alignDir"}."/concat.fasta", $self->{"alignDir"}."/mrbayes.nex", @markeralignments);
     print STDERR "AFTER concatenateALI\n";
     return $self;
 }
