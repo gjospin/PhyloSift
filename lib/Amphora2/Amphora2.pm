@@ -15,7 +15,7 @@ use Amphora2::MarkerAlign;
 use Amphora2::blast qw(RunBlast);
 use Amphora2::pplacer;
 use Amphora2::Summarize;
-
+use Amphora2::rapSearch;
 =head2 new
 
     Returns : Amphora2 project object
@@ -167,7 +167,8 @@ sub run {
     print "@markers\n";
     print "MODE :: ".$self->{"mode"}."\n";
     if($self->{"mode"} eq 'blast' || $self->{"mode"} eq 'all'){
-	$self=$self->runBlast($continue,$custom,$isolateMode,\@markers);
+#	$self=$self->runBlast($continue,$custom,$isolateMode,\@markers);
+	$self=$self->runRapSearch($continue,$custom,$isolateMode,\@markers);
 	print "MODE :: ".$self->{"mode"}."\n";
     }
 
@@ -336,7 +337,7 @@ sub directoryPrep {
 	`rm -rf $dir`;
     }elsif(-e $self->{"fileDir"} && $self->{"mode"} eq 'all'){
 	print STDERR "A previous run was found using the same file name aborting the current run\n";
-	print STDERR "Either delete that run from $fileDir, or force overwrite with the -f command-line option\n";
+	print STDERR "Either delete that run from ".$self->{"fileDir"}.", or force overwrite with the -f command-line option\n";
 	exit;
     }
     #check if the temporary directory exists, if it doesn't create it.
@@ -449,6 +450,29 @@ sub runBlast {
     
     if($continue != 0){
 	$self->{"mode"} = 'align';
+    }
+    return $self;
+}
+
+sub runRapSearch {
+    my $self = shift;
+    my $continue = shift;
+    my $custom = shift;
+    my $isolateMode=shift;
+    my $markerListRef = shift;
+    ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst)=localtime(time);
+    printf STDERR "Before runRap %4d-%02d-%02d %02d:%02d:%02d\n",$year+1900,$mon+1,$mday,$hour,$min,$sec;
+    #clearing the blast directory                                                                                                                            
+    my $blastDir = $self->{"blastDir"};
+    `rm $self->{"blastDir"}/*` if(<$blastDir/*>);
+    #run Blast                                                                                                                                               
+    Amphora2::rapSearch::RunRapSearch($self,$custom,$isolateMode,$markerListRef);
+
+    ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst)=localtime(time);
+    printf STDERR "After runRap %4d-%02d-%02d %02d:%02d:%02d\n",$year+1900,$mon+1,$mday,$hour,$min,$sec;
+
+    if($continue != 0){
+        $self->{"mode"} = 'align';
     }
     return $self;
 }

@@ -72,7 +72,8 @@ our $makeblastdb = "";
 our $translateSixFrame = "";
 our $printneighbor = "";
 our $Rscript = "";
-
+our $rapSearch= "";
+our $preRapSearch = "";
 sub programChecks {
 	eval 'require Bio::Seq;';
 	if ($@) {
@@ -142,6 +143,15 @@ sub programChecks {
 	unless( defined($ENV{"R_LIBS_USER"}) && $ENV{"R_LIBS_USER"}=~/amphora2/ ){
 		$ENV{"R_LIBS_USER"} .= ":$amphora_r_lib_path";
 	}
+
+	$rapSearch = get_program_path("rapsearch",$Amphora2::Settings::a2_path);
+	if($rapSearch eq ""){
+	    carp("rapsearch was not found\n");
+	    return 1;
+	}
+
+	$preRapSearch = get_program_path("prerapsearch",$Amphora2::Settings::a2_path);
+
 
 	return 0;
 }
