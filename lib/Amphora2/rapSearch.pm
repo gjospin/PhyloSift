@@ -240,10 +240,10 @@ sub fastqToFasta{
 	    open(FASTQ_1, $self->{"readsFile"})or die "Couldn't open ".$self->{"readsFile"}." in run_blast.pl reading the FastQ file\n";
 	    while(<FASTQ_1>){
 		chomp($_);
-		if($_ =~ m/^@(\S+)\/(\d)/){
+		if($_ =~ m/^@(\S+)/){
 		    $curr_ID =$1;
 		    $skip =0;
-		}elsif($_ =~ m/^\+$curr_ID\/(\d)/){
+		}elsif($_ =~ m/^\+$curr_ID/){
 		    $skip = 1;
 		}else{
 		    if($skip ==0){
@@ -258,10 +258,10 @@ sub fastqToFasta{
 	    open(FASTQ_2, $self->{"readsFile_2"})or die "Couldn't open ".$self->{"readsFile_2"}." in run_blast.pl reading the FastQ file\n";
 	    while(<FASTQ_2>){
 		chomp($_);
-		if($_ =~ m/^@(\S+)\/(\d)/){
+		if($_ =~ m/^@(\S+)/){
 		    $curr_ID =$1;
 		    $skip =0;
-		}elsif($_ =~ m/^\+$curr_ID\/(\d)/){
+		}elsif($_ =~ m/^\+$curr_ID/){
 		    $skip = 1;
 		}else{
 		    if($skip ==0){
@@ -273,7 +273,7 @@ sub fastqToFasta{
 		}
 	    }
 	    close(FASTQ_2);
-	    print STDERR "Writing ". $self->{"fileName"}.".fasta\n";
+	    print STDERR "Writing ".$readsCore.".fasta\n";
 	    open(FastA, ">".$self->{"blastDir"}."/$readsCore.fasta")or die "Couldn't open ".$self->{"blastDir"}."/$readsCore.fasta for writing in run_blast.pl\n";
 	    foreach my $id (keys %fastQ){
 		print FastA ">".$id."\n".$fastQ{$id}."\n";
