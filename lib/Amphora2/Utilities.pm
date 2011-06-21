@@ -210,8 +210,9 @@ sub dataChecks {
 	$marker_dir = get_data_path( "markers", $Amphora2::Settings::marker_path );
 	my ($content_type, $document_length, $modified_time, $expires, $server)= head("$marker_update_url");
 	print "TEST REMOTE:".localtime($modified_time)."\n";
+	print STDERR "MARKER_PATH : ".$marker_dir."\n";
 	if(-x $marker_dir){
-	    my $mtime = (stat($ENV{"HOME"}."/share/amphora2/markers"))[9];
+	    my $mtime = (stat($marker_dir))[9];
 	    print "TEST LOCAL :".localtime($mtime)."\n";	
 	    if($modified_time > $mtime){
 		warn "Found newer version of the marker data\n";
