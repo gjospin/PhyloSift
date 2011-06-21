@@ -176,6 +176,11 @@ sub translateFrame{
 
 sub executeRap{
     my $self = shift;
+    if($self->{"readsFile"} !~ m/^\//){
+	print STDERR "Making sure rapsearch can find the readsfile\n";
+	$self->{"readsFile"}=getcwd()."/".$self->{"readsFile"};
+	print "New readsFile ".$self->{"readsFile"}."\n";
+    }
     if($custom ne ""){
 	if(!-e $self->{"blastDir"}."/$readsCore.rapSearch.m8"){
 	    print "INSIDE custom markers RAPSearch\n";
