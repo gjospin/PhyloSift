@@ -363,8 +363,6 @@ sub taxonomyAssignments {
     ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst)=localtime(time);
     printf STDERR "Before taxonomy assignments %4d-%02d-%02d %02d:%02d:%02d\n",$year+1900,$mon+1,$mday,$hour,$min,$sec;
     # Taxonomy assignemnts
-    print STDERR "NEIGHOR TEST \t$Amphora2::Utilities::printneighbor\n";
-    `$Amphora2::Utilities::Rscript $Amphora2::Utilities::printneighbor $self->{"treeDir"}/*.num.tre > $self->{"fileDir"}/neighbortaxa.txt`;
     Amphora2::Summarize::summarize( $self,$markListRef );
     ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst)=localtime(time);
     printf STDERR "After taxonomy assignments %4d-%02d-%02d %02d:%02d:%02d\n",$year+1900,$mon+1,$mday,$hour,$min,$sec;
