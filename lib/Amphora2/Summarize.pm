@@ -3,6 +3,9 @@ package Amphora2::Summarize;
 use warnings;
 use strict;
 use Amphora2::Amphora2;
+use Math::Random;
+use Carp;
+
 =head1 NAME
 
 Amphora2::Summarize - Summarize placed reads using the NCBI taxonomy
@@ -34,13 +37,9 @@ if you don't export anything, such as for a purely object-oriented module.
 my %nameidmap;
 my %idnamemap;
 
-sub summarize {
-    my $self = shift;
-    my $markerdir = $Amphora2::Utilities::marker_dir;
-    my %namemap = Amphora2::Utilities::readNameTable($markerdir);
-    foreach my $key( keys(%namemap) ){
-	$namemap{$key}=homogenizeNameAlaDongying($namemap{$key});
-    }
+# read the NCBI taxon names
+# stash them in hashes called nameidmap and idnamemap to go back & forth from tax ids to names
+sub readNcbiTaxonNameMap {
     my $ncbidir = $Amphora2::Utilities::ncbi_dir;
     open( my $TAXIDS, "$ncbidir/names.dmp" );
     while( my $line = <$TAXIDS> ){
@@ -51,53 +50,171 @@ sub summarize {
 	    $idnamemap{$vals[0]}=homogenizeNameAlaDongying($vals[1]) if($line =~ /scientific name/);
 	}
     }
+}
+
+# now read the NCBI taxonomy structure
+# puts the results in a hash called "parent"
+my %parent;
+sub readNcbiTaxonomyStructure {
+    my $ncbidir = $Amphora2::Utilities::ncbi_dir;
     open( my $TAXSTRUCTURE, "$ncbidir/nodes.dmp" );
-    my %parent;
     while( my $line = <$TAXSTRUCTURE> ){
 	chomp $line;
 	my @vals = split( /\s+\|\s+/, $line );
 	$parent{$vals[0]} = [$vals[1],$vals[2]];
     }
-    my %hitcounter;
-    my $readcount = 0;
-    open(my $neighborIN, $self->{"fileDir"}."/neighbortaxa.txt");
-    while( my $line = <$neighborIN> ){
-	chomp $line;
-	$line =~ s/\s+$//g;
-	$line =~ s/^\s+//g;
-	#	next unless length($line) > 12;
-	next unless( defined($namemap{$line}) );
-	my ($tid,$name) = dongyingFindNameInTaxaDb($namemap{$line});
+}
+
+
+
+=head2 makeNcbiTree
+Reads all the marker gene trees, finds their corresponding taxa in the NCBI taxonomy, and
+constructs a newick format tree representation of the NCBI taxonomy containing only the
+organisms present in the marker gene trees.  
+=cut
+sub makeNcbiTree {
+    my $self = shift;
+    readNcbiTaxonNameMap();
+    readNcbiTaxonomyStructure();
+    # now read the list of organisms we have in our DB
+    # construct a phylo tree with the NCBI topology containing
+    # just the organisms in our database
+    my $markerdir = $Amphora2::Utilities::marker_dir;
+    my %namemap = Amphora2::Utilities::readNameTable($markerdir);
+    my $phylotree = Bio::Phylo::Forest::Tree->new();
+    open( MARKERTAXONMAP, ">$markerdir/marker_taxon_map.txt" );
+    my %tidnodes;
+    foreach my $key( keys(%namemap) ){
+	$namemap{$key}=homogenizeNameAlaDongying($namemap{$key});
+	my ($tid,$name) = dongyingFindNameInTaxaDb($namemap{$key});
 	if($tid eq "ERROR"){
-	    print STDERR "Error! Could not find $line in name map\n" if length($line) > 12;
+	    print STDERR "Error! Could not find $namemap{$key} in name map\n" if length($key) > 12;
 	    next;
 	}
-	#got the taxon id, now walk to root tallying everything we hit
+	# add it to the mapping file
+	my $treename = treeName($idnamemap{$tid});
+        print MARKERTAXONMAP "$key\t$treename\n";
+	#got the taxon id, now walk to root adding tree nodes as necessary
 	next unless(defined($tid));
+	my $child;        
 	while( $tid != 1 ){
-	    if(defined($hitcounter{$tid})){
-		$hitcounter{$tid}++;
-	    }else{
-		$hitcounter{$tid}=1;
-	    }
-	    $tid = $parent{$tid}->[0];
+	    # check if we've already seen this one
+            last if(defined($tidnodes{$tid}));
+            # create a new node & add to tree
+            my $nodename = treeName($idnamemap{$tid});
+	    my $parentid = $parent{$tid}->[0];
+            my $newnode;
+            $newnode = Bio::Phylo::Forest::Node->new( -parent=>$tidnodes{$parentid}, -name=>$nodename) if defined($tidnodes{$parentid});
+            $newnode = Bio::Phylo::Forest::Node->new( -name=>$nodename) if !defined($tidnodes{$parentid});
+            $tidnodes{$tid} = $newnode;
+            $newnode->set_child($child) if(defined($child));
+            $phylotree->insert($newnode);
+            # continue traversal toward root
+            $tid = $parentid;
+            $child = $newnode;
 	}
-	$readcount++;
     }
-    close($neighborIN);
-    my %hitvals;
-    foreach my $tid(keys(%hitcounter)){
-	my $frac = sprintf("%.4f",$hitcounter{$tid}/$readcount);
-	#	$hitvals{$idnamemap{$tid}} = $frac;
-	$hitvals{$idnamemap{$tid}}=[$hitcounter{$tid},$parent{$tid}->[1],$frac];
-	
+    close MARKERTAXONMAP;
+    open( TREEOUT, ">ncbi_tree.tre" );
+    print TREEOUT $phylotree->to_newick("-nodelabels"=>1);
+    close TREEOUT;
+}
+
+=head2 summarize
+Reads the .place files containing Pplacer read placements and maps them onto the
+NCBI taxonomy
+=cut
+sub summarize {
+    my $self = shift;
+    my $markRef = shift; # list of the markers we're using
+    readNcbiTaxonNameMap();
+    readNcbiTaxonomyStructure();
+    my $markerdir = $Amphora2::Utilities::marker_dir;
+    my %namemap = Amphora2::Utilities::readNameTable($markerdir);
+    foreach my $key( keys(%namemap) ){
+	$namemap{$key}=homogenizeNameAlaDongying($namemap{$key});
     }
-    my @sorted = reverse sort { $hitvals{$a}->[0] <=> $hitvals{$b}->[0] } keys %hitvals; 
+    # keep a hash counting up all the read placements
+    my %ncbireads;
+
+    # read all of the .place files for markers
+    # map them onto the ncbi taxonomy
+    foreach my $marker(@{$markRef}){
+	# don't bother with this one if there's no read placements
+	next unless( -e $self->{"treeDir"}."/$marker.aln_hmmer3.trim.place" );
+
+        # first read the taxonomy mapping
+        open( TAXONMAP, "$markerdir/$marker.ncbimap") || croak("Unable to read file $markerdir/$marker.ncbimap\n");
+	my %markerncbimap;
+	while( my $line = <TAXONMAP> ){
+                chomp($line);
+		my ($markerbranch,$ncbiname) = split(/\t/, $line);
+		$markerncbimap{$markerbranch} = [] unless defined( $markerncbimap{$markerbranch} );
+		push( @{ $markerncbimap{$markerbranch} }, $ncbiname );
+	}
+
+        # then read & map the placement
+        open(PLACEFILE, $self->{"treeDir"}."/$marker.aln_hmmer3.trim.place") || croak("Unable to read file ".$self->{"treeDir"}."/$marker.aln_hmmer3.trim.place\n");
+	my $placeline = 0;
+	while( my $line = <PLACEFILE> ){
+            $placeline=1 if($line =~ /^\>/);
+            next if($line =~ /^\>/);
+            next if($line =~ /^\s*\#/);
+            next unless($line =~ /^\d+\t\d+/);
+            if($placeline==1){
+                my @pline = split(/\t/, $line);
+                my $mapcount = scalar(@{$markerncbimap{$pline[0]}});
+                foreach my $taxon( @{$markerncbimap{$pline[0]}} ){
+                    $ncbireads{$taxon} = 0 unless defined $ncbireads{$taxon};
+                    $ncbireads{$taxon} += $pline[1] / $mapcount;	# split the p.p. across the possible edge mappings
+                }
+            }
+	}
+    }
     open(taxaOUT,">".$self->{"fileDir"}."/taxasummary.txt");
-    foreach my $names (@sorted){
-	print taxaOUT join("\t",$hitvals{$names}->[1],$names,$hitvals{$names}->[0],$hitvals{$names}->[2]),"\n";
+    foreach my $taxon(keys(%ncbireads)){
+	print taxaOUT join("\t",$taxon,$ncbireads{$taxon}),"\n";
     }
     close(taxaOUT);
+    
+    # sample from multinomial to get confidence limits
+    # get total read count
+    my $totalreads=0;
+    foreach my $val(values(%ncbireads)){
+        $totalreads+=$val;
+    }
+    print "Have $totalreads reads\n";
+    # normalize to a sampling distribution
+    foreach my $key(keys(%ncbireads)){
+        $ncbireads{$key}/=$totalreads;
+    }
+    my $sample_count = 100;
+    my %samples;
+    for( my $sI=0; $sI<$sample_count; $sI++ ){
+        my @sample = Math::Random::random_multinomial( $totalreads, values(%ncbireads) );
+        my $kI=0;
+        foreach my $key(keys(%ncbireads)){
+            push(@{ $samples{$key} }, $sample[$kI++]);
+        }
+    }
+    
+    open(taxaCONF,">".$self->{"fileDir"}."/taxaconfidence.txt");
+    foreach my $key(keys(%samples)){
+        my @svals = @{ $samples{$key} };
+        my @sorted = sort { $a <=> $b } @svals;
+        print taxaCONF join("\t",$key, $sorted[0], $sorted[int($sample_count*0.1)], $sorted[int($sample_count*0.25)], $sorted[int($sample_count*0.5)], $sorted[int($sample_count*0.75)], $sorted[int($sample_count*0.9)], $sorted[$sample_count-1]), "\n";
+    }
+}
+
+
+sub treeName {
+    my $inName = shift;
+    $inName=~s/\s+/_/g;
+    $inName=~s/'//g;
+    $inName=~s/[\(\)]//g;
+    $inName=~s/-/_/g;
+    $inName=~s/\//_/g;
+    return $inName;
 }
 
 =head2 homogenizeNameAlaDongying
