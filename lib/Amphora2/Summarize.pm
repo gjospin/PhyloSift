@@ -186,12 +186,19 @@ sub summarize {
     print "Have $totalreads reads\n";
     # normalize to a sampling distribution
     foreach my $key(keys(%ncbireads)){
-        $ncbireads{$key}/=$totalreads;
+        $ncbireads{$key}/=$totalreads + 1;
     }
+    my $normsum=0;
+    my @valarray = values(%ncbireads);
+    foreach my $val(@valarray){
+        $normsum+=$val;
+    }
+    print "Normalize sum $normsum reads\n";
+#    $valarray[0] += 1 - $normsum; # ugh, deal with fp error
     my $sample_count = 100;
     my %samples;
     for( my $sI=0; $sI<$sample_count; $sI++ ){
-        my @sample = Math::Random::random_multinomial( $totalreads, values(%ncbireads) );
+        my @sample = Math::Random::random_multinomial( $totalreads, @valarray );
         my $kI=0;
         foreach my $key(keys(%ncbireads)){
             push(@{ $samples{$key} }, $sample[$kI++]);
