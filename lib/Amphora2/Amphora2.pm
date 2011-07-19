@@ -35,6 +35,7 @@ sub new{
     $self->{"blastDir"} = undef;
     $self->{"alignDir"} = undef;
     $self->{"treeDir"} = undef;
+    $self->{"dna"}=undef;
     bless($self);
     return $self;
 }
@@ -68,6 +69,7 @@ sub initialize{
     $self->{"blastDir"} = $self->{"fileDir"}."/blastDir"; 
     $self->{"alignDir"} = $self->{"fileDir"}."/alignDir";
     $self->{"treeDir"} = $self->{"fileDir"}."/treeDir"; 
+    $self->{"dna"}=0;
     return $self;
     
 }
@@ -139,6 +141,7 @@ sub run {
     my $custom = shift;
     my $continue = shift;
     my $isolateMode=shift;
+    my $reverseTranslate=shift;
     print "force : $force\n";
     ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst)=localtime(time);
     printf STDERR  "START : %4d-%02d-%02d %02d:%02d:%02d\n",$year+1900,$mon+1,$mday,$hour,$min,$sec;
@@ -168,13 +171,13 @@ sub run {
     print "MODE :: ".$self->{"mode"}."\n";
     if($self->{"mode"} eq 'blast' || $self->{"mode"} eq 'all'){
 #	$self=$self->runBlast($continue,$custom,$isolateMode,\@markers);
-	$self=$self->runRapSearch($continue,$custom,$isolateMode,\@markers);
+	$self=$self->runRapSearch($continue,$custom,$isolateMode,$reverseTranslate,\@markers);
 	print "MODE :: ".$self->{"mode"}."\n";
     }
 
     print "MODE :: ".$self->{"mode"}."\n";
     if($self->{"mode"} eq 'align' || $self->{"mode"} eq 'all'){
-	$self=$self->runMarkerAlign($continue,\@markers);
+	$self=$self->runMarkerAlign($continue,$reverseTranslate,\@markers);
     }
     if($self->{"mode"} eq 'placer' || $self->{"mode"} eq 'all'){
 	$self=$self->runPplacer($continue,\@markers);
@@ -404,6 +407,7 @@ sub runPplacer{
 sub runMarkerAlign{
     my $self = shift;
     my $continue = shift;
+    my $reverseTranslate = shift;
     my $markRef = shift;
     ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst)=localtime(time);
     printf STDERR "Before Alignments for Markers %4d-%02d-%02d %02d:%02d:%02d\n",$year+1900,$mon+1,$mday,$hour,$min,$sec;
@@ -412,7 +416,7 @@ sub runMarkerAlign{
     `rm $alignDir/*` if(<$alignDir/*>);
     #Align Markers
     my $threadNum=1;
-    Amphora2::MarkerAlign::MarkerAlign( $self, $markRef );
+    Amphora2::MarkerAlign::MarkerAlign( $self,$reverseTranslate, $markRef );
     ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst)=localtime(time);
     printf STDERR "After Alignments %4d-%02d-%02d %02d:%02d:%02d\n",$year+1900,$mon+1,$mday,$hour,$min,$sec;
     if($continue != 0){
@@ -459,6 +463,7 @@ sub runRapSearch {
     my $continue = shift;
     my $custom = shift;
     my $isolateMode=shift;
+    my $reverseTranslate=shift;
     my $markerListRef = shift;
     ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst)=localtime(time);
     printf STDERR "Before runRap %4d-%02d-%02d %02d:%02d:%02d\n",$year+1900,$mon+1,$mday,$hour,$min,$sec;
@@ -466,7 +471,7 @@ sub runRapSearch {
     my $blastDir = $self->{"blastDir"};
     `rm $self->{"blastDir"}/*` if(<$blastDir/*>);
     #run Blast                                                                                                                                               
-    Amphora2::rapSearch::RunRapSearch($self,$custom,$isolateMode,$markerListRef);
+    Amphora2::rapSearch::RunRapSearch($self,$custom,$isolateMode,$reverseTranslate,$markerListRef);
 
     ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst)=localtime(time);
     printf STDERR "After runRap %4d-%02d-%02d %02d:%02d:%02d\n",$year+1900,$mon+1,$mday,$hour,$min,$sec;

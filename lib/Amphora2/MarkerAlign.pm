@@ -9,6 +9,8 @@ use Bio::SearchIO;
 use Bio::SeqIO;
 use List::Util qw(min);
 use Amphora2::Amphora2;
+use Bio::Tools::CodonTable;
+use Bio::Align::Utilities qw(:all);
 #use Parallel::ForkManager;
 
 
@@ -62,6 +64,7 @@ my $minAlignedResidues = 20;
 sub MarkerAlign {
 
     my $self = shift;
+    my $reverseTranslate= shift;
     my $markersRef = shift;
     print "beforeDirprepClean @{$markersRef}\n";
     directoryPrepAndClean($self, $markersRef);
@@ -71,7 +74,7 @@ sub MarkerAlign {
     markerPrepAndRun($self,$markersRef);
     hmmsearchParse($self,$markersRef);
     print STDERR "after HMMSEARCH PARSE\n";
-    alignAndMask($self,$markersRef);
+    alignAndMask($self,$reverseTranslate,$markersRef);
     print STDERR "AFTER ALIGN and MASK\n";
     my @markeralignments = getMarkerAlignmentFiles($self,$markersRef);
     #Amphora2::Utilities::concatenateAlignments($self->{"alignDir"}."/concat.fasta", $self->{"alignDir"}."/mrbayes.nex", @markeralignments);
@@ -103,6 +106,8 @@ sub directoryPrepAndClean{
     }
     return $self;
 }
+
+=cut
 
 =head2 markerPrepAndRun
 
@@ -187,6 +192,7 @@ sub hmmsearchParse{
 
 sub alignAndMask{
     my $self = shift;
+    my $reverseTranslate = shift;
     my $markRef = shift;
     for(my $index=0; $index < @{$markRef}; $index++){
 	my $marker=${$markRef}[$index];
@@ -214,7 +220,6 @@ sub alignAndMask{
 		}
 	    }
 	}
-	print $masqseq."\n";
 	# reading and trimming out non-marker alignment columns from Hmmalign output (Hmmer3)
 	my $hmmer3Ali = new Bio::AlignIO(-file =>$self->{"alignDir"}."/$marker.aln_hmmer3.fasta",-format=>'fasta');
 	open(aliOUT,">".$self->{"alignDir"}."/$marker.aln_hmmer3.trim.fasta")or die "Couldn't open ".$self->{"alignDir"}."/$marker.aln_hmmer3.trim.fasta for writting\n";
@@ -255,6 +260,36 @@ sub alignAndMask{
 	    }
 	}
 	close(aliOUT);
+
+	#if the reverse option is on AND the submitted sequences are DNA, then output a Nucleotide alignment in addition to the AA alignment
+	if($reverseTranslate && $self->{"dna"}==1){
+	    #if it exists read the reference nucleotide sequences for the candidates
+	    my %referenceNuc = ();
+	    if(-e $self->{"blastDir"}."/$marker.candidate.ffn"){
+		open(refSeqsIN,$self->{"blastDir"}."/$marker.candidate.ffn") or die "Couldn't open ".$self->{"alignDir"}."/$marker.candidate.ffn for reading\n";
+		my $currID="";
+		my $currSeq="";
+		while(<refSeqsIN>){
+		    chomp($_);
+                if($_ =~ m/^>(.*)/){
+                    $currID=$1;
+                }else{
+                    $currSeq = $_;
+                    my $tempseq = Bio::LocatableSeq->new( -seq => $currSeq, -id => $currID);
+                    $referenceNuc{$currID}=$tempseq;
+                }
+		}
+		close(refSeqsIN);
+	    }
+	    open(ali_trans_OUT, ">".$self->{"alignDir"}."/$marker.aln_hmmer3.trim.ffn")or die "Couldn't open ".$self->{"alignDir"}."/$marker.aln_hmmer3.trim.ffn for writting\n";
+	    my $aa_ali = new Bio::AlignIO(-file =>$self->{"alignDir"}."/$marker.aln_hmmer3.trim.fasta",-format=>'fasta');
+	    my $dna_ali = &aa_to_dna_aln($aa_ali->next_aln(),\%referenceNuc);
+	    foreach my $seq ($dna_ali->each_seq()){
+		print ali_trans_OUT ">".$seq->id."\n".$seq->seq."\n";
+	    }	
+	    close(ali_trans_OUT);
+	}
+
 	#checking if sequences were written to the marker alignment file
 	if($seqCount ==0){
 	    #removing the marker from the list if no sequences were added to the alignment file

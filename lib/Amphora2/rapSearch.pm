@@ -54,7 +54,7 @@ my $isolateMode=0; # set to 1 if running on an isolate assembly instead of raw r
 my $bestHitsBitScoreRange=30; # all hits with a bit score within this amount of the best will be used
 my $pair=0; #used if using paired FastQ files
 my @markers;
-my (%hitsStart,%hitsEnd, %topscore, %hits, %markerHits)=();
+my (%hitsStart,%hitsEnd, %topscore, %hits, %markerHits,%markerNuc)=();
 my $readsCore;
 my $custom="";
 my %duplicates=();
@@ -64,6 +64,7 @@ sub RunRapSearch {
     my $self = shift;
     my $custom = shift;
     my $isolateMode=shift;
+    my $reverseTranslate=shift;
     my $markersRef = shift;
     @markers = @{$markersRef};
 #    print "MARKER       @markers\n";
@@ -89,7 +90,7 @@ sub RunRapSearch {
 #    executeBlast($self);
     executeRap($self);
     build_lookup_table($self);
-    get_rap_hits($self);
+    get_rap_hits($self,$reverseTranslate);
     return $self;
 }
 
@@ -120,7 +121,7 @@ sub build_lookup_table{
 	next if $_ !~ m/^>/;
 	if ($_ =~ m/^>(\S+).+log\(E-value\)=(-\d+\.\d+).+frame=([+-]\d)/){
 #	    print "Found a suitable alignment line\n";
-	    
+	    $self->{"dna"}=1;
 	    if(exists $frames{$1}){
 #		print "'".@{$frames{$1}}."'\t\'@{$frames{$1}}\'\n";
 #		exit;
@@ -132,6 +133,7 @@ sub build_lookup_table{
 	    }else{
 		$frames{$1}=[$3,$2];
 	    }
+	    
 	}elsif($_ =~ m/^>(\S+).*log\(E-value\)=(\d+\.\d+)/){
 	    #no frame displayed the input was in AA format.
 	}
@@ -148,25 +150,51 @@ sub build_lookup_table{
 =cut
 
 sub translateFrame{
+    my $id = shift;
     my $seq = shift;
     my $frame = shift;
+    my $marker = shift;
+    my $reverseTranslate = shift;
+    my $returnSeq = "";
     my $newseq = Bio::LocatableSeq->new( -seq => $seq, -id => 'temp');
     my @prots = Bio::SeqUtils->translate_6frames($newseq);
     foreach my $prot (@prots){
 	if($prot->id =~ m/-0F/ && $frame eq '+1'){
-	    return $prot->seq;
+	    $returnSeq = $prot->seq;
+	    last;
 	}elsif($prot->id =~ m/-1F/&& $frame eq '+2'){
-	    return $prot->seq;
+	    $seq =~ s/^.//; 
+	    $returnSeq =  $prot->seq;
+	    last;
 	}elsif($prot->id =~ m/-2F/&& $frame eq '+3'){
-	    return $prot->seq;
+	    $seq =~ s/^..//;
+	    $returnSeq =  $prot->seq;
+	    last;
         }elsif($prot->id =~ m/-0R/&& $frame eq '-1'){
-	    return $prot->seq;
+	    $seq = reverse($seq);
+	    $returnSeq = $prot->seq;
+	    last;
         }elsif($prot->id =~ m/-1R/&& $frame eq '-2'){
-	    return $prot->seq;
+	    $seq = reverse($seq);
+	    $seq =~ s/^.//;
+	    $returnSeq = $prot->seq;
+	    last;
         }elsif($prot->id =~ m/-2R/&& $frame eq '-3'){
-	    return $prot->seq;
+	    $seq = reverse($seq);
+            $seq =~ s/^..//;
+	    $returnSeq = $prot->seq;
+	    last;
         }
     }
+    if($reverseTranslate){
+	if(exists  $markerNuc{$marker}){
+	    $markerNuc{$marker} .= ">".$id."\n".$seq."\n";
+	}else{
+	    $markerNuc{$marker}= ">".$id."\n".$seq."\n";
+	}
+    }
+
+    return $returnSeq;
 
 }
 
@@ -302,6 +330,7 @@ parse the blast file
 sub get_rap_hits{
     my %duplicates = ();
     my $self = shift;
+    my $reverseTranslate=shift;
     #parsing the blast file
     # parse once to get the top scores for each marker
     my %markerTopScores;
@@ -448,15 +477,24 @@ sub get_rap_hits{
 		#if the $newID exists in the %frames hash, then it needs to be translated to the correct frame
 		if(exists $frames{$newID}){
 #		    print "Translating $newID\n";
-                    my $translatedSeq = translateFrame($seq->seq,${$frames{$newID}}[0]);
-		    $newSeq = substr($translatedSeq,$start,$end-$start);
-		    #exit;
+		    
+                    my $translatedSeq = translateFrame($newID,$seq->seq,${$frames{$newID}}[0],$markerHit,$reverseTranslate);
+#		    print "End : $end\tStart: $start\n";
+#		    print "Legnth of string\t".length($translatedSeq);
+		    $newSeq = substr($translatedSeq,$start/3,(($end-$start)/3));
                 }
 		if(exists  $markerHits{$markerHit}){
 		    $markerHits{$markerHit} .= ">".$newID."\n".$newSeq."\n";
 		}else{
 		    $markerHits{$markerHit} = ">".$newID."\n".$newSeq."\n";
 		}
+#		if($reverseTranslate && $self->{"dna"}==1){
+#		    if(exists  $markerNuc{$markerHit}){
+#			$markerNuc{$markerHit} .= ">".$newID."\n".$seq->seq."\n";
+#		    }else{
+#			$markerNuc{$markerHit}= ">".$newID."\n".$seq->seq."\n";
+#		    }
+#		}
 	    }
 	}
     }
@@ -467,6 +505,12 @@ sub get_rap_hits{
 	open(fileOUT,">".$self->{"blastDir"}."/$marker.candidate")or die " Couldn't open ".$self->{"blastDir"}."/$marker.candidate for writing\n";
 	print fileOUT $markerHits{$marker};
 	close(fileOUT);
+	if($reverseTranslate && $self->{"dna"}==1){
+	    open(fileOUT,">".$self->{"blastDir"}."/$marker.candidate.ffn")or die " Couldn't open ".$self->{"blastDir"}."/$marker.candidate.ffn for writing\n";
+	    print fileOUT $markerNuc{$marker};
+	    close(fileOUT);
+	}
+	
     }
 #    exit;
     return $self;

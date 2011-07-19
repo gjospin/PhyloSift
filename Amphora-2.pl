@@ -11,6 +11,7 @@ my $force=0;
 my $continue=0;
 my $isolate=0;
 my $custom = "";
+my $reverseTranslate=0;
 my $usage = qq~
   Usage: $0 <mode> <options> <reads_file>                                                                       
 
@@ -28,6 +29,7 @@ GetOptions("threaded=i" => \$threadNum,
 	   "f" => \$force, #overrides a previous run otherwise stop                                               
 	   "continue" => \$continue, #when a mode different than all is used, continue the rest of Amphora after the section
 	   "isolate" => \$isolate, #use when processing one or more isolate genomes
+	   "reverse"=> \$reverseTranslate,#use to output the reverse translation of the AA alignments
 	   #specified by the mode is finished
     )|| die $usage;
     
@@ -58,7 +60,7 @@ $newObject->{"isolate"} = $isolate;
 my $readsFile = $newObject->getReadsFile;
 print "FORCE: ".$force."\n";
 print "Continue : ".$continue."\n";
-$newObject->run($force,$custom,$continue,$isolate);
+$newObject->run($force,$custom,$continue,$isolate,$reverseTranslate);
 
 #Amphora2::Amphora2::run(@ARGV);
 
