@@ -273,9 +273,13 @@ sub fastqToFasta{
 	    open(FASTQ_1, $self->{"readsFile"})or die "Couldn't open ".$self->{"readsFile"}." in run_blast.pl reading the FastQ file\n";
 	    while(<FASTQ_1>){
 		chomp($_);
-		if($_ =~ m/^@(\S+)/){
+		if($_ =~ m/^@(\S+)\/\d/){
 		    $curr_ID =$1;
 		    $skip =0;
+		}elsif($_ =~ m/^@(\S+)/){
+		    $curr_ID=$1;
+		    $skip=0;
+		}
 		}elsif($_ =~ m/^\+$curr_ID/){
 		    $skip = 1;
 		}else{
@@ -291,7 +295,10 @@ sub fastqToFasta{
 	    open(FASTQ_2, $self->{"readsFile_2"})or die "Couldn't open ".$self->{"readsFile_2"}." in run_blast.pl reading the FastQ file\n";
 	    while(<FASTQ_2>){
 		chomp($_);
-		if($_ =~ m/^@(\S+)/){
+		if($_ =~ m/^@(\S+)\/\d/){
+                    $curr_ID =$1;
+                    $skip =0;
+                }elsif($_ =~ m/^@(\S+)/){
 		    $curr_ID =$1;
 		    $skip =0;
 		}elsif($_ =~ m/^\+$curr_ID/){
