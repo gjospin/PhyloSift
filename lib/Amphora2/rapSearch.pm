@@ -278,8 +278,7 @@ sub fastqToFasta{
 		    $skip =0;
 		}elsif($_ =~ m/^@(\S+)/){
 		    $curr_ID=$1;
-		    $skip=0;
-		}
+		    $skip=0; 
 		}elsif($_ =~ m/^\+$curr_ID/){
 		    $skip = 1;
 		}else{
