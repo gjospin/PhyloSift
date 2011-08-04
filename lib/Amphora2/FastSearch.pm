@@ -58,7 +58,6 @@ my @markers;
 my (%hitsStart,%hitsEnd, %topscore, %hits, %markerHits,%markerNuc)=();
 my $readsCore;
 my $custom="";
-my %duplicates=();
 my %marker_lookup=();
 my %frames=();
 my $reverseTranslate=0;
@@ -271,64 +270,35 @@ sub fastqToFasta{
     my $self = shift;
     if($self->{"readsFile_2"} ne ""){
 	print "FILENAME ".$self->{"fileName"}."\n";
-
-	if(!-e $self->{"blastDir"}."/$readsCore.fasta"){
-	    my %fastQ = ();
-	    my $curr_ID = "";
-	    my $skip = 0;
-	    print STDERR "Reading ".$self->{"readsFile"}."\n";
-	    open(FASTQ_1, $self->{"readsFile"})or die "Couldn't open ".$self->{"readsFile"}." in run_blast.pl reading the FastQ file\n";
-	    while(<FASTQ_1>){
-		chomp($_);
-		if($_ =~ m/^@(\S+)\/\d/){
-		    $curr_ID =$1;
-		    $skip =0;
-		}elsif($_ =~ m/^@(\S+)/){
-		    $curr_ID=$1;
-		    $skip=0; 
-		}elsif($_ =~ m/^\+$curr_ID/){
-		    $skip = 1;
-		}else{
-		    if($skip ==0){
-			$fastQ{$curr_ID}=$_;
-		    }else{
-			#do nothing
-		    }
-		}
-	    }
-	    close(FASTQ_1);
-	    print STDERR "Reading ".$self->{"readsFile_2"}."\n";
-	    open(FASTQ_2, $self->{"readsFile_2"})or die "Couldn't open ".$self->{"readsFile_2"}." in run_blast.pl reading the FastQ file\n";
-	    while(<FASTQ_2>){
-		chomp($_);
-		if($_ =~ m/^@(\S+)\/\d/){
-                    $curr_ID =$1;
-                    $skip =0;
-                }elsif($_ =~ m/^@(\S+)/){
-		    $curr_ID =$1;
-		    $skip =0;
-		}elsif($_ =~ m/^\+$curr_ID/){
-		    $skip = 1;
-		}else{
-		    if($skip ==0){
-			my $reverse = reverse $_;
-			$fastQ{$curr_ID}.=$reverse;
-		    }else{
-			#do nothing
-		    }
-		}
-	    }
-	    close(FASTQ_2);
-	    print STDERR "Writing ".$readsCore.".fasta\n";
-	    open(FastA, ">".$self->{"blastDir"}."/$readsCore.fasta")or die "Couldn't open ".$self->{"blastDir"}."/$readsCore.fasta for writing in run_blast.pl\n";
-	    foreach my $id (keys %fastQ){
-		print FastA ">".$id."\n".$fastQ{$id}."\n";
-	    }
-	    close(FastA);
-	}
-    
 	#pointing $readsFile to the newly created fastA file
 	$self->{"readsFile"} = $self->{"blastDir"}."/$readsCore.fasta";
+
+	return $self if(-e $self->{"readsFile"});
+	
+	my %fastQ = ();
+	my $curr_ID = "";
+	my $skip = 0;
+	print STDERR "Reading ".$self->{"readsFile"}."\n";
+	open(FASTQ_1, $self->{"readsFile"})or die "Couldn't open ".$self->{"readsFile"}." in run_blast.pl reading the FastQ file\n";
+	open(FASTQ_2, $self->{"readsFile_2"})or die "Couldn't open ".$self->{"readsFile_2"}." in run_blast.pl reading the FastQ file\n";            
+	print STDERR "Writing ".$readsCore.".fasta\n";
+	open(FASTA, ">".$self->{"blastDir"}."/$readsCore.fasta")or die "Couldn't open ".$self->{"blastDir"}."/$readsCore.fasta for writing in run_blast.pl\n";
+	while(my $head1 = <FASTQ_1>){
+		my $read1 = <FASTQ_1>;
+		my $qhead1 = <FASTQ_1>;
+		my $qval1 = <FASTQ_1>;
+		my $head2 = <FASTQ_2>;
+		my $read2 = <FASTQ_2>;
+		my $qhead2 = <FASTQ_2>;
+		my $qval2 = <FASTQ_2>;
+
+		$head1 =~ s/^\@/\>/g;
+		chomp($read1);
+		chomp($read2);
+		$read2 =~ tr/ACGTacgt/TGCAtgca/;
+		$read2 = reverse($read2);
+		print FASTA "$head1$read1$read2\n";
+	}
     }
     return $self;
 }
@@ -371,7 +341,7 @@ sub get_hits{
 		$markerName = $marker_lookup{$subject};
 	}
 #	print "BLAST ".$query."\n";
-	if($query =~ m/(\S+)_([rf][012])/){
+	if($query =~ m/(\S+)_([rf][012])/ && $isolateMode!=1){
 	    #print "PARSING BLAST\n";
 	    if(exists $duplicates{$1}{$markerName}){
 		foreach my $suff (keys (%{$duplicates{$1}{$markerName}})){
@@ -428,7 +398,7 @@ sub get_hits{
     close(blastIN);
     if($isolateMode ==1){
 	# reading the output a second to check the bitscore ranges from the top score
-	open(blastIN,$self->{"blastDir"}."/$readsCore.blastp")or die "Couldn't open ".$self->{"blastDir"}."/$readsCore.blastp\n";
+	open(blastIN,$hitfilename)or die "Couldn't open $hitfilename\n";
 	# running on a genome assembly
 	# allow more than one marker per sequence
 	# require all hits to the marker to have bit score within some range of the top hit

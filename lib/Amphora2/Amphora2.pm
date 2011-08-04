@@ -178,7 +178,7 @@ sub run {
 
     print "MODE :: ".$self->{"mode"}."\n";
     if($self->{"mode"} eq 'align' || $self->{"mode"} eq 'all'){
-	$self=$self->runMarkerAlign($continue,$reverseTranslate,\@markers);
+	$self=$self->runMarkerAlign($continue,\@markers);
     }
     if($self->{"mode"} eq 'placer' || $self->{"mode"} eq 'all'){
 	$self=$self->runPplacer($continue,\@markers);
@@ -408,7 +408,6 @@ sub runPplacer{
 sub runMarkerAlign{
     my $self = shift;
     my $continue = shift;
-    my $reverseTranslate = shift;
     my $markRef = shift;
     ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst)=localtime(time);
     printf STDERR "Before Alignments for Markers %4d-%02d-%02d %02d:%02d:%02d\n",$year+1900,$mon+1,$mday,$hour,$min,$sec;
@@ -448,7 +447,7 @@ sub runSearch {
     my $blastDir = $self->{"blastDir"};
     `rm $self->{"blastDir"}/*` if(<$blastDir/*>);
     #run Blast
-    Amphora2::rapSearch::RunSearch($self,$custom,$type,$markerListRef);
+    Amphora2::FastSearch::RunSearch($self,$custom,$type,$markerListRef);
     ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst)=localtime(time);
     printf STDERR "After runBlast %4d-%02d-%02d %02d:%02d:%02d\n",$year+1900,$mon+1,$mday,$hour,$min,$sec;
     
