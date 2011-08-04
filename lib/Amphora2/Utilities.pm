@@ -129,12 +129,6 @@ sub programChecks {
 	    return 1;
 	}
 
-	$printneighbor = get_program_path("printneighbor.R", $Amphora2::Settings::a2_path);
-	if($printneighbor eq ""){
-	    carp("Amphora2 printneighbor program not found");
-	    return 1;
-	}
-
 	$Rscript = get_program_path("Rscript", $Amphora2::Settings::R_path);
 
 	#ensure we have a place to put any R packages that might need to be downloaded
@@ -227,7 +221,7 @@ sub dataChecks {
 	$ncbi_dir = get_data_path( "ncbi", $Amphora2::Settings::ncbi_path );
 	($content_type, $document_length, $modified_time, $expires, $server)= head("$ncbi_url");
 	if( -x $ncbi_dir ){
-	    my $ncbi_time =(stat($ENV{"HOME"}."/share/amphora2/ncbi"))[9];
+	    my $ncbi_time =(stat($ncbi_dir))[9];
 	    if($modified_time > $ncbi_time){
 		warn "Found newer version of NCBI taxonomy data!\n";
 		warn "Downloading from $ncbi_url\n";
