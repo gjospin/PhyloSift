@@ -56,7 +56,7 @@ sub pplacer {
 	print STDERR "Running Placer on $marker ....\t";
 	#running Pplacer
 	if(!-e $self->{"treeDir"}."/$marker.aln_hmmer3.trim.place"){
-	    `$Amphora2::Utilities::pplacer -p -r $Amphora2::Utilities::marker_dir/$marker.trimfinal.fasta -t $Amphora2::Utilities::marker_dir/$marker.final.tre -s $Amphora2::Utilities::marker_dir/$marker.in_phyml_stats.txt $self->{"alignDir"}/$marker.aln_hmmer3.trim.fasta`;
+	    `$Amphora2::Utilities::pplacer -p -r $Amphora2::Utilities::marker_dir/$marker.trimfinal.fasta -t $Amphora2::Utilities::marker_dir/$marker.final.tre -s $Amphora2::Utilities::marker_dir/$marker.in_phyml_stats.txt $self->{"alignDir"}/$marker.aln_hmmer3.trim`;
 	}
 	#adding a printed statement to check on the progress (not really working if using parrallel jobs)
 	print STDERR "Done !\n";

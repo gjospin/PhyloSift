@@ -289,7 +289,7 @@ sub alignAndMask{
 		close(refSeqsIN);
 	    }
 	    open(ali_trans_OUT, ">".$self->{"alignDir"}."/$marker.aln_hmmer3.trim.ffn")or die "Couldn't open ".$self->{"alignDir"}."/$marker.aln_hmmer3.trim.ffn for writting\n";
-	    my $aa_ali = new Bio::AlignIO(-file =>$self->{"alignDir"}."/$marker.aln_hmmer3.trim.fasta",-format=>'fasta');
+	    my $aa_ali = new Bio::AlignIO(-file =>$self->{"alignDir"}."/$marker.aln_hmmer3.trim",-format=>'fasta');
 	    my $dna_ali = &aa_to_dna_aln($aa_ali->next_aln(),\%referenceNuc);
 	    foreach my $seq ($dna_ali->each_seq()){
 		print ali_trans_OUT ">".$seq->id."\n".$seq->seq."\n";
