@@ -12,7 +12,8 @@ use Amphora2::Amphora2;
 use File::Basename;
 =head1 NAME
 
-Amphora2::blast - Subroutines to blast search reads against marker genes
+Amphora2::FastSearch - Subroutines to perform fast sequence identity searches between reads and marker genes.
+Currently uses either BLAST or RAPsearch.
 
 =head1 VERSION
 
@@ -60,11 +61,15 @@ my $custom="";
 my %duplicates=();
 my %marker_lookup=();
 my %frames=();
-sub RunRapSearch {
+my $reverseTranslate=0;
+
+my $blastdb_name = "blastrep.faa";
+my $blastplus_parameters = "-evalue 0.1 -num_descriptions 50000 -num_alignments 50000";
+
+sub RunSearch {
     my $self = shift;
     my $custom = shift;
-    my $isolateMode=shift;
-    my $reverseTranslate=shift;
+    my $searchtype = shift;
     my $markersRef = shift;
     @markers = @{$markersRef};
 #    print "MARKER       @markers\n";
@@ -73,24 +78,24 @@ sub RunRapSearch {
     $self->{"readsFile"} =~ m/(\w+)\.?(\w*)$/;
     $readsCore = $1;
     $isolateMode = $self->{"isolate"};
+    $reverseTranslate = $self->{"reverseTranslate"};
     print "before rapPrepandclean\n";
-    rapPrepAndClean($self);
+    prepAndClean($self);
     if($self->{"readsFile_2"} ne ""){
 	print "before fastqtoFASTA\n";
 	fastqToFasta($self);
     }
-#    if(!-e $self->{"blastDir"}."/".$self->{"fileName"}."-6frame"){
-#	`$Amphora2::Utilities::translateSixFrame $self->{"readsFile"} > $self->{"blastDir"}/$self->{"fileName"}-6frame`
-#    }
-    
-#        $readsFile = "$blastDir/$fileName-6frame";
-    
-#    sixFrameTranslation($self);
 
-#    executeBlast($self);
-    executeRap($self);
-    build_lookup_table($self);
-    get_rap_hits($self,$reverseTranslate);
+    my $resultsfile;
+    if($searchtype eq "blast"){
+        sixFrameTranslation($self);
+	my $query_file = $self->{"blastDir"}."/$readsCore-6frame";
+    	$resultsfile = executeBlast($self, $query_file);
+    }else{
+        $resultsfile = executeRap($self);
+        build_lookup_table($self);
+    }
+    get_hits($self,$resultsfile, $searchtype);
     return $self;
 }
 
@@ -144,6 +149,27 @@ sub build_lookup_table{
     return $self;
 }
 
+=head2 blastXoof_table
+
+=cut
+
+sub blastXoof_table{
+    my $self = shift;
+       print "INSIDE tabular OOF blastx\n";
+       `$Amphora2::Utilities::blastall -p blastx -i $self->{"blastDir"}/$readsCore -e 0.1 -w 20 -b 50000 -v 50000 -d $self->{"blastDir"}/rep.faa -o $self->{"blastDir"}/$readsCore.tabblastx -m 8 -a $threadNum`;
+     return $self;
+ }
+
+=head2 blastXoof_full
+
+=cut
+
+sub blastXoof_full{
+    my $self = shift;
+       print "INSIDE full OOF blastx\n";
+       `$Amphora2::Utilities::blastall -p blastx -i $self->{"blastDir"}/$readsCore-hitoof -e 0.1 -w 20 -b 50000 -v 50000 -d $self->{"blastDir"}/rep.faa -o $self->{"blastDir"}/$readsCore.blastx -a $threadNum`;
+    return $self;
+}
 
 =head2 translationFrame
 
@@ -198,7 +224,7 @@ sub translateFrame{
 
 }
 
-=head2 executeBlast
+=head2 executeRap
 
 =cut
 
@@ -209,50 +235,31 @@ sub executeRap{
 	$self->{"readsFile"}=getcwd()."/".$self->{"readsFile"};
 	print "New readsFile ".$self->{"readsFile"}."\n";
     }
-    if($custom ne ""){
+    my $dbDir = "$Amphora2::Utilities::marker_dir/representatives";
+    $dbDir = $self->{"blastDir"} if($custom ne "");
 	if(!-e $self->{"blastDir"}."/$readsCore.rapSearch.m8"){
 	    print "INSIDE custom markers RAPSearch\n";
-	    `cd $self->{"blastDir"} ; $Amphora2::Utilities::rapSearch -q $self->{"readsFile"} -d $self->{"blastDir"}/rep -o $readsCore.rapSearch -e -1`;
-#	    `cd $self->{"blastDir"} ; $Amphora2::Utilities::rapSearch -query $self->{"blastDir"}/$readsCore-6frame -evalue 0.1 -num_descriptions 50000 -num_alignments 50000 -db $self->{"blastDir"}/rep.faa -out $self->{"blastDir"}/$readsCore.blastp -outfmt 6 -num_threads $threadNum`;
-#	    `blastall -p blastp -i $self->{"blastDir"}/$readsCore-6frame -e 0.1 -d $self->{"blastDir"}/rep.faa -o $self->{"blastDir"}/$readsCore.blastp -m 8 -a $threadNum`;
-	}
-    }else{
-	my $dbDir = "$Amphora2::Utilities::marker_dir/representatives";
-	if(!-e $self->{"blastDir"}."/$readsCore.rapSearch.m8"){
-            print "rapSearch default DB using $self->{\"readsFile\"} \n";
 	    `cd $self->{"blastDir"} ; $Amphora2::Utilities::rapSearch -q $self->{"readsFile"} -d $dbDir/rep -o $readsCore.rapSearch -e -1`;
-#            `$Amphora2::Utilities::blastp -query $self->{"blastDir"}/$readsCore-6frame -evalue 0.1 -num_descriptions 50000 -num_alignments 50000 -db $dbDir/rep.faa -out $self->{"blastDir"}/$readsCore.blastp -outfmt 6 -num_threads $threadNum`;
-        }
-    }
-    return $self;
+	}
+    return $self->{"blastDir"}."/".$readsCore.".rapSearch.m8";
 }
 
-=head2 sixFrameTranslation
+=head2 executeBlast
 
 =cut
 
-sub sixFrameTranslation{
-
+sub executeBlast{
     my $self = shift;
-    open(readCheck,$self->{"readsFile"}) or die "Couldn't open ".$self->{"readsFile"}."\n";
-    my ($totalCount,$seqCount) =0;
-    while(<readCheck>){
-	chomp($_);
-	if($_=~m/^>/){
-	    next;
-	}
-	$seqCount++ while ($_ =~ /[atcgATCGnNmMrRwWsSyYkKvVhHdDbB-]/g);
-	$totalCount += length($_);
+    my $query_file = shift;
+    my $dbDir = "$Amphora2::Utilities::marker_dir/representatives";
+    $dbDir = $self->{"blastDir"} if $custom ne "";
+    print "INSIDE BLAST\n";
+    if(!-e $self->{"blastDir"}."/$readsCore.blastp"){
+	`$Amphora2::Utilities::blastp -query $query_file $blastplus_parameters -db $dbDir/$blastdb_name -out $self->{"blastDir"}/$readsCore.blastp -outfmt 6 -num_threads $threadNum`;
     }
-    close(readCheck);
-    print STDERR "DNA % ".$seqCount/$totalCount."\n";
-    if($seqCount/$totalCount >0.98){
-	print STDERR "Doing a six frame translation\n";
-	#found DNA, translate in 6 frames
-	`$Amphora2::Utilities::translateSixFrame $self->{"readsFile"} > $self->{"blastDir"}/$readsCore-6frame`;
-    }
-    return $self;
+    return $self->{"blastDir"}."/$readsCore.blastp";
 }
+
 
 =head2 fastqToFasta
 
@@ -326,17 +333,19 @@ sub fastqToFasta{
     return $self;
 }
 
-=head2 get_blast_hits
+=head2 get_hits
 
 parse the blast file
 
 =cut
 
 
-sub get_rap_hits{
+
+sub get_hits{
     my %duplicates = ();
     my $self = shift;
-    my $reverseTranslate=shift;
+    my $hitfilename=shift;
+    my $searchtype = shift;
     #parsing the blast file
     # parse once to get the top scores for each marker
     my %markerTopScores;
@@ -344,7 +353,7 @@ sub get_rap_hits{
     my %topScore=();
     my %topStart=();
     my %topEnd=();
-    open(blastIN,$self->{"blastDir"}."/$readsCore.rapSearch.m8")or die "Couldn't open ".$self->{"blastDir"}."/$readsCore.rapSearch.m8\n";
+    open(blastIN,$hitfilename)or carp("Couldn't open ".$hitfilename."\n");
     while(<blastIN>){
 	chomp($_);
 	next if($_ =~ /^#/);
@@ -354,8 +363,13 @@ sub get_rap_hits{
 	my $query_start = $values[6];
 	my $query_end = $values[7];
 	my $bitScore = $values[11];
-#	my @marker=split(/\_/,$subject);
-	my $markerName = $marker_lookup{$subject};
+	my $markerName = "";
+	if($searchtype eq "blast"){
+		my @marker=split(/\_/,$subject);
+		$markerName = $marker[$#marker];
+	}else{
+		$markerName = $marker_lookup{$subject};
+	}
 #	print "BLAST ".$query."\n";
 	if($query =~ m/(\S+)_([rf][012])/){
 	    #print "PARSING BLAST\n";
@@ -426,7 +440,13 @@ sub get_rap_hits{
 	    my $query_start = $values[6];
 	    my $query_end = $values[7];
 	    my $bitScore = $values[11];
-	    my $markerName = $marker_lookup{$subject};
+		my $markerName = "";
+		if($searchtype eq "blast"){
+			my @marker=split(/\_/,$subject);
+			$markerName = $marker[$#marker];
+		}else{
+			$markerName = $marker_lookup{$subject};
+		}
 	    if($markerTopScores{$markerName} < $bitScore + $bestHitsBitScoreRange){
 		$hits{$query}{$markerName}=1;
 		$hitsStart{$query}{$markerName} = $query_start;
@@ -522,7 +542,7 @@ sub get_rap_hits{
     return $self;
 }
 
-=head2 blastPrepAndClean
+=head2 prepAndClean
 
 =item *
 
@@ -534,7 +554,7 @@ Generates the blastable database using the marker representatives
 
 =cut
 
-sub rapPrepAndClean {
+sub prepAndClean {
     my $self = shift;
     print STDERR "RAPprepclean MARKERS @markers\nTESTING\n ";
     `mkdir $self->{"tempDir"}` unless (-e $self->{"tempDir"});
@@ -556,10 +576,14 @@ sub rapPrepAndClean {
 	    #append the rep sequences for all the markers included in the study to the rep.faa file
 	    `cat $Amphora2::Utilities::marker_dir/$marker.faa >> $self->{"blastDir"}/rep.faa`
 	}
-	#make a blastable DB
+	#make a DB for rapSearch
 	if(!-e $self->{"blastDir"}."/rep.des" ||  !-e $self->{"blastDir"}."/rep.fbn" || !-e $self->{"blastDir"}."/rep.inf" || !-e $self->{"blastDir"}."/rep.swt"){
 	    `cd $self->{"blastDir"} ; $Amphora2::Utilities::preRapSearch -d $self->{"blastDir"}/rep.faa -n rep`;
         }
+	#make one for BLAST
+	if(!-e $self->{"blastDir"}."/rep.faa.psq" ||  !-e $self->{"blastDir"}."/rep.faa.pin" || !-e $self->{"blastDir"}."/rep.faa.phr"){
+	    `makeblastdb -in $self->{"blastDir"}/rep.faa -dbtype prot -title RepDB`;
+	}
     }else{
 	#when using the default marker package
 	my $dbDir = "$Amphora2::Utilities::marker_dir/representatives";
@@ -575,9 +599,48 @@ sub rapPrepAndClean {
 	if(!-e "$dbDir/rep.des" ||  !-e "$dbDir/rep.fbn" || !-e "$dbDir/rep.inf" || !-e "$dbDir/rep.swt"){
 		`cd $dbDir ; $Amphora2::Utilities::preRapSearch -d rep.faa -n rep`;
 	}
+	# now make a DB for BLAST containing just representative sequences
+	if(!-e "$dbDir/$blastdb_name"){
+	    foreach my $marker (@markers){
+		$markerHits{$marker}="";
+		`cat $dbDir/$marker.rep >> $dbDir/$blastdb_name`;
+	    }
+	}
+	if(!-e "$dbDir/$blastdb_name.psq" ||  !-e "$dbDir/$blastdb_name.pin" || !-e "$dbDir/$blastdb_name.phr"){
+		`makeblastdb -in $dbDir/$blastdb_name -dbtype prot -title RepDB`;
+	}
     }
     return $self;
 }
+
+=head2 sixFrameTranslation
+
+=cut
+
+sub sixFrameTranslation{
+
+    my $self = shift;
+    open(readCheck,$self->{"readsFile"}) or die "Couldn't open ".$self->{"readsFile"}."\n";
+    my ($totalCount,$seqCount) =0;
+    while(<readCheck>){
+	chomp($_);
+	if($_=~m/^>/){
+	    next;
+	}
+	$seqCount++ while ($_ =~ /[atcgATCGnNmMrRwWsSyYkKvVhHdDbB-]/g);
+	$totalCount += length($_);
+    }
+    close(readCheck);
+    print STDERR "DNA % ".$seqCount/$totalCount."\n";
+    if($seqCount/$totalCount >0.98){
+	print STDERR "Doing a six frame translation\n";
+	#found DNA, translate in 6 frames
+	`$Amphora2::Utilities::translateSixFrame $self->{"readsFile"} > $self->{"blastDir"}/$readsCore-6frame`;
+    }
+    return $self;
+}
+
+
 
 =head1 AUTHOR
 
