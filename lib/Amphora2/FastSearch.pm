@@ -1,4 +1,4 @@
-package Amphora2::rapSearch;
+package Amphora2::FastSearch;
 
 use warnings;
 use strict;

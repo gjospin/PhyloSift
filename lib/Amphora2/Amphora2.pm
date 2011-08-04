@@ -14,7 +14,7 @@ use Amphora2::Utilities;
 use Amphora2::MarkerAlign;
 use Amphora2::pplacer;
 use Amphora2::Summarize;
-use Amphora2::rapSearch;
+use Amphora2::FastSearch;
 =head2 new
 
     Returns : Amphora2 project object
