@@ -129,12 +129,6 @@ sub programChecks {
 	    return 1;
 	}
 
-	$printneighbor = get_program_path("printneighbor.R", $Amphora2::Settings::a2_path);
-	if($printneighbor eq ""){
-	    carp("Amphora2 printneighbor program not found");
-	    return 1;
-	}
-
 	$Rscript = get_program_path("Rscript", $Amphora2::Settings::R_path);
 
 	#ensure we have a place to put any R packages that might need to be downloaded

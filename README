@@ -40,7 +40,7 @@ Options Available at this time :
    			Reversing the sequences for the second file listed 
 			and appending to the corresponding pair from the first file listed.
    -continue            Enables the pipeline to continue to subsequent steps when not using the 'all' mode
-			
+   -reverse		If the submitted sequences were Nucleotides, the program prints out an alignment for all the markers in DNA space in addition to the one in Protein space.
 
 Requirements
 ==========================================

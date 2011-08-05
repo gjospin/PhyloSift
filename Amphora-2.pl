@@ -2,8 +2,11 @@
 
 use warnings;
 use strict;
+
+use FindBin qw($Bin); use lib "$Bin/lib";
 use Getopt::Long;
 use Amphora2::Amphora2;
+use Carp;
 my $pair=0;
 my $threadNum=1;
 my $clean=0;
@@ -11,6 +14,8 @@ my $force=0;
 my $continue=0;
 my $isolate=0;
 my $custom = "";
+my $reverseTranslate=0;
+my $besthit=0;
 my $usage = qq~
   Usage: $0 <mode> <options> <reads_file>                                                                       
 
@@ -28,6 +33,8 @@ GetOptions("threaded=i" => \$threadNum,
 	   "f" => \$force, #overrides a previous run otherwise stop                                               
 	   "continue" => \$continue, #when a mode different than all is used, continue the rest of Amphora after the section
 	   "isolate" => \$isolate, #use when processing one or more isolate genomes
+	   "reverse"=> \$reverseTranslate,#use to output the reverse translation of the AA alignments
+	   "besthit" => \$besthit, #should we keep only the best hit when there are multiple?
 	   #specified by the mode is finished
     )|| die $usage;
     
@@ -54,11 +61,13 @@ if($pair == 0){
 }
 
 $newObject->{"isolate"} = $isolate;
+$newObject->{"besthit"} = $besthit;
+$newObject->{"reverseTranslate"} = $reverseTranslate;
 
 my $readsFile = $newObject->getReadsFile;
 print "FORCE: ".$force."\n";
 print "Continue : ".$continue."\n";
-$newObject->run($force,$custom,$continue,$isolate);
+$newObject->run($force,$custom,$continue,$isolate,$reverseTranslate);
 
 #Amphora2::Amphora2::run(@ARGV);
 
