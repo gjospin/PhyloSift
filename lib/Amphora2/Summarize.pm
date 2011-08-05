@@ -136,12 +136,12 @@ sub summarize {
     }
     # keep a hash counting up all the read placements
     my %ncbireads;
-
+	
     # read all of the .place files for markers
     # map them onto the ncbi taxonomy
     foreach my $marker(@{$markRef}){
 	# don't bother with this one if there's no read placements
-	next unless( -e $self->{"treeDir"}."/$marker.aln_hmmer3.trim.place" );
+	next unless( -e $self->{"treeDir"}."/$marker.aln_hmmer3.place" );
 
         # first read the taxonomy mapping
         open( TAXONMAP, "$markerdir/$marker.ncbimap") || croak("Unable to read file $markerdir/$marker.ncbimap\n");
@@ -154,7 +154,7 @@ sub summarize {
 	}
 
         # then read & map the placement
-        open(PLACEFILE, $self->{"treeDir"}."/$marker.aln_hmmer3.trim.place") || croak("Unable to read file ".$self->{"treeDir"}."/$marker.aln_hmmer3.trim.place\n");
+        open(PLACEFILE, $self->{"treeDir"}."/$marker.aln_hmmer3.place") || croak("Unable to read file ".$self->{"treeDir"}."/$marker.aln_hmmer3.place\n");
 	my $placeline = 0;
 	while( my $line = <PLACEFILE> ){
             $placeline=1 if($line =~ /^\>/);
