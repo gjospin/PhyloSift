@@ -270,10 +270,8 @@ sub fastqToFasta{
     my $self = shift;
     if($self->{"readsFile_2"} ne ""){
 	print "FILENAME ".$self->{"fileName"}."\n";
-	#pointing $readsFile to the newly created fastA file
-	$self->{"readsFile"} = $self->{"blastDir"}."/$readsCore.fasta";
 
-	return $self if(-e $self->{"readsFile"});
+	return $self if(-e $self->{"blastDir"}."/$readsCore.fasta");
 	
 	my %fastQ = ();
 	my $curr_ID = "";
@@ -299,6 +297,9 @@ sub fastqToFasta{
 		$read2 = reverse($read2);
 		print FASTA "$head1$read1$read2\n";
 	}
+
+	#pointing $readsFile to the newly created fastA file
+	$self->{"readsFile"} = $self->{"blastDir"}."/$readsCore.fasta";
     }
     return $self;
 }
