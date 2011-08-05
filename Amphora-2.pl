@@ -2,11 +2,13 @@
 
 use warnings;
 use strict;
+use diagnostics;
 
 use FindBin qw($Bin); use lib "$Bin/lib";
 use Getopt::Long;
 use Amphora2::Amphora2;
-use Carp;
+use Log::Message::Simple qw[msg error debug carp croak cluck confess];
+
 my $pair=0;
 my $threadNum=1;
 my $clean=0;
@@ -39,24 +41,24 @@ GetOptions("threaded=i" => \$threadNum,
     )|| die $usage;
     
 
-print "@ARGV\n";
+debug( "@ARGV\n" );
 if($pair ==0){
     croak $usage unless ($ARGV[0] && $ARGV[1]);
 }elsif(scalar(@ARGV) == 3){
     croak $usage2 unless ($ARGV[0] && $ARGV[1] && $ARGV[2]);
 }else{
-    die $usage."\nOR\n".$usage2."\n";
+    croak $usage."\nOR\n".$usage2."\n";
 }
 
 
 
 my $newObject = new Amphora2::Amphora2();
-print "PAIR : $pair\n";
+debug "PAIR : $pair\n";
 if($pair == 0){
-    print "notpaired @ARGV\n";
+    debug "notpaired @ARGV\n";
     $newObject = $newObject->initialize($ARGV[0],$ARGV[1]);
 }else{
-    print "INSIDE paired\n";
+    debug "INSIDE paired\n";
     $newObject = $newObject->initialize($ARGV[0],$ARGV[1],$ARGV[2]);
 }
 
@@ -65,9 +67,9 @@ $newObject->{"besthit"} = $besthit;
 $newObject->{"reverseTranslate"} = $reverseTranslate;
 
 my $readsFile = $newObject->getReadsFile;
-print "FORCE: ".$force."\n";
-print "Continue : ".$continue."\n";
-$newObject->run($force,$custom,$continue,$isolate,$reverseTranslate);
+debug "FORCE: ".$force."\n";
+debug "Continue : ".$continue."\n";
+$newObject->run($force,$custom,$continue);
 
 #Amphora2::Amphora2::run(@ARGV);
 

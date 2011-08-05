@@ -8,9 +8,9 @@ use Bio::SearchIO;
 use Bio::SeqIO;
 use Getopt::Long;
 use Cwd;
-use Carp;
+use Log::Message::Simple qw[msg error debug carp croak cluck confess];
 use File::Basename;
-use Amphora2::Utilities;
+use Amphora2::Utilities qw(:all);
 use Amphora2::MarkerAlign;
 use Amphora2::pplacer;
 use Amphora2::Summarize;
@@ -50,10 +50,10 @@ sub initialize{
     my $self = shift;
     my $mode = shift;
     my $readsFile = shift;
-    print "READSFILE\t".$readsFile."\n";
+    debug "READSFILE\t".$readsFile."\n";
     my $readsFile_2="";
     if(scalar(@_) == 1){
-	print "FOUND a second file\n";
+	debug "FOUND a second file\n";
 	$readsFile_2 = shift;
     }
     
@@ -139,10 +139,8 @@ sub run {
     my $force = shift;
     my $custom = shift;
     my $continue = shift;
-    my $reverseTranslate=$self->{"reverseTranslate"};
-    print "force : $force\n";
-    ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst)=localtime(time);
-    printf STDERR  "START : %4d-%02d-%02d %02d:%02d:%02d\n",$year+1900,$mon+1,$mday,$hour,$min,$sec;
+    debug "force : $force\n";
+    Amphora2::Utilities::start_timer("START");
     #message to output if the script isn't called properly
     my $usage = qq~
 	Usage: $0 <mode> <options> <reads_file>
@@ -162,21 +160,21 @@ sub run {
     $self->{"readsFile"} = $self->prepIsolateFiles($self->{"readsFile"}) if $self->{"isolate"}==1;
 
     #create a file with a list of markers called markers.list
-    print "CUSTOM = ".$custom."\n";
+    debug "CUSTOM = ".$custom."\n";
 
     my @markers = $self->markerGather($custom);
-    print "@markers\n";
-    print "MODE :: ".$self->{"mode"}."\n";
+    debug "@markers\n";
+    debug "MODE :: ".$self->{"mode"}."\n";
     if($self->{"mode"} eq 'blast' || $self->{"mode"} eq 'all'){
 	my $searchtype = "rap";
 	$searchtype = "blast" if defined($self->{"isolate"}) && $self->{"isolate"} ne "0";
-	print "Search type is $searchtype\n";
+	debug "Search type is $searchtype\n";
 	# need to use BLAST for isolate mode, since RAP only handles very short reads
 	$self=$self->runSearch($continue,$custom,$searchtype,\@markers);
-	print "MODE :: ".$self->{"mode"}."\n";
+	debug "MODE :: ".$self->{"mode"}."\n";
     }
 
-    print "MODE :: ".$self->{"mode"}."\n";
+    debug "MODE :: ".$self->{"mode"}."\n";
     if($self->{"mode"} eq 'align' || $self->{"mode"} eq 'all'){
 	$self=$self->runMarkerAlign($continue,\@markers);
     }
@@ -246,10 +244,9 @@ sub runProgCheck{
     #check if the various programs used in this pipeline are installed on the machine
     my $progCheck = Amphora2::Utilities::programChecks($self);
     if($progCheck!=0){
-	print STDERR "A required program was not found during the checks aborting\n";
-	exit();
+	croak "A required program was not found during the checks aborting\n";
     }elsif($progCheck==0){
-	print STDERR "All systems are good to go, continuing the screening\n";
+	debug "All systems are good to go, continuing the screening\n";
     }
     return $self;
 }
@@ -272,13 +269,12 @@ sub prepIsolateFiles {
 	while(my $file = shift){
 		open( ISOLATEFILE, $file ) || croak("Unable to read $file\n");
 		my $fname = $self->{"fileDir"}."/".basename($file);
-		print "Operating on isolate file $fname\n";
+		debug "Operating on isolate file $fname\n";
 		print OUTFILE ">".basename($file)."\n";
 		while( my $line = <ISOLATEFILE> ){
 			next if $line =~ /^>/;
 			print OUTFILE $line;
 		}
-		print "\n";
 		close ISOLATEFILE;
 	}
 	close OUTFILE;
@@ -336,13 +332,12 @@ sub directoryPrep {
 #    exit;
     #remove the directory from a previous run
     if($force && $self->{"mode"} eq 'all'){
-	print STDERR "deleting an old run\n";
+	msg("deleting an old run\n", 1);
 	my $dir = $self->{"fileDir"};
 	`rm -rf $dir`;
     }elsif(-e $self->{"fileDir"} && $self->{"mode"} eq 'all'){
-	print STDERR "A previous run was found using the same file name aborting the current run\n";
-	print STDERR "Either delete that run from ".$self->{"fileDir"}.", or force overwrite with the -f command-line option\n";
-	exit;
+	croak("A previous run was found using the same file name aborting the current run\n".
+	"Either delete that run from ".$self->{"fileDir"}.", or force overwrite with the -f command-line option\n");
     }
     #check if the temporary directory exists, if it doesn't create it.
     `mkdir $self->{"tempDir"}` unless (-e $self->{"tempDir"});
@@ -364,12 +359,9 @@ sub taxonomyAssignments {
     my $self = shift;
     my $continue = shift;
     my $markListRef = shift;
-    ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst)=localtime(time);
-    printf STDERR "Before taxonomy assignments %4d-%02d-%02d %02d:%02d:%02d\n",$year+1900,$mon+1,$mday,$hour,$min,$sec;
-    # Taxonomy assignemnts
+    Amphora2::Utilities::start_timer("taxonomy assignments");
     Amphora2::Summarize::summarize( $self,$markListRef );
-    ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst)=localtime(time);
-    printf STDERR "After taxonomy assignments %4d-%02d-%02d %02d:%02d:%02d\n",$year+1900,$mon+1,$mday,$hour,$min,$sec;
+    Amphora2::Utilities::Amphora2::Utilities::end_timer("taxonomy assignments");
 }
 
 =head2 runPplacer
@@ -384,14 +376,12 @@ sub runPplacer{
     my $self = shift;
     my $continue = shift;
     my $markListRef = shift;
-    print "PPLACER MARKS @{$markListRef}\n";
-    ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst)=localtime(time);
-    printf STDERR "Starting runPPlacer %4d-%02d-%02d %02d:%02d:%02d\n",$year+1900,$mon+1,$mday,$hour,$min,$sec;
+    debug "PPLACER MARKS @{$markListRef}\n";
+    Amphora2::Utilities::start_timer("runPPlacer");
     my $treeDir =$self->{"treeDir"};
     `rm $treeDir/*` if (<$treeDir/*>);
     Amphora2::pplacer::pplacer($self,$markListRef);
-    ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst)=localtime(time);
-    printf STDERR "After runPPlacer %4d-%02d-%02d %02d:%02d:%02d\n",$year+1900,$mon+1,$mday,$hour,$min,$sec;
+    Amphora2::Utilities::Amphora2::Utilities::end_timer("runPPlacer");
     if($continue != 0){
 	$self->{"mode"} = 'summary';
     }
@@ -409,16 +399,14 @@ sub runMarkerAlign{
     my $self = shift;
     my $continue = shift;
     my $markRef = shift;
-    ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst)=localtime(time);
-    printf STDERR "Before Alignments for Markers %4d-%02d-%02d %02d:%02d:%02d\n",$year+1900,$mon+1,$mday,$hour,$min,$sec;
+    Amphora2::Utilities::start_timer("Alignments");
     #clearing the alignment directory if needed
     my $alignDir = $self->{"alignDir"};
     `rm $alignDir/*` if(<$alignDir/*>);
     #Align Markers
     my $threadNum=1;
     Amphora2::MarkerAlign::MarkerAlign( $self, $markRef );
-    ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst)=localtime(time);
-    printf STDERR "After Alignments %4d-%02d-%02d %02d:%02d:%02d\n",$year+1900,$mon+1,$mday,$hour,$min,$sec;
+    Amphora2::Utilities::Amphora2::Utilities::end_timer("Alignments");
     if($continue != 0){
 	$self->{"mode"} = 'placer';
     }
@@ -441,15 +429,13 @@ sub runSearch {
     my $custom = shift;
     my $type = shift;
     my $markerListRef = shift;
-    ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst)=localtime(time);
-    printf STDERR "Before runBlast %4d-%02d-%02d %02d:%02d:%02d\n",$year+1900,$mon+1,$mday,$hour,$min,$sec;
+    Amphora2::Utilities::start_timer("runBlast");
     #clearing the blast directory
     my $blastDir = $self->{"blastDir"};
     `rm $self->{"blastDir"}/*` if(<$blastDir/*>);
     #run Blast
     Amphora2::FastSearch::RunSearch($self,$custom,$type,$markerListRef);
-    ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst)=localtime(time);
-    printf STDERR "After runBlast %4d-%02d-%02d %02d:%02d:%02d\n",$year+1900,$mon+1,$mday,$hour,$min,$sec;
+    Amphora2::Utilities::Amphora2::Utilities::end_timer("runBlast");
     
     if($continue != 0){
 	$self->{"mode"} = 'align';
