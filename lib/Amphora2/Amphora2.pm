@@ -200,7 +200,7 @@ sub readAmphora2Config {
     # try first a config in the script dir, in case we're running from
     # a dev directory.  then config in system dir, then user's home.
     # let each one override its predecessor.
-    { package Amphora2::Settings; do "$scriptpath/amphora2rc"; do "$scriptpath/../etc/amphora2rc"; do "$ENV{HOME}/.amphora2rc" }
+    { package Amphora2::Settings; do "$scriptpath/amphora2rc"; do "$scriptpath/../amphora2rc"; do "$scriptpath/../etc/amphora2rc"; do "$ENV{HOME}/.amphora2rc" }
     return $self;
 }
 
