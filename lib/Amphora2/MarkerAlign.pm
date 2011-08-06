@@ -11,6 +11,7 @@ use List::Util qw(min);
 use Amphora2::Amphora2;
 use Bio::Tools::CodonTable;
 use Bio::Align::Utilities qw(:all);
+use Log::Message::Simple qw[msg error debug carp croak cluck confess];
 #use Parallel::ForkManager;
 
 
@@ -67,16 +68,16 @@ sub MarkerAlign {
     my $self = shift;
     my $markersRef = shift;
     $reverseTranslate = $self->{"reverseTranslate"};
-    print "beforeDirprepClean @{$markersRef}\n";
+    debug "beforeDirprepClean @{$markersRef}\n";
     directoryPrepAndClean($self, $markersRef);
-    print "AFTERdirprepclean @{$markersRef}\n";
+    debug "AFTERdirprepclean @{$markersRef}\n";
     my $index =-1;
     
     markerPrepAndRun($self,$markersRef);
     hmmsearchParse($self,$markersRef);
-    print STDERR "after HMMSEARCH PARSE\n";
+    debug "after HMMSEARCH PARSE\n";
     alignAndMask($self,$reverseTranslate,$markersRef);
-    print STDERR "AFTER ALIGN and MASK\n";
+    debug "AFTER ALIGN and MASK\n";
     if($self->{"isolate"} && $self->{"besthit"}){
 	    my @markeralignments = getMarkerAlignmentFiles($self,$markersRef);
 	    Amphora2::Utilities::concatenateAlignments($self->{"alignDir"}."/concat.fasta", $self->{"alignDir"}."/mrbayes.nex", @markeralignments);
@@ -87,7 +88,7 @@ sub MarkerAlign {
 		Amphora2::Utilities::concatenateAlignments($self->{"alignDir"}."/concat-dna.fasta", $self->{"alignDir"}."/mrbayes-dna.nex", @markeralignments);
 	    }
     }
-    print STDERR "AFTER concatenateALI\n";
+    debug "AFTER concatenateALI\n";
     return $self;
 }
 
@@ -108,7 +109,7 @@ sub directoryPrepAndClean{
 	my $marker = ${$markRef}[$index];
 	my $sizer = -s $self->{"blastDir"}."/$marker.candidate"; 
 	if(-z $self->{"blastDir"}."/$marker.candidate"){
-            print STDERR "WARNING : the candidate file for $marker is empty\n";
+            warn "WARNING : the candidate file for $marker is empty\n";
             splice @{$markRef}, $index--, 1;
             next;
         }
@@ -125,7 +126,7 @@ sub directoryPrepAndClean{
 sub markerPrepAndRun{
     my $self = shift;
     my $markRef = shift;
-    print "ALIGNDIR : ".$self->{"alignDir"}."\n";
+    debug "ALIGNDIR : ".$self->{"alignDir"}."\n";
     foreach my $marker (@{$markRef}){
 	
 	#converting the marker's reference alignments from Fasta to Stockholm (required by Hmmer3)
@@ -155,9 +156,9 @@ sub hmmsearchParse{
 	my $marker = ${$markRef}[$index];
 	my %hmmHits=();
 	my %hmmScores=();
-	open(tbloutIN,$self->{"alignDir"}."/$marker.hmmsearch.tblout");
+	open(TBLOUTIN,$self->{"alignDir"}."/$marker.hmmsearch.tblout");
 	my $countHits = 0;
-	while(<tbloutIN>){
+	while(<TBLOUTIN>){
 	    chomp($_);
 	    if($_ =~ m/^(\S+)\s+-\s+(\S+)\s+-\s+(\S+)\s+(\S+)/){
 		$countHits++;
@@ -172,25 +173,25 @@ sub hmmsearchParse{
 		}
 	    }
 	}
-	close(tbloutIN);
+	close(TBLOUTIN);
         
 	# added a check if the hmmsearch found hits to prevent the masking and aligning from failing
 	if($countHits==0){
-	    print STDERR "WARNING : The hmmsearch for $marker found 0 hits, removing marker from the list to process\n";
+	    warn "WARNING : The hmmsearch for $marker found 0 hits, removing marker from the list to process\n";
 	    splice @{$markRef}, $index--, 1;
 	    next;
 	}
 	
-	open(newCandidate,">".$self->{"alignDir"}."/$marker.newCandidate");
+	open(NEWCANDIDATE,">".$self->{"alignDir"}."/$marker.newCandidate");
 	my $seqin = new Bio::SeqIO('-file'=>$self->{"blastDir"}."/$marker.candidate");
 	while(my $sequence = $seqin->next_seq){
 	    my $baseid = $sequence->id;
 	    $baseid =~ s/_[fr][123]$//g;
 	    if(exists $hmmHits{$baseid} && $hmmHits{$baseid} eq $sequence->id){
-		print newCandidate ">".$sequence->id."\n".$sequence->seq."\n";
+		print NEWCANDIDATE ">".$sequence->id."\n".$sequence->seq."\n";
 	    }
 	}
-	close(newCandidate);
+	close(NEWCANDIDATE);
     }
     return $self;
 }
@@ -231,7 +232,7 @@ sub alignAndMask{
 	}
 	# reading and trimming out non-marker alignment columns from Hmmalign output (Hmmer3)
 	my $hmmer3Ali = new Bio::AlignIO(-file =>$self->{"alignDir"}."/$marker.aln_hmmer3.fasta",-format=>'fasta');
-	open(aliOUT,">".$self->{"alignDir"}."/$marker.aln_hmmer3.trim")or die "Couldn't open ".$self->{"alignDir"}."/$marker.aln_hmmer3.trim for writting\n";
+	open(ALIOUT,">".$self->{"alignDir"}."/$marker.aln_hmmer3.trim")or die "Couldn't open ".$self->{"alignDir"}."/$marker.aln_hmmer3.trim for writting\n";
 	my $seqCount = 0;
 	while(my $aln = $hmmer3Ali->next_aln()){
 	    foreach my $seq ($aln->each_seq()){
@@ -267,22 +268,22 @@ sub alignAndMask{
 		    #add a paralog ID if we're running in isolate mode and more than one good hit
 		    $newIDs .= "_p$seqCount" if $seqCount > 0 && $self->{"isolate"};
                     #print the new trimmed alignment
-		    print aliOUT ">".$newIDs."\n".$newSeq."\n";
+		    print ALIOUT ">".$newIDs."\n".$newSeq."\n";
 		    $seqCount++;
 		}
 	    }
 	}
-	close(aliOUT);
+	close(ALIOUT);
 
 	#if the reverse option is on AND the submitted sequences are DNA, then output a Nucleotide alignment in addition to the AA alignment
 	if($reverseTranslate){
 	    #if it exists read the reference nucleotide sequences for the candidates
 	    my %referenceNuc = ();
 	    if(-e $self->{"blastDir"}."/$marker.candidate.ffn"){
-		open(refSeqsIN,$self->{"blastDir"}."/$marker.candidate.ffn") or die "Couldn't open ".$self->{"alignDir"}."/$marker.candidate.ffn for reading\n";
+		open(REFSEQSIN,$self->{"blastDir"}."/$marker.candidate.ffn") or die "Couldn't open ".$self->{"alignDir"}."/$marker.candidate.ffn for reading\n";
 		my $currID="";
 		my $currSeq="";
-		while(my $line = <refSeqsIN>){
+		while(my $line = <REFSEQSIN>){
 		    chomp($line);
                 if($line =~ m/^>(.*)/){
                     $currID=$1;
@@ -291,21 +292,21 @@ sub alignAndMask{
                     $referenceNuc{$currID}=$tempseq;
                 }
 		}
-		close(refSeqsIN);
+		close(REFSEQSIN);
 	    }
-	    open(ali_trans_OUT, ">".$self->{"alignDir"}."/$marker.aln_hmmer3.trim.ffn")or die "Couldn't open ".$self->{"alignDir"}."/$marker.aln_hmmer3.trim.ffn for writting\n";
+	    open(ALITRANSOUT, ">".$self->{"alignDir"}."/$marker.aln_hmmer3.trim.ffn")or die "Couldn't open ".$self->{"alignDir"}."/$marker.aln_hmmer3.trim.ffn for writting\n";
 	    my $aa_ali = new Bio::AlignIO(-file =>$self->{"alignDir"}."/$marker.aln_hmmer3.trim",-format=>'fasta');
 	    my $dna_ali = &aa_to_dna_aln($aa_ali->next_aln(),\%referenceNuc);
 	    foreach my $seq ($dna_ali->each_seq()){
-		print ali_trans_OUT ">".$seq->id."\n".$seq->seq."\n";
+		print ALITRANSOUT ">".$seq->id."\n".$seq->seq."\n";
 	    }	
-	    close(ali_trans_OUT);
+	    close(ALITRANSOUT);
 	}
 
 	#checking if sequences were written to the marker alignment file
 	if($seqCount ==0){
 	    #removing the marker from the list if no sequences were added to the alignment file
-	    print STDERR "Masking or hmmsearch thresholds failed, removing $marker from the list\n";
+	    warn "Masking or hmmsearch thresholds failed, removing $marker from the list\n";
 	    splice @{$markRef}, $index--, 1;
 	}
     }
