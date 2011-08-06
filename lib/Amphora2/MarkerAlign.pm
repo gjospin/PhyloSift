@@ -80,6 +80,12 @@ sub MarkerAlign {
     if($self->{"isolate"} && $self->{"besthit"}){
 	    my @markeralignments = getMarkerAlignmentFiles($self,$markersRef);
 	    Amphora2::Utilities::concatenateAlignments($self->{"alignDir"}."/concat.fasta", $self->{"alignDir"}."/mrbayes.nex", @markeralignments);
+	    if($self->{"reverseTranslate"}){
+		for(my $i=0; $i<@markeralignments; $i++){
+			$markeralignments[$i].= ".ffn";
+		}
+		Amphora2::Utilities::concatenateAlignments($self->{"alignDir"}."/concat-dna.fasta", $self->{"alignDir"}."/mrbayes-dna.nex", @markeralignments);
+	    }
     }
     print STDERR "AFTER concatenateALI\n";
     return $self;
@@ -269,20 +275,19 @@ sub alignAndMask{
 	close(aliOUT);
 
 	#if the reverse option is on AND the submitted sequences are DNA, then output a Nucleotide alignment in addition to the AA alignment
-	if($reverseTranslate && $self->{"dna"}==1){
+	if($reverseTranslate){
 	    #if it exists read the reference nucleotide sequences for the candidates
 	    my %referenceNuc = ();
 	    if(-e $self->{"blastDir"}."/$marker.candidate.ffn"){
 		open(refSeqsIN,$self->{"blastDir"}."/$marker.candidate.ffn") or die "Couldn't open ".$self->{"alignDir"}."/$marker.candidate.ffn for reading\n";
 		my $currID="";
 		my $currSeq="";
-		while(<refSeqsIN>){
-		    chomp($_);
-                if($_ =~ m/^>(.*)/){
+		while(my $line = <refSeqsIN>){
+		    chomp($line);
+                if($line =~ m/^>(.*)/){
                     $currID=$1;
                 }else{
-                    $currSeq = $_;
-                    my $tempseq = Bio::LocatableSeq->new( -seq => $currSeq, -id => $currID);
+                    my $tempseq = Bio::LocatableSeq->new( -seq => $line, -id => $currID);
                     $referenceNuc{$currID}=$tempseq;
                 }
 		}
