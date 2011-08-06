@@ -1,8 +1,7 @@
-#!/usr/bin/perl -w
+#!/usr/bin/env perl
 
 use warnings;
 use strict;
-use diagnostics;
 
 use FindBin qw($Bin); use lib "$Bin/lib";
 use Getopt::Long;
