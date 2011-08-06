@@ -361,7 +361,7 @@ sub taxonomyAssignments {
     my $markListRef = shift;
     Amphora2::Utilities::start_timer("taxonomy assignments");
     Amphora2::Summarize::summarize( $self,$markListRef );
-    Amphora2::Utilities::Amphora2::Utilities::end_timer("taxonomy assignments");
+    Amphora2::Utilities::end_timer("taxonomy assignments");
 }
 
 =head2 runPplacer
@@ -381,7 +381,7 @@ sub runPplacer{
     my $treeDir =$self->{"treeDir"};
     `rm $treeDir/*` if (<$treeDir/*>);
     Amphora2::pplacer::pplacer($self,$markListRef);
-    Amphora2::Utilities::Amphora2::Utilities::end_timer("runPPlacer");
+    Amphora2::Utilities::end_timer("runPPlacer");
     if($continue != 0){
 	$self->{"mode"} = 'summary';
     }
@@ -406,7 +406,7 @@ sub runMarkerAlign{
     #Align Markers
     my $threadNum=1;
     Amphora2::MarkerAlign::MarkerAlign( $self, $markRef );
-    Amphora2::Utilities::Amphora2::Utilities::end_timer("Alignments");
+    Amphora2::Utilities::end_timer("Alignments");
     if($continue != 0){
 	$self->{"mode"} = 'placer';
     }
@@ -435,7 +435,7 @@ sub runSearch {
     `rm $self->{"blastDir"}/*` if(<$blastDir/*>);
     #run Blast
     Amphora2::FastSearch::RunSearch($self,$custom,$type,$markerListRef);
-    Amphora2::Utilities::Amphora2::Utilities::end_timer("runBlast");
+    Amphora2::Utilities::end_timer("runBlast");
     
     if($continue != 0){
 	$self->{"mode"} = 'align';
