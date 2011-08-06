@@ -78,8 +78,6 @@ our $makeblastdb = "";
 our $blastall = "";
 our $formatdb = "";
 our $translateSixFrame = "";
-our $printneighbor = "";
-our $Rscript = "";
 our $rapSearch= "";
 our $preRapSearch = "";
 sub programChecks {
@@ -135,15 +133,6 @@ sub programChecks {
 	if($translateSixFrame eq ""){
 	    carp("Amphora2 translateSixFrame program not found");
 	    return 1;
-	}
-
-	$Rscript = get_program_path("Rscript", $Amphora2::Settings::R_path);
-
-	#ensure we have a place to put any R packages that might need to be downloaded
-	my $amphora_r_lib_path = $ENV{"HOME"}."/.amphora2_rlibs";
-	`mkdir -p $amphora_r_lib_path`;
-	unless( defined($ENV{"R_LIBS_USER"}) && $ENV{"R_LIBS_USER"}=~/amphora2/ ){
-		$ENV{"R_LIBS_USER"} .= ":$amphora_r_lib_path";
 	}
 
 	$rapSearch = get_program_path("rapsearch",$Amphora2::Settings::a2_path);
