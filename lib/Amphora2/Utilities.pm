@@ -71,6 +71,8 @@ our $hmmsearch = "";
 our $hmmbuild = "";
 our $blastp = "";
 our $makeblastdb = "";
+our $blastall = "";
+our $formatdb = "";
 our $translateSixFrame = "";
 our $printneighbor = "";
 our $Rscript = "";
@@ -148,6 +150,13 @@ sub programChecks {
 
 	$preRapSearch = get_program_path("prerapsearch",$Amphora2::Settings::a2_path);
 
+
+	$blastall = get_program_path("blastall",$Amphora2::Settings::a2_path);
+	if($blastall eq ""){
+	    carp("blastall was not found\n");
+	    return 1;
+	}
+	$formatdb = get_program_path("formatdb",$Amphora2::Settings::a2_path);
 
 	return 0;
 }
@@ -329,7 +338,6 @@ sub concatenateAlignments {
 	my $partlist = "partition genes = ".scalar(@alignments).": ";
 	my $prevlen = 0;
 	foreach my $file(@alignments){
-	    print STDERR $file."\n";
 		my $in  = Bio::AlignIO->new(-file => $file , '-format' => 'fasta');
 		while ( my $aln = $in->next_aln() ) {
 			my $csname = $file;
