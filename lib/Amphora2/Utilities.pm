@@ -10,6 +10,7 @@ use Bio::Align::Utilities qw(:all);
 use POSIX ();
 use LWP::Simple;
 use File::Fetch;
+use FindBin qw($Bin);
 
 
 =head1 NAME
@@ -61,6 +62,9 @@ sub get_program_path {
 		$progcheck = `which $progname`;
 		chomp $progcheck;
 	}
+	# last ditch attempt, check the directories from where the script is running
+	$progcheck = $Bin."/".$progname unless( $progcheck =~ /$progname/ || !(-x $Bin."/".$progname) );
+	$progcheck = $Bin."/bin/".$progname unless( $progcheck =~ /$progname/  && !(-x $Bin."/".$progname) );
 	return $progcheck;
 }
 
@@ -150,7 +154,6 @@ sub programChecks {
 
 	$preRapSearch = get_program_path("prerapsearch",$Amphora2::Settings::a2_path);
 
-
 	$blastall = get_program_path("blastall",$Amphora2::Settings::a2_path);
 	if($blastall eq ""){
 	    carp("blastall was not found\n");
@@ -193,13 +196,13 @@ sub download_data {
 	my $destination = shift;
 	`mkdir -p $destination`;
 	# FIXME this is insecure!
+	# but then again, so is just about every other line of code in this program...
 	my $ff = File::Fetch->new(uri=>$url);
 	$ff->fetch(to=>"$destination/..");
-#	`wget -N -nv $url -O  $destination/../amphora_data.tar.gz`;
-	print "URL : $url\n";
+	debug "URL : $url\n";
 	$url =~ /\/(\w+)\.tgz/;
 	my $archive = $1;
-	print "ARCHIVE : $archive\n";
+	debug "ARCHIVE : $archive\n";
 	if(-e "$destination/.. "){
 	    `rm -rf $destination/..`;
 	}
@@ -214,11 +217,11 @@ my $ncbi_url = "http://edhar.genomecenter.ucdavis.edu/~koadman/ncbi.tgz";
 sub dataChecks {
 	$marker_dir = get_data_path( "markers", $Amphora2::Settings::marker_path );
 	my ($content_type, $document_length, $modified_time, $expires, $server)= head("$marker_update_url");
-	print "TEST REMOTE:".localtime($modified_time)."\n";
-	print STDERR "MARKER_PATH : ".$marker_dir."\n";
+	debug "TEST REMOTE:".localtime($modified_time)."\n";
+	debug "MARKER_PATH : ".$marker_dir."\n";
 	if(-x $marker_dir){
 	    my $mtime = (stat($marker_dir))[9];
-	    print "TEST LOCAL :".localtime($mtime)."\n";	
+	    debug "TEST LOCAL :".localtime($mtime)."\n";	
 	    if($modified_time > $mtime){
 		warn "Found newer version of the marker data\n";
 		warn "Downloading from $marker_update_url\n";
