@@ -2,6 +2,7 @@ package Amphora2::FastSearch;
 
 use warnings;
 use strict;
+use Log::Message::Simple qw[msg error debug carp croak cluck confess];
 use Getopt::Long;
 use Cwd;
 use Bio::SearchIO;
@@ -10,6 +11,9 @@ use Bio::SeqUtils;
 use Carp;
 use Amphora2::Amphora2;
 use File::Basename;
+
+use constant FLANKING_LENGTH => 150;
+
 =head1 NAME
 
 Amphora2::FastSearch - Subroutines to perform fast sequence identity searches between reads and marker genes.
@@ -78,21 +82,22 @@ sub RunSearch {
     $readsCore = $1;
     $isolateMode = $self->{"isolate"};
     $reverseTranslate = $self->{"reverseTranslate"};
-    print "before rapPrepandclean\n";
+    debug "before rapPrepandclean\n";
     prepAndClean($self);
     if($self->{"readsFile_2"} ne ""){
-	print "before fastqtoFASTA\n";
+	debug "before fastqtoFASTA\n";
 	fastqToFasta($self);
     }
 
     my $resultsfile;
-    if($searchtype eq "blast"){
+    if($searchtype eq "blast" && $reverseTranslate){
+	$resultsfile = blastXoof_table($self, $self->{"readsFile"});
+    }elsif($searchtype eq "blast"){
         sixFrameTranslation($self);
 	my $query_file = $self->{"blastDir"}."/$readsCore-6frame";
     	$resultsfile = executeBlast($self, $query_file);
     }else{
         $resultsfile = executeRap($self);
-        build_lookup_table($self);
     }
     get_hits($self,$resultsfile, $searchtype);
     return $self;
@@ -104,31 +109,27 @@ sub RunSearch {
 
 sub build_lookup_table{
     my $self=shift;
-    print STDERR "Building the lookup table for all markers";
+    debug "Building the lookup table for all markers";
     foreach my $markName (@markers){
 	open(markIN,$Amphora2::Utilities::marker_dir."/".$markName.".faa");
 	while(<markIN>){
 	    chomp($_);
 	    if ($_ =~ m/^>(\S+)/){
-		#print $1."\t'".$markName."'\n";
 		$marker_lookup{$1}=$markName;
 	    }
 	}
 	close(markIN);
-	print STDERR ".";
+	debug STDERR ".";
     }
-    print STDERR "\n";
-    print STDERR "Building lookup table for hits' frames ... ";
+    debug "\n";
+    debug "Building lookup table for hits' frames ... ";
     open(frameIN,$self->{"blastDir"}."/".$readsCore.".rapSearch.aln");
     while(<frameIN>){
 	chomp($_);
 	next if $_ !~ m/^>/;
 	if ($_ =~ m/^>(\S+).+log\(E-value\)=(-\d+\.\d+).+frame=([+-]\d)/){
-#	    print "Found a suitable alignment line\n";
 	    $self->{"dna"}=1;
 	    if(exists $frames{$1}){
-#		print "'".@{$frames{$1}}."'\t\'@{$frames{$1}}\'\n";
-#		exit;
 		if(${$frames{$1}}[1] > $2){
 		    $frames{$1}=[$3,$2];
 		}else{
@@ -143,8 +144,7 @@ sub build_lookup_table{
 	}
     }
     close(frameIN);
-    print STDERR "Done.\n";
-#    exit;
+    debug "Done.\n";
     return $self;
 }
 
@@ -154,9 +154,10 @@ sub build_lookup_table{
 
 sub blastXoof_table{
     my $self = shift;
+    my $query_file = shift;
        print "INSIDE tabular OOF blastx\n";
-       `$Amphora2::Utilities::blastall -p blastx -i $self->{"blastDir"}/$readsCore -e 0.1 -w 20 -b 50000 -v 50000 -d $self->{"blastDir"}/rep.faa -o $self->{"blastDir"}/$readsCore.tabblastx -m 8 -a $threadNum`;
-     return $self;
+       `$Amphora2::Utilities::blastall -p blastx -i $query_file -e 0.1 -w 20 -b 50000 -v 50000 -d $self->{"blastDir"}/$blastdb_name -o $self->{"blastDir"}/$readsCore.tabblastx -m 8 -a $threadNum`;
+     return $self->{"blastDir"}."/$readsCore.tabblastx";
  }
 
 =head2 blastXoof_full
@@ -164,9 +165,10 @@ sub blastXoof_table{
 =cut
 
 sub blastXoof_full{
+    my $query_file = shift;
     my $self = shift;
        print "INSIDE full OOF blastx\n";
-       `$Amphora2::Utilities::blastall -p blastx -i $self->{"blastDir"}/$readsCore-hitoof -e 0.1 -w 20 -b 50000 -v 50000 -d $self->{"blastDir"}/rep.faa -o $self->{"blastDir"}/$readsCore.blastx -a $threadNum`;
+       `$Amphora2::Utilities::blastall -p blastx -i $query_file -e 0.1 -w 20 -b 50000 -v 50000 -d $self->{"blastDir"}/$blastdb_name -o $self->{"blastDir"}/$readsCore.blastx -a $threadNum`;
     return $self;
 }
 
@@ -177,50 +179,28 @@ sub blastXoof_full{
 sub translateFrame{
     my $id = shift;
     my $seq = shift;
+    my $start = shift;
+    my $end = shift;
     my $frame = shift;
     my $marker = shift;
     my $reverseTranslate = shift;
     my $returnSeq = "";
-    my $newseq = Bio::LocatableSeq->new( -seq => $seq, -id => 'temp');
-    my @prots = Bio::SeqUtils->translate_6frames($newseq);
-    foreach my $prot (@prots){
-	if($prot->id =~ m/-0F/ && $frame eq '+1'){
-	    $returnSeq = $prot->seq;
-	    last;
-	}elsif($prot->id =~ m/-1F/&& $frame eq '+2'){
-	    $seq =~ s/^.//; 
-	    $returnSeq =  $prot->seq;
-	    last;
-	}elsif($prot->id =~ m/-2F/&& $frame eq '+3'){
-	    $seq =~ s/^..//;
-	    $returnSeq =  $prot->seq;
-	    last;
-        }elsif($prot->id =~ m/-0R/&& $frame eq '-1'){
-	    $seq = reverse($seq);
-	    $returnSeq = $prot->seq;
-	    last;
-        }elsif($prot->id =~ m/-1R/&& $frame eq '-2'){
-	    $seq = reverse($seq);
-	    $seq =~ s/^.//;
-	    $returnSeq = $prot->seq;
-	    last;
-        }elsif($prot->id =~ m/-2R/&& $frame eq '-3'){
-	    $seq = reverse($seq);
-            $seq =~ s/^..//;
-	    $returnSeq = $prot->seq;
-	    last;
-        }
-    }
+    my $localseq = substr($seq, $start-1, $end-$start+1);
+    
+    my $newseq = Bio::LocatableSeq->new( -seq => $localseq, -id => 'temp');
+    $newseq = $newseq->revcom() if($frame<0);
     if($reverseTranslate){
+	$id =~ s/\./_/g;
 	if(exists  $markerNuc{$marker}){
-	    $markerNuc{$marker} .= ">".$id."\n".$seq."\n";
+	    $markerNuc{$marker} .= ">".$id."\n".$newseq->seq."\n";
 	}else{
-	    $markerNuc{$marker}= ">".$id."\n".$seq."\n";
+	    $markerNuc{$marker}= ">".$id."\n".$newseq->seq."\n";
 	}
     }
 
-    return $returnSeq;
+    $returnSeq = $newseq->translate();
 
+    return $returnSeq->seq();
 }
 
 =head2 executeRap
@@ -341,16 +321,13 @@ sub get_hits{
 	}else{
 		$markerName = $marker_lookup{$subject};
 	}
-#	print "BLAST ".$query."\n";
+
 	if($query =~ m/(\S+)_([rf][012])/ && $isolateMode!=1){
-	    #print "PARSING BLAST\n";
 	    if(exists $duplicates{$1}{$markerName}){
 		foreach my $suff (keys (%{$duplicates{$1}{$markerName}})){
 		    if($bitScore > $duplicates{$1}{$markerName}{$suff}){
 			delete($duplicates{$1}{$markerName}{$suff});
 			$duplicates{$1}{$markerName}{$2}=$bitScore;
-		    }else{
-			#do nothing;
 		    }
 		}
 	    }else{
@@ -367,16 +344,6 @@ sub get_hits{
 		$hitsStart{$query}{$markerName} = $query_start;
 		$hitsEnd{$query}{$markerName}=$query_end;
 	    }
-#	}
-#	if($isolateMode==1){
-	    # running on a genome assembly
-	    # allow more than one marker per sequence
-	    # require all hits to the marker to have bit score within some range of the top hit
-#	    if($markerTopScores{$markerName} < $hit->bits + $bestHitsBitScoreRange){
-#		$hits{$hitName}{$markerHit}=1;
-#		$hitsStart{$hitName}{$markerName} = $query_start;
-#		$hitsEnd{$hitName}{$markerName} = $query_end;
-#	    }
 	}else{
 	    # running on reads
 	    # just do one marker per read
@@ -442,7 +409,6 @@ sub get_hits{
     while (my $seq = $seqin->next_seq) {
 	if(exists $hits{$seq->id}){
 	    foreach my $markerHit(keys %{$hits{$seq->id}}){
-		#print STDERR $seq->id."\t".$seq->description."\n";
 		#checking if a 6frame translation was done and the suffix was appended to the description and not the sequence ID
 		my $newID = $seq->id;
 		my $current_suff="";
@@ -459,57 +425,53 @@ sub get_hits{
 		    print "Skipping ".$seq->id."\t".$current_suff."\n";
 		    next;
 		}
-		#print "not skipping\t";
-		#pre-trimming for the query + 150 residues before and after (for very long queries)
-		my $start = $hitsStart{$seq->id}{$markerHit}-150;
-		if($start < 0){
-		    $start=0;
-		}
-		my $end = $hitsEnd{$seq->id}{$markerHit}+150;
+
+		#pre-trimming for the query + FLANKING_LENGTH residues before and after (for very long queries)
+		my $start = $hitsStart{$seq->id}{$markerHit};
+		my $end = $hitsEnd{$seq->id}{$markerHit};
+		($start,$end) = ($end,$start) if($start > $end); # swap if start bigger than end
+		$start -= FLANKING_LENGTH;
+		$end += FLANKING_LENGTH;
+		$start=0 if($start < 0);
 		my $seqLength = length($seq->seq);
-		if($end >= $seqLength){
-		    $end=$seqLength;
-		}
+		$end=$seqLength if($end >= $seqLength);
+
 		my $newSeq = substr($seq->seq,$start,$end-$start);
 		#if the $newID exists in the %frames hash, then it needs to be translated to the correct frame
-		if(exists $frames{$newID}){
-#		    print "Translating $newID\n";
-		    
-                    my $translatedSeq = translateFrame($newID,$seq->seq,${$frames{$newID}}[0],$markerHit,$reverseTranslate);
-#		    print "End : $end\tStart: $start\n";
-#		    print "Legnth of string\t".length($translatedSeq);
-		    $newSeq = substr($translatedSeq,$start/3,(($end-$start)/3));
+		if($reverseTranslate){
+		    # compute the frame as modulo 3 of start site, reverse strand if end < start
+		    my $frame = $hitsStart{$seq->id}{$markerHit} % 3 + 1;
+		    $frame *= -1 if( $hitsStart{$seq->id}{$markerHit} > $hitsEnd{$seq->id}{$markerHit});
+		    my $seqlen = abs($hitsStart{$seq->id}{$markerHit} - $hitsEnd{$seq->id}{$markerHit})+1;
+		    if($seqlen % 3 == 0){
+	                    $newSeq = translateFrame($newID,$seq->seq,$start,$end,$frame,$markerHit,$reverseTranslate);
+		    }else{
+			print STDERR "Error, alignment length not multiple of 3!  FIXME: need to pull frameshift from full blastx\n";
+		    }
                 }
 		if(exists  $markerHits{$markerHit}){
 		    $markerHits{$markerHit} .= ">".$newID."\n".$newSeq."\n";
 		}else{
 		    $markerHits{$markerHit} = ">".$newID."\n".$newSeq."\n";
 		}
-#		if($reverseTranslate && $self->{"dna"}==1){
-#		    if(exists  $markerNuc{$markerHit}){
-#			$markerNuc{$markerHit} .= ">".$newID."\n".$seq->seq."\n";
-#		    }else{
-#			$markerNuc{$markerHit}= ">".$newID."\n".$seq->seq."\n";
-#		    }
-#		}
 	    }
 	}
     }
-#    print "Writtenmarkers\t".keys(%markerHits)."\n";
+
     #write the read+ref_seqs for each markers in the list
     foreach my $marker (keys %markerHits){
 	#writing the hits to the candidate file
 	open(fileOUT,">".$self->{"blastDir"}."/$marker.candidate")or die " Couldn't open ".$self->{"blastDir"}."/$marker.candidate for writing\n";
 	print fileOUT $markerHits{$marker};
 	close(fileOUT);
-	if($reverseTranslate && $self->{"dna"}==1){
+	if($reverseTranslate){
 	    open(fileOUT,">".$self->{"blastDir"}."/$marker.candidate.ffn")or die " Couldn't open ".$self->{"blastDir"}."/$marker.candidate.ffn for writing\n";
 	    print fileOUT $markerNuc{$marker};
 	    close(fileOUT);
 	}
 	
     }
-#    exit;
+
     return $self;
 }
 
@@ -553,8 +515,14 @@ sub prepAndClean {
         }
 	#make one for BLAST
 	if(!-e $self->{"blastDir"}."/rep.faa.psq" ||  !-e $self->{"blastDir"}."/rep.faa.pin" || !-e $self->{"blastDir"}."/rep.faa.phr"){
-	    `makeblastdb -in $self->{"blastDir"}/rep.faa -dbtype prot -title RepDB`;
-	}
+	        if($reverseTranslate){
+		    print STDERR "formatdb\n";
+		    `formatdb -i $self->{"blastDir"}/rep.faa -o F -p T -t RepDB`;
+		}else{
+		    print STDERR "makeblastdb\n";
+		    `makeblastdb -in $self->{"blastDir"}/rep.faa -dbtype prot -title RepDB`;
+		}
+        }
     }else{
 	#when using the default marker package
 	my $dbDir = "$Amphora2::Utilities::marker_dir/representatives";
@@ -577,8 +545,13 @@ sub prepAndClean {
 		`cat $dbDir/$marker.rep >> $dbDir/$blastdb_name`;
 	    }
 	}
-	if(!-e "$dbDir/$blastdb_name.psq" ||  !-e "$dbDir/$blastdb_name.pin" || !-e "$dbDir/$blastdb_name.phr"){
-		`makeblastdb -in $dbDir/$blastdb_name -dbtype prot -title RepDB`;
+        if($reverseTranslate){
+	    print STDERR "formatdb\n";
+	    `cp $dbDir/$blastdb_name $self->{"blastDir"}`;
+	    `$Amphora2::Utilities::formatdb -i $self->{"blastDir"}/$blastdb_name -o F -p T -t RepDB`;
+	}elsif(!-e "$dbDir/$blastdb_name.psq" ||  !-e "$dbDir/$blastdb_name.pin" || !-e "$dbDir/$blastdb_name.phr"){
+		    print STDERR "makeblastdb\n";
+		    `$Amphora2::Utilities::makeblastdb -in $dbDir/$blastdb_name -dbtype prot -title RepDB`;
 	}
     }
     return $self;
