@@ -8,8 +8,8 @@ use Bio::SearchIO;
 use Bio::SeqIO;
 use Getopt::Long;
 use Cwd;
-use Log::Message::Simple qw[msg error debug carp croak cluck confess];
 use File::Basename;
+use Carp;
 use Amphora2::Utilities qw(:all);
 use Amphora2::MarkerAlign;
 use Amphora2::pplacer;
@@ -140,7 +140,7 @@ sub run {
     my $custom = shift;
     my $continue = shift;
     debug "force : $force\n";
-    Amphora2::Utilities::start_timer("START");
+    start_timer("START");
     #message to output if the script isn't called properly
     my $usage = qq~
 	Usage: $0 <mode> <options> <reads_file>
@@ -332,7 +332,7 @@ sub directoryPrep {
 #    exit;
     #remove the directory from a previous run
     if($force && $self->{"mode"} eq 'all'){
-	msg("deleting an old run\n", 1);
+	debug("deleting an old run\n", 0);
 	my $dir = $self->{"fileDir"};
 	`rm -rf $dir`;
     }elsif(-e $self->{"fileDir"} && $self->{"mode"} eq 'all'){
