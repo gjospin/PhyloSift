@@ -9,6 +9,7 @@ use Bio::SearchIO;
 use Bio::SeqIO;
 use List::Util qw(min);
 use Amphora2::Amphora2;
+use Amphora2::Utilities qw(:all);
 use Bio::Tools::CodonTable;
 use Bio::Align::Utilities qw(:all);
 use Log::Message::Simple qw[msg error debug carp croak cluck confess];
@@ -276,7 +277,7 @@ sub alignAndMask{
 	close(ALIOUT);
 
 	#if the reverse option is on AND the submitted sequences are DNA, then output a Nucleotide alignment in addition to the AA alignment
-	if($reverseTranslate){
+	if($reverseTranslate && -e $self->{"alignDir"}."/$marker.aln_hmmer3.trim"){
 	    #if it exists read the reference nucleotide sequences for the candidates
 	    my %referenceNuc = ();
 	    if(-e $self->{"blastDir"}."/$marker.candidate.ffn"){
@@ -294,12 +295,14 @@ sub alignAndMask{
 		}
 		close(REFSEQSIN);
 	    }
-	    open(ALITRANSOUT, ">".$self->{"alignDir"}."/$marker.aln_hmmer3.trim.ffn")or die "Couldn't open ".$self->{"alignDir"}."/$marker.aln_hmmer3.trim.ffn for writting\n";
+	    open(ALITRANSOUT, ">".$self->{"alignDir"}."/$marker.aln_hmmer3.trim.ffn")or die "Couldn't open ".$self->{"alignDir"}."/$marker.aln_hmmer3.trim.ffn for writing\n";
 	    my $aa_ali = new Bio::AlignIO(-file =>$self->{"alignDir"}."/$marker.aln_hmmer3.trim",-format=>'fasta');
-	    my $dna_ali = &aa_to_dna_aln($aa_ali->next_aln(),\%referenceNuc);
-	    foreach my $seq ($dna_ali->each_seq()){
-		print ALITRANSOUT ">".$seq->id."\n".$seq->seq."\n";
-	    }	
+	    if(my $aln = $aa_ali->next_aln()){
+		    my $dna_ali = &aa_to_dna_aln($aln,\%referenceNuc);
+		    foreach my $seq ($dna_ali->each_seq()){
+			print ALITRANSOUT ">".$seq->id."\n".$seq->seq."\n";
+		    }	
+	    }
 	    close(ALITRANSOUT);
 	}
 
