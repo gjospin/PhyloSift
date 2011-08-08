@@ -3,15 +3,35 @@ package Amphora2::Utilities;
 #use 5.006;
 use strict;
 use warnings;
-use Log::Message::Simple qw[msg error debug carp croak cluck confess];
+use Log::Message;
 use File::Basename;
 use Bio::AlignIO;
 use Bio::Align::Utilities qw(:all); 
 use POSIX ();
 use LWP::Simple;
+use Carp;
 use File::Fetch;
 use FindBin qw($Bin);
 
+use Exporter;
+use vars            qw[ @EXPORT @EXPORT_OK %EXPORT_TAGS @ISA ];;
+
+@ISA            = 'Exporter';
+@EXPORT         = qw[start_timer end_timer debug];
+@EXPORT_OK      = qw[];
+
+%EXPORT_TAGS    = (
+STD     => \@EXPORT,
+all     => [ @EXPORT, @EXPORT_OK ],
+);        
+
+our $debuglevel = 0;
+my $logger = Log::Message->new();
+sub debug {
+	my $msg = shift;
+	my $msglevel = shift || 2;
+	print $msg if $debuglevel >= $msglevel;
+}
 
 =head1 NAME
 
@@ -206,17 +226,22 @@ my $ncbi_url = "http://edhar.genomecenter.ucdavis.edu/~koadman/ncbi.tgz";
 sub dataChecks {
 	$marker_dir = get_data_path( "markers", $Amphora2::Settings::marker_path );
 	my ($content_type, $document_length, $modified_time, $expires, $server)= head("$marker_update_url");
-	debug "TEST REMOTE:".localtime($modified_time)."\n";
 	debug "MARKER_PATH : ".$marker_dir."\n";
 	if(-x $marker_dir){
 	    my $mtime = (stat($marker_dir))[9];
 	    debug "TEST LOCAL :".localtime($mtime)."\n";	
-	    if($modified_time > $mtime){
+	    if(!defined($modified_time)){
+		warn "Warning: unable to connect to marker update server, please check your internet connection\n";
+	    }elsif($modified_time > $mtime){
+		debug "TEST REMOTE:".localtime($modified_time)."\n";
 		warn "Found newer version of the marker data\n";
 		warn "Downloading from $marker_update_url\n";
 		download_data( $marker_update_url, $marker_dir );
 	    }
 	}else{
+	    if(!defined($modified_time)){
+		croak "Marker data not found and unable to connect to marker update server, please check your amphora2 configuration and internet connection!\n";
+	    }
 	    warn "Unable to find marker data!\n";
 	    warn "Downloading from $marker_update_url\n";
 	    download_data($marker_update_url, $marker_dir);
@@ -225,12 +250,17 @@ sub dataChecks {
 	($content_type, $document_length, $modified_time, $expires, $server)= head("$ncbi_url");
 	if( -x $ncbi_dir ){
 	    my $ncbi_time =(stat($ncbi_dir))[9];
-	    if($modified_time > $ncbi_time){
+	    if(!defined($modified_time)){
+		warn "Warning: unable to connect to NCBI taxonomy update server, please check your internet connection\n";
+	    }elsif($modified_time > $ncbi_time){
 		warn "Found newer version of NCBI taxonomy data!\n";
 		warn "Downloading from $ncbi_url\n";
 		download_data( $ncbi_url, $ncbi_dir );
 	    }
 	}else{
+	    if(!defined($modified_time)){
+		croak "NCBI taxonomy data not found and unable to connect to update server, please check your amphora2 configuration and internet connection!\n";
+	    }
 	    warn "Unable to find NCBI taxonomy data!\n";
 	    warn "Downloading from $ncbi_url\n";
 	    download_data( $ncbi_url, $ncbi_dir);
