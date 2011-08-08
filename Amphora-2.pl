@@ -6,7 +6,8 @@ use strict;
 use FindBin qw($Bin); use lib "$Bin/lib";
 use Getopt::Long;
 use Amphora2::Amphora2;
-use Log::Message::Simple qw[msg error debug carp croak cluck confess];
+use Carp;
+use Amphora2::Utilities qw(debug);
 
 my $pair=0;
 my $threadNum=1;

@@ -3,7 +3,6 @@ package Amphora2::Utilities;
 #use 5.006;
 use strict;
 use warnings;
-use Log::Message;
 use File::Basename;
 use Bio::AlignIO;
 use Bio::Align::Utilities qw(:all); 
@@ -26,7 +25,6 @@ all     => [ @EXPORT, @EXPORT_OK ],
 );        
 
 our $debuglevel = 0;
-my $logger = Log::Message->new();
 sub debug {
 	my $msg = shift;
 	my $msglevel = shift || 2;
@@ -354,12 +352,35 @@ Requires a marker directory as an argument
 sub concatenateAlignments {
 	my $outputFasta = shift;
 	my $outputMrBayes = shift;
+	my $gapmultiplier = shift;	# 1 for protein, 3 for reverse-translated DNA
 	my @alignments = @_;
 	my $catobj = 0;
 	open(MRBAYES, ">$outputMrBayes");
 	my $partlist = "partition genes = ".scalar(@alignments).": ";
 	my $prevlen = 0;
+	my @todelete;
 	foreach my $file(@alignments){
+
+		unless( -e $file ){
+			# this marker doesn't exist, need to create a dummy with the right number of gap columns
+			my $stock = $file;
+			$stock =~ s/aln_hmmer3\.trim/trimfinal/g;
+			$stock =~ s/\.ffn//g;
+			$stock = basename($stock);
+			$stock = $Amphora2::Utilities::marker_dir."/$stock";
+			open( STOCK, $stock );
+			my $burn1 = <STOCK>;
+			$burn1 = <STOCK>;
+			chomp $burn1;
+			my $len = length($burn1);
+			open( DUMMY, ">$file" );
+			print DUMMY ">dummydummydummy\n";
+			my $glen = "-" x $len x $gapmultiplier;
+			print DUMMY "$glen\n";
+			close DUMMY;
+			push( @todelete, $file );
+		}
+
 		my $in  = Bio::AlignIO->new(-file => $file , '-format' => 'fasta');
 		while ( my $aln = $in->next_aln() ) {
 			my $csname = $file;
@@ -409,7 +430,13 @@ sub concatenateAlignments {
 	}
 	print MRBAYES "$partlist;\n";
 	my $out = Bio::AlignIO->new(-file => ">$outputFasta" , '-format' => 'fasta');
+	foreach my $dummyseq( $catobj->each_seq_with_id("dummydummydummy") ){
+		$catobj->remove_seq( $dummyseq );
+	}
 	$out->write_aln($catobj);
+	foreach my $delfile(@todelete){
+		`rm $delfile`;
+	}
 }
 
 my %timers;

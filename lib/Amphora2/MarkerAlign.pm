@@ -12,7 +12,6 @@ use Amphora2::Amphora2;
 use Amphora2::Utilities qw(:all);
 use Bio::Tools::CodonTable;
 use Bio::Align::Utilities qw(:all);
-use Log::Message::Simple qw[msg error debug carp croak cluck confess];
 #use Parallel::ForkManager;
 
 
@@ -68,6 +67,7 @@ sub MarkerAlign {
 
     my $self = shift;
     my $markersRef = shift;
+    my @allmarkers = @{$markersRef};
     $reverseTranslate = $self->{"reverseTranslate"};
     debug "beforeDirprepClean @{$markersRef}\n";
     directoryPrepAndClean($self, $markersRef);
@@ -80,13 +80,13 @@ sub MarkerAlign {
     alignAndMask($self,$reverseTranslate,$markersRef);
     debug "AFTER ALIGN and MASK\n";
     if($self->{"isolate"} && $self->{"besthit"}){
-	    my @markeralignments = getMarkerAlignmentFiles($self,$markersRef);
-	    Amphora2::Utilities::concatenateAlignments($self->{"alignDir"}."/concat.fasta", $self->{"alignDir"}."/mrbayes.nex", @markeralignments);
+	    my @markeralignments = getMarkerAlignmentFiles($self,\@allmarkers);
+	    Amphora2::Utilities::concatenateAlignments($self->{"alignDir"}."/concat.fasta", $self->{"alignDir"}."/mrbayes.nex", 1, @markeralignments);
 	    if($self->{"reverseTranslate"}){
 		for(my $i=0; $i<@markeralignments; $i++){
 			$markeralignments[$i].= ".ffn";
 		}
-		Amphora2::Utilities::concatenateAlignments($self->{"alignDir"}."/concat-dna.fasta", $self->{"alignDir"}."/mrbayes-dna.nex", @markeralignments);
+		Amphora2::Utilities::concatenateAlignments($self->{"alignDir"}."/concat-dna.fasta", $self->{"alignDir"}."/mrbayes-dna.nex", 3, @markeralignments);
 	    }
     }
     debug "AFTER concatenateALI\n";
