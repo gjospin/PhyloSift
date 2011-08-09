@@ -8,6 +8,7 @@ use Getopt::Long;
 use Amphora2::Amphora2;
 use Carp;
 use Amphora2::Utilities qw(debug);
+use POSIX;
 
 my $pair=0;
 my $threadNum=1;
@@ -51,6 +52,9 @@ if($pair ==0){
 }
 
 
+unless((POSIX::uname)[4] =~ /64/){
+	die "Sorry, Amphora 2 requires a 64-bit OS to run.\n";
+}
 
 my $newObject = new Amphora2::Amphora2();
 debug "PAIR : $pair\n";
