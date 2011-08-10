@@ -2,9 +2,11 @@ package Amphora2::Summarize;
 
 use warnings;
 use strict;
+use FindBin;
 use Amphora2::Amphora2;
-use Math::Random;
 use Carp;
+use if $^O=~/arwin/, lib =>"$FindBin::Bin/osx/darwin-thread-multi-2level/";
+use Math::Random;
 
 =head1 NAME
 
