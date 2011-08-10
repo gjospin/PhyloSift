@@ -5,8 +5,10 @@ use strict;
 use FindBin;
 use Amphora2::Amphora2;
 use Carp;
-use if $^O=~/arwin/, lib =>"$FindBin::Bin/osx/darwin-thread-multi-2level/";
-use Math::Random;
+require Math::Random;
+if($^O=~/arwin/){
+	use lib "$FindBin::Bin/osx/darwin-thread-multi-2level/";
+}
 
 =head1 NAME
 
