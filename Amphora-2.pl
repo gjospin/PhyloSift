@@ -52,7 +52,8 @@ if($pair ==0){
 }
 
 
-unless((POSIX::uname)[4] =~ /64/){
+unless((POSIX::uname)[4] =~ /64/ || $^O =~ /arwin/){
+	print STDERR (POSIX::uname)[4]."\n";
 	die "Sorry, Amphora 2 requires a 64-bit OS to run.\n";
 }
 
