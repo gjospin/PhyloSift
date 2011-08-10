@@ -83,7 +83,12 @@ sub get_program_path {
 	}
 	# last ditch attempt, check the directories from where the script is running
 	$progcheck = $Bin."/".$progname unless( $progcheck =~ /$progname/ || !(-x $Bin."/".$progname) );
-	$progcheck = $Bin."/bin/".$progname unless( $progcheck =~ /$progname/  && !(-x $Bin."/".$progname) );
+	# check the OS and use Mac binaries if needed
+	if($^O =~ /arwin/){
+		$progcheck = $Bin."/osx/".$progname unless( $progcheck =~ /$progname/  && !(-x $Bin."/".$progname) );
+	}else{
+		$progcheck = $Bin."/bin/".$progname unless( $progcheck =~ /$progname/  && !(-x $Bin."/".$progname) );
+	}
 	return $progcheck;
 }
 
