@@ -17,5 +17,11 @@ chdir("Math-Random-0.71");
 `mv blib/arch/auto ../Amphora-2/lib/`;
 `mv blib/lib/Math ../Amphora-2/lib/`;
 chdir("..");
-`tar czf Amphora-2.tar.gz Amphora-2`;
+my @timerval = localtime();
+my $datestr = (1900+$timerval[5]).($timerval[4]+1).$timerval[3];
+`mv Amphora-2 amphora2_$datestr`;
+`tar cjf amphora2_$datestr.tar.bz2 amphora2_$datestr`;
+`rm -rf amphora2_$datestr`;
+`cp amphora2_$datestr.tar.bz2 ~/public_html/amphora2/amphora2_latest.tar.bz2`;
+`mv amphora2_$datestr.tar.bz2 ~/public_html/amphora2/`;
 
