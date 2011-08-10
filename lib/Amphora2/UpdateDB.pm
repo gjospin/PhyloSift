@@ -4,6 +4,7 @@ use warnings;
 use strict;
 use File::Basename;
 use Bio::SeqIO;
+use Carp;
 
 =head1 NAME
 
@@ -61,26 +62,36 @@ sub get_ebi_from_list(){
 		my $outfile = $acc;
 		$outfile =~ s/\./_/g;
 		$outfile .= ".$taxid";
+		print STDERR "$outfile.fasta\n";
 		# if it exists and is newer, don't re-download
-		if(-e $outfile){
-			my $mtime = (stat($outfile))[9];
-			my @timerval=localtime(time);
-			my $datestr = (1900+$timerval[5]).($timerval[4]+1).$timerval[3];
-			next unless $datestr < $date;
+		my $download = 1;
+		if(-e "$outfile.fasta"){
+			my $mtime = (stat("$outfile.fasta"))[9];
+			my @timerval=localtime($mtime);
+			my $datestr = (1900+$timerval[5]);
+			$datestr .= 0 if $timerval[4] < 9; 
+			$datestr .= ($timerval[4]+1);
+			$datestr .= 0 if $timerval[3] < 9; 
+			$datestr .= $timerval[3];
+			next unless int($datestr) < int($date);
+			`rm $outfile.fasta`;
 		}
 		# either we don't have this one yet, or our version is out of date
 		open( WGETTER, "| wget -i - -O $outfile.embl ");
 		print WGETTER "http://www.ebi.ac.uk/ena/data/view/$acc&display=txt&expanded=true";
 		close WGETTER;
-		my $seq_in = Bio::SeqIO->new(-file => "$outfile.embl");
-	
-		my $seq_out = Bio::SeqIO->new('-file' => ">$outfile.fasta",
-		                               '-format' => "fasta");
-		while (my $inseq = $seq_in->next_seq) {
-			$seq_out->write_seq($inseq);
+		eval{
+			my $seq_in = Bio::SeqIO->new(-file => "$outfile.embl");	
+			my $seq_out = Bio::SeqIO->new('-file' => ">$outfile.fasta",
+				                       '-format' => "fasta");
+			while (my $inseq = $seq_in->next_seq) {
+				$seq_out->write_seq($inseq);
+			}
+			push(@{$newgenomes}, "$outfile.fasta" );
+			`rm $outfile.embl`;
+		} or do {
+			carp "Error processing $outfile.embl\n";
 		}
-		push(@{$newgenomes}, "$outfile.fasta" );
-		`rm $outfile.embl`;
 	}
 	`rm list.txt`;
 }
@@ -117,15 +128,15 @@ sub qsub_updates($$){
 	`mkdir -p $results_dir`;
 	foreach my $file(@{$files}){
 		chdir($results_dir);
-		my $jobid = `qsub -q all.q -q eisen.q /home/koadman/bin/a2sge.sh $file`;
-		$jobid =~ /Your job (\d+) /;
+		my $job = `qsub -q all.q -q eisen.q /home/koadman/bin/a2sge.sh $file`;
+		$job =~ /Your job (\d+) /;
 		push(@jobids, $1);
 	}
 
 	# wait for all jobs to complete
 	foreach my $jobid(@jobids){
 		while(1){
-			my $output = `qstat -j $jobid`;
+			my $output = `qstat -j $jobid 2>&1`;
 			last if $output =~ /Following jobs do not exist/;
 			sleep(20);
 		}
