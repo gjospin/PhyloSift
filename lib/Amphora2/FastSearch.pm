@@ -2,7 +2,6 @@ package Amphora2::FastSearch;
 
 use warnings;
 use strict;
-use Getopt::Long;
 use Cwd;
 use Bio::SearchIO;
 use Bio::SeqIO;
