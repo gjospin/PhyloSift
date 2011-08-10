@@ -10,8 +10,11 @@ use Bio::Align::Utilities qw(:all);
 use POSIX ();
 use LWP::Simple;
 use Carp;
-use File::Fetch;
 use FindBin qw($Bin);
+require File::Fetch;
+if($^O=~/arwin/){
+	use lib "$FindBin::Bin/osx/darwin-thread-multi-2level/";
+}
 
 use Exporter;
 use vars            qw[ @EXPORT @EXPORT_OK %EXPORT_TAGS @ISA ];;
