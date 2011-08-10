@@ -3,7 +3,6 @@ package Amphora2::pplacer;
 use Cwd;
 use Getopt::Long;
 use Bio::AlignIO;
-use Parallel::ForkManager;
 use Amphora2::Amphora2;
 =head1 NAME
 
