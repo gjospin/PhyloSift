@@ -2,6 +2,7 @@ package Amphora2::UpdateDB;
 
 use warnings;
 use strict;
+use File::Basename;
 use Bio::SeqIO;
 
 =head1 NAME
@@ -34,10 +35,11 @@ if you don't export anything, such as for a purely object-oriented module.
 =cut
 
 
-sub get_ebi_genomes(){
+sub get_ebi_genomes($$){
 	my $directory = shift;
 	my $newgenomes = shift;
 	chdir($directory);
+	get_ebi_from_list("http://www.ebi.ac.uk/genomes/organelle.details.txt", $newgenomes);
 	get_ebi_from_list("http://www.ebi.ac.uk/genomes/virus.details.txt", $newgenomes);
 	get_ebi_from_list("http://www.ebi.ac.uk/genomes/phage.details.txt", $newgenomes);
 	get_ebi_from_list("http://www.ebi.ac.uk/genomes/bacteria.details.txt", $newgenomes);
@@ -90,20 +92,38 @@ sub get_ncbi_draft_genomes(){
 	`$ncbi_wget_cmd`;
 }
 
-sub qsub_updates(){
+sub find_new_genomes($$$){
 	my $genome_dir = shift;
 	my $results_dir = shift;
 	my $files = shift;
+	open( FINDER, "find $genome_dir |" );
+	while( my $genome = <FINDER> ){
+		chomp $genome;
+		my $gbase = basename $genome;
+		if( -e "$results_dir/$gbase/alignDir/concat.fasta" ){
+			my $ctime = (stat("$results_dir/$gbase/alignDir/concat.fasta"))[9];
+			my $mtime = (stat($genome))[9];
+			push(@{$files}, $genome) if($ctime < $mtime);
+		}else{
+			push(@{$files}, $genome);
+		}
+	}
+}
+
+sub qsub_updates($$){
+	my $results_dir = shift;	
+	my $files = shift;
 	my @jobids;
-	foreach my $file(@{files}){
+	`mkdir -p $results_dir`;
+	foreach my $file(@{$files}){
 		chdir($results_dir);
 		my $jobid = `qsub -q all.q -q eisen.q /home/koadman/bin/a2sge.sh $file`;
 		$jobid =~ /Your job (\d+) /;
-		push(@jobids, $jobid);
+		push(@jobids, $1);
 	}
 
 	# wait for all jobs to complete
-	foreach $jobid(@jobids){
+	foreach my $jobid(@jobids){
 		while(1){
 			my $output = `qstat -j $jobid`;
 			last if $output =~ /Following jobs do not exist/;
@@ -112,7 +132,7 @@ sub qsub_updates(){
 	}
 }
 
-sub collate_markers(){
+sub collate_markers($$$){
 	my $results_dir = shift;
 	my $marker_dir = shift;
 	my $markers = shift;
@@ -132,10 +152,12 @@ sub collate_markers(){
 	}
 }
 
-sub build_marker_trees(){
+sub build_marker_trees($){
 	# TODO: run raxml on these
+	my $dna_tree = "raxmlHPC -m GTRGAMMA -n test -s nucleotides.phy";
+	my $aa_tree = "raxmlHPC -m PROTGAMMAWAGF -n test -s amino_acids.phy";
 }
 
-sub reconcile_with_ncbi(){
+sub reconcile_with_ncbi($){
 	# TODO: use readconciler
 }
