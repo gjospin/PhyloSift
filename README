@@ -73,17 +73,56 @@ Options Available at this time :
    -continue            Enables the pipeline to continue to subsequent steps when not using the 'all' mode
    -reverse		If the submitted sequences were Nucleotides, the program prints out an alignment for all the markers in DNA space in addition to the one in Protein space.
    -isolate             Use this mode if you are running data from an Isolate genome
-
+   -updated_markers     Use the set of updated markers with newly sequenced genomes instead of the stock markers
 
 Requirements
 ==========================================
 
-	A 64bit operating system is required as the binaries packaged with the Amphora-2 scripts were compiled using such OS.
-	Amphora-2 will NOT work on a 32bit operating system.
+A 64bit operating system is required as the binaries packaged with the Amphora-2 scripts were compiled using such OS.
+Amphora-2 will NOT work on a 32bit operating system.
+
+Default Markers used by Amphora-2
+=========================================
+PMPROK00003  PMPROK00025  PMPROK00048  PMPROK00064  PMPROK00081  PMPROK00106
+PMPROK00014  PMPROK00028  PMPROK00050  PMPROK00067  PMPROK00086  PMPROK00123
+PMPROK00015  PMPROK00029  PMPROK00051  PMPROK00068  PMPROK00087  PMPROK00126
+PMPROK00019  PMPROK00031  PMPROK00052  PMPROK00069  PMPROK00092
+PMPROK00020  PMPROK00034  PMPROK00053  PMPROK00071  PMPROK00093
+PMPROK00022  PMPROK00041  PMPROK00054  PMPROK00074  PMPROK00094
+PMPROK00024  PMPROK00047  PMPROK00060  PMPROK00075  PMPROK00097
+
+This data has not yet been pusblished.
+
+Results
+==========================================
+
+All results are generated within the Amphora-2 directory in the the Amph_temp/<filename>/ directory.
+    blastDir : All files related to the Blast / Rapsearch step.
+               *.candidate           Fasta format of the candidate sequences in Protein space for each marker
+               *.candidate.ffn       Fasta format of the candidate sequences in DNA space for each marker (option activated)
+               blastrep.faa          Fasta format of the Reference sequences used in the Blast search
+               blastrep.faa.*        Blast database used by Blast
+               isolated.tabblastx    File used by the isolate mode when running isolate genomes through A2
+
+    alignDir : All files related to the alignment and masking steps.
+    	       *.aln_hmmer3.fasta    hmmer3 generated alignment for the candidate sequences in fasta format
+	       *.aln_hmmer3.trim     Trimmed version of the previous file
+	       *.hmmsearch.out 	     Hmmersearch output of the candidate sequences Vs the markers HMM profile               
+	       *.hmmsearch.tblout    Tabular version of the hmmsearch.out file
+	       *.newCandidate	     Fasta file of the candidate sequences after the hmmsearch filter
+	       *.seed.stock 	     stockholm format of the reference sequences alignment
+	       *.stock.hmm	     HMM profile
+
+    treeDir : All files related to the tree placements of the candidate sequences by Pplacer.
+    	      *.place 		     Placement file for the newCandidate sequences
+
+    taxasummary.txt 		     Taxa found to be present in the input file
+    taxaconfidence.txt		     Confidence values for each taxa in the taxasummary.txt file
 
 
 
 SUPPORT AND DOCUMENTATION
+==========================================
 
 After installing, you can find documentation for this module with the
 perldoc command.
@@ -106,6 +145,7 @@ You can also look for information at:
 
 
 LICENSE AND COPYRIGHT
+===========================================
 
 Copyright (C) 2011 Aaron Darling
 
@@ -115,3 +155,5 @@ by the Free Software Foundation; or the Artistic License.
 
 See http://dev.perl.org/licenses/ for more information.
 
+Contact information
+===========================================
