@@ -174,9 +174,12 @@ sub qsub_updates($$){
 		$job =~ /Your job (\d+) /;
 		push(@jobids, $1);
 	}
+	wait_for_jobs(@jobids);
+}
 
+sub wait_for_jobs{
 	# wait for all jobs to complete
-	foreach my $jobid(@jobids){
+	while(my $jobid = shift){
 		while(1){
 			my $output = `qstat -j $jobid 2>&1`;
 			last if $output =~ /Following jobs do not exist/;
@@ -223,7 +226,7 @@ sub collate_markers($$){
 #			next if defined($existing{$genome});
 #			print "Adding $genome to $marker\n";
 			chomp($file);
-			push(@catfiles, "$file");
+			push(@catfiles, $file);
 			# cat the files into the alignment in batches
 			# this cuts down on process spawning and file I/O
 			# can't do more than about 4k at once because argument lists get too long
@@ -239,7 +242,7 @@ sub collate_markers($$){
 		}
 		if(@catfiles > 0){
 			my $catline = join(" ", @catfiles);
-			print STDERR "Catting $catline\n";
+#			print STDERR "Catting $catline\n";
 			`cat $catline $cat_ch $marker_dir/$marker.updated.ali`;
 			$catline =~ s/\.aln_hmmer3\.trim/\.aln_hmmer3\.trim\.ffn/g;
 			`cat $catline $cat_ch $marker_dir/$marker.codon.updated.ali`;
@@ -265,51 +268,64 @@ sub build_marker_trees($){
 
 	open(TREESCRIPT, ">/tmp/a2_tree.sh");
 	print TREESCRIPT qq{#!/bin/sh
-#$ -cwd
-#$ -V
-#$ -pe threaded 3
+#\$ -cwd
+#\$ -V
+#\$ -pe threaded 3
+raxmlHPC -m GTRGAMMA -n \$1.codon.updated -s \$1.codon.updated.phy -T 4
+raxmlHPC -m PROTGAMMAWAGF -n \$1.updated -s \$1.updated.phy -T 4
+mv RAxML_bestTree.\$1.codon.updated \$1.codon.updated.tre
+mv RAxML_bestTree.\$1.updated \$1.updated.tre
+mv RAxML_info.\$1.codon.updated \$1.codon.updated.RAxML_info
+mv RAxML_info.\$1.updated \$1.updated.RAxML_info
+rm RAxML*.\$1
 };
-	print TREESCRIPT "raxmlHPC -m GTRGAMMA -n \$1 -s \$1.codon.updated.phy\n";
-	print TREESCRIPT "raxmlHPC -m PROTGAMMAWAGF -n \$1 -s \$1.updated.phy\n";
 	`chmod 755 /tmp/a2_tree.sh`;
 
 	chdir($marker_dir);
 	my @markerlist = get_marker_list($marker_dir);
 
+	my @jobids;
 	foreach my $marker(@markerlist){
 		# convert to phylip
+		next unless (-e "$marker.updated.ali");
 		my $in = Bio::AlignIO->new(-file   => "$marker.updated.ali", -format => "fasta" );
 		my $out = Bio::AlignIO->new(-file   => ">$marker.updated.phy", -format => "phylip" );
-		while (my $inseq = $in->next_seq) {
-			$out->write_seq($inseq);
+		while (my $inseq = $in->next_aln) {
+			$out->write_aln($inseq);
 		}
-		my $in_dna = Bio::AlignIO->new(-file   => "$marker.codon.updated.ali", -format => "fasta" );
-		my $out_dna = Bio::AlignIO->new(-file   => ">$marker.codon.updated.phy", -format => "phylip" );
-		while (my $inseq = $in_dna->next_seq) {
-			$out_dna->write_seq($inseq);
+		if(-e "$marker.codon.updated.ali"){
+			my $in_dna = Bio::AlignIO->new(-file   => "$marker.codon.updated.ali", -format => "fasta" );
+			my $out_dna = Bio::AlignIO->new(-file   => ">$marker.codon.updated.phy", -format => "phylip" );
+			while (my $inseq = $in_dna->next_aln) {
+				$out_dna->write_aln($inseq);
+			}
 		}
-
 		# run raxml on them
 		my $qsub_cmd = "qsub -q all.q -q eisen.q /tmp/a2_tree.sh $marker";
-		`$qsub_cmd`;
+		my $job = `$qsub_cmd`;
+		$job =~ /Your job (\d+) /;
+		push(@jobids, $1);
 	}
+	wait_for_jobs(@jobids);
 }
 
-sub reconcile_with_ncbi($){
+sub reconcile_with_ncbi($$$){
 	# TODO: use readconciler
+	my $self = shift;
 	my $results_dir = shift;
 	my $marker_dir = shift;
-	Amphora2::Summarize::makeNcbiTreeFromUpdate($results_dir, $marker_dir);
+	Amphora2::Summarize::makeNcbiTreeFromUpdate($self, $results_dir, $marker_dir);
 	my @markerlist = get_marker_list($marker_dir);
 	foreach my $marker(@markerlist){
-		my $readconciler = "readconciler $marker_dir/ncbi_tree.updated.tre $marker_dir/$marker.updated.phy $marker_dir/marker_taxon_map.updated.txt $marker_dir/$marker.updated.taxonmap";
-		`readconciler`;
+		my $readconciler = "readconciler $marker_dir/ncbi_tree.updated.tre $marker_dir/$marker.updated.tre $marker_dir/marker_taxon_map.updated.txt $marker_dir/$marker.updated.taxonmap";
+		$readconciler = "readconciler $marker_dir/ncbi_tree.updated.tre $marker_dir/$marker.codon.updated.tre $marker_dir/marker_taxon_map.updated.txt $marker_dir/$marker.codon.updated.taxonmap";
+		`$readconciler`;
 	}
 }
 
 sub package_markers($){
 	my $marker_dir = shift;
-	chdir($marker_dir);
+	chdir($marker_dir."/../");
 	
 	my @timerval = localtime();
 	my $datestr = (1900+$timerval[5]);
@@ -318,7 +334,7 @@ sub package_markers($){
 	$datestr .= 0 if $timerval[3] < 9; 
 	$datestr .= $timerval[3];
 	`tar czf markers_$datestr.tgz markers`;
-	`rm markers.tgz`;
+	`rm -f markers.tgz`;
 	`ln -s markers_$datestr.tgz markers.tgz`;
 }
 
