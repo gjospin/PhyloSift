@@ -70,6 +70,45 @@ sub readNcbiTaxonomyStructure {
 }
 
 
+sub makeNcbiTreeFromUpdate {
+	my $self = shift;
+	my $results_dir = shift;
+	my $markerdir = shift;
+	readNcbiTaxonNameMap();
+	readNcbiTaxonomyStructure();
+	my @orgnames = `ls -1 $results_dir | grep fasta`; 
+	my @taxonids;
+	open( MARKERTAXONMAP, ">$markerdir/marker_taxon_map.updated.txt" );
+	foreach my $org(@orgnames){
+		$org =~ /_(\d+)_fasta/;
+		push(@taxonids, $1);
+		print MARKERTAXONMAP "$1\t".treename($org)."\n";
+	}
+	close MARKERTAXONMAP;
+	my %tidnodes;
+	my $phylotree = Bio::Phylo::Forest::Tree->new();
+	foreach my $tid(@taxonids){
+		my $child;        
+		while( $tid != 1 ){
+		    # check if we've already seen this one
+		    last if(defined($tidnodes{$tid}));
+		    # create a new node & add to tree
+		    my $parentid = $parent{$tid}->[0];
+		    my $newnode;
+		    $newnode = Bio::Phylo::Forest::Node->new( -parent=>$tidnodes{$parentid}, -name=>$tid) if defined($tidnodes{$parentid});
+		    $newnode = Bio::Phylo::Forest::Node->new( -name=>$tid) if !defined($tidnodes{$parentid});
+		    $tidnodes{$tid} = $newnode;
+		    $newnode->set_child($child) if(defined($child));
+		    $phylotree->insert($newnode);
+		    # continue traversal toward root
+		    $tid = $parentid;
+		    $child = $newnode;
+		}
+	}
+	open( TREEOUT, ">ncbi_tree.updated.tre" );
+	print TREEOUT $phylotree->to_newick("-nodelabels"=>1);
+	close TREEOUT;
+}
 
 =head2 makeNcbiTree
 Reads all the marker gene trees, finds their corresponding taxa in the NCBI taxonomy, and
@@ -124,6 +163,7 @@ sub makeNcbiTree {
     close TREEOUT;
 }
 
+
 =head2 summarize
 Reads the .place files containing Pplacer read placements and maps them onto the
 NCBI taxonomy
@@ -177,7 +217,8 @@ sub summarize {
     }
     open(taxaOUT,">".$self->{"fileDir"}."/taxasummary.txt");
     foreach my $taxon(keys(%ncbireads)){
-	print taxaOUT join("\t",$taxon,$ncbireads{$taxon}),"\n";
+	my ($taxon_name, $taxon_level, $taxon_id) = getTaxonInfo($taxon);
+	print taxaOUT join("\t",$taxon_id,$taxon_level,$taxon_name, $ncbireads{$taxon}),"\n";
     }
     close(taxaOUT);
     
@@ -213,10 +254,21 @@ sub summarize {
     foreach my $key(keys(%samples)){
         my @svals = @{ $samples{$key} };
         my @sorted = sort { $a <=> $b } @svals;
-        print taxaCONF join("\t",$key, $sorted[0], $sorted[int($sample_count*0.1)], $sorted[int($sample_count*0.25)], $sorted[int($sample_count*0.5)], $sorted[int($sample_count*0.75)], $sorted[int($sample_count*0.9)], $sorted[$sample_count-1]), "\n";
+	my ($taxon_name, $taxon_level, $taxon_id) = getTaxonInfo($key);
+        print taxaCONF join("\t", $taxon_id, $taxon_level, $taxon_name, $sorted[0], $sorted[int($sample_count*0.1)], $sorted[int($sample_count*0.25)], $sorted[int($sample_count*0.5)], $sorted[int($sample_count*0.75)], $sorted[int($sample_count*0.9)], $sorted[$sample_count-1]), "\n";
     }
 }
 
+sub getTaxonInfo {
+	my $in = shift;
+	if($in =~ /^\d+$/){
+		#it's an ncbi taxon id.  look up its name and level.
+		my $name = $idnamemap{$in};
+		my $level = $parent{$in}->[1];
+		return ($name, $level, $in);
+	}
+	return ($in,"","");
+}
 
 sub treeName {
     my $inName = shift;
