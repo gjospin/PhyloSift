@@ -40,7 +40,7 @@ sub pplacer {
     my $self = shift;
     my $markRef = shift;
     directoryPrepAndClean($self);
-    debug( "PPLACER MARKS\t @{$markRef}\n");
+    #debug "PPLACER MARKS\t @{$markRef}\n";
 
 
     foreach my $marker(@{$markRef}){
