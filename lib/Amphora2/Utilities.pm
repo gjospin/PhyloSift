@@ -107,6 +107,7 @@ our $formatdb = "";
 our $translateSixFrame = "";
 our $rapSearch= "";
 our $preRapSearch = "";
+our $raxml = "";
 sub programChecks {
 	eval 'require Bio::Seq;';
 	if ($@) {
@@ -177,6 +178,11 @@ sub programChecks {
 	}
 	$formatdb = get_program_path("formatdb",$Amphora2::Settings::a2_path);
 
+	$raxml = get_program_path("raxmlHPC",$Amphora2::Settings::a2_path);
+	if($raxml eq ""){
+	    carp("raxmlHPC was not found\n");
+	    return 1;
+	}
 	return 0;
 }
 
