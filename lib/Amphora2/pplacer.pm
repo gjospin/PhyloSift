@@ -40,7 +40,7 @@ sub pplacer {
     my $self = shift;
     my $markRef = shift;
     directoryPrepAndClean($self);
-    print "PPLACER MARKS\t @{$markRef}\n";
+    debug( "PPLACER MARKS\t @{$markRef}\n");
 
 
     foreach my $marker(@{$markRef}){
@@ -63,7 +63,6 @@ sub pplacer {
 	print STDERR "Running Placer on $marker ....\t";
 	#running Pplacer
 	if(!-e $self->{"treeDir"}."/$marker.aln_hmmer3.trim.place"){
-	    print STDERR "$Amphora2::Utilities::pplacer -p -r $Amphora2::Utilities::marker_dir/$trimfinalFastaFile -t $Amphora2::Utilities::marker_dir/$finalTreFile -s $Amphora2::Utilities::marker_dir/$phymlStatsFile $self->{\"alignDir\"}/$marker.aln_hmmer3.trim\n";
 	    `$Amphora2::Utilities::pplacer -p -r $Amphora2::Utilities::marker_dir/$trimfinalFastaFile -t $Amphora2::Utilities::marker_dir/$treeFile -s $Amphora2::Utilities::marker_dir/$treeStatsFile $self->{"alignDir"}/$marker.aln_hmmer3.trim`;
 	}
 	#adding a printed statement to check on the progress (not really working if using parrallel jobs)
