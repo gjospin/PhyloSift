@@ -484,7 +484,8 @@ sub prepAndClean {
 	    #and will yield an empty candidate file
 	    $markerHits{$marker}="";
 	    #append the rep sequences for all the markers included in the study to the rep.faa file
-	    `cat $Amphora2::Utilities::marker_dir/$marker.faa >> $self->{"blastDir"}/rep.faa`
+	    my $fastaName = Amphora2::Utilities::getFastaMarkerFile($marker);
+	    `cat $Amphora2::Utilities::marker_dir/$fastaName.faa >> $self->{"blastDir"}/rep.faa`
 	}
 	#make a DB for rapSearch
 	if(!-e $self->{"blastDir"}."/rep.des" ||  !-e $self->{"blastDir"}."/rep.fbn" || !-e $self->{"blastDir"}."/rep.inf" || !-e $self->{"blastDir"}."/rep.swt"){
@@ -503,10 +504,15 @@ sub prepAndClean {
 	my $dbDir = "$Amphora2::Utilities::marker_dir/representatives";
 	debug "Using the standard marker package\n";
 	debug "Using $dbDir as default directory\n";
+	#removing all the previous representative work from other runs in case we switch from Updated to stock markers
+	if(-e "$dbDir/rep.faa"){
+	    `rm $dbDir/rep.*`;
+	}
 	if(!-e "$dbDir/rep.faa"){
 	    foreach my $marker (@markers){
 		$markerHits{$marker}="";
-		`cat $Amphora2::Utilities::marker_dir/$marker.faa >> $dbDir/rep.faa`;
+		my $fastaFile = Amphora2::Utilities::getFastaMarkerFile($self,$marker);
+		`cat $Amphora2::Utilities::marker_dir/$fastaFile >> $dbDir/rep.faa`;
 	    }
 	}
 	if(!-e "$dbDir/rep.des" ||  !-e "$dbDir/rep.fbn" || !-e "$dbDir/rep.inf" || !-e "$dbDir/rep.swt"){
@@ -515,7 +521,6 @@ sub prepAndClean {
 	# now make a DB for BLAST containing just representative sequences
 	if(!-e "$dbDir/$blastdb_name"){
 	    foreach my $marker (@markers){
-		$markerHits{$marker}="";
 		`cat $dbDir/$marker.rep >> $dbDir/$blastdb_name`;
 	    }
 	}

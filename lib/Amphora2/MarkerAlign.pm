@@ -129,9 +129,9 @@ sub markerPrepAndRun{
     my $markRef = shift;
     debug "ALIGNDIR : ".$self->{"alignDir"}."\n";
     foreach my $marker (@{$markRef}){
-	
+	my $trimfinalFile = Amphora2::Utilities::getTrimfinalMarkerFile($self,$marker);
 	#converting the marker's reference alignments from Fasta to Stockholm (required by Hmmer3)
-	Amphora2::Utilities::fasta2stockholm( "$Amphora2::Utilities::marker_dir/$marker.trimfinal", $self->{"alignDir"}."/$marker.seed.stock" );    
+	Amphora2::Utilities::fasta2stockholm( "$Amphora2::Utilities::marker_dir/$trimfinalFile", $self->{"alignDir"}."/$marker.seed.stock" );    
 	#build the Hmm for the marker using Hmmer3
 	if(!-e $self->{"alignDir"}."/$marker.stock.hmm"){
 	    `$Amphora2::Utilities::hmmbuild $self->{"alignDir"}/$marker.stock.hmm $self->{"alignDir"}/$marker.seed.stock`;
@@ -210,7 +210,8 @@ sub alignAndMask{
 	#Align the hits to the reference alignment using Hmmer3
 	`$Amphora2::Utilities::hmmalign --trim --outformat afa -o $self->{"alignDir"}/$marker.aln_hmmer3.fasta --mapali $self->{"alignDir"}/$marker.seed.stock $self->{"alignDir"}/$marker.stock.hmm $self->{"alignDir"}/$marker.newCandidate`;
 	#find out all the indexes that have a . in the reference sequences
-	my $originAli = new Bio::AlignIO(-file=>"$Amphora2::Utilities::marker_dir/$marker.trimfinal", -format=>'fasta');
+	my $trimfinalFile = Amphora2::Utilities::getTrimfinalMarkerFile($self,$marker);
+	my $originAli = new Bio::AlignIO(-file=>"$Amphora2::Utilities::marker_dir/$trimfinalFile", -format=>'fasta');
 	my %referenceSeqs = ();
 	while(my $aln = $originAli->next_aln()){
 	    foreach my $seq($aln->each_seq()){
@@ -286,12 +287,12 @@ sub alignAndMask{
 		my $currSeq="";
 		while(my $line = <REFSEQSIN>){
 		    chomp($line);
-                if($line =~ m/^>(.*)/){
-                    $currID=$1;
-                }else{
-                    my $tempseq = Bio::LocatableSeq->new( -seq => $line, -id => $currID);
-                    $referenceNuc{$currID}=$tempseq;
-                }
+		    if($line =~ m/^>(.*)/){
+			$currID=$1;
+		    }else{
+			my $tempseq = Bio::LocatableSeq->new( -seq => $line, -id => $currID);
+			$referenceNuc{$currID}=$tempseq;
+		    }
 		}
 		close(REFSEQSIN);
 	    }

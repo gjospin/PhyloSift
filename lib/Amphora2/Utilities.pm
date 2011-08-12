@@ -78,6 +78,8 @@ sub get_program_path {
 	my $progname = shift;
 	my $progpath = shift;
 	my $progcheck = "";
+#	print STDERR "BIN : $Bin\n";
+#	exit;
 	if( defined($progpath) && $progpath ne "" && -x $progpath."/".$progname ){
 		$progcheck = $progpath."/".$progname;
 	}else{
@@ -90,7 +92,8 @@ sub get_program_path {
 	if($^O =~ /arwin/){
 		$progcheck = $Bin."/osx/".$progname unless( $progcheck =~ /$progname/  && !(-x $Bin."/".$progname) );
 	}else{
-		$progcheck = $Bin."/bin/".$progname unless( $progcheck =~ /$progname/  && !(-x $Bin."/".$progname) );
+	    #I don't think this line is needed because it is taken care of 5 lines before
+		#$progcheck = $Bin."/bin/".$progname unless( $progcheck =~ /$progname/  && !(-x $Bin."/".$progname) );
 	}
 	return $progcheck;
 }
@@ -373,6 +376,132 @@ sub makeDummyFile {
 	$aln->add_seq($newseq);
 	return $aln;
 }
+
+=head2 getAlignmentMarkerFile 
+
+Returns the alignment file for the markerName passed in as an argument
+If the user chooses the updated markers, the updated filename is returned
+
+=cut
+
+sub getAlignemntMarkerFile{
+    my $self = shift;
+    my $marker= shift;
+    if($self->{"updated"} == 0){
+	return "$marker.ali";
+    }else{
+	return "$marker.updated.ali";
+    }
+}
+=head2 getFastaMarkerFile
+
+Returns the fasta file for the markerName passed in as an argument
+If the user chooses the updated markers, the updated filename is returned
+
+=cut
+
+
+sub getFastaMarkerFile{
+    my $self = shift;
+    my $marker= shift;
+    if($self->{"updated"} == 0){
+	return "$marker.faa";
+    }else{
+	return "$marker.updated.faa";
+    }
+}
+
+
+=head2 getTrimfinalMarkerFile
+
+Returns the .trimfinal file for the markerName passed in as an argument
+If the user chooses the updated markers, the updated filename is returned
+
+=cut
+
+sub getTrimfinalMarkerFile{
+    my $self = shift;
+    my $marker= shift;
+    if($self->{"updated"} == 0){
+        return "$marker.trimfinal";
+    }else{
+        return "$marker.updated.ali";
+    }
+}
+
+=head2 getTrimfinalFastaMarkerFile
+
+Returns the .trimfinal.fasta file for the markerName passed in as an argument
+If the use chooses teh updated markers, the updated file is returned instead
+
+=cut
+
+sub getTrimfinalFastaMarkerFile{
+    my $self = shift;
+    my $marker= shift;
+    if($self->{"updated"} == 0){
+        return "$marker.trimfinal.fasta";
+    }else{
+        return "$marker.updated.ali.fasta";
+    }
+}
+
+=head2 getTreeFile
+
+Returns the .final.tre file from the marker directory 
+The user chooses the updated or stock version
+
+=cut
+
+sub getTreeMarkerFile{
+
+    my $self = shift;
+    my $marker= shift;
+    if($self->{"updated"} == 0){
+        return "$marker.final.tre";
+    }else{
+        return "$marker.updated.tre";
+    }
+
+}
+
+
+=head2 getTreeStatsFile
+
+Return the updated or stock version of the Tree stats file
+
+=cut
+
+sub getTreeStatsMarkerFile{
+
+    my $self = shift;
+    my $marker= shift;
+    if($self->{"updated"} == 0){
+        return "$marker.in_phyml_stats.txt";
+    }else{
+        return "$marker.updated.RAxML_info";
+    }
+
+}
+
+=head2 getNcbiMapFile
+
+Returns the updated of stock version of the NCBI map file
+
+=cut
+
+sub getNcbiMapFile{
+
+    my $self = shift;
+    my $marker= shift;
+    if($self->{"updated"} == 0){
+        return "$marker.ncbimap";
+    }else{
+        return "$marker.updated.ncbimap";
+    }
+}
+
+
 
 =head2 concatenateAlignments
 
