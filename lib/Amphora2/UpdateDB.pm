@@ -5,6 +5,7 @@ use strict;
 use File::Basename;
 use Bio::SeqIO;
 use Carp;
+use Amphora2::Summarize;
 
 =head1 NAME
 
@@ -43,20 +44,20 @@ sub get_ebi_genomes($$){
 	get_ebi_from_list("http://www.ebi.ac.uk/genomes/organelle.details.txt", $newgenomes);
 	get_ebi_from_list("http://www.ebi.ac.uk/genomes/virus.details.txt", $newgenomes);
 	get_ebi_from_list("http://www.ebi.ac.uk/genomes/phage.details.txt", $newgenomes);
-	get_ebi_from_list("http://www.ebi.ac.uk/genomes/bacteria.details.txt", $newgenomes);
 	get_ebi_from_list("http://www.ebi.ac.uk/genomes/archaea.details.txt", $newgenomes);
+	get_ebi_from_list("http://www.ebi.ac.uk/genomes/archaealvirus.details.txt", $newgenomes);
+	get_ebi_from_list("http://www.ebi.ac.uk/genomes/bacteria.details.txt", $newgenomes);
 #	get_ebi_from_list("http://www.ebi.ac.uk/genomes/eukaryota.details.txt");
 }
 
 sub get_ebi_from_list(){
 	my $list_url = shift;	# URL to EBI's table of genome characteristics
-	my $newgenomes = shift;	# array reference to append file paths of newly downloaded genomes
 	`wget $list_url -O list.txt`;
-
 
 	open( DETAILS, "list.txt" );
 	my $line = <DETAILS>;
 	while( $line = <DETAILS> ){
+		# each line in the list file records a genome and some metadata
 		chomp $line;
 		my ($acc, $version, $date, $taxid, $description) = split( /\t/, $line );
 		my $outfile = $acc;
@@ -65,8 +66,8 @@ sub get_ebi_from_list(){
 		print STDERR "$outfile.fasta\n";
 		# if it exists and is newer, don't re-download
 		my $download = 1;
-		if(-e "$outfile.fasta"){
-			my $mtime = (stat("$outfile.fasta"))[9];
+		if(-e "$outfile.embl"){
+			my $mtime = (stat("$outfile.embl"))[9];
 			my @timerval=localtime($mtime);
 			my $datestr = (1900+$timerval[5]);
 			$datestr .= 0 if $timerval[4] < 9; 
@@ -80,27 +81,67 @@ sub get_ebi_from_list(){
 		open( WGETTER, "| wget -i - -O $outfile.embl ");
 		print WGETTER "http://www.ebi.ac.uk/ena/data/view/$acc&display=txt&expanded=true";
 		close WGETTER;
-		eval{
+#		eval{
 			my $seq_in = Bio::SeqIO->new(-file => "$outfile.embl");	
 			my $seq_out = Bio::SeqIO->new('-file' => ">$outfile.fasta",
 				                       '-format' => "fasta");
 			while (my $inseq = $seq_in->next_seq) {
 				$seq_out->write_seq($inseq);
 			}
-			push(@{$newgenomes}, "$outfile.fasta" );
-			`rm $outfile.embl`;
-		} or do {
-			carp "Error processing $outfile.embl\n";
-		}
+#			`rm $outfile.embl`;
+#		} or do {
+#			carp "Error processing $outfile.embl\n";
+#		}
 	}
 	`rm list.txt`;
 }
 
-sub get_ncbi_draft_genomes(){
-	my $ncbi_wget_cmd = "wget -m --continue --timeout=20 --accept=fna.tgz ftp://ftp.ncbi.nih.gov/genomes/Bacteria_DRAFT";
-	my $draft_db = "/share/eisen-d2/amphora2/";
-	chdir($draft_db);
+sub get_ncbi_draft_genomes($){
+	my $directory = shift;
+	`mkdir -p $directory`;
+	chdir($directory);
+	my $ncbi_wget_cmd = "wget -m --continue --timeout=20 --accept=gbk ftp://ftp.ncbi.nih.gov/genomes/Bacteria_DRAFT";
 	`$ncbi_wget_cmd`;
+	$ncbi_wget_cmd = "wget -m --continue --timeout=20 --accept=\"*fna.tgz\",\"*fna.[0-9].tgz\" ftp://ftp.ncbi.nih.gov/genomes/Bacteria_DRAFT";
+	`$ncbi_wget_cmd`;
+	open( FINDER, "find . -name \"*.gbk\" |" );
+	while( my $line = <FINDER> ){
+		chomp $line;
+		# first get the taxon ID
+		open(GBK, $line);
+		my $taxid;
+		while( my $l2 = <GBK> ){
+			if($l2 =~ /\/db_xref\=\"taxon\:(\d+)/){
+				$taxid = $1;
+				last;
+			}
+		}
+		# then unpack all the files and combine them
+		my $fasta_out = basename($line, ".gbk").".$taxid.fasta";
+		my $fna = $line;
+		$fna =~ s/\.gbk/\.scaffold\.fna\.tgz/g;
+		$fna =~ s/\.scaffold\.fna\.tgz/\.contig\.fna\.tgz/g unless (-e $fna);
+		$fna =~ s/\.contig\.fna\.tgz/\.contig\.fna\.1\.tgz/g unless (-e $fna);
+		unless( -e $fna ){
+			warn "Missing FastA data for $line\n";
+			next;
+		}elsif($fna =~ /contig\.fna\.1\.tgz/){
+			# if the contigs are broken into many files, unpack them all at once
+			$fna =~ s/\.contig\.fna\.1\.tgz/\.contig\.fna\.\*\.tgz/g;
+		}
+		# skip this one if it exists and hasn't been updated
+		if( -e $fasta_out && (stat($fasta_out))[9] > (stat($line))[9]){
+			print STDERR "Already have $fasta_out\n";
+			next;
+		}
+		# unpack the nucleotide tarball and cat the scaffolds/contigs.
+		my @tarfiles = `tar xvzf $fna`;
+		my $catline = join(" ",@tarfiles);
+		$catline =~ s/\n//g;
+		`rm -f $fasta_out`;
+		`cat $catline >> $fasta_out`;
+		`rm $catline`;
+	}
 }
 
 sub find_new_genomes($$$){
@@ -110,6 +151,7 @@ sub find_new_genomes($$$){
 	open( FINDER, "find $genome_dir |" );
 	while( my $genome = <FINDER> ){
 		chomp $genome;
+		next unless $genome =~ /\.fasta/;
 		my $gbase = basename $genome;
 		if( -e "$results_dir/$gbase/alignDir/concat.fasta" ){
 			my $ctime = (stat("$results_dir/$gbase/alignDir/concat.fasta"))[9];
@@ -143,32 +185,140 @@ sub qsub_updates($$){
 	}
 }
 
-sub collate_markers($$$){
+sub collate_markers($$){
 	my $results_dir = shift;
 	my $marker_dir = shift;
-	my $markers = shift;
-	foreach my $marker(@{$markers}){
-		`rm $marker_dir/$marker.aln`;
-		open( FINDER, "find $results_dir -name $marker.aln_hmmer3.trim |" );
-		while( my $file = <FINDER> ){
-			chomp $file;
-			`cat $file >> $marker_dir/$marker.aln`;
+	# get list of markers
+	chdir($marker_dir);
+	my @markerlist = get_marker_list($marker_dir);
+	print STDERR "Markers are ".join(" ",@markerlist)."\n";
+	# get a list of genomes available in the results directory
+	# this hopefully means we touch each inode over NFS only once
+	# NFS is slooooow...
+	print STDERR "Working with ".scalar(@markerlist)." markers\n";
+	print STDERR "Listing all files in results dir\n";
+	my @alldata = `find $results_dir -name "*.aln_hmmer3.trim"`;
+	print STDERR "Found ".scalar(@alldata)." files\n";
+	foreach my $marker(@markerlist){
+		my $cat_ch = ">";
+#		my %existing;
+		# get a list of genomes already in the alignment
+#		if(-e "$marker.updated.ali"){
+#			open(MARKERALN, "$marker.updated.ali");
+#			while( my $line = <MARKERALN> ){
+#				next unless $line =~ /^>(.+)/;
+#				my $genome = $1;
+#				$genome =~ s/_(\d+)_fasta/\.$1\.fasta/;
+#				print STDERR "Found existing $genome\n";
+#				$existing{$genome}=1;
+#			}
+#		}
+		# find all alignments with this marker
+		my @catfiles=();
+		foreach my $file(@alldata){
+#			print "Examining file $file\n";
+			next unless $file =~ /(.+\.fasta)\/alignDir\/$marker.aln_hmmer3.trim/;
+			my $genome = $1;
+#			next if $file =~ /\.trim\.ffn/;	# only want the aa alignment file
+#			next if defined($existing{$genome});
+#			print "Adding $genome to $marker\n";
+			chomp($file);
+			push(@catfiles, "$file");
+			# cat the files into the alignment in batches
+			# this cuts down on process spawning and file I/O
+			# can't do more than about 4k at once because argument lists get too long
+			if(@catfiles > 2000){
+				my $catline = join(" ", @catfiles);
+				print STDERR "Catting $catline\n";
+				`cat $catline $cat_ch $marker_dir/$marker.updated.ali`;
+				$catline =~ s/\.aln_hmmer3\.trim/\.aln_hmmer3\.trim\.ffn/g;
+				`cat $catline $cat_ch $marker_dir/$marker.codon.updated.ali`;
+				@catfiles = ();
+				$cat_ch = ">>";	
+			}
 		}
-		`rm $marker_dir/$marker.codon.aln`;
-		open( FINDER, "find $results_dir -name $marker.aln_hmmer3.trim.ffn |" );
-		while( my $file = <FINDER> ){
-			chomp $file;
-			`cat $file >> $marker_dir/$marker.codon.aln`;
+		if(@catfiles > 0){
+			my $catline = join(" ", @catfiles);
+			print STDERR "Catting $catline\n";
+			`cat $catline $cat_ch $marker_dir/$marker.updated.ali`;
+			$catline =~ s/\.aln_hmmer3\.trim/\.aln_hmmer3\.trim\.ffn/g;
+			`cat $catline $cat_ch $marker_dir/$marker.codon.updated.ali`;
+			@catfiles = ();				
 		}
 	}
 }
 
+sub get_marker_list{
+	my $marker_dir = shift;
+	my @markerlist = `find $marker_dir -name \"*.hmm\"`;
+	for(my $i=0; $i<@markerlist; $i++){
+		chomp $markerlist[$i];
+		$markerlist[$i]=~s/\.hmm//g;
+		$markerlist[$i]=substr($markerlist[$i], length($marker_dir));
+		$markerlist[$i]=~s/^\///g;
+	}
+	return @markerlist;
+}
+
 sub build_marker_trees($){
-	# TODO: run raxml on these
-	my $dna_tree = "raxmlHPC -m GTRGAMMA -n test -s nucleotides.phy";
-	my $aa_tree = "raxmlHPC -m PROTGAMMAWAGF -n test -s amino_acids.phy";
+	my $marker_dir = shift;
+
+	open(TREESCRIPT, ">/tmp/a2_tree.sh");
+	print TREESCRIPT qq{#!/bin/sh
+#$ -cwd
+#$ -V
+#$ -pe threaded 3
+};
+	print TREESCRIPT "raxmlHPC -m GTRGAMMA -n \$1 -s \$1.codon.updated.phy\n";
+	print TREESCRIPT "raxmlHPC -m PROTGAMMAWAGF -n \$1 -s \$1.updated.phy\n";
+	`chmod 755 /tmp/a2_tree.sh`;
+
+	chdir($marker_dir);
+	my @markerlist = get_marker_list($marker_dir);
+
+	foreach my $marker(@markerlist){
+		# convert to phylip
+		my $in = Bio::AlignIO->new(-file   => "$marker.updated.ali", -format => "fasta" );
+		my $out = Bio::AlignIO->new(-file   => ">$marker.updated.phy", -format => "phylip" );
+		while (my $inseq = $in->next_seq) {
+			$out->write_seq($inseq);
+		}
+		my $in_dna = Bio::AlignIO->new(-file   => "$marker.codon.updated.ali", -format => "fasta" );
+		my $out_dna = Bio::AlignIO->new(-file   => ">$marker.codon.updated.phy", -format => "phylip" );
+		while (my $inseq = $in_dna->next_seq) {
+			$out_dna->write_seq($inseq);
+		}
+
+		# run raxml on them
+		my $qsub_cmd = "qsub -q all.q -q eisen.q /tmp/a2_tree.sh $marker";
+		`$qsub_cmd`;
+	}
 }
 
 sub reconcile_with_ncbi($){
 	# TODO: use readconciler
+	my $results_dir = shift;
+	my $marker_dir = shift;
+	Amphora2::Summarize::makeNcbiTreeFromUpdate($results_dir, $marker_dir);
+	my @markerlist = get_marker_list($marker_dir);
+	foreach my $marker(@markerlist){
+		my $readconciler = "readconciler $marker_dir/ncbi_tree.updated.tre $marker_dir/$marker.updated.phy $marker_dir/marker_taxon_map.updated.txt $marker_dir/$marker.updated.taxonmap";
+		`readconciler`;
+	}
 }
+
+sub package_markers($){
+	my $marker_dir = shift;
+	chdir($marker_dir);
+	
+	my @timerval = localtime();
+	my $datestr = (1900+$timerval[5]);
+	$datestr .= 0 if $timerval[4] < 9; 
+	$datestr .= ($timerval[4]+1);
+	$datestr .= 0 if $timerval[3] < 9; 
+	$datestr .= $timerval[3];
+	`tar czf markers_$datestr.tgz markers`;
+	`rm markers.tgz`;
+	`ln -s markers_$datestr.tgz markers.tgz`;
+}
+
