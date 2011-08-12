@@ -5,6 +5,8 @@ use strict;
 use FindBin;
 use Amphora2::Amphora2;
 use Carp;
+use Bio::Phylo;
+use Bio::Phylo::Forest::Tree;
 require Math::Random;
 if($^O=~/arwin/){
 	use lib "$FindBin::Bin/osx/darwin-thread-multi-2level/";
@@ -45,8 +47,8 @@ my %idnamemap;
 # stash them in hashes called nameidmap and idnamemap to go back & forth from tax ids to names
 sub readNcbiTaxonNameMap {
     my $ncbidir = $Amphora2::Utilities::ncbi_dir;
-    open( my $TAXIDS, "$ncbidir/names.dmp" );
-    while( my $line = <$TAXIDS> ){
+    open( TAXIDS, "$ncbidir/names.dmp" );
+    while( my $line = <TAXIDS> ){
 	chomp $line;
 	if(($line =~ /scientific name/) || ($line =~ /synonym/) || ($line =~ /misspelling/)){
 	    my @vals = split( /\s+\|\s+/, $line );
@@ -61,8 +63,8 @@ sub readNcbiTaxonNameMap {
 my %parent;
 sub readNcbiTaxonomyStructure {
     my $ncbidir = $Amphora2::Utilities::ncbi_dir;
-    open( my $TAXSTRUCTURE, "$ncbidir/nodes.dmp" );
-    while( my $line = <$TAXSTRUCTURE> ){
+    open( TAXSTRUCTURE, "$ncbidir/nodes.dmp" );
+    while( my $line = <TAXSTRUCTURE> ){
 	chomp $line;
 	my @vals = split( /\s+\|\s+/, $line );
 	$parent{$vals[0]} = [$vals[1],$vals[2]];
@@ -80,14 +82,22 @@ sub makeNcbiTreeFromUpdate {
 	my @taxonids;
 	open( MARKERTAXONMAP, ">$markerdir/marker_taxon_map.updated.txt" );
 	foreach my $org(@orgnames){
-		$org =~ /_(\d+)_fasta/;
+		$org =~ /\.(\d+)\.fasta/;
+		if(!defined($1)){
+			print MARKERTAXONMAP treeName($org)."\t".treeName($org)."\n";
+			next;
+		}
+		print STDERR "Bad taxon ID $1 for $org" unless defined($parent{$1});
+		next unless defined($parent{$1});
 		push(@taxonids, $1);
-		print MARKERTAXONMAP "$1\t".treename($org)."\n";
+		chomp($org);
+		print MARKERTAXONMAP "$1\t".treeName($org)."\n";
 	}
 	close MARKERTAXONMAP;
 	my %tidnodes;
 	my $phylotree = Bio::Phylo::Forest::Tree->new();
 	foreach my $tid(@taxonids){
+		next if ($tid eq "");
 		my $child;        
 		while( $tid != 1 ){
 		    # check if we've already seen this one
