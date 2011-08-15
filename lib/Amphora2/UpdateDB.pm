@@ -96,6 +96,61 @@ sub get_ebi_from_list(){
 	`rm list.txt`;
 }
 
+sub get_taxid_from_gbk($){
+	# first get the taxon ID
+	my $file = shift;
+	open(GBK, $file);
+	my $taxid;
+	while( my $l2 = <GBK> ){
+		if($l2 =~ /\/db_xref\=\"taxon\:(\d+)/){
+			$taxid = $1;
+			last;
+		}
+	}
+	return $taxid;
+}
+
+sub get_ncbi_finished_genomes($){
+	my $directory = shift;
+	`mkdir -p $directory`;
+	# First download all finished bacterial genomes
+	# then for each genome, concatenate all replicons into a FastA file
+	# Name the FastA file with the organism and its taxon ID.
+	chdir($directory);
+	my $ncbi_wget_cmd = "wget -m --continue --timeout=20 --accept=gbk ftp://ftp.ncbi.nih.gov/genomes/Bacteria";
+#	`$ncbi_wget_cmd`;
+	open( FINDER, "find ftp.ncbi.nih.gov/genomes/Bacteria -type d |" );
+	while( my $line = <FINDER> ){
+		chomp $line;
+		$line =~ /\/Bacteria\/(.+)/;
+		my $orgname = $1;
+		next if( $orgname =~ /\// );	# could be a malformed genbank directory
+		next unless length($1)>1;
+		my $seq_out;
+		my $fasta_name;
+		open( LSSER, "ls $line/*gbk |" );
+		while( my $gbk = <LSSER> ){
+			chomp $gbk;
+			if(!defined($fasta_name)){
+				my $taxid = get_taxid_from_gbk($gbk);
+				$fasta_name = "$orgname.$taxid.fasta";
+				# skip this one if it exists and hasn't been updated
+				# POSSIBLE BUG: if only part of this organism's genbank record is updated
+				if( -e $fasta_name && (stat($fasta_name))[9] > (stat($gbk))[9]){
+					print STDERR "Already have $fasta_name\n";
+					last;
+				}
+				
+				$seq_out = Bio::SeqIO->new('-file' => ">$fasta_name",'-format' => "fasta");
+			}
+			my $seq_in = Bio::SeqIO->new(-file => "$gbk");	
+			while (my $inseq = $seq_in->next_seq) {
+				$seq_out->write_seq($inseq);
+			}
+		}
+	}
+}
+
 sub get_ncbi_draft_genomes($){
 	my $directory = shift;
 	`mkdir -p $directory`;
@@ -107,15 +162,7 @@ sub get_ncbi_draft_genomes($){
 	open( FINDER, "find . -name \"*.gbk\" |" );
 	while( my $line = <FINDER> ){
 		chomp $line;
-		# first get the taxon ID
-		open(GBK, $line);
-		my $taxid;
-		while( my $l2 = <GBK> ){
-			if($l2 =~ /\/db_xref\=\"taxon\:(\d+)/){
-				$taxid = $1;
-				last;
-			}
-		}
+		my $taxid = get_taxid_from_gbk($line);
 		# then unpack all the files and combine them
 		my $fasta_out = basename($line, ".gbk").".$taxid.fasta";
 		my $fna = $line;
@@ -204,50 +251,35 @@ sub collate_markers($$){
 	print STDERR "Found ".scalar(@alldata)." files\n";
 	foreach my $marker(@markerlist){
 		my $cat_ch = ">";
-#		my %existing;
-		# get a list of genomes already in the alignment
-#		if(-e "$marker.updated.ali"){
-#			open(MARKERALN, "$marker.updated.ali");
-#			while( my $line = <MARKERALN> ){
-#				next unless $line =~ /^>(.+)/;
-#				my $genome = $1;
-#				$genome =~ s/_(\d+)_fasta/\.$1\.fasta/;
-#				print STDERR "Found existing $genome\n";
-#				$existing{$genome}=1;
-#			}
-#		}
 		# find all alignments with this marker
 		my @catfiles=();
 		foreach my $file(@alldata){
-#			print "Examining file $file\n";
 			next unless $file =~ /(.+\.fasta)\/alignDir\/$marker.aln_hmmer3.trim/;
 			my $genome = $1;
-#			next if $file =~ /\.trim\.ffn/;	# only want the aa alignment file
-#			next if defined($existing{$genome});
-#			print "Adding $genome to $marker\n";
 			chomp($file);
 			push(@catfiles, $file);
 			# cat the files into the alignment in batches
 			# this cuts down on process spawning and file I/O
 			# can't do more than about 4k at once because argument lists get too long
-			if(@catfiles > 2000){
+			if(@catfiles > 200){
 				my $catline = join(" ", @catfiles);
-				print STDERR "Catting $catline\n";
-				`cat $catline $cat_ch $marker_dir/$marker.updated.ali`;
+				print STDERR "Found 200 files for marker $marker\n";
+				`cat $catline $cat_ch $marker_dir/$marker.updated.fasta`;
 				$catline =~ s/\.aln_hmmer3\.trim/\.aln_hmmer3\.trim\.ffn/g;
-				`cat $catline $cat_ch $marker_dir/$marker.codon.updated.ali`;
+				`cat $catline $cat_ch $marker_dir/$marker.codon.updated.fasta`;
 				@catfiles = ();
 				$cat_ch = ">>";	
 			}
 		}
 		if(@catfiles > 0){
 			my $catline = join(" ", @catfiles);
-#			print STDERR "Catting $catline\n";
-			`cat $catline $cat_ch $marker_dir/$marker.updated.ali`;
+			print STDERR "Last cat for marker $marker\n";
+			`cat $catline $cat_ch $marker_dir/$marker.updated.fasta`;
 			$catline =~ s/\.aln_hmmer3\.trim/\.aln_hmmer3\.trim\.ffn/g;
-			`cat $catline $cat_ch $marker_dir/$marker.codon.updated.ali`;
-			@catfiles = ();				
+			`cat $catline $cat_ch $marker_dir/$marker.codon.updated.fasta`;
 		}
+		fix_names_in_alignment("$marker_dir/$marker.updated.fasta");
+		fix_names_in_alignment("$marker_dir/$marker.codon.updated.fasta");
 	}
 }
 
@@ -287,14 +319,16 @@ rm RAxML*.\$1
 	my @jobids;
 	foreach my $marker(@markerlist){
 		# convert to phylip
-		next unless (-e "$marker.updated.ali");
-		my $in = Bio::AlignIO->new(-file   => "$marker.updated.ali", -format => "fasta" );
+		next unless (-e "$marker.updated.fasta");
+		make_raxml_alignment("$marker.updated.fasta", "$marker.updated.raxml.fasta");
+		my $in = Bio::AlignIO->new(-file   => "$marker.updated.raxml.fasta", -format => "fasta" );
 		my $out = Bio::AlignIO->new(-file   => ">$marker.updated.phy", -format => "phylip" );
 		while (my $inseq = $in->next_aln) {
 			$out->write_aln($inseq);
 		}
-		if(-e "$marker.codon.updated.ali"){
-			my $in_dna = Bio::AlignIO->new(-file   => "$marker.codon.updated.ali", -format => "fasta" );
+		if(-e "$marker.codon.updated.fasta"){
+			make_raxml_alignment("$marker.codon.updated.fasta", "$marker.codon.updated.raxml.fasta");
+			my $in_dna = Bio::AlignIO->new(-file   => "$marker.codon.updated.raxml.fasta", -format => "fasta" );
 			my $out_dna = Bio::AlignIO->new(-file   => ">$marker.codon.updated.phy", -format => "phylip" );
 			while (my $inseq = $in_dna->next_aln) {
 				$out_dna->write_aln($inseq);
@@ -309,17 +343,89 @@ rm RAxML*.\$1
 	wait_for_jobs(@jobids);
 }
 
+sub fix_names_in_alignment($){
+	my $alignment = shift;
+	open( INALN, $alignment );
+	open( OUTALN, ">$alignment.fixed" );
+	while( my $line = <INALN> ){
+		if($line =~ /^>(.+)/){
+			my $header = $1;
+			if($header =~ /_(\d+)_fasta/){
+				$line = ">$1\n";
+			}
+		}
+		print OUTALN $line;
+	}
+	close INALN;
+	close OUTALN;
+	`mv $alignment.fixed $alignment`;
+}
+
+sub make_raxml_alignment($$){
+	my $inaln = shift;
+	my $outaln = shift;
+	open( INALN, $inaln );
+	open( OUTALN, ">$outaln" );
+	my $seqcount = 0;
+	while( my $line = <INALN> ){
+		if($line =~ /^>/){
+			printf OUTALN ">%10u\n", $seqcount;
+		}else{
+			print OUTALN $line;
+		}
+	}
+	close INALN;
+	close OUTALN;
+}
+
+# replace shortened RAxML names with NCBI taxonomy IDs
+sub fix_names_in_raxml_tree($$){
+	my $marker_dir = shift;
+	my $treefile = shift;
+	open(MARKERTAXONMAP, "$marker_dir/marker_taxon_map.updated.txt");
+	my %taxanames;
+	# get short versions of taxon names
+	while( my $line = <MARKERTAXONMAP> ){
+		chomp $line;
+		my ($tid, $tname) = split(/\t/, $line);
+		my $short_t = substr($tname,0,10);
+		$taxanames{$short_t} = $tid;
+	}
+	open(TREEFILE, $treefile);
+	my @treedata = <TREEFILE>;
+	close TREEFILE;
+	for(my $lineI=0; $lineI<@treedata; $lineI++){
+		foreach my $short(keys(%taxanames)){
+			$treedata[$lineI] =~ s/$short/$taxanames{$short}/g;
+		}
+	}
+	open(TREEFILE, ">$treefile.fixed");
+	print TREEFILE @treedata;
+	close TREEFILE;
+}
+
 sub reconcile_with_ncbi($$$){
-	# TODO: use readconciler
 	my $self = shift;
 	my $results_dir = shift;
 	my $marker_dir = shift;
 	Amphora2::Summarize::makeNcbiTreeFromUpdate($self, $results_dir, $marker_dir);
 	my @markerlist = get_marker_list($marker_dir);
 	foreach my $marker(@markerlist){
-		my $readconciler = "readconciler $marker_dir/ncbi_tree.updated.tre $marker_dir/$marker.updated.tre $marker_dir/marker_taxon_map.updated.txt $marker_dir/$marker.updated.taxonmap";
-		$readconciler = "readconciler $marker_dir/ncbi_tree.updated.tre $marker_dir/$marker.codon.updated.tre $marker_dir/marker_taxon_map.updated.txt $marker_dir/$marker.codon.updated.taxonmap";
+		# readconciler expects a pplacer tree from a .place file
+		fix_names_in_raxml_tree($marker_dir, "$marker_dir/$marker.updated.tre");
+		fix_names_in_raxml_tree($marker_dir, "$marker_dir/$marker.codon.updated.tre");
+		`head -n 2 $marker_dir/$marker.updated.fasta > $marker_dir/$marker.updated.tmpread.fasta`;
+		my $pplacer = "pplacer -p -r $marker_dir/$marker.updated.fasta -t $marker_dir/$marker.updated.tre.fixed -s $marker_dir/$marker.updated.RAxML_info  $marker_dir/$marker.updated.tmpread.fasta";
+		`$pplacer`;
+		my $readconciler = "readconciler $marker_dir/ncbi_tree.updated.tre $marker_dir/$marker.updated.fasta.place $marker_dir/marker_taxon_map.updated.txt $marker_dir/$marker.updated.taxonmap";
 		`$readconciler`;
+#		`rm $marker_dir/$marker.updated.fasta.place $marker_dir/$marker.updated.tmpread`;
+		`head -n 2 $marker_dir/$marker.codon.updated.fasta > $marker_dir/$marker.codon.updated.tmpread.fasta`;
+		$pplacer = "pplacer -p -r $marker_dir/$marker.codon.updated.fasta -t $marker_dir/$marker.codon.updated.tre.fixed -s $marker_dir/$marker.codon.updated.RAxML_info $marker_dir/$marker.codon.updated.tmpread.fasta";
+		`$pplacer`;
+		$readconciler = "readconciler $marker_dir/ncbi_tree.updated.tre $marker_dir/$marker.codon.updated.fasta.place $marker_dir/marker_taxon_map.updated.txt $marker_dir/$marker.codon.updated.taxonmap";
+		`$readconciler`;
+#		`rm $marker_dir/$marker.codon.updated.fasta.place $marker_dir/$marker.codon.updated.tmpread`;
 	}
 }
 
