@@ -40,11 +40,19 @@ sub pplacer {
     my $self = shift;
     my $markRef = shift;
     directoryPrepAndClean($self);
-    print "PPLACER MARKS\t @{$markRef}\n";
+    #debug "PPLACER MARKS\t @{$markRef}\n";
+
+
     foreach my $marker(@{$markRef}){
+
+	my $trimfinalFastaFile = Amphora2::Utilities::getTrimfinalFastaMarkerFile($self,$marker);
+	my $trimfinalFile = Amphora2::Utilities::getTrimfinalMarkerFile($self,$marker);
+	my $treeFile = Amphora2::Utilities::getTreeMarkerFile($self,$marker);
+	my $treeStatsFile = Amphora2::Utilities::getTreeStatsMarkerFile($self,$marker);
+	
 	# Pplacer requires the alignment files to have a .fasta extension
-	if(!-e "$Amphora2::Utilities::marker_dir/$marker.trimfinal.fasta" ){
-	    `cp $Amphora2::Utilities::marker_dir/$marker.trimfinal $Amphora2::Utilities::marker_dir/$marker.trimfinal.fasta`;
+	if(!-e "$Amphora2::Utilities::marker_dir/$trimfinalFastaFile" ){
+	    `cp $Amphora2::Utilities::marker_dir/$trimfinalFile $Amphora2::Utilities::marker_dir/$trimfinalFastaFile`;
 	}
 #	if(!-e $self->{"alignDir"}."/$marker.aln_hmmer3.trim.fasta"  && -e $self->{"alignDir"}."/$marker.aln_hmmer3.trim"){
 #	    `cp $self->{"alignDir"}/$marker.aln_hmmer3.trim $self->{"alignDir"}/$marker.aln_hmmer3.trim.fasta`;
@@ -55,7 +63,7 @@ sub pplacer {
 	print STDERR "Running Placer on $marker ....\t";
 	#running Pplacer
 	if(!-e $self->{"treeDir"}."/$marker.aln_hmmer3.trim.place"){
-	    `$Amphora2::Utilities::pplacer -p -r $Amphora2::Utilities::marker_dir/$marker.trimfinal.fasta -t $Amphora2::Utilities::marker_dir/$marker.final.tre -s $Amphora2::Utilities::marker_dir/$marker.in_phyml_stats.txt $self->{"alignDir"}/$marker.aln_hmmer3.trim`;
+	    `$Amphora2::Utilities::pplacer -p -r $Amphora2::Utilities::marker_dir/$trimfinalFastaFile -t $Amphora2::Utilities::marker_dir/$treeFile -s $Amphora2::Utilities::marker_dir/$treeStatsFile $self->{"alignDir"}/$marker.aln_hmmer3.trim`;
 	}
 	#adding a printed statement to check on the progress (not really working if using parrallel jobs)
 	print STDERR "Done !\n";

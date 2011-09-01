@@ -35,6 +35,7 @@ sub new{
     $self->{"alignDir"} = undef;
     $self->{"treeDir"} = undef;
     $self->{"dna"}=undef;
+    $self->{"updated"}=undef;
     bless($self);
     return $self;
 }
@@ -69,6 +70,7 @@ sub initialize{
     $self->{"alignDir"} = $self->{"fileDir"}."/alignDir";
     $self->{"treeDir"} = $self->{"fileDir"}."/treeDir"; 
     $self->{"dna"}=0;
+    $self->{"updated"}=0;
     return $self;
     
 }

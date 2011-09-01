@@ -11,7 +11,37 @@ AMPHORA 2 has several new features over AMPHORA
 -HMMER 3 replaces the older, slower, HMMER 2
 -Use of Pplacer from Erick Matsen to place the reads on the reference trees
 -Use of BioPerl 1.6.1
+-Use of Rapsearch for short read input.
 -...more to come
+
+Install
+==========================================
+
+==== The easy way ====
+
+Download the tarball archive from http://edhar.genomecenter.ucdavis.edu/~koadman/amphora2/amphora2_latest.tar.bz2
+
+Navigate to the directory where you want to install A2.
+
+   >tar -xvf amphora2_latest.tar.bz2
+
+Amphora-2 is ready for use, refer to the Usage section.
+
+==== Update the fast way ====
+
+Download and install Git from http://github.com/   OR  run the following unix command : >apt-get install git
+
+To update Amphora-2, navigate to the Amphora-2 directory and run the following command.
+   >cd Amphora-2
+   >git pull
+
+Amphora-2 is ready for use
+
+==== Update ====
+
+Follow the install steps of downloading the tarball
+This method will redownload all the binaries and library in addition to new code.  This may not be as fast as the github update method.
+
 
 Usage
 ==========================================
@@ -24,13 +54,14 @@ $ perl Amphora-2.pl <Mode> <options> -paired <sequence_file_1> <sequence_file_2>
    sequence_file_1 and _2 need to be in fastq format
 
 Mode : Only execute a specific step in the pipeline
-  all - execute all the steps
-  blast - only execute the blast + write candidate files
+  all - execute all the following steps in that order.
+  blast - only execute the blast search + write candidate files
   align - hmmsearch + hmmalign + trims + coverage filters
   placer - run pplacer on the results from the align step
   summary - run the taxonomy assignment steps
 
 Options Available at this time : 
+   -h -help             Prints the usage section of the README
    -custom <file>       Reads a custom marker list from a file otherwise use all the markers from the markers directory
    --threaded=<Number>  Runs Blast and Hmmer using the number of processors sepcified
                         Runs 1 Pplacer per processor specified
@@ -41,41 +72,57 @@ Options Available at this time :
 			and appending to the corresponding pair from the first file listed.
    -continue            Enables the pipeline to continue to subsequent steps when not using the 'all' mode
    -reverse		If the submitted sequences were Nucleotides, the program prints out an alignment for all the markers in DNA space in addition to the one in Protein space.
+   -isolate             Use this mode if you are running data from an Isolate genome
+   -updated_markers     Use the set of updated markers with newly sequenced genomes instead of the stock markers
 
 Requirements
 ==========================================
-- The Amphora-2 package that includes :
-      Amphora-2.pl
-      run_blast.pl
-      MarkerAlign.pl
-      Run_Pplacer.pl
-      fasta2stockholm.pl (from https://github.com/jhbadger/scripts)
-      translateSixFrame
-      Marker information (available for download from http://edhar.genomecenter.ucdavis.edu/~mlangill/markers.tgz)
-      /bin directory includes the executables (pplacer, placeviz, blastp, makeblastdb, hmmalign, hmmpress, translateSixFrame, hmmbuild, fasta2stockholm.pl) for a  Linux 2.6.32-23-server #37-Ubuntu machine
-- Perl available at http://www.perl.org/
-- Bioperl available at https://github.com/bioperl/bioperl-live
-- Pplacer AND placeviz by Erick Matsen available at http://matsen.fhcrc.org/pplacer/
-- Hmmer3 available at http://hmmer.janelia.org/
-- Blast 2.2.24 (or later) available at ftp://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST/
-- R available at http://www.r-project.org/
-    Users will need to install the "ape" library (included in printneighbor.R)
-    
-    *** Alternative method manually installing within R
 
-    > install.packages("ape", repos="http://cran.r-project.org")
+A 64bit operating system is required as the binaries packaged with the Amphora-2 scripts were compiled using such OS.
+Amphora-2 will NOT work on a 32bit operating system.
+
+Default Markers used by Amphora-2
+=========================================
+PMPROK00003  PMPROK00025  PMPROK00048  PMPROK00064  PMPROK00081  PMPROK00106
+PMPROK00014  PMPROK00028  PMPROK00050  PMPROK00067  PMPROK00086  PMPROK00123
+PMPROK00015  PMPROK00029  PMPROK00051  PMPROK00068  PMPROK00087  PMPROK00126
+PMPROK00019  PMPROK00031  PMPROK00052  PMPROK00069  PMPROK00092
+PMPROK00020  PMPROK00034  PMPROK00053  PMPROK00071  PMPROK00093
+PMPROK00022  PMPROK00041  PMPROK00054  PMPROK00074  PMPROK00094
+PMPROK00024  PMPROK00047  PMPROK00060  PMPROK00075  PMPROK00097
+
+This data has not yet been pusblished.
+
+Results
+==========================================
+
+All results are generated within the Amphora-2 directory in the the Amph_temp/<filename>/ directory.
+    blastDir : All files related to the Blast / Rapsearch step.
+               *.candidate           Fasta format of the candidate sequences in Protein space for each marker
+               *.candidate.ffn       Fasta format of the candidate sequences in DNA space for each marker (option activated)
+               blastrep.faa          Fasta format of the Reference sequences used in the Blast search
+               blastrep.faa.*        Blast database used by Blast
+               isolated.tabblastx    File used by the isolate mode when running isolate genomes through A2
+
+    alignDir : All files related to the alignment and masking steps.
+    	       *.aln_hmmer3.fasta    hmmer3 generated alignment for the candidate sequences in fasta format
+	       *.aln_hmmer3.trim     Trimmed version of the previous file
+	       *.hmmsearch.out 	     Hmmersearch output of the candidate sequences Vs the markers HMM profile               
+	       *.hmmsearch.tblout    Tabular version of the hmmsearch.out file
+	       *.newCandidate	     Fasta file of the candidate sequences after the hmmsearch filter
+	       *.seed.stock 	     stockholm format of the reference sequences alignment
+	       *.stock.hmm	     HMM profile
+
+    treeDir : All files related to the tree placements of the candidate sequences by Pplacer.
+    	      *.place 		     Placement file for the newCandidate sequences
+
+    taxasummary.txt 		     Taxa found to be present in the input file
+    taxaconfidence.txt		     Confidence values for each taxa in the taxasummary.txt file
 
 
-INSTALLATION
-
-To install this module, run the following commands:
-
-	perl Makefile.PL
-	make
-	make test
-	make install
 
 SUPPORT AND DOCUMENTATION
+==========================================
 
 After installing, you can find documentation for this module with the
 perldoc command.
@@ -98,6 +145,7 @@ You can also look for information at:
 
 
 LICENSE AND COPYRIGHT
+===========================================
 
 Copyright (C) 2011 Aaron Darling
 
@@ -107,3 +155,5 @@ by the Free Software Foundation; or the Artistic License.
 
 See http://dev.perl.org/licenses/ for more information.
 
+Contact information
+===========================================
