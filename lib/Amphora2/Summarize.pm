@@ -190,13 +190,13 @@ sub summarize {
     }
     # keep a hash counting up all the read placements
     my %ncbireads;
-	
+#    print "1\n";
     # read all of the .place files for markers
     # map them onto the ncbi taxonomy
     foreach my $marker(@{$markRef}){
 	# don't bother with this one if there's no read placements
-	next unless( -e $self->{"treeDir"}."/$marker.aln_hmmer3.place" );
-
+	next unless( -e $self->{"treeDir"}."/$marker.aln_hmmer3.trim.jplace" );
+#	next unless( -e $self->{"treeDir"}."/$marker.muscle.jplace");
         # first read the taxonomy mapping
         open( TAXONMAP, "$markerdir/$marker.ncbimap") || croak("Unable to read file $markerdir/$marker.ncbimap\n");
 	my %markerncbimap;
@@ -208,19 +208,26 @@ sub summarize {
 	}
 
         # then read & map the placement
-        open(PLACEFILE, $self->{"treeDir"}."/$marker.aln_hmmer3.place") || croak("Unable to read file ".$self->{"treeDir"}."/$marker.aln_hmmer3.place\n");
+        open(PLACEFILE, $self->{"treeDir"}."/$marker.aln_hmmer3.trim.jplace") || croak("Unable to read file ".$self->{"treeDir"}."/$marker.aln_hmmer3.trim.jplace\n");
+#	open(PLACEFILE, $self->{"treeDir"}."/$marker.muscle.jplace") || croak("Unable to read file ".$self->{"treeDir"}."/$marker.jplace\n");
 	my $placeline = 0;
 	while( my $line = <PLACEFILE> ){
-            $placeline=1 if($line =~ /^\>/);
+#            $placeline=1 if($line =~ /^\>/);
+	    $placeline=1 if($line =~ /"placements"/);
             next if($line =~ /^\>/);
             next if($line =~ /^\s*\#/);
-            next unless($line =~ /^\d+\t\d+/);
-            if($placeline==1){
-                my @pline = split(/\t/, $line);
-                my $mapcount = scalar(@{$markerncbimap{$pline[0]}});
-                foreach my $taxon( @{$markerncbimap{$pline[0]}} ){
+ #           next unless($line =~ /^\d+\t\d+/);
+	    next unless($line =~ /\[(\d+),\s.\d+\.?\d+,\s(\d+\.?\d*),/);
+           if($placeline==1){
+	       my $edgNum = $1;
+	       my $weightRatio = $2;
+#                my @pline = split(/\t/, $line);
+#		print "testing: ".$pline[0]."\n";
+#		exit;
+                my $mapcount = scalar(@{$markerncbimap{$edgNum}});
+                foreach my $taxon( @{$markerncbimap{$edgNum}} ){
                     $ncbireads{$taxon} = 0 unless defined $ncbireads{$taxon};
-                    $ncbireads{$taxon} += $pline[1] / $mapcount;	# split the p.p. across the possible edge mappings
+                    $ncbireads{$taxon} += $weightRatio / $mapcount;	# split the p.p. across the possible edge mappings
                 }
             }
 	}
