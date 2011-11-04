@@ -100,6 +100,7 @@ sub get_program_path {
 
 # external programs used by Amphora2
 our $pplacer = "";
+our $placeviz= "";
 our $hmmalign = "";
 our $hmmsearch = "";
 our $hmmbuild = "";
@@ -121,11 +122,11 @@ sub programChecks {
 	$pplacer = get_program_path("pplacer", $Amphora2::Settings::pplacer_path);
 	if($pplacer eq ""){
 	    #program not found return;
-	    carp("pplacer v1.1.alpha00 not found");
+	    carp("pplacer v1.1.alpha09 not found");
 	    return 1;
-	}elsif(`$pplacer -help` !~ m/v1.1.alpha00/){
+	}elsif(`$pplacer --version` !~ m/v1.1.alpha09/){
 	    # pplacer was found but the version doens't match the one tested with Amphora
-	    carp("Warning : a different version of pplacer was found. Amphora-2 was tested with pplacer v1.1.alpha00\n");
+	    carp("Warning : a different version of pplacer was found. Amphora-2 was tested with pplacer v1.1.alpha09\n");
 	}
 
 	$hmmalign = get_program_path("hmmalign", $Amphora2::Settings::hmmer3_path);
@@ -180,6 +181,8 @@ sub programChecks {
 	    return 1;
 	}
 	$formatdb = get_program_path("formatdb",$Amphora2::Settings::a2_path);
+	
+        $placeviz = get_program_path("formatdb",$Amphora2::Settings::a2_path);
 
 	$raxml = get_program_path("raxmlHPC",$Amphora2::Settings::a2_path);
 	if($raxml eq ""){
