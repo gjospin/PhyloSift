@@ -22,17 +22,8 @@ my $besthit=0;
 my $updated=0;
 my $help=0;
 my $usage = qq~
-  Usage: $0 <mode> <options> <reads_file>                                                                       
 
-    ~;
-my $usage2 = qq~
-  Usage: $0 <mode> <options> -paired <reads_file_1> <reads_file_2>                                              
-
-    ~;
-
-my $help_message = qq~
-
-Amphora-2 Help.
+$0 Usage
 
 Usage
 ==========================================
