@@ -91,7 +91,7 @@ sub makeNcbiTreeFromUpdate {
 		next unless defined($parent{$1});
 		push(@taxonids, $1);
 		chomp($org);
-		print MARKERTAXONMAP "$1\t".treeName($org)."\n";
+		print MARKERTAXONMAP "$1\t$1\n";
 	}
 	close MARKERTAXONMAP;
 	my %tidnodes;
@@ -190,13 +190,14 @@ sub summarize {
     }
     # keep a hash counting up all the read placements
     my %ncbireads;
-#    print "1\n";
+	
     # read all of the .place files for markers
     # map them onto the ncbi taxonomy
     foreach my $marker(@{$markRef}){
 	# don't bother with this one if there's no read placements
-	next unless( -e $self->{"treeDir"}."/$marker.aln_hmmer3.trim.jplace" );
-#	next unless( -e $self->{"treeDir"}."/$marker.muscle.jplace");
+	my $placeFile = $self->{"treeDir"}."/".Amphora2::Utilities::getReadPlacementFile($marker);
+	next unless( -e $placeFile );
+
         # first read the taxonomy mapping
         open( TAXONMAP, "$markerdir/$marker.ncbimap") || croak("Unable to read file $markerdir/$marker.ncbimap\n");
 	my %markerncbimap;
@@ -208,26 +209,23 @@ sub summarize {
 	}
 
         # then read & map the placement
-        open(PLACEFILE, $self->{"treeDir"}."/$marker.aln_hmmer3.trim.jplace") || croak("Unable to read file ".$self->{"treeDir"}."/$marker.aln_hmmer3.trim.jplace\n");
-#	open(PLACEFILE, $self->{"treeDir"}."/$marker.muscle.jplace") || croak("Unable to read file ".$self->{"treeDir"}."/$marker.jplace\n");
+        open(PLACEFILE, $placeFile) || croak("Unable to read file $placeFile\n");
 	my $placeline = 0;
 	while( my $line = <PLACEFILE> ){
-#            $placeline=1 if($line =~ /^\>/);
-	    $placeline=1 if($line =~ /"placements"/);
+            $placeline=1 if($line =~ /"placements"/);
             next if($line =~ /^\>/);
             next if($line =~ /^\s*\#/);
- #           next unless($line =~ /^\d+\t\d+/);
-	    next unless($line =~ /\[(\d+),\s.\d+\.?\d+,\s(\d+\.?\d*),/);
+      next unless($line =~ /\[(\d+),\s.\d+\.?\d+,\s(\d+\.?\d*),/);
            if($placeline==1){
-	       my $edgNum = $1;
-	       my $weightRatio = $2;
+         my $edgNum = $1;
+         my $weightRatio = $2;
 #                my @pline = split(/\t/, $line);
-#		print "testing: ".$pline[0]."\n";
-#		exit;
+#    print "testing: ".$pline[0]."\n";
+#    exit;
                 my $mapcount = scalar(@{$markerncbimap{$edgNum}});
                 foreach my $taxon( @{$markerncbimap{$edgNum}} ){
                     $ncbireads{$taxon} = 0 unless defined $ncbireads{$taxon};
-                    $ncbireads{$taxon} += $weightRatio / $mapcount;	# split the p.p. across the possible edge mappings
+                    $ncbireads{$taxon} += $weightRatio / $mapcount;  # split the p.p. across the possible edge mappings
                 }
             }
 	}
@@ -245,7 +243,6 @@ sub summarize {
     foreach my $val(values(%ncbireads)){
         $totalreads+=$val;
     }
-    print "Have $totalreads reads\n";
     # normalize to a sampling distribution
     foreach my $key(keys(%ncbireads)){
         $ncbireads{$key}/=$totalreads + 1;
@@ -255,7 +252,6 @@ sub summarize {
     foreach my $val(@valarray){
         $normsum+=$val;
     }
-    print "Normalize sum $normsum reads\n";
 #    $valarray[0] += 1 - $normsum; # ugh, deal with fp error
     my $sample_count = 100;
     my %samples;
@@ -303,6 +299,7 @@ sub treeName {
 
 sub homogenizeNameAlaDongying {
     my $inName = shift;
+    return "" unless defined($inName);
     $inName=~s/^\s+//;
     $inName=~s/\s+$//;
     $inName=~s/\s+/ /g;
@@ -317,6 +314,7 @@ sub homogenizeNameAlaDongying {
     
 sub dongyingFindNameInTaxaDb {
     my $name = shift;
+    return "" unless defined($name);
     $name=~s/^\s+//;
     my @t=split(/\s+/, $name);
     my $input_name=join(" ",@t);
