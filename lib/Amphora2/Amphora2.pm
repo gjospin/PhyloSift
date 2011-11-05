@@ -170,6 +170,10 @@ sub run {
     if($self->{"mode"} eq 'blast' || $self->{"mode"} eq 'all'){
 	my $searchtype = "rap";
 	$searchtype = "blast" if defined($self->{"isolate"}) && $self->{"isolate"} ne "0";
+	# check what kind of input was provided
+	my $inputtype = Amphora2::Utilities::get_sequence_input_type($self->{"readsFile"});
+	$searchtype = "blast" if($inputtype eq "long");	# RAP can not handle the long reads and contigs
+
 	debug "Search type is $searchtype\n";
 	# need to use BLAST for isolate mode, since RAP only handles very short reads
 	$self=$self->runSearch($continue,$custom,$searchtype,\@markers);
@@ -231,6 +235,7 @@ sub fileCheck{
 	    die $self->{"readsFile_2"}." is not a plain file, could be a directory\n";
 	}
     }
+
     return $self;
 }
 
