@@ -20,7 +20,7 @@ chdir("..");
 
 `wget http://search.cpan.org/CPAN/authors/id/R/RV/RVOSA/Bio-Phylo-0.45.tar.gz`;
 `tar xvzf Bio-Phylo-0.45.tar.gz`;
-chdir("Bio-Phylo-0.45")
+chdir("Bio-Phylo-0.45");
 `perl Makefile.PL`;
 `make`;
 `mv blib/lib/Bio/Phylo ../Amphora-2/lib/Bio/`;
