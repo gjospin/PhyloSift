@@ -232,9 +232,11 @@ sub alignAndMask{
 		}
 	    }
 	}
+	my $outputFastaAA = $self->{"alignDir"}."/".Amphora2::Utilities::getAlignerOutputFastaAA($marker);
+	my $outputFastaDNA = $self->{"alignDir"}."/".Amphora2::Utilities::getAlignerOutputFastaDNA($marker);
 	# reading and trimming out non-marker alignment columns from Hmmalign output (Hmmer3)
 	my $hmmer3Ali = new Bio::AlignIO(-file =>$self->{"alignDir"}."/$marker.aln_hmmer3.fasta",-format=>'fasta');
-	open(ALIOUT,">".$self->{"alignDir"}."/$marker.aln_hmmer3.trim")or die "Couldn't open ".$self->{"alignDir"}."/$marker.aln_hmmer3.trim for writting\n";
+	open(ALIOUT,">".$outputFastaAA) or die "Couldn't open $outputFastaAA for writing\n";
 	my $seqCount = 0;
 	while(my $aln = $hmmer3Ali->next_aln()){
 	    foreach my $seq ($aln->each_seq()){
@@ -278,10 +280,10 @@ sub alignAndMask{
 	close(ALIOUT);
 
 	#if the reverse option is on AND the submitted sequences are DNA, then output a Nucleotide alignment in addition to the AA alignment
-	if($reverseTranslate && -e $self->{"alignDir"}."/$marker.aln_hmmer3.trim"){
+	if($reverseTranslate && -e $outputFastaAA){
 	    #if it exists read the reference nucleotide sequences for the candidates
 	    my %referenceNuc = ();
-	    if(-e $self->{"blastDir"}."/$marker.candidate.ffn"){
+	    if(-e $outputFastaAA){
 		open(REFSEQSIN,$self->{"blastDir"}."/$marker.candidate.ffn") or die "Couldn't open ".$self->{"alignDir"}."/$marker.candidate.ffn for reading\n";
 		my $currID="";
 		my $currSeq="";
@@ -296,8 +298,8 @@ sub alignAndMask{
 		}
 		close(REFSEQSIN);
 	    }
-	    open(ALITRANSOUT, ">".$self->{"alignDir"}."/$marker.aln_hmmer3.trim.ffn")or die "Couldn't open ".$self->{"alignDir"}."/$marker.aln_hmmer3.trim.ffn for writing\n";
-	    my $aa_ali = new Bio::AlignIO(-file =>$self->{"alignDir"}."/$marker.aln_hmmer3.trim",-format=>'fasta');
+	    open(ALITRANSOUT, ">".$outputFastaDNA) or die "Couldn't open ".$outputFastaDNA/" for writing\n";
+	    my $aa_ali = new Bio::AlignIO(-file =>$outputFastaAA,-format=>'fasta');
 	    if(my $aln = $aa_ali->next_aln()){
 		    my $dna_ali = &aa_to_dna_aln($aln,\%referenceNuc);
 		    foreach my $seq ($dna_ali->each_seq()){
