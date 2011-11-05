@@ -7,6 +7,7 @@ use warnings;
 `rm -rf Amphora-2`;
 #`rm -rf bioperl-live`;
 `git clone git://github.com/gjospin/Amphora-2.git`;
+`rm -rf Amphora-2/.git`;
 `git clone git://github.com/bioperl/bioperl-live.git`;
 `mv bioperl-live/Bio* Amphora-2/lib`;
 `wget http://search.cpan.org/CPAN/authors/id/G/GR/GROMMEL/Math-Random-0.71.tar.gz`;
