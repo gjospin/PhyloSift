@@ -28,7 +28,7 @@ STD     => \@EXPORT,
 all     => [ @EXPORT, @EXPORT_OK ],
 );        
 
-our $debuglevel = 0;
+our $debuglevel = 3;
 sub debug {
 	my $msg = shift;
 	my $msglevel = shift || 2;
@@ -100,15 +100,11 @@ sub get_program_path {
 
 # external programs used by Amphora2
 our $pplacer = "";
-our $placeviz= "";
 our $hmmalign = "";
 our $hmmsearch = "";
 our $hmmbuild = "";
-our $blastp = "";
-our $makeblastdb = "";
 our $blastall = "";
 our $formatdb = "";
-our $translateSixFrame = "";
 our $rapSearch= "";
 our $preRapSearch = "";
 our $raxml = "";
@@ -141,32 +137,6 @@ sub programChecks {
 	$hmmsearch = get_program_path("hmmsearch", $Amphora2::Settings::hmmer3_path);
 	$hmmbuild = get_program_path("hmmbuild", $Amphora2::Settings::hmmer3_path);
 
-
-	$blastp = get_program_path("blastp", $Amphora2::Settings::blast_path);
-	if($blastp eq ""){
-	    #program not found return;
-	    carp("Blast 2.2.24+ not found");
-	    return 1;
-	}elsif(`$blastp -help` !~ m/BLAST 2.2.24+/){
-	    # pplacer was found but the version doens't match the one tested with Amphora
-	    carp "Warning : a different version of Blast was found. Amphora-2 was tested with BLAST 2.2.24+\n";
-	}else{
-	    #program found and the correct version is installed
-	}
-
-	# use makeblastdb from the same location as blastall
-	$makeblastdb = get_program_path("makeblastdb", $Amphora2::Settings::blast_path);
-	if($makeblastdb eq ""){
-	    carp("makeblastdb from Blast+ not found");
-	    return 1;
-	}
-
-	$translateSixFrame = get_program_path("translateSixFrame", $Amphora2::Settings::a2_path);
-	if($translateSixFrame eq ""){
-	    carp("Amphora2 translateSixFrame program not found");
-	    return 1;
-	}
-
 	$rapSearch = get_program_path("rapsearch",$Amphora2::Settings::a2_path);
 	if($rapSearch eq ""){
 	    carp("rapsearch was not found\n");
@@ -181,8 +151,6 @@ sub programChecks {
 	    return 1;
 	}
 	$formatdb = get_program_path("formatdb",$Amphora2::Settings::a2_path);
-	
-        $placeviz = get_program_path("formatdb",$Amphora2::Settings::a2_path);
 
 	$raxml = get_program_path("raxmlHPC",$Amphora2::Settings::a2_path);
 	if($raxml eq ""){
@@ -297,43 +265,54 @@ sub fasta2stockholm {
 	my $output = shift;
 	open( STOCKOUT, ">$output" );
 	# read FASTA file
-	    my %seq;
+	    my @seq;
 	    my @name;
 	    my $name;
+	    my $curseq = "";
 	    open FASTA, "<$fasta" or die "Couldn't open '$fasta': $!";
 	    while (<FASTA>) {
 		if (/^\s*>\s*(\S+)/) {
+		    if(length($curseq)>0){
+			push @seq, $curseq;
+			push @name, $name;
+			$curseq = "";
+		    }
 		    $name = $1;
-		    croak "Duplicate name: $name" if defined $seq{$name};
-		    push @name, $name;
 		} else {
 		    if (/\S/ && !defined $name) {
 			warn "Ignoring: $_";
 		    } else {
 			s/\s//g;
-			$seq{$name} .= $_;
+			$curseq .= $_;
 		    }
 		}
+	    }
+	    if(length($curseq)>0){
+		push @seq, $curseq;
+		push @name, $name;
+		$curseq = "";
 	    }
 	    close FASTA;
 
 	# check all seqs are same length
 	    my $length;
 	    my $lname;
-	    foreach my $nname (@name) {
-		my $l = length $seq{$nname};
+	    for( my $sI=0; $sI<@name; $sI++){
+	    	my $nname= $name[$sI];
+		my $sseq = $seq[$sI];
+		my $l = length $sseq;
 		if (defined $length) {
 		    croak "Sequences not all same length ($lname is $length, $nname is $l)" unless $length == $l;
 		} else {
-		    $length = length $seq{$nname};
+		    $length = length $sseq;
 		    $lname = $nname;
 		}
 	    }
 
 	# print Stockholm output
 	    print STOCKOUT "# STOCKHOLM 1.0\n";
-	    foreach my $nname (@name) {
-		print STOCKOUT $nname, " ", $seq{$nname}, "\n";
+	    for( my $sI=0; $sI<@name; $sI++){
+		print STOCKOUT $name[$sI], " ", $seq[$sI], "\n";
 	    }
 	    print STOCKOUT "//\n";
 }
@@ -399,7 +378,7 @@ sub getAlignemntMarkerFile{
     if($self->{"updated"} == 0){
 	return "$marker.ali";
     }else{
-	return "$marker.updated.ali";
+	return "$marker.updated.fasta";
     }
 }
 =head2 getFastaMarkerFile
@@ -416,10 +395,40 @@ sub getFastaMarkerFile{
     if($self->{"updated"} == 0){
 	return "$marker.faa";
     }else{
-	return "$marker.updated.faa";
+	return "$marker.updated.fasta.fasta";
     }
 }
 
+
+=head2 getAlignerOutputFastaAA
+Returns the FastA file containing amino acid read or contig alignments to the marker
+given by markerName
+=cut
+
+sub getAlignerOutputFastaAA{
+    my $marker= shift;
+    return "$marker.trim.fasta";
+}
+
+=head2 getAlignerOutputFastaDNA
+Returns the FastA file containing DNA read or contig alignments to the marker
+given by markerName
+=cut
+
+sub getAlignerOutputFastaDNA{
+    my $marker= shift;
+    return "$marker.trim.fna.fasta";
+}
+
+=head2 getAlignerOutputFastaDNA
+Returns the FastA file containing DNA read or contig alignments to the marker
+given by markerName
+=cut
+
+sub getReadPlacementFile{
+    my $marker= shift;
+    return "$marker.trim.jplace";
+}
 
 =head2 getTrimfinalMarkerFile
 
@@ -434,14 +443,14 @@ sub getTrimfinalMarkerFile{
     if($self->{"updated"} == 0){
         return "$marker.trimfinal";
     }else{
-        return "$marker.updated.ali";
+        return "$marker.updated.unique.fasta";
     }
 }
 
 =head2 getTrimfinalFastaMarkerFile
 
 Returns the .trimfinal.fasta file for the markerName passed in as an argument
-If the use chooses teh updated markers, the updated file is returned instead
+If the use chooses the updated markers, the updated file is returned instead
 
 =cut
 
@@ -451,7 +460,7 @@ sub getTrimfinalFastaMarkerFile{
     if($self->{"updated"} == 0){
         return "$marker.trimfinal.fasta";
     }else{
-        return "$marker.updated.ali.fasta";
+        return "$marker.updated.fasta";
     }
 }
 
@@ -609,6 +618,38 @@ sub end_timer {
     my $timername = shift;
     my @timerval=localtime(time);
     debug join("After $timername %4d-%02d-%02d %02d:%02d:%02d\n",$timerval[5]+1900,$timerval[4]+1,$timerval[3],$timerval[2],$timerval[1],$timerval[0]);
+}
+
+
+=head2 get_sequence_input_type
+
+Checks whether input is either short sequence reads, e.g. < 500nt or assembled fragments
+without reading the whole file.
+
+=cut
+
+sub get_sequence_input_type {
+	my $file = shift;
+	my $maxshortread = 500;
+	open(FILE, $file);
+	my $filesize = -s "$file";
+	my @counts;
+	my $counter = 0;
+	for( my $i=0; $i<200; $i++ ){
+		my $seekpos = int(rand($filesize-100));
+		seek(FILE, $seekpos, 0);
+		$counter = 0;
+		while( my $line = <FILE> ){
+			last if $line =~ />/; # fasta
+			last if $line =~ /@/; # fastq
+			last if $line =~ /\+/; # fastq
+			$counter += length($line);		
+		}
+		push(@counts, $counter);
+		last if($counter > 500);	# found a long read
+	}
+	return "short" if $counter < 500;
+	return "long";
 }
 
 =head1 AUTHOR
