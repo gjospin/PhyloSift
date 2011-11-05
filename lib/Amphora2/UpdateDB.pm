@@ -303,13 +303,14 @@ sub build_marker_trees($){
 #\$ -cwd
 #\$ -V
 #\$ -pe threaded 3
+rm RAxML*\$1*
 raxmlHPC -m GTRGAMMA -n \$1.codon.updated -s \$1.codon.updated.phy -T 4
 raxmlHPC -m PROTGAMMAWAGF -n \$1.updated -s \$1.updated.phy -T 4
 mv RAxML_bestTree.\$1.codon.updated \$1.codon.updated.tre
 mv RAxML_bestTree.\$1.updated \$1.updated.tre
 mv RAxML_info.\$1.codon.updated \$1.codon.updated.RAxML_info
 mv RAxML_info.\$1.updated \$1.updated.RAxML_info
-rm RAxML*.\$1
+rm RAxML*.\$1*
 };
 	`chmod 755 /tmp/a2_tree.sh`;
 
@@ -327,6 +328,7 @@ rm RAxML*.\$1
 			$out->write_aln($inseq);
 		}
 		if(-e "$marker.codon.updated.fasta"){
+			fix_names_in_alignment("$marker_dir/$marker.codon.updated.fasta");
 			make_raxml_alignment("$marker.codon.updated.fasta", "$marker.codon.updated.raxml.fasta");
 			my $in_dna = Bio::AlignIO->new(-file   => "$marker.codon.updated.raxml.fasta", -format => "fasta" );
 			my $out_dna = Bio::AlignIO->new(-file   => ">$marker.codon.updated.phy", -format => "phylip" );
@@ -369,7 +371,8 @@ sub make_raxml_alignment($$){
 	my $seqcount = 0;
 	while( my $line = <INALN> ){
 		if($line =~ /^>/){
-			printf OUTALN ">%10u\n", $seqcount;
+			printf OUTALN ">%010u\n", $seqcount;
+			$seqcount++;
 		}else{
 			print OUTALN $line;
 		}
@@ -379,24 +382,38 @@ sub make_raxml_alignment($$){
 }
 
 # replace shortened RAxML names with NCBI taxonomy IDs
-sub fix_names_in_raxml_tree($$){
-	my $marker_dir = shift;
+sub fix_names_in_raxml_tree($$$){
+#	my $marker_dir = shift;
+	my $original_aln = shift;
+	my $raxml_aln = shift;
 	my $treefile = shift;
-	open(MARKERTAXONMAP, "$marker_dir/marker_taxon_map.updated.txt");
+#	open(MARKERTAXONMAP, "$marker_dir/marker_taxon_map.updated.txt");
 	my %taxanames;
 	# get short versions of taxon names
-	while( my $line = <MARKERTAXONMAP> ){
+#	while( my $line = <MARKERTAXONMAP> ){
+#		chomp $line;
+#		my ($tid, $tname) = split(/\t/, $line);
+#		my $short_t = substr($tname,0,10);
+#		$taxanames{$short_t} = $tid;
+#	}
+	open(ORIGALN, $original_aln);
+	open(RAXMLALN, $raxml_aln);
+	while( my $line = <ORIGALN> ){
 		chomp $line;
-		my ($tid, $tname) = split(/\t/, $line);
-		my $short_t = substr($tname,0,10);
-		$taxanames{$short_t} = $tid;
+		my $raline = <RAXMLALN>;
+		chomp $raline;
+		if($line =~ />(.+)/){
+			my $origname = $1;
+			$raline =~ />(.+)/;
+			$taxanames{$1}=$origname;
+		}
 	}
 	open(TREEFILE, $treefile);
 	my @treedata = <TREEFILE>;
 	close TREEFILE;
 	for(my $lineI=0; $lineI<@treedata; $lineI++){
 		foreach my $short(keys(%taxanames)){
-			$treedata[$lineI] =~ s/$short/$taxanames{$short}/g;
+			$treedata[$lineI] =~ s/$short\:/$taxanames{$short}\:/g;
 		}
 	}
 	open(TREEFILE, ">$treefile.fixed");
@@ -408,24 +425,72 @@ sub reconcile_with_ncbi($$$){
 	my $self = shift;
 	my $results_dir = shift;
 	my $marker_dir = shift;
-	Amphora2::Summarize::makeNcbiTreeFromUpdate($self, $results_dir, $marker_dir);
+#	Amphora2::Summarize::makeNcbiTreeFromUpdate($self, $results_dir, $marker_dir);
 	my @markerlist = get_marker_list($marker_dir);
 	foreach my $marker(@markerlist){
 		# readconciler expects a pplacer tree from a .place file
-		fix_names_in_raxml_tree($marker_dir, "$marker_dir/$marker.updated.tre");
-		fix_names_in_raxml_tree($marker_dir, "$marker_dir/$marker.codon.updated.tre");
+#		fix_names_in_raxml_tree($marker_dir, "$marker_dir/$marker.updated.tre");
+#		fix_names_in_raxml_tree($marker_dir, "$marker_dir/$marker.codon.updated.tre");
 		`head -n 2 $marker_dir/$marker.updated.fasta > $marker_dir/$marker.updated.tmpread.fasta`;
-		my $pplacer = "pplacer -p -r $marker_dir/$marker.updated.fasta -t $marker_dir/$marker.updated.tre.fixed -s $marker_dir/$marker.updated.RAxML_info  $marker_dir/$marker.updated.tmpread.fasta";
-		`$pplacer`;
-		my $readconciler = "readconciler $marker_dir/ncbi_tree.updated.tre $marker_dir/$marker.updated.fasta.place $marker_dir/marker_taxon_map.updated.txt $marker_dir/$marker.updated.taxonmap";
+		my $pplacer = "pplacer -p --outDir $marker_dir -r $marker_dir/$marker.updated.unique.fasta -t $marker_dir/$marker.updated.tre.fixed -s $marker_dir/$marker.updated.RAxML_info  $marker_dir/$marker.updated.tmpread.fasta";
+		system("$pplacer");
+		my $readconciler = "readconciler $marker_dir/ncbi_tree.updated.tre $marker_dir/$marker.updated.tmpread.place $marker_dir/marker_taxon_map.updated.txt $marker_dir/$marker.updated.taxonmap";
 		`$readconciler`;
 #		`rm $marker_dir/$marker.updated.fasta.place $marker_dir/$marker.updated.tmpread`;
 		`head -n 2 $marker_dir/$marker.codon.updated.fasta > $marker_dir/$marker.codon.updated.tmpread.fasta`;
-		$pplacer = "pplacer -p -r $marker_dir/$marker.codon.updated.fasta -t $marker_dir/$marker.codon.updated.tre.fixed -s $marker_dir/$marker.codon.updated.RAxML_info $marker_dir/$marker.codon.updated.tmpread.fasta";
-		`$pplacer`;
-		$readconciler = "readconciler $marker_dir/ncbi_tree.updated.tre $marker_dir/$marker.codon.updated.fasta.place $marker_dir/marker_taxon_map.updated.txt $marker_dir/$marker.codon.updated.taxonmap";
+		$pplacer = "pplacer -p --outDir $marker_dir -r $marker_dir/$marker.codon.updated.unique.fasta -t $marker_dir/$marker.codon.updated.tre.fixed -s $marker_dir/$marker.codon.updated.RAxML_info $marker_dir/$marker.codon.updated.tmpread.fasta";
+		system("$pplacer");
+		$readconciler = "readconciler $marker_dir/ncbi_tree.updated.tre $marker_dir/$marker.codon.updated.tmpread.place $marker_dir/marker_taxon_map.updated.txt $marker_dir/$marker.codon.updated.taxonmap";
 		`$readconciler`;
 #		`rm $marker_dir/$marker.codon.updated.fasta.place $marker_dir/$marker.codon.updated.tmpread`;
+	}
+}
+
+my @markerdb;
+my @markertaxa;
+
+sub uniquify($$){
+	my $input = shift;
+	my $output = shift;
+	my $curseq;
+	my $outseq;
+	open( INFASTA, $input );
+	while( my $line = <INFASTA> ){
+		chomp $line;
+		if($line =~ /^>(.+)/){
+			my $header = $1;
+			$curseq = sprintf("%010u", scalar(@markerdb));
+			push(@markerdb, $1);
+			if($header =~ /_(\d+)_fasta/){
+				push(@markertaxa, $1);
+			}else{
+				push(@markertaxa, $header);
+			}
+			$outseq .= ">$curseq\n";
+		}else{
+			$outseq .= $line."\n";
+		}
+	}
+	open( OUTFASTA, ">$output" );
+	print OUTFASTA $outseq;
+	close OUTFASTA;
+}
+#
+# this is a function of questionable rationale, which removes markers with duplicate taxon ids at random
+# so that they can be used during HMM construction
+sub uniquify_markers($){
+	my $marker_dir = shift;
+	my @markerlist = get_marker_list($marker_dir);
+	foreach my $marker(@markerlist){
+		uniquify( "$marker_dir/$marker.updated.fasta", "$marker_dir/$marker.updated.unique.fasta" );
+		fix_names_in_raxml_tree( "$marker_dir/$marker.updated.unique.fasta", "$marker_dir/$marker.updated.raxml.fasta", "$marker_dir/$marker.updated.tre" );
+		uniquify( "$marker_dir/$marker.codon.updated.fasta", "$marker_dir/$marker.codon.updated.unique.fasta" );
+		fix_names_in_raxml_tree( "$marker_dir/$marker.codon.updated.unique.fasta", "$marker_dir/$marker.codon.updated.raxml.fasta", "$marker_dir/$marker.codon.updated.tre" );
+	}
+	open( MARKERTAXONMAP, ">$marker_dir/marker_taxon_map.updated.txt");
+	for(my $i=0; $i<@markerdb; $i++){
+		my $curseq = sprintf("%010u", $i);
+		print MARKERTAXONMAP $curseq."\t".$markertaxa[$i]."\n";
 	}
 }
 
@@ -443,4 +508,6 @@ sub package_markers($){
 	`rm -f markers.tgz`;
 	`ln -s markers_$datestr.tgz markers.tgz`;
 }
+
+1;
 
