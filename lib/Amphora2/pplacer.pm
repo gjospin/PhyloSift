@@ -45,55 +45,31 @@ sub pplacer {
 
     foreach my $marker(@{$markRef}){
 
-	my $trimfinalFastaFile = Amphora2::Utilities::getTrimfinalFastaMarkerFile($self,$marker);
-	my $trimfinalFile = Amphora2::Utilities::getTrimfinalMarkerFile($self,$marker);
-	my $treeFile = Amphora2::Utilities::getTreeMarkerFile($self,$marker);
-	my $treeStatsFile = Amphora2::Utilities::getTreeStatsMarkerFile($self,$marker);
+	my $trimfinalFastaFile = "$Amphora2::Utilities::marker_dir/".Amphora2::Utilities::getTrimfinalFastaMarkerFile($self,$marker);
+	my $trimfinalFile = "$Amphora2::Utilities::marker_dir/".Amphora2::Utilities::getTrimfinalMarkerFile($self,$marker);
+	my $treeFile = "$Amphora2::Utilities::marker_dir/".Amphora2::Utilities::getTreeMarkerFile($self,$marker);
+	my $treeStatsFile = "$Amphora2::Utilities::marker_dir/".Amphora2::Utilities::getTreeStatsMarkerFile($self,$marker);
+	my $readAlignmentFile = $self->{"alignDir"}."/".Amphora2::Utilities::getAlignerOutputFastaAA($marker);
 	
 	# Pplacer requires the alignment files to have a .fasta extension
-	if(!-e "$Amphora2::Utilities::marker_dir/$trimfinalFastaFile" ){
-	    `cp $Amphora2::Utilities::marker_dir/$trimfinalFile $Amphora2::Utilities::marker_dir/$trimfinalFastaFile`;
+	if(!-e "$trimfinalFastaFile" ){
+	    `cp $trimfinalFile $trimfinalFastaFile`;
 	}
-#	if(!-e $self->{"alignDir"}."/$marker.aln_hmmer3.trim.fasta"  && -e $self->{"alignDir"}."/$marker.aln_hmmer3.trim"){
-#	    `cp $self->{"alignDir"}/$marker.aln_hmmer3.trim $self->{"alignDir"}/$marker.aln_hmmer3.trim.fasta`;
-#	}else{
-#	    next;
-#	}
+
 	#adding a printed statement to check on the progress
 	print STDERR "Running Placer on $marker ....\t";
 	#running Pplacer
-	if(!-e $self->{"treeDir"}."/$marker.aln_hmmer3.trim.place"){
-	    `$Amphora2::Utilities::pplacer -p -r $Amphora2::Utilities::marker_dir/$trimfinalFastaFile -t $Amphora2::Utilities::marker_dir/$treeFile -s $Amphora2::Utilities::marker_dir/$treeStatsFile $self->{"alignDir"}/$marker.aln_hmmer3.trim`;
+	my $placeFile = Amphora2::Utilities::getReadPlacementFile($marker);
+	if(!-e $self->{"treeDir"}."/$placeFile"){
+	    `$Amphora2::Utilities::pplacer -p -r $trimfinalFastaFile -t $treeFile -s $treeStatsFile $readAlignmentFile`;
 	}
 	#adding a printed statement to check on the progress (not really working if using parrallel jobs)
 	print STDERR "Done !\n";
 	#Pplacer write its output to the directory it is called from. Need to move the output to the trees directory
-	if(-e $self->{"workingDir"}."/$marker.aln_hmmer3.trim.place"){
-	    `mv $self->{"workingDir"}/$marker.aln_hmmer3.trim.place $self->{"treeDir"}`;
-	}
-	
-	#Transform the .place file into a tree file
-	if(-e $self->{"treeDir"}."/$marker.aln_hmmer3.trim.place" && !-e $self->{"treeDir"}."/$marker.aln_hmmer3.trim.tog.tree"){
-	    `placeviz --loc -p $self->{"treeDir"}/$marker.aln_hmmer3.trim.place`
-	}
-	
-	
-	#placeviz writes its output to the directory it was called from, need to move the output to the trees directory
-	my $workingDir = $self->{"workingDir"};
-	my @placevizFiles = <$workingDir/$marker.aln_hmmer3.*>;
-	if(scalar(@placevizFiles)>0){
-	    `mv $self->{"workingDir"}/$marker.* $self->{"treeDir"}`;
-	}
-	#added the .PP. check to accomodate for what pplacer names its files (tax branch or master branch)
-	# transform the taxon names in the tree file
-	if(-e $self->{"treeDir"}."/$marker.aln_hmmer3.trim.tog.tre"){
-	    nameTaxa($self->{"treeDir"}."/$marker.aln_hmmer3.trim.tog.tre");
-	}elsif(-e $self->{"treeDir"}."/$marker.aln_hmmer.trim.PP.tog.tre"){
-	    nameTaxa($self->{"treeDir"}."/$marker.aln_hmmer3.trim.PP.tog.tre");
-	}
-	
+	if(-e $self->{"workingDir"}."/$placeFile"){
+	    `mv $self->{"workingDir"}/$placeFile $self->{"treeDir"}`;
+	}		
     }
-
 }
 
 
