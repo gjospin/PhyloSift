@@ -54,6 +54,9 @@ sub readNcbiTaxonNameMap {
 	    my @vals = split( /\s+\|\s+/, $line );
 	    $nameidmap{homogenizeNameAlaDongying($vals[1])}=$vals[0];
 	    $idnamemap{$vals[0]}=homogenizeNameAlaDongying($vals[1]) if($line =~ /scientific name/);
+	    if($line =~ /ermomicrobia/){
+		print STDERR "Dongying says $vals[1] is ".homogenizeNameAlaDongying($vals[1])."\n";
+		}
 	}
     }
 }
@@ -279,6 +282,14 @@ sub getTaxonInfo {
 		my $name = $idnamemap{$in};
 		my $level = $parent{$in}->[1];
 		return ($name, $level, $in);
+	}elsif($in =~ /\w+/){
+		# old style map, need to go from NCBI name back to ID
+		my $name = $in;
+		$name =~ s/_/ /g; # map uses spaces instead of underscores
+		my ($id, $qname) = dongyingFindNameInTaxaDb($name);
+		my $level = $parent{$id}->[1];
+		return ($in, $level, $id);
+	}else{
 	}
 	return ($in,"","");
 }
@@ -304,6 +315,8 @@ sub homogenizeNameAlaDongying {
     $inName=~s/\s+$//;
     $inName=~s/\s+/ /g;
     $inName=~s/,//g;
+    $inName=~s/[)(]//g;
+    $inName=~s/-/ /g;
     $inName=uc $inName;
     return $inName;
 }
