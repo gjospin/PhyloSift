@@ -36,6 +36,7 @@ sub new{
     $self->{"treeDir"} = undef;
     $self->{"dna"}=undef;
     $self->{"updated"}=undef;
+    $self->{"coverage"}=undef;
     bless($self);
     return $self;
 }
@@ -143,15 +144,6 @@ sub run {
     my $continue = shift;
     debug "force : $force\n";
     start_timer("START");
-    #message to output if the script isn't called properly
-    my $usage = qq~
-	Usage: $0 <mode> <options> <reads_file>
-
-	~;
-    my $usage2 = qq~
-        Usage: $0 <mode> <options> -paired <reads_file_1> <reads_file_2>
-
-	~;
 
     $self->readAmphora2Config();
     $self->runProgCheck();
