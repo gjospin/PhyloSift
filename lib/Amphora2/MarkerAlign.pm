@@ -101,12 +101,11 @@ sub MarkerAlign {
 sub directoryPrepAndClean{
     my $self = shift;
     my $markRef = shift;
-    `mkdir $self->{"tempDir"}` unless (-e $self->{"tempDir"});
+    `mkdir -p $self->{"tempDir"}`;
     #create a directory for the Reads file being processed.
-    `mkdir $self->{"fileDir"}` unless (-e $self->{"fileDir"});
-    `mkdir $self->{"alignDir"}` unless (-e $self->{"alignDir"});
+    `mkdir -p $self->{"fileDir"}`;
+    `mkdir -p $self->{"alignDir"}`;
     for( my $index = 0; $index < @{$markRef}; $index++){
-        #    $pm->start and next;                                                                                                                        
 	my $marker = ${$markRef}[$index];
 	my $sizer = -s $self->{"blastDir"}."/$marker.candidate"; 
 	if(-z $self->{"blastDir"}."/$marker.candidate"){
