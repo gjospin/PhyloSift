@@ -75,7 +75,7 @@ GetOptions("threaded=i" => \$threadNum,
     )|| die $usage;
 
 if($help != 0){
-    print $help_message."\n";
+    print $usage."\n";
     die "End of Help message\n";
 }
 
@@ -83,9 +83,9 @@ debug( "@ARGV\n" );
 if($pair ==0){
     croak $usage unless ($ARGV[0] && $ARGV[1]);
 }elsif(scalar(@ARGV) == 3){
-    croak $usage2 unless ($ARGV[0] && $ARGV[1] && $ARGV[2]);
+    croak $usage unless ($ARGV[0] && $ARGV[1] && $ARGV[2]);
 }else{
-    croak $usage."\nOR\n".$usage2."\n";
+    croak $usage."\nOR\n".$usage."\n";
 }
 
 
