@@ -65,7 +65,7 @@ my $custom="";
 my %marker_lookup=();
 my %frames=();
 my $reverseTranslate=0;
-
+my $searchtype="";
 my $blastdb_name = "blastrep.faa";
 my $blastp_params = "-p blastp -e 0.1 -b 50000 -v 50000 -a $threadNum -m 8";
 
@@ -270,7 +270,7 @@ sub get_hits{
     my %duplicates = ();
     my $self = shift;
     my $hitfilename=shift;
-    my $searchtype = shift;
+    $searchtype = shift;
     #parsing the blast file
     # parse once to get the top scores for each marker
     my %markerTopScores;
@@ -384,8 +384,15 @@ sub get_hits{
 
 		#pre-trimming for the query + FLANKING_LENGTH residues before and after (for very long queries)
 		my $start = $hitsStart{$seq->id}{$markerHit};
+		if($searchtype ne "blast"){
+                    $start = $hitsStart{$seq->id}{$markerHit}-2;
+                }
 		my $end = $hitsEnd{$seq->id}{$markerHit};
-		($start,$end) = ($end,$start) if($start > $end); # swap if start bigger than end
+		if($searchtype ne "blast"){
+		    ($start,$end) = ($end+2,$start+2) if($start > $end); # swap if start bigger than end 
+		}else{
+		    ($start,$end) = ($end,$start) if($start > $end); # swap if start bigger than end
+		}
 		$start -= FLANKING_LENGTH;
 		$end += FLANKING_LENGTH;
 		$start=abs($start) % 3 + 1 if($start < 0);
@@ -394,17 +401,16 @@ sub get_hits{
 
 		my $newSeq = substr($seq->seq,$start,$end-$start);
 		#if the $newID exists in the %frames hash, then it needs to be translated to the correct frame
-		if($reverseTranslate){
-		    # compute the frame as modulo 3 of start site, reverse strand if end < start
-		    my $frame = $hitsStart{$seq->id}{$markerHit} % 3 + 1;
-		    $frame *= -1 if( $hitsStart{$seq->id}{$markerHit} > $hitsEnd{$seq->id}{$markerHit});
-		    my $seqlen = abs($hitsStart{$seq->id}{$markerHit} - $hitsEnd{$seq->id}{$markerHit})+1;
-		    if($seqlen % 3 == 0){
-	                    $newSeq = translateFrame($newID,$seq->seq,$start,$end,$frame,$markerHit,$reverseTranslate);
-		    }else{
-			warn "Error, alignment length not multiple of 3!  FIXME: need to pull frameshift from full blastx\n";
-		    }
-                }
+		# compute the frame as modulo 3 of start site, reverse strand if end < start
+		my $frame = $hitsStart{$seq->id}{$markerHit} % 3 + 1;
+		$frame *= -1 if( $hitsStart{$seq->id}{$markerHit} > $hitsEnd{$seq->id}{$markerHit});
+		my $seqlen = abs($hitsStart{$seq->id}{$markerHit} - $hitsEnd{$seq->id}{$markerHit})+1;
+		if($seqlen % 3 == 0){
+		    $newSeq = translateFrame($newID,$seq->seq,$start,$end,$frame,$markerHit,$reverseTranslate);
+		}else{
+		    warn "Error, alignment length not multiple of 3!  FIXME: need to pull frameshift from full blastx\n";
+		}
+                
 		if(exists  $markerHits{$markerHit}){
 		    $markerHits{$markerHit} .= ">".$newID."\n".$newSeq."\n";
 		}else{
