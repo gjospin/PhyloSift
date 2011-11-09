@@ -54,9 +54,6 @@ sub readNcbiTaxonNameMap {
 	    my @vals = split( /\s+\|\s+/, $line );
 	    $nameidmap{homogenizeNameAlaDongying($vals[1])}=$vals[0];
 	    $idnamemap{$vals[0]}=homogenizeNameAlaDongying($vals[1]) if($line =~ /scientific name/);
-	    if($line =~ /ermomicrobia/){
-		print STDERR "Dongying says $vals[1] is ".homogenizeNameAlaDongying($vals[1])."\n";
-		}
 	}
     }
 }
@@ -176,6 +173,22 @@ sub makeNcbiTree {
     close TREEOUT;
 }
 
+=head2 readCoverage
+Reads a coverage file
+=cut
+sub readCoverage {
+	my $coverageFile = shift;
+	my %coverage;
+	open( COVERAGE, $coverageFile ) || return %coverage;
+	while( my $line = <COVERAGE> ){
+		chomp $line;
+		my @data = split( /\t/, $line );
+		$data[0] =~ s/[\(\)\[\]\+\=\<\>\?]//g;
+		$data[0] =~ s/[\-\s]/_/g;
+		$coverage{$data[0]} = $data[1];
+	}
+	return \%coverage;
+}
 
 =head2 summarize
 Reads the .place files containing Pplacer read placements and maps them onto the
@@ -193,7 +206,15 @@ sub summarize {
     }
     # keep a hash counting up all the read placements
     my %ncbireads;
-	
+
+    # try to read a contig coverage file if it exists
+    my %coverage;
+
+    if(defined $self->{"coverage"} ){
+	my $covref = readCoverage($self->{"coverage"});
+	%coverage = %$covref;
+    }
+
     # read all of the .place files for markers
     # map them onto the ncbi taxonomy
     foreach my $marker(@{$markRef}){
@@ -214,27 +235,31 @@ sub summarize {
         # then read & map the placement
         open(PLACEFILE, $placeFile) || croak("Unable to read file $placeFile\n");
 	my $placeline = 0;
+	my %curplaces;
 	while( my $line = <PLACEFILE> ){
-            $placeline=1 if($line =~ /"placements"/);
-            next if($line =~ /^\>/);
-            next if($line =~ /^\s*\#/);
-      next unless($line =~ /\[(\d+),\s.\d+\.?\d+,\s(\d+\.?\d*),/);
-           if($placeline==1){
-         my $edgNum = $1;
-         my $weightRatio = $2;
-#                my @pline = split(/\t/, $line);
-#    print "testing: ".$pline[0]."\n";
-#    exit;
-                my $mapcount = scalar(@{$markerncbimap{$edgNum}});
-                foreach my $taxon( @{$markerncbimap{$edgNum}} ){
-                    $ncbireads{$taxon} = 0 unless defined $ncbireads{$taxon};
-                    $ncbireads{$taxon} += $weightRatio / $mapcount;  # split the p.p. across the possible edge mappings
-                }
-            }
+		$placeline=1 if($line =~ /"placements"/);
+		next if($line =~ /^\>/);
+		next if($line =~ /^\s*\#/);
+		if($placeline==1 && $line =~ /\[(\d+),\s.\d+\.?\d+,\s(\d+\.?\d*),/){
+			$curplaces{$1}=$2;
+		}
+		if($placeline==1 && $line =~ /\"n\"\:\s+\[\"(.+?)\"\]/){
+			my $qname = $1;
+			foreach my $edge(keys(%curplaces)){
+				my $weightRatio = $curplaces{$edge};
+				$weightRatio *= $coverage{$qname} if defined($coverage{$qname});
+				my $mapcount = scalar(@{$markerncbimap{$edge}});
+				foreach my $taxon( @{$markerncbimap{$edge}} ){
+					$ncbireads{$taxon} = 0 unless defined $ncbireads{$taxon};
+					$ncbireads{$taxon} += $weightRatio / $mapcount;  # split the p.p. across the possible edge mappings
+				}
+			}
+		}
 	}
-    }
+}
+    # sort descending
     open(taxaOUT,">".$self->{"fileDir"}."/taxasummary.txt");
-    foreach my $taxon(keys(%ncbireads)){
+    foreach my $taxon (sort {$ncbireads{$b} <=> $ncbireads{$a} } keys %ncbireads) {
 	my ($taxon_name, $taxon_level, $taxon_id) = getTaxonInfo($taxon);
 	print taxaOUT join("\t",$taxon_id,$taxon_level,$taxon_name, $ncbireads{$taxon}),"\n";
     }
@@ -246,6 +271,19 @@ sub summarize {
     foreach my $val(values(%ncbireads)){
         $totalreads+=$val;
     }
+    print STDERR "Total reads are $totalreads\n";
+
+    # write the taxa with 90% highest posterior density, assuming each read is an independent observation
+    my $taxasum = 0;
+    open(TAXAHPDOUT,">".$self->{"fileDir"}."/taxa_90pct_HPD.txt");
+    foreach my $taxon (sort {$ncbireads{$b} <=> $ncbireads{$a} } keys %ncbireads) {
+	$taxasum += $ncbireads{$taxon};
+	my ($taxon_name, $taxon_level, $taxon_id) = getTaxonInfo($taxon);
+	print TAXAHPDOUT join("\t",$taxon_id,$taxon_level,$taxon_name, $ncbireads{$taxon}),"\n";
+	last if $taxasum >= $totalreads*0.9;
+    }
+    close(TAXAHPDOUT);
+
     # normalize to a sampling distribution
     foreach my $key(keys(%ncbireads)){
         $ncbireads{$key}/=$totalreads + 1;
@@ -255,7 +293,7 @@ sub summarize {
     foreach my $val(@valarray){
         $normsum+=$val;
     }
-#    $valarray[0] += 1 - $normsum; # ugh, deal with fp error
+
     my $sample_count = 100;
     my %samples;
     for( my $sI=0; $sI<$sample_count; $sI++ ){
