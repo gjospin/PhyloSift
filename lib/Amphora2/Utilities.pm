@@ -633,21 +633,27 @@ sub get_sequence_input_type {
 	my $maxshortread = 500;
 	open(FILE, $file);
 	my $filesize = -s "$file";
-	my @counts;
 	my $counter = 0;
+	my $allcount = 0;
+	my $dnacount = 0;
+	
 	for( my $i=0; $i<200; $i++ ){
 		my $seekpos = int(rand($filesize-100));
 		seek(FILE, $seekpos, 0);
 		$counter = 0;
-		while( my $line = <FILE> ){
+		my $line = <FILE>;	# burn a line to be sure we get to sequence
+		while( $line = <FILE> ){
 			last if $line =~ />/; # fasta
 			last if $line =~ /@/; # fastq
 			last if $line =~ /\+/; # fastq
 			$counter += length($line);		
+			$dnacount += $line =~ tr/[ACGTacgt]//;
 		}
-		push(@counts, $counter);
+		$allcount += $counter;
 		last if($counter > 500);	# found a long read
 	}
+	print STDERR "dna frac is ".($dnacount / $allcount)."\n";
+	return "protein" if ($dnacount < $allcount * 0.75);
 	return "short" if $counter < 500;
 	return "long";
 }
