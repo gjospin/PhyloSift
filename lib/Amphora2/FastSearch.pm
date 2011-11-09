@@ -65,7 +65,7 @@ my $custom="";
 my %marker_lookup=();
 my %frames=();
 my $reverseTranslate=0;
-my $searchtype="";
+
 my $blastdb_name = "blastrep.faa";
 my $blastp_params = "-p blastp -e 0.1 -b 50000 -v 50000 -a $threadNum -m 8";
 
@@ -81,6 +81,8 @@ sub RunSearch {
     $readsCore = $1;
     $isolateMode = $self->{"isolate"};
     $reverseTranslate = $self->{"reverseTranslate"};
+
+    # ensure databases and sequences are prepared for search
     debug "before rapPrepandclean\n";
     prepAndClean($self);
     if($self->{"readsFile_2"} ne ""){
@@ -88,6 +90,7 @@ sub RunSearch {
 	fastqToFasta($self);
     }
 
+    # search reads/contigs against marker database
     my $resultsfile;
     if($searchtype eq "blast"){
 	$resultsfile = blastXoof_table($self, $self->{"readsFile"});
@@ -96,7 +99,18 @@ sub RunSearch {
         $resultsfile = executeRap($self);
 	build_lookup_table($self);
     }
-    get_hits($self,$resultsfile, $searchtype);
+
+    # parse the hits to marker genes
+    my $hitsref;
+    if(defined $self->{"coverage"} && (!defined $self->{"isolate"} || $self->{"isolate"} != 1)){
+	$hitsref = get_hits_contigs($self,$resultsfile, $searchtype);
+    }else{
+	$hitsref = get_hits($self,$resultsfile, $searchtype);
+    }
+
+    # write out sequence regions hitting marker genes to candidate files
+    writeCandidates($self,$hitsref);
+    
     return $self;
 }
 
@@ -258,36 +272,150 @@ sub fastqToFasta{
     return $self;
 }
 
-=head2 get_hits
+=head2 get_hits_contigs
 
 parse the blast file
 
 =cut
 
 
+sub get_hits_contigs{
+	my $self = shift;
+	my $hitfilename=shift;
+
+	# key is a contig name
+	# value is an array of arrays, each one has [marker,bit_score,left-end,right-end]
+	my %contig_hits;
+	my %contig_top_bitscore;
+	my $max_hit_overlap = 10;
+
+	open(blastIN,$hitfilename)or carp("Couldn't open ".$hitfilename."\n");
+	while(<blastIN>){
+		# read a blast line
+		next if($_ =~ /^#/);
+		chomp($_);
+		my ($query, $subject, $two, $three, $four, $five, $query_start,
+			$query_end, $eight, $nine, $ten, $bitScore) = split(/\t/,$_);	
+		# get the marker name
+		my @marker=split(/\_/,$subject);
+		my $markerName = $marker[$#marker];
+		# running on long reads or an assembly
+		# allow each region of a sequence to have a top hit
+		# do not allow overlap
+		if(defined($contig_top_bitscore{$query}{$markerName}) && $contig_top_bitscore{$query}{$markerName} - $bestHitsBitScoreRange < $bitScore){
+			my $i=0;
+			for(; $i<@{$contig_hits{$query}}; $i++){
+				my $prevhitref=$contig_hits{$query}->[$i];
+				my @prevhit = @$prevhitref;
+				# is there enough overlap to consider these the same?
+				# if so, take the new one if it has higher bitscore
+				if(	$prevhit[2] < $prevhit[3] && $query_start < $query_end &&
+					$prevhit[2] < $query_end - $max_hit_overlap && 
+					$query_start + $max_hit_overlap < $prevhit[3]){
+					print STDERR "Found overlap $query and $markerName, $query_start:$query_end\n";
+					$contig_hits{$query}->[$i] = [$markerName, $bitScore, $query_start, $query_end] if ($bitScore > $prevhit[1]);
+					last;
+				}
+				# now check the same for reverse-strand hits
+				if(	$prevhit[2] > $prevhit[3] && $query_start > $query_end &&
+					$prevhit[3] < $query_start - $max_hit_overlap && 
+					$query_end + $max_hit_overlap < $prevhit[2]){
+					print STDERR "Found overlap $query and $markerName, $query_start:$query_end\n";
+					$contig_hits{$query}->[$i] = [$markerName, $bitScore, $query_start, $query_end] if ($bitScore > $prevhit[1]);
+					last;
+				}
+			}
+			if($i==@{$contig_hits{$query}}){
+				# no overlap was found, include this hit
+				my @hitdata = [$markerName, $bitScore, $query_start, $query_end];
+				push(@{$contig_hits{$query}}, @hitdata);
+			}
+		}elsif(!defined($contig_top_bitscore{$query}{$markerName})){
+			my @hitdata = [$markerName, $bitScore, $query_start, $query_end];
+			push(@{$contig_hits{$query}}, @hitdata);
+			$contig_top_bitscore{$query}{$markerName} = $bitScore;
+		}
+	}
+	return \%contig_hits;
+}
+
+
+=head2 get_hits
+
+parse the blast file
+
+=cut
 
 sub get_hits{
-    my %duplicates = ();
     my $self = shift;
     my $hitfilename=shift;
-    $searchtype = shift;
-    #parsing the blast file
-    # parse once to get the top scores for each marker
+    my $searchtype = shift;
+
     my %markerTopScores;
-    my %topFamily=();
     my %topScore=();
-    my %topStart=();
-    my %topEnd=();
+    my %contig_hits;
+
     open(blastIN,$hitfilename)or carp("Couldn't open ".$hitfilename."\n");
     while(<blastIN>){
 	chomp($_);
 	next if($_ =~ /^#/);
-	my @values = split(/\t/,$_);
-	my $query = $values[0];
-	my $subject = $values[1];
-	my $query_start = $values[6];
-	my $query_end = $values[7];
-	my $bitScore = $values[11];
+	my ($query, $subject, $two, $three, $four, $five, $query_start,
+		$query_end, $eight, $nine, $ten, $bitScore) = split(/\t/,$_);	
+	my $markerName = getMarkerName($subject, $searchtype);
+
+	if($searchtype ne "blast" && $self->{"dna"}){
+		# RAPsearch seems to have an off-by-one on its DNA coordinates
+		$query_start -= 2;
+		$query_end -= 2;
+	}
+	#parse once to get the top score for each marker (if isolate is ON, parse again to check the bitscore ranges)
+	if($isolateMode==1){
+	    # running on a genome assembly, allow only 1 hit per marker (TOP hit)
+	    if( !defined($markerTopScores{$markerName}) || $markerTopScores{$markerName} < $bitScore ){
+		$markerTopScores{$markerName} = $bitScore;
+	    }
+	}else{
+	    # running on short reads, just do one marker per read
+		$topScore{$query}=0 unless exists $topScore{$query};
+		#only keep the top hit
+		if($topScore{$query} <= $bitScore){
+		    $contig_hits{$query} = [[$markerName, $bitScore, $query_start, $query_end]];
+		    $topScore{$query}=$bitScore;
+		}#else do nothing
+	}
+    }
+    close(blastIN);
+    if($isolateMode==1){
+	# reading the output a second to check the bitscore ranges from the top score
+	open(blastIN,$hitfilename)or die "Couldn't open $hitfilename\n";
+	# running on a genome assembly, allow more than one marker per sequence
+	# require all hits to the marker to have bit score within some range of the top hit
+	while(<blastIN>){
+		chomp($_);
+		next if($_ =~ /^#/);
+		my ($query, $subject, $two, $three, $four, $five, $query_start,
+			$query_end, $eight, $nine, $ten, $bitScore) = split(/\t/,$_);	
+		my $markerName = getMarkerName($subject, $searchtype);
+		if($markerTopScores{$markerName} < $bitScore + $bestHitsBitScoreRange){
+			my @hitdata = [$markerName, $bitScore, $query_start, $query_end];
+			push(@{$contig_hits{$query}}, @hitdata);
+		}
+	}
+	close(blastIN);
+    }
+    return \%contig_hits;
+}
+
+
+=head2 getMarkerName
+
+Extracts a marker gene name from a blast or rapsearch subject sequence name
+
+=cut
+
+sub getMarkerName{
+	my $subject = shift;
+	my $searchtype = shift;
 	my $markerName = "";
 	if($searchtype eq "blast"){
 		my @marker=split(/\_/,$subject);
@@ -295,146 +423,72 @@ sub get_hits{
 	}else{
 		my @marker=split(/\_\_/,$subject);
 		$markerName = $marker[0];
-		
 #		$markerName = $marker_lookup{$subject};
 	}
+	return $markerName;
+}
 
-	#parse once to get the top score for each marker (if isolate is ON, parse again to check the bitscore ranges)
-	if($isolateMode==1){
-	    # running on a genome assembly
-	    # allow only 1 marker per sequence (TOP hit)
-	    if( !defined($markerTopScores{$markerName}) || $markerTopScores{$markerName} < $bitScore ){
-		$markerTopScores{$markerName} = $bitScore;
-		$hitsStart{$query}{$markerName} = $query_start;
-		$hitsEnd{$query}{$markerName}=$query_end;
-	    }
-	}else{
-	    # running on reads
-	    # just do one marker per read
-	    if(!exists $topFamily{$query}){
-		$topFamily{$query}=$markerName;
-		$topStart{$query}=$query_start;
-		$topEnd{$query}=$query_end;
-		$topScore{$query}=$bitScore;
-	    }else{
-		#only keep the top hit
-		if($topScore{$query} <= $bitScore){
-		    $topFamily{$query}= $markerName;
-		    $topStart{$query}=$query_start;
-		    $topEnd{$query}=$query_end;
-		    $topScore{$query}=$bitScore;
-		}#else do nothing
-	    }#else do nothing
-	}
-    }
-    close(blastIN);
-    if($isolateMode ==1){
-	# reading the output a second to check the bitscore ranges from the top score
-	open(blastIN,$hitfilename)or die "Couldn't open $hitfilename\n";
-	# running on a genome assembly
-	# allow more than one marker per sequence
-	# require all hits to the marker to have bit score within some range of the top hit
-	while(<blastIN>){
-	    chomp($_);
-	    my @values = split(/\t/,$_);
-	    my $query = $values[0];
-	    my $subject = $values[1];
-	    my $query_start = $values[6];
-	    my $query_end = $values[7];
-	    my $bitScore = $values[11];
-		my $markerName = "";
-		if($searchtype eq "blast"){
-			my @marker=split(/\_/,$subject);
-			$markerName = $marker[$#marker];
-		}else{
-			$markerName = $marker_lookup{$subject};
-		}
-	    if($markerTopScores{$markerName} < $bitScore + $bestHitsBitScoreRange){
-		$hits{$query}{$markerName}=1;
-		$hitsStart{$query}{$markerName} = $query_start;
-		$hitsEnd{$query}{$markerName} = $query_end;
-	    }
-	}
-	close(blastIN);
-    }else{
-	foreach my $queryID (keys %topFamily){
-	    $hits{$queryID}{$topFamily{$queryID}}=1;
-	    $hitsStart{$queryID}{$topFamily{$queryID}}=$topStart{$queryID};
-	    $hitsEnd{$queryID}{$topFamily{$queryID}}=$topEnd{$queryID};
-	}
-    }
-    my $seqin;
-    if(-e $self->{"blastDir"}."/$readsCore-6frame"){
-	$seqin = new Bio::SeqIO('-file'=>$self->{"blastDir"}."/$readsCore-6frame");
-    }else{
+=head2 writeCandidates
+
+write out results
+
+=cut
+
+sub writeCandidates{
+	my $self = shift;
+	my $contigHitsRef = shift;
+	my %contig_hits = %$contigHitsRef;
 	debug "ReadsFile:  $self->{\"readsFile\"}"."\n";
-	$seqin = new Bio::SeqIO('-file'=>$self->{"readsFile"});
-    }
-    while (my $seq = $seqin->next_seq) {
-	if(exists $hits{$seq->id}){
-	    foreach my $markerHit(keys %{$hits{$seq->id}}){
-		#checking if a 6frame translation was done and the suffix was appended to the description and not the sequence ID
-		my $newID = $seq->id;
-		my $current_suff="";
-		my $current_seq="";
-		if(exists $duplicates{$current_seq}{$markerHit}{$current_suff}){
-		    warn "Skipping ".$seq->id."\t".$current_suff."\n";
-		    next;
-		}
+	my $seqin = new Bio::SeqIO('-file'=>$self->{"readsFile"});
+	while (my $seq = $seqin->next_seq) {
+		# skip this one if there are no hits
+		next unless( exists $contig_hits{$seq->id} );
+		for( my $i=0; $i<@{$contig_hits{$seq->id}}; $i++){
+			my $curhitref=$contig_hits{$seq->id}->[$i];
+			my @curhit=@$curhitref;
+			my $markerHit = $curhit[0];
+			my $start = $curhit[2];
+			my $end = $curhit[3];
+			($start,$end) = ($end,$start) if($start > $end); # swap if start bigger than end
+			$start -= FLANKING_LENGTH;
+			$end += FLANKING_LENGTH;
+			# ensure flanking region is a multiple of 3 to avoid breaking frame in DNA
+			$start=abs($start) % 3 + 1 if($start < 0);
+			my $seqLength = length($seq->seq);
+			$end= $end-ceil(($end - $seqLength)/3)*3 if($end >= $seqLength);
 
-		#pre-trimming for the query + FLANKING_LENGTH residues before and after (for very long queries)
-		my $start = $hitsStart{$seq->id}{$markerHit};
-		if($searchtype ne "blast"){
-                    $start = $hitsStart{$seq->id}{$markerHit}-2;
-                }
-		my $end = $hitsEnd{$seq->id}{$markerHit};
-		if($searchtype ne "blast"){
-		    ($start,$end) = ($end+2,$start+2) if($start > $end); # swap if start bigger than end 
-		}else{
-		    ($start,$end) = ($end,$start) if($start > $end); # swap if start bigger than end
-		}
-		$start -= FLANKING_LENGTH;
-		$end += FLANKING_LENGTH;
-		$start=abs($start) % 3 + 1 if($start < 0);
-		my $seqLength = length($seq->seq);
-		$end= $end-ceil(($end - $seqLength)/3)*3 if($end >= $seqLength);
-
-		my $newSeq = substr($seq->seq,$start,$end-$start);
-		#if the $newID exists in the %frames hash, then it needs to be translated to the correct frame
-		# compute the frame as modulo 3 of start site, reverse strand if end < start
-		my $frame = $hitsStart{$seq->id}{$markerHit} % 3 + 1;
-		$frame *= -1 if( $hitsStart{$seq->id}{$markerHit} > $hitsEnd{$seq->id}{$markerHit});
-		my $seqlen = abs($hitsStart{$seq->id}{$markerHit} - $hitsEnd{$seq->id}{$markerHit})+1;
-		if($seqlen % 3 == 0){
-		    $newSeq = translateFrame($newID,$seq->seq,$start,$end,$frame,$markerHit,$reverseTranslate);
-		}else{
-		    warn "Error, alignment length not multiple of 3!  FIXME: need to pull frameshift from full blastx\n";
-		}
-                
-		if(exists  $markerHits{$markerHit}){
-		    $markerHits{$markerHit} .= ">".$newID."\n".$newSeq."\n";
-		}else{
-		    $markerHits{$markerHit} = ">".$newID."\n".$newSeq."\n";
-		}
-	    }
+			my $newSeq = substr($seq->seq,$start,$end-$start);
+			#if we're working from DNA then need to translate to protein
+			if($self->{"dna"}){
+				# compute the frame as modulo 3 of start site, reverse strand if end < start
+				my $frame = $curhit[2] % 3 + 1;
+				$frame *= -1 if( $curhit[2] > $curhit[3]);
+				my $seqlen = abs($curhit[2] - $curhit[3])+1;
+				if($seqlen % 3 == 0){
+					$newSeq = translateFrame($seq->id,$seq->seq,$start,$end,$frame,$markerHit,$self->{"dna"});
+					$newSeq =~ s/\*/X/g;	# bioperl uses * for stop codons but we want to give X to hmmer later
+				}else{
+					warn "Error, alignment length not multiple of 3!  FIXME: need to pull frameshift from full blastx\n";
+				}
+			}
+			$markerHits{$markerHit} = "" unless defined($markerHits{$markerHit});
+			$markerHits{$markerHit} .= ">".$seq->id."\n".$newSeq."\n";
+#			$markerHits{$markerHit} .= ">".$seq->id.":$start-$end\n".$newSeq."\n";
+		}		
 	}
-    }
 
-    #write the read+ref_seqs for each markers in the list
-    foreach my $marker (keys %markerHits){
-	#writing the hits to the candidate file
-	open(fileOUT,">".$self->{"blastDir"}."/$marker.candidate")or die " Couldn't open ".$self->{"blastDir"}."/$marker.candidate for writing\n";
-	print fileOUT $markerHits{$marker};
-	close(fileOUT);
-	if($reverseTranslate){
-	    open(fileOUT,">".$self->{"blastDir"}."/$marker.candidate.ffn")or die " Couldn't open ".$self->{"blastDir"}."/$marker.candidate.ffn for writing\n";
-	    print fileOUT $markerNuc{$marker};
-	    close(fileOUT);
+	#write the read+ref_seqs for each markers in the list
+	foreach my $marker (keys %markerHits){
+		#writing the hits to the candidate file
+		open(fileOUT,">".$self->{"blastDir"}."/$marker.candidate")or die " Couldn't open ".$self->{"blastDir"}."/$marker.candidate for writing\n";
+		print fileOUT $markerHits{$marker};
+		close(fileOUT);
+		if($self->{"dna"}){
+			open(fileOUT,">".$self->{"blastDir"}."/$marker.candidate.ffn")or die " Couldn't open ".$self->{"blastDir"}."/$marker.candidate.ffn for writing\n";
+			print fileOUT $markerNuc{$marker};
+			close(fileOUT);
+		}
 	}
-	
-    }
-
-    return $self;
 }
 
 =head2 prepAndClean
