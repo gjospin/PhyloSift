@@ -160,15 +160,16 @@ sub run {
     debug "@markers\n";
     debug "MODE :: ".$self->{"mode"}."\n";
     if($self->{"mode"} eq 'blast' || $self->{"mode"} eq 'all'){
-	my $searchtype = "rap";
-	$searchtype = "blast" if defined($self->{"isolate"}) && $self->{"isolate"} ne "0";
+	$self->{"searchtype"} = "rap";
+	$self->{"searchtype"} = "blast" if defined($self->{"isolate"}) && $self->{"isolate"} ne "0";
 	# check what kind of input was provided
 	my $inputtype = Amphora2::Utilities::get_sequence_input_type($self->{"readsFile"});
-	$searchtype = "blast" if($inputtype eq "long");	# RAP can not handle the long reads and contigs
-
-	debug "Search type is $searchtype\n";
+	$self->{"searchtype"} = "blast" if($inputtype eq "long");	# RAP can not handle the long reads and contigs
+	$self->{"dna"} = $inputtype eq "protein" ? 0 : 1;	# Is the input protein sequences?
+	print "Inputtype is $inputtype\n";
+	debug "Search type is ".$self->{"searchtype"}."\n";
 	# need to use BLAST for isolate mode, since RAP only handles very short reads
-	$self=$self->runSearch($continue,$custom,$searchtype,\@markers);
+	$self=$self->runSearch($continue,$custom,$self->{"searchtype"},\@markers);
 	debug "MODE :: ".$self->{"mode"}."\n";
     }
 
