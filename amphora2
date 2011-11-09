@@ -45,17 +45,17 @@ Mode : Only execute a specific step in the pipeline
 
 Options Available at this time :
    -h -help             Prints the usage section of the README
-   -custom <file>       Reads a custom marker list from a file otherwise use all the markers from the markers directory
-   --threaded=<Number>  Runs Blast and Hmmer using the number of processors sepcified
+   --custom <file>       Reads a custom marker list from a file otherwise use all the markers from the markers directory
+   --threaded=<number>  Runs Blast and Hmmer using the number of processors sepcified
                         Runs 1 Pplacer per processor specified
                         (DEFAULT : 1)
-   -clean               Cleans the temporary files created by Amphora (NOT YET IMPLEMENTED)
-   -paired              Looks for 2 input files (paired end sequencing) in FastQ format.
+   --clean               Cleans the temporary files created by Amphora (NOT YET IMPLEMENTED)
+   --paired              Looks for 2 input files (paired end sequencing) in FastQ format.
                         Reversing the sequences for the second file listed
                         and appending to the corresponding pair from the first file listed.
-   -continue            Enables the pipeline to continue to subsequent steps when not using the 'all' mode
-   -reverse             If the submitted sequences were Nucleotides, the program prints out an alignment for all the markers in DNA space in addition to the one in Protein space.
-   -isolate             Use this mode if you are running data from an Isolate genome
+   --continue            Enables the pipeline to continue to subsequent steps when not using the 'all' mode
+   --reverse             If the submitted sequences were nucleotides, the program prints out an alignment for all the markers in DNA space in addition to the one in Protein space.
+   --isolate             Use this mode if you are running data from an Isolate genome
 
 ~;
 
@@ -68,7 +68,7 @@ GetOptions("threaded=i" => \$threadNum,
 	   "isolate" => \$isolate, #use when processing one or more isolate genomes
 	   "reverse"=> \$reverseTranslate,#use to output the reverse translation of the AA alignments
 	   "besthit" => \$besthit, #should we keep only the best hit when there are multiple?
-	   "coverage=f" => \$coverage, #provides a contig/scaffold coverage file
+	   "coverage=s" => \$coverage, #provides a contig/scaffold coverage file
 	   "updated_markers"=> \$updated, #Indicates if Amphora2 uses the updated versions of the Markers.
 	   "h"=>\$help,#prints the usage part of the README file
 	   "help"=>\$help,#same as -h
