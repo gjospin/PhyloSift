@@ -92,7 +92,9 @@ sub RunSearch {
 
     # search reads/contigs against marker database
     my $resultsfile;
-    if($searchtype eq "blast"){
+    if(!defined($self->{"dna"}) || $self->{"dna"}==0){
+	$resultsfile = executeBlast($self, $self->{"readsFile"});
+    }elsif($searchtype eq "blast"){
 	$resultsfile = blastXoof_table($self, $self->{"readsFile"});
 	$reverseTranslate=1;
     }else{

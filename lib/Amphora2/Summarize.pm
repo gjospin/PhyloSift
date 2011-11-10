@@ -217,6 +217,8 @@ sub summarize {
 
     # read all of the .place files for markers
     # map them onto the ncbi taxonomy
+    # also write out the taxon assignments for sequences
+    open(SEQUENCETAXA, ">".$self->{"fileDir"}."/sequence_taxa.txt");
     foreach my $marker(@{$markRef}){
 	# don't bother with this one if there's no read placements
 	my $placeFile = $self->{"treeDir"}."/".Amphora2::Utilities::getReadPlacementFile($marker);
@@ -252,11 +254,14 @@ sub summarize {
 				foreach my $taxon( @{$markerncbimap{$edge}} ){
 					$ncbireads{$taxon} = 0 unless defined $ncbireads{$taxon};
 					$ncbireads{$taxon} += $weightRatio / $mapcount;  # split the p.p. across the possible edge mappings
+					print SEQUENCETAXA "$qname\t$taxon\t".($weightRatio / $mapcount)."\n";
 				}
 			}
 		}
 	}
 }
+    close(SEQUENCETAXA);
+
     # sort descending
     open(taxaOUT,">".$self->{"fileDir"}."/taxasummary.txt");
     foreach my $taxon (sort {$ncbireads{$b} <=> $ncbireads{$a} } keys %ncbireads) {

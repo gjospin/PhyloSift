@@ -164,7 +164,7 @@ sub run {
 	$self->{"searchtype"} = "blast" if defined($self->{"isolate"}) && $self->{"isolate"} ne "0";
 	# check what kind of input was provided
 	my $inputtype = Amphora2::Utilities::get_sequence_input_type($self->{"readsFile"});
-	$self->{"searchtype"} = "blast" if($inputtype eq "long");	# RAP can not handle the long reads and contigs
+	$self->{"searchtype"} = "blast" if($inputtype ne "short");	# RAP can not handle the long reads and contigs
 	$self->{"dna"} = $inputtype eq "protein" ? 0 : 1;	# Is the input protein sequences?
 	print "Inputtype is $inputtype\n";
 	debug "Search type is ".$self->{"searchtype"}."\n";
