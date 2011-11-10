@@ -363,11 +363,11 @@ sub get_hits{
 		$query_end, $eight, $nine, $ten, $bitScore) = split(/\t/,$_);	
 	my $markerName = getMarkerName($subject, $searchtype);
 
-	if($searchtype ne "blast" && $self->{"dna"}){
+#	if($searchtype ne "blast" && $self->{"dna"}){
 		# RAPsearch seems to have an off-by-one on its DNA coordinates
-		$query_start -= 2;
-		$query_end -= 2;
-	}
+#		$query_start -= 2;
+#		$query_end -= 2;
+#	}
 	#parse once to get the top score for each marker (if isolate is ON, parse again to check the bitscore ranges)
 	if($isolateMode==1){
 	    # running on a genome assembly, allow only 1 hit per marker (TOP hit)
