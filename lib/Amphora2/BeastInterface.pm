@@ -165,7 +165,7 @@ sub writeXML{
 		}
 		foreach my $taxon( keys(%refseqs) ){
 			next if defined($seentaxa{$taxon});
-			print STDERR "Missing sequence for taxon $taxon in gene $genename.  Filling with gaps.\n";
+#			print STDERR "Missing sequence for taxon $taxon in gene $genename.  Filling with gaps.\n";
 			print ALLXML "\t\t<sequence>\n";
 			print ALLXML "\t\t<taxon idref=\"$taxon\"/>\n";
 			print ALLXML "\t\t"."-"x$curlen."\n";
