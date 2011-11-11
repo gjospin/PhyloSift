@@ -15,6 +15,8 @@ use Amphora2::MarkerAlign;
 use Amphora2::pplacer;
 use Amphora2::Summarize;
 use Amphora2::FastSearch;
+use Amphora2::BeastInterface;
+
 =head2 new
 
     Returns : Amphora2 project object
@@ -406,6 +408,7 @@ sub runMarkerAlign{
     #Align Markers
     my $threadNum=1;
     Amphora2::MarkerAlign::MarkerAlign( $self, $markRef );
+    Amphora2::BeastInterface::Export($self, $markRef, $self->{"fileDir"}."/beast.xml");
     Amphora2::Utilities::end_timer("Alignments");
     if($continue != 0){
 	$self->{"mode"} = 'placer';
