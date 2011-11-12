@@ -24,7 +24,7 @@ chdir("..");
 chdir("Bio-Phylo-0.45");
 `perl Makefile.PL`;
 `make`;
-`mv blib/lib/Bio/Phylo ../Amphora-2/lib/Bio/`;
+`mv blib/lib/Bio/Phylo* ../Amphora-2/lib/Bio/`;
 chdir("..");
 
 my @timerval = localtime();
