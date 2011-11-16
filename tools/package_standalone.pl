@@ -27,6 +27,15 @@ chdir("Bio-Phylo-0.45");
 `mv blib/lib/Bio/Phylo* ../Amphora-2/lib/Bio/`;
 chdir("..");
 
+`wget http://cpan.uwinnipeg.ca/cpan/authors/id/T/TO/TODDR/Locale-Maketext-1.19.tar.gz`;
+`tar xvzf Locale-Maketext-1.19.tar.gz`;
+chdir("Locale-Maketext-1.19");
+`perl Makefile.PL`;
+`make`;
+`mv blib/lib/Locale/ ../Amphora-2/lib/`;
+chdir("..");
+
+
 my @timerval = localtime();
 my $datestr = (1900+$timerval[5]);
 $datestr .= 0 if $timerval[4] < 9; 
