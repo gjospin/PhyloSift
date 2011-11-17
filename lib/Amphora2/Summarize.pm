@@ -56,6 +56,7 @@ sub readNcbiTaxonNameMap {
 	    $idnamemap{$vals[0]}=homogenizeNameAlaDongying($vals[1]) if($line =~ /scientific name/);
 	}
     }
+    return (%nameidmap,%idnamemap);
 }
 
 # now read the NCBI taxonomy structure
@@ -69,6 +70,7 @@ sub readNcbiTaxonomyStructure {
 	my @vals = split( /\s+\|\s+/, $line );
 	$parent{$vals[0]} = [$vals[1],$vals[2]];
     }
+    return %parent;
 }
 
 

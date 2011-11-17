@@ -15,6 +15,7 @@ use Amphora2::MarkerAlign;
 use Amphora2::pplacer;
 use Amphora2::Summarize;
 use Amphora2::FastSearch;
+use Amphora2::Benchmark;
 =head2 new
 
     Returns : Amphora2 project object
@@ -182,6 +183,9 @@ sub run {
     }
     if($self->{"mode"} eq 'summary' || $self->{"mode"} eq 'all'){
 	$self=$self->taxonomyAssignments($continue,\@markers);
+    }
+    if($self->{"mode"} eq 'benchmark'){
+	$self=$self->benchmark();
     }
 }
 
@@ -362,8 +366,17 @@ sub taxonomyAssignments {
     Amphora2::Utilities::start_timer("taxonomy assignments");
     Amphora2::Summarize::summarize( $self,$markListRef );
     Amphora2::Utilities::end_timer("taxonomy assignments");
+    return $self;
 }
 
+=head2 benchmark
+
+=cut
+sub benchmark{
+    my $self = shift;
+    debug "RUNNING Benchmark\n";
+    Amphora2::Benchmark::runBenchmark($self);
+}
 =head2 runPplacer
 
     Performs the appropriate checks before runing the Read placement parts of the pipeline
