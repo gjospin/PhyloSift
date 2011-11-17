@@ -72,7 +72,6 @@ my $blastp_params = "-p blastp -e 0.1 -b 50000 -v 50000 -a $threadNum -m 8";
 sub RunSearch {
     my $self = shift;
     my $custom = shift;
-    my $searchtype = shift;
     my $markersRef = shift;
     @markers = @{$markersRef};
     %markerHits = ();
@@ -82,22 +81,34 @@ sub RunSearch {
     $isolateMode = $self->{"isolate"};
     $reverseTranslate = $self->{"reverseTranslate"};
 
+	# check what kind of input was provided
+	my ($seqtype, $length, $format) = Amphora2::Utilities::get_sequence_input_type($self->{"readsFile"});
+	$self->{"dna"} = $seqtype eq "protein" ? 0 : 1;	# Is the input protein sequences?	
+	debug "Input type is $seqtype, $length, $format\n";
+	# need to use BLAST for isolate mode, since RAP only handles very short reads
+
     # ensure databases and sequences are prepared for search
     debug "before rapPrepandclean\n";
     prepAndClean($self);
     if($self->{"readsFile_2"} ne ""){
-	debug "before fastqtoFASTA\n";
-	fastqToFasta($self);
+	carp "Error, paired mode requires FastQ format input data" unless $format eq "fastq";
+	debug "before fastqtoMergedFasta\n";
+	fastqToMergedFasta($self);
+    }elsif($format eq "fastq"){
+	fastqToFasta($self->{"readsFile"}, $self->{"blastDir"}."/$readsCore.fasta");
+	$self->{"readsFile"} = $self->{"blastDir"}."/$readsCore.fasta";
     }
 
     # search reads/contigs against marker database
     my $resultsfile;
-    if(!defined($self->{"dna"}) || $self->{"dna"}==0){
+    my $searchtype = "blast";
+    if($length eq "long" && $seqtype eq "protein"){
 	$resultsfile = executeBlast($self, $self->{"readsFile"});
-    }elsif($searchtype eq "blast"){
+    }elsif($length eq "long"){
 	$resultsfile = blastXoof_table($self, $self->{"readsFile"});
 	$reverseTranslate=1;
     }else{
+	$searchtype = "rap";
         $resultsfile = executeRap($self);
 	build_lookup_table($self);
     }
@@ -232,11 +243,31 @@ sub executeBlast{
 
 =head2 fastqToFasta
 
-    Writes a fastA file from 2 fastQ files from the Amphora2 object
+Convert a FastQ file to FastA
 
 =cut
 
 sub fastqToFasta{
+	my $infile = shift;
+	my $outfile = shift;	
+	my $count = 0;
+	debug "Reading $infile\n";
+	open(FASTQ_1, $infile)or croak( "Couldn't open the FastQ file $infile\n" );
+	open(FASTA, ">$outfile")or croak( "Couldn't open $outfile for writing\n" ) ;
+	while(my $head1 = <FASTQ_1>){
+		$head1 =~ s/^@/>/g if($count%4==0);
+		print FASTA $head1 if($count%4<2);
+		$count++;
+	}
+}
+
+=head2 fastqToMergedFasta
+
+    Writes a fastA file from 2 fastQ files from the Amphora2 object
+
+=cut
+
+sub fastqToMergedFasta{
     my $self = shift;
     if($self->{"readsFile_2"} ne ""){
 	debug "FILENAME ".$self->{"fileName"}."\n";
@@ -247,10 +278,10 @@ sub fastqToFasta{
 	my $curr_ID = "";
 	my $skip = 0;
 	debug "Reading ".$self->{"readsFile"}."\n";
-	open(FASTQ_1, $self->{"readsFile"})or die "Couldn't open ".$self->{"readsFile"}." in run_blast.pl reading the FastQ file\n";
-	open(FASTQ_2, $self->{"readsFile_2"})or die "Couldn't open ".$self->{"readsFile_2"}." in run_blast.pl reading the FastQ file\n";            
+	open(FASTQ_1, $self->{"readsFile"})or croak "Couldn't open ".$self->{"readsFile"}." in run_blast.pl reading the FastQ file\n";
+	open(FASTQ_2, $self->{"readsFile_2"})or croak "Couldn't open ".$self->{"readsFile_2"}." in run_blast.pl reading the FastQ file\n";            
 	debug "Writing ".$readsCore.".fasta\n";
-	open(FASTA, ">".$self->{"blastDir"}."/$readsCore.fasta")or die "Couldn't open ".$self->{"blastDir"}."/$readsCore.fasta for writing in run_blast.pl\n";
+	open(FASTA, ">".$self->{"blastDir"}."/$readsCore.fasta")or croak "Couldn't open ".$self->{"blastDir"}."/$readsCore.fasta for writing in run_blast.pl\n";
 	while(my $head1 = <FASTQ_1>){
 		my $read1 = <FASTQ_1>;
 		my $qhead1 = <FASTQ_1>;
@@ -487,7 +518,7 @@ sub writeCandidates{
 		close(fileOUT);
 		if($self->{"dna"}){
 			open(fileOUT,">".$self->{"blastDir"}."/$marker.candidate.ffn")or die " Couldn't open ".$self->{"blastDir"}."/$marker.candidate.ffn for writing\n";
-			print fileOUT $markerNuc{$marker};
+			print fileOUT $markerNuc{$marker} if defined($markerNuc{$marker});
 			close(fileOUT);
 		}
 	}

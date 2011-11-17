@@ -15,7 +15,12 @@ use Amphora2::MarkerAlign;
 use Amphora2::pplacer;
 use Amphora2::Summarize;
 use Amphora2::FastSearch;
+<<<<<<< HEAD
 use Amphora2::Benchmark;
+=======
+use Amphora2::BeastInterface;
+
+>>>>>>> cee95b64bbc9634b0b4a60bf6cd4e33fcaaa1891
 =head2 new
 
     Returns : Amphora2 project object
@@ -161,16 +166,7 @@ sub run {
     debug "@markers\n";
     debug "MODE :: ".$self->{"mode"}."\n";
     if($self->{"mode"} eq 'blast' || $self->{"mode"} eq 'all'){
-	$self->{"searchtype"} = "rap";
-	$self->{"searchtype"} = "blast" if defined($self->{"isolate"}) && $self->{"isolate"} ne "0";
-	# check what kind of input was provided
-	my $inputtype = Amphora2::Utilities::get_sequence_input_type($self->{"readsFile"});
-	$self->{"searchtype"} = "blast" if($inputtype ne "short");	# RAP can not handle the long reads and contigs
-	$self->{"dna"} = $inputtype eq "protein" ? 0 : 1;	# Is the input protein sequences?
-	print "Inputtype is $inputtype\n";
-	debug "Search type is ".$self->{"searchtype"}."\n";
-	# need to use BLAST for isolate mode, since RAP only handles very short reads
-	$self=$self->runSearch($continue,$custom,$self->{"searchtype"},\@markers);
+	$self=$self->runSearch($continue,$custom,\@markers);
 	debug "MODE :: ".$self->{"mode"}."\n";
     }
 
@@ -179,6 +175,7 @@ sub run {
 	$self=$self->runMarkerAlign($continue,\@markers);
     }
     if($self->{"mode"} eq 'placer' || $self->{"mode"} eq 'all'){
+	croak "No marker gene hits found in the input data. Unable to reconstruct phylogeny and taxonomy." if(scalar(@markers)==0);
 	$self=$self->runPplacer($continue,\@markers);
     }
     if($self->{"mode"} eq 'summary' || $self->{"mode"} eq 'all'){
@@ -419,6 +416,7 @@ sub runMarkerAlign{
     #Align Markers
     my $threadNum=1;
     Amphora2::MarkerAlign::MarkerAlign( $self, $markRef );
+    Amphora2::BeastInterface::Export($self, $markRef, $self->{"fileDir"}."/beast.xml");
     Amphora2::Utilities::end_timer("Alignments");
     if($continue != 0){
 	$self->{"mode"} = 'placer';
