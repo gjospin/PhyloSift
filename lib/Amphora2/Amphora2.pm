@@ -15,12 +15,9 @@ use Amphora2::MarkerAlign;
 use Amphora2::pplacer;
 use Amphora2::Summarize;
 use Amphora2::FastSearch;
-<<<<<<< HEAD
 use Amphora2::Benchmark;
-=======
 use Amphora2::BeastInterface;
 
->>>>>>> cee95b64bbc9634b0b4a60bf6cd4e33fcaaa1891
 =head2 new
 
     Returns : Amphora2 project object
