@@ -30,6 +30,8 @@ chdir("..");
 `wget http://cpan.uwinnipeg.ca/cpan/authors/id/T/TO/TODDR/Locale-Maketext-1.19.tar.gz`;
 `tar xvzf Locale-Maketext-1.19.tar.gz`;
 chdir("Locale-Maketext-1.19");
+# remove the following files because they break Todd's ancient perldoc
+`rm lib/Locale/Maketext/*.pod`;
 `perl Makefile.PL`;
 `make`;
 `mv blib/lib/Locale/ ../Amphora-2/lib/`;
