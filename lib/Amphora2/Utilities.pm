@@ -636,6 +636,9 @@ sub get_sequence_input_type {
 	my $counter = 0;
 	my $allcount = 0;
 	my $dnacount = 0;
+	my $seqtype="dna";
+	my $length="long";
+	my $format="unknown";
 	
 	for( my $i=0; $i<200; $i++ ){
 		my $seekpos = int(rand($filesize-100));
@@ -643,9 +646,14 @@ sub get_sequence_input_type {
 		$counter = 0;
 		my $line = <FILE>;	# burn a line to be sure we get to sequence
 		while( $line = <FILE> ){
-			last if $line =~ />/; # fasta
-			last if $line =~ /@/; # fastq
-			last if $line =~ /\+/; # fastq
+			if($line =~ /^>/){
+				$format = "fasta";
+				last;
+			}
+			if($line =~ /^@/ || $line =~ /^\+/){
+				$format = "fastq";
+				last;
+			}
 			$counter += length($line);		
 			$dnacount += $line =~ tr/[ACGTacgt]//;
 		}
@@ -653,9 +661,9 @@ sub get_sequence_input_type {
 		last if($counter > 500);	# found a long read
 	}
 	print STDERR "dna frac is ".($dnacount / $allcount)."\n";
-	return "protein" if ($dnacount < $allcount * 0.75);
-	return "short" if $counter < 500;
-	return "long";
+	$seqtype = "protein" if ($dnacount < $allcount * 0.75);
+	$length = "short" if $counter < 500;
+	return ($seqtype, $length, $format);
 }
 
 =head1 AUTHOR
