@@ -37,6 +37,14 @@ chdir("Locale-Maketext-1.19");
 `mv blib/lib/Locale/ ../Amphora-2/lib/`;
 chdir("..");
 
+`wget http://search.cpan.org/CPAN/authors/id/J/JP/JPEACOCK/version-0.95.tar.gz`;
+`tar xzf version-0.95.tar.gz`;
+chdir("version-0.95");
+`perl Makefile.PL`;
+`make`;
+`mv blib/lib/version* ../Amphora-2/lib/`;
+`mv blib/arch/auto/version ../Amphora-2/lib/arch/auto/`;
+chdir("..");
 
 my @timerval = localtime();
 my $datestr = (1900+$timerval[5]);
