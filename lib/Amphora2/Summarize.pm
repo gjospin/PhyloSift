@@ -253,12 +253,19 @@ sub summarize {
 				my $weightRatio = $curplaces{$edge};
 				$weightRatio *= $coverage{$qname} if defined($coverage{$qname});
 				my $mapcount = scalar(@{$markerncbimap{$edge}});
+				my %readsums;
 				foreach my $taxon( @{$markerncbimap{$edge}} ){
+					$readsums{$taxon} = 0 unless defined($readsums{$taxon});
+					$readsums{$taxon} += $weightRatio / $mapcount;  # split the p.p. across the possible edge mappings
 					$ncbireads{$taxon} = 0 unless defined $ncbireads{$taxon};
 					$ncbireads{$taxon} += $weightRatio / $mapcount;  # split the p.p. across the possible edge mappings
-					print SEQUENCETAXA "$qname\t$taxon\t".($weightRatio / $mapcount)."\n";
+				}
+				foreach my $taxon (sort {$readsums{$b} <=> $readsums{$a} } keys %readsums) {
+					my ($taxon_name, $taxon_level, $taxon_id) = getTaxonInfo($taxon);
+					print SEQUENCETAXA "$qname\t$taxon_id\t$taxon_level\t$taxon_name\t".$readsums{$taxon}."\n";
 				}
 			}
+			%curplaces = ();
 		}
 	}
 }
