@@ -49,10 +49,10 @@ sub readSeqSummary{
     my %allPlacedScore = ();
     #reading and storing information from the sequence_taxa.txt file
     while(<fileIN>){
-	if($_ =~ m/^(\S+)\s+(\S+)\s+(\S+)$/){
+	if($_ =~ m/^(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)$/){
 	    my $read = $1;
-	    my $taxPlacement = $2;
-	    my $probability = $3;
+	    my $taxPlacement = $4;
+	    my $probability = $5;
 	    my @taxPlacementID = Amphora2::Summarize::getTaxonInfo($2);
 #	    print "TaxPlacement : $2\t $taxPlacementID[0]\t\n";
 
