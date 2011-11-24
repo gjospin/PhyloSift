@@ -219,8 +219,8 @@ sub summarize {
 
     # read all of the .place files for markers
     # map them onto the ncbi taxonomy
-    # also write out the taxon assignments for sequences
-    open(SEQUENCETAXA, ">".$self->{"fileDir"}."/sequence_taxa.txt");
+    # this is a hash structured as {sequenceID}{taxonID}=probabilitySum
+    my %placements;
     foreach my $marker(@{$markRef}){
 	# don't bother with this one if there's no read placements
 	my $placeFile = $self->{"treeDir"}."/".Amphora2::Utilities::getReadPlacementFile($marker);
@@ -253,24 +253,45 @@ sub summarize {
 				my $weightRatio = $curplaces{$edge};
 				$weightRatio *= $coverage{$qname} if defined($coverage{$qname});
 				my $mapcount = scalar(@{$markerncbimap{$edge}});
-				my %readsums;
 				foreach my $taxon( @{$markerncbimap{$edge}} ){
-					$readsums{$taxon} = 0 unless defined($readsums{$taxon});
-					$readsums{$taxon} += $weightRatio / $mapcount;  # split the p.p. across the possible edge mappings
+					my ($taxon_name, $taxon_level, $taxon_id) = getTaxonInfo($taxon);
+					$placements{$qname} = () unless defined($placements{$qname});
+					$placements{$qname}{$taxon_id} = 0 unless defined($placements{$qname}{$taxon_id});
+					$placements{$qname}{$taxon_id} += $curplaces{$edge} / $mapcount;
+
 					$ncbireads{$taxon} = 0 unless defined $ncbireads{$taxon};
 					$ncbireads{$taxon} += $weightRatio / $mapcount;  # split the p.p. across the possible edge mappings
-				}
-				foreach my $taxon (sort {$readsums{$b} <=> $readsums{$a} } keys %readsums) {
-					my ($taxon_name, $taxon_level, $taxon_id) = getTaxonInfo($taxon);
-					print SEQUENCETAXA "$qname\t$taxon_id\t$taxon_level\t$taxon_name\t".$readsums{$taxon}."\n";
 				}
 			}
 			%curplaces = ();
 		}
 	}
 }
+    # also write out the taxon assignments for sequences
+    open(SEQUENCETAXA, ">".$self->{"fileDir"}."/sequence_taxa.txt");
+    open(SEQUENCESUMMARY, ">".$self->{"fileDir"}."/sequence_taxa_summary.txt");
+	foreach my $qname( keys( %placements ) ){
+		# sum up all placements for this sequence, use to normalize
+		my $placecount = 0;
+		foreach my $taxon_id( keys( %{$placements{$qname}} ) ){
+			$placecount += $placements{$qname}{$taxon_id};
+		}
+		# normalize to probability distribution
+		foreach my $taxon_id (sort {$placements{$qname}{$b} <=> $placements{$qname}{$a} } keys %{$placements{$qname}}) {
+			$placements{$qname}{$taxon_id} /= $placecount;			
+			my ($taxon_name, $taxon_level, $tid) = getTaxonInfo($taxon_id);
+			print SEQUENCETAXA "$qname\t$taxon_id\t$taxon_level\t$taxon_name\t".$placements{$qname}{$taxon_id}."\n";
+		}
+		my $readsummary = sum_taxon_levels( $placements{$qname} );
+		foreach my $taxon_id (sort {$readsummary->{$b} <=> $readsummary->{$a} } keys %{$readsummary}) {
+			my ($taxon_name, $taxon_level, $tid) = getTaxonInfo($taxon_id);
+			print SEQUENCESUMMARY "$qname\t$taxon_id\t$taxon_level\t$taxon_name\t".$readsummary->{$taxon_id}."\n";
+		}
+		
+	}
+    close(SEQUENCESUMMARY);
     close(SEQUENCETAXA);
-
+	
     # sort descending
     open(taxaOUT,">".$self->{"fileDir"}."/taxasummary.txt");
     foreach my $taxon (sort {$ncbireads{$b} <=> $ncbireads{$a} } keys %ncbireads) {
@@ -325,6 +346,20 @@ sub summarize {
 	my ($taxon_name, $taxon_level, $taxon_id) = getTaxonInfo($key);
         print taxaCONF join("\t", $taxon_id, $taxon_level, $taxon_name, $sorted[0], $sorted[int($sample_count*0.1)], $sorted[int($sample_count*0.25)], $sorted[int($sample_count*0.5)], $sorted[int($sample_count*0.75)], $sorted[int($sample_count*0.9)], $sorted[$sample_count-1]), "\n";
     }
+}
+
+sub sum_taxon_levels{
+	my $placements = shift;
+	my %summarized = ();
+	foreach my $taxon_id( keys %$placements ){
+		my $cur_tid = $taxon_id;		
+		while( defined($cur_tid) && $cur_tid != 1 ){
+			$summarized{$cur_tid} = 0 unless defined($summarized{$cur_tid});			
+			$summarized{$cur_tid} += $placements->{$taxon_id};
+			$cur_tid = $parent{$cur_tid}[0];
+		}
+	}
+	return \%summarized;
 }
 
 sub getTaxonInfo {
