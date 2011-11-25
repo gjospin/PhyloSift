@@ -57,6 +57,7 @@ my $clean = 0; #option set up, but not used for later
 my $threadNum = 4; #default value runs on 1 processor only.
 my $isolateMode=0; # set to 1 if running on an isolate assembly instead of raw reads
 my $bestHitsBitScoreRange=30; # all hits with a bit score within this amount of the best will be used
+my $align_fraction = 0.5; # at least this amount of min[length(query),length(marker)] must align to be considered a hit
 my $pair=0; #used if using paired FastQ files
 my @markers;
 my (%hitsStart,%hitsEnd, %topscore, %hits, %markerHits,%markerNuc)=();
@@ -68,6 +69,8 @@ my $reverseTranslate=0;
 
 my $blastdb_name = "blastrep.faa";
 my $blastp_params = "-p blastp -e 0.1 -b 50000 -v 50000 -a $threadNum -m 8";
+
+my %markerLength;
 
 sub RunSearch {
     my $self = shift;
@@ -98,6 +101,7 @@ sub RunSearch {
 	fastqToFasta($self->{"readsFile"}, $self->{"blastDir"}."/$readsCore.fasta");
 	$self->{"readsFile"} = $self->{"blastDir"}."/$readsCore.fasta";
     }
+    readMarkerLengths();
 
     # search reads/contigs against marker database
     my $resultsfile;
@@ -125,6 +129,18 @@ sub RunSearch {
     writeCandidates($self,$hitsref);
     
     return $self;
+}
+
+sub readMarkerLengths{
+	foreach my $marker(@markers){
+		open( HMM, $Amphora2::Utilities::marker_dir."/$marker.hmm");
+		while( my $line = <HMM> ){
+			if($line =~ /LENG\s+(\d+)/){
+				$markerLength{$marker} = $1;
+				last;
+			}
+		}
+	}
 }
 
 =head2 build_lookup_table
@@ -483,6 +499,13 @@ sub writeCandidates{
 			my $start = $curhit[2];
 			my $end = $curhit[3];
 			($start,$end) = ($end,$start) if($start > $end); # swap if start bigger than end
+
+			# check to ensure hit covers enough of the marker
+			# TODO: make this smarter about boundaries, e.g. allow a smaller fraction to hit
+			# if it looks like the query seq goes off the marker boundary
+			my $min_len = $markerLength{$markerHit} < $seq->length ? $markerLength{$markerHit} : $seq->length;
+			next unless (($end-$start)/$min_len >= $align_fraction);
+
 			$start -= FLANKING_LENGTH;
 			$end += FLANKING_LENGTH;
 			# ensure flanking region is a multiple of 3 to avoid breaking frame in DNA
@@ -497,6 +520,8 @@ sub writeCandidates{
 				my $frame = $curhit[2] % 3 + 1;
 				$frame *= -1 if( $curhit[2] > $curhit[3]);
 				my $seqlen = abs($curhit[2] - $curhit[3])+1;
+				# check length again in AA units
+				next unless (($seqlen/3)/$min_len >= $align_fraction);
 				if($seqlen % 3 == 0){
 					$newSeq = translateFrame($seq->id,$seq->seq,$start,$end,$frame,$markerHit,$self->{"dna"});
 					$newSeq =~ s/\*/X/g;	# bioperl uses * for stop codons but we want to give X to hmmer later
