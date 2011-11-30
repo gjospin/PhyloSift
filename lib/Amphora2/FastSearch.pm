@@ -119,7 +119,7 @@ sub RunSearch {
 
     # parse the hits to marker genes
     my $hitsref;
-    if(defined $self->{"coverage"} && (!defined $self->{"isolate"} || $self->{"isolate"} != 1)){
+    if($length eq "long" && $seqtype ne "protein" && (!defined $self->{"isolate"} || $self->{"isolate"} != 1)){
 	$hitsref = get_hits_contigs($self,$resultsfile, $searchtype);
     }else{
 	$hitsref = get_hits($self,$resultsfile, $searchtype);
@@ -351,7 +351,7 @@ sub get_hits_contigs{
 		# running on long reads or an assembly
 		# allow each region of a sequence to have a top hit
 		# do not allow overlap
-		if(defined($contig_top_bitscore{$query}{$markerName}) && $contig_top_bitscore{$query}{$markerName} - $bestHitsBitScoreRange < $bitScore){
+		if(defined($contig_top_bitscore{$query}{$markerName})){
 			my $i=0;
 			for(; $i<@{$contig_hits{$query}}; $i++){
 				my $prevhitref=$contig_hits{$query}->[$i];
@@ -378,6 +378,7 @@ sub get_hits_contigs{
 				# no overlap was found, include this hit
 				my @hitdata = [$markerName, $bitScore, $query_start, $query_end];
 				push(@{$contig_hits{$query}}, @hitdata);
+				print "Including additional hit, hit count now ".scalar(@{$contig_hits{$query}})."\n";
 			}
 		}elsif(!defined($contig_top_bitscore{$query}{$markerName})){
 			my @hitdata = [$markerName, $bitScore, $query_start, $query_end];
@@ -433,7 +434,7 @@ sub get_hits{
 		}#else do nothing
 	}
     }
-    close(blastIN);
+	    close(blastIN);
     if($isolateMode==1){
 	# reading the output a second to check the bitscore ranges from the top score
 	open(blastIN,$hitfilename)or die "Couldn't open $hitfilename\n";
