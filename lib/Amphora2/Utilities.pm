@@ -459,9 +459,10 @@ sub getTrimfinalFastaMarkerFile{
     my $self = shift;
     my $marker= shift;
     if($self->{"updated"} == 0){
-        return "$marker.trimfinal.fasta";
+	return "$marker.trimfinal.fasta";
     }else{
-        return "$marker.updated.fasta";
+        return $self->{"alignDir"}."/$marker.updated.hmm.fasta";
+#        return "$Amphora2::Utilities::marker_dir/$marker.updated.fasta";
     }
 }
 
@@ -643,20 +644,21 @@ sub get_sequence_input_type {
 	
 	for( my $i=0; $i<200; $i++ ){
 		my $seekpos = int(rand($filesize-100));
+		$seekpos = 0 if($i==0); # always start with the first line in case the sequence is on a single line!
 		seek(FILE, $seekpos, 0);
 		$counter = 0;
 		my $line = <FILE>;	# burn a line to be sure we get to sequence
 		while( $line = <FILE> ){
 			if($line =~ /^>/){
 				$format = "fasta";
-				last;
-			}
-			if($line =~ /^@/ || $line =~ /^\+/){
+				last if $i>0;
+			}elsif($line =~ /^@/ || $line =~ /^\+/){
 				$format = "fastq";
-				last;
+				last if $i>0;
+			}else{
+				$counter += length($line);		
+				$dnacount += $line =~ tr/[ACGTacgt]//;
 			}
-			$counter += length($line);		
-			$dnacount += $line =~ tr/[ACGTacgt]//;
 		}
 		$allcount += $counter;
 		last if($counter > 500);	# found a long read
