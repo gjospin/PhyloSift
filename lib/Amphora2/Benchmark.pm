@@ -26,12 +26,13 @@ my %correctReadPlacement=();
 my %refTaxa = ();
 sub runBenchmark{
     my $self = shift;
+    my $output_path = shift;
     (%nameidmap, %idnamemap)= Amphora2::Summarize::readNcbiTaxonNameMap();
     %parent = Amphora2::Summarize::readNcbiTaxonomyStructure();
-    %refTaxa = getInputTaxa($self->{"readsFile"});    
+    %refTaxa = getInputTaxa($self->{"readsFile"});
     print "Number of reads counted = ".scalar(keys(%readSource))."\n";
     
-    readSeqSummary($self->{"fileDir"});
+    readSeqSummary($self, $output_path, \%readSource);
 
 }
 
@@ -43,7 +44,10 @@ prints the percentage of all PLACED reads that have the correct taxonmic ID
 =cut
 
 sub readSeqSummary{
-    my $targetDir = shift;
+    my $self = shift;
+    my $output_path = shift;
+    my $readSource = shift;
+    my $targetDir = $self->{"fileDir"};
     open(fileIN,$targetDir."/sequence_taxa.txt");
     my %topReadScore = (); 
     my %allPlacedScore = ();
@@ -103,24 +107,7 @@ sub readSeqSummary{
 	}
     }
     my $readNumber = scalar(keys(%topReadScore));
-#    foreach my $m (keys %matchTop){
-#	next if $m eq "no rank";
-	#print "Match : $m\t".$match{$m}/$readNumber."\n";
-#	print "Top placed Matches : $m\t".$matchTop{$m}."\n";
-#}
-    print "\n";
-    print "Top placed Matches : Superkingdom\t".100*$matchTop{"superkingdom"}/$readNumber."\n";
-    print "Top placed Matches : Phylum\t".100*$matchTop{"phylum"}/$readNumber."\n";
-    print "Top placed Matches : Subphylum\t".100*$matchTop{"subphylum"}/$readNumber."\n";
-    print "Top placed Matches : Class\t".100*$matchTop{"class"}/$readNumber."\n";
-    print "Top placed Matches : Order\t".100*$matchTop{"order"}/$readNumber."\n";
-    print "Top placed Matches : Family\t".100*$matchTop{"family"}/$readNumber."\n";
-    print "Top placed Matches : Genus\t".100*$matchTop{"genus"}/$readNumber."\n";
-    print "Top placed Matches : Species\t".100*$matchTop{"species"}/$readNumber."\n";
-    print "Top placed Matches : Subspecies\t".100*$matchTop{"subspecies"}/$readNumber."\n";
-    print "Top placed Matches : No rank\t".100*$matchTop{"no rank"}/$readNumber."\n";
-    print "\n";
-    print "Total placed Reads : $readNumber\n";
+
     my $allReadNumber = 0;
     my $totalProb=0;
     my %rankTotalProb = ();
@@ -150,6 +137,124 @@ sub readSeqSummary{
 	    }
         }
     }
+	chdir($output_path) if defined($output_path);
+	report_text($self, "accuracy.txt", \%matchTop, \%matchAll, $readNumber, $allReadNumber, $totalProb, \%rankTotalProb);
+	report_csv($self, \%matchTop, \%matchAll, $readNumber, $allReadNumber, $totalProb, \%rankTotalProb);
+}
+
+#    foreach my $m (keys %matchTop){
+#	next if $m eq "no rank";
+	#print "Match : $m\t".$match{$m}/$readNumber."\n";
+#	print "Top placed Matches : $m\t".$matchTop{$m}."\n";
+#}
+
+sub report_flot_json{
+	my $mtref = shift;
+	my $maref = shift;
+	my $readNumber = shift;
+	my $allReadNumber = shift;
+	my $totalProb = shift;
+	my $rtpref = shift;
+	my %matchTop = %$mtref;
+	my %matchAll = %$maref;
+	my %rankTotalProb = %$rtpref;
+	
+#	open(JSON, ">amphora2_accuracy.json");
+}
+
+# get the date in YYYYMMDD format
+sub get_date_YYYYMMDD {
+	my @timerval = localtime();
+	my $datestr = (1900+$timerval[5]);
+	$datestr .= 0 if $timerval[4] < 9; 
+	$datestr .= ($timerval[4]+1);
+	$datestr .= 0 if $timerval[3] < 9; 
+	$datestr .= $timerval[3];
+	return $datestr;
+}
+
+sub reportTiming{
+	my $self = shift;
+	my $data = shift;
+	my $output_path = shift;
+	my $timing_file = $output_path."/timing.csv";
+	unless(-f $timing_file){
+		open(TIMING, ">$timing_file");
+		print TIMING "Date,".join(",",keys(%$data))."\n";
+		close TIMING;
+	}
+	open(TIMING, ">>$timing_file");
+	print TIMING get_date_YYYYMMDD;
+	foreach my $time(keys(%$data)){
+		print TIMING ",".$data->{$time};
+	}
+	print TIMING "\n";
+}
+
+sub report_csv{
+	my $self = shift;
+	my $mtref = shift;
+	my $maref = shift;
+	my $readNumber = shift;
+	my $allReadNumber = shift;
+	my $totalProb = shift;
+	my $rtpref = shift;
+	my %matchTop = %$mtref;
+	my %matchAll = %$maref;
+	my %rankTotalProb = %$rtpref;
+
+	my $tophitfile = $self->{"readsFile"}."tophits.csv";
+	unless(-f $tophitfile){
+		open(TOPHITS, ">$tophitfile");
+		print TOPHITS "Date,Superkingdom,Phylum,Subphylum,Class,Order,Family,Genus,Species,Subspecies,No Rank\n";
+		close TOPHITS;
+	}
+
+	my $date = get_date_YYYYMMDD();
+
+	# append an entry to the tophits file
+	open(TOPHITS, ">>$tophitfile");
+	print TOPHITS $date;
+	print TOPHITS ",".100*$matchTop{"superkingdom"}/$readNumber;
+	print TOPHITS ",".100*$matchTop{"phylum"}/$readNumber;
+	print TOPHITS ",".100*$matchTop{"subphylum"}/$readNumber;
+	print TOPHITS ",".100*$matchTop{"class"}/$readNumber;
+	print TOPHITS ",".100*$matchTop{"order"}/$readNumber;
+	print TOPHITS ",".100*$matchTop{"family"}/$readNumber;
+	print TOPHITS ",".100*$matchTop{"genus"}/$readNumber;
+	print TOPHITS ",".100*$matchTop{"species"}/$readNumber;
+	print TOPHITS ",".100*$matchTop{"subspecies"}/$readNumber;
+	print TOPHITS ",".100*$matchTop{"no rank"}/$readNumber;
+	print TOPHITS "\n";
+	
+}
+
+sub report_text{
+    my $outputfile = shift;
+    my $mtref = shift;
+    my $maref = shift;
+    my $readNumber = shift;
+    my $allReadNumber = shift;
+    my $totalProb = shift;
+    my $rtpref = shift;
+    my %matchTop = %$mtref;
+    my %matchAll = %$maref;
+    my %rankTotalProb = %$rtpref;
+
+    print "\n";
+    print "Top placed Matches : Superkingdom\t".100*$matchTop{"superkingdom"}/$readNumber."\n";
+    print "Top placed Matches : Phylum\t".100*$matchTop{"phylum"}/$readNumber."\n";
+    print "Top placed Matches : Subphylum\t".100*$matchTop{"subphylum"}/$readNumber."\n";
+    print "Top placed Matches : Class\t".100*$matchTop{"class"}/$readNumber."\n";
+    print "Top placed Matches : Order\t".100*$matchTop{"order"}/$readNumber."\n";
+    print "Top placed Matches : Family\t".100*$matchTop{"family"}/$readNumber."\n";
+    print "Top placed Matches : Genus\t".100*$matchTop{"genus"}/$readNumber."\n";
+    print "Top placed Matches : Species\t".100*$matchTop{"species"}/$readNumber."\n";
+    print "Top placed Matches : Subspecies\t".100*$matchTop{"subspecies"}/$readNumber."\n";
+    print "Top placed Matches : No rank\t".100*$matchTop{"no rank"}/$readNumber."\n";
+    print "\n";
+    print "Total placed Reads : $readNumber\n";
+
     print "\n";
     print "All placements Matches : Superkingdom\t".100*$matchAll{"superkingdom"}/$allReadNumber."\n";
     print "All placements Matches : Phylum\t".100*$matchAll{"phylum"}/$allReadNumber."\n";
@@ -254,7 +359,7 @@ sub getAncestorArray{
 
 You can find documentation for this module with the perldoc command.
 
-    perldoc Amphora2::Summarize
+    perldoc Amphora2::Benchmark
 
 
 You can also look for information at:
