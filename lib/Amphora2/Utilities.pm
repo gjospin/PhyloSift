@@ -656,18 +656,19 @@ sub get_sequence_input_type {
 			if($line =~ /^>/){
 				$format = "fasta";
 				last if $i>0;
+				$i++;
 			}elsif($line =~ /^@/ || $line =~ /^\+/){
 				$format = "fastq";
 				last if $i>0;
+				$i++;
 			}else{
-				$counter += length($line);		
+				$counter += length($line);
 				$dnacount += $line =~ tr/[ACGTacgt]//;
 			}
 		}
 		$allcount += $counter;
 		last if($counter > 500);	# found a long read
 	}
-	print STDERR "dna frac is ".($dnacount / $allcount)."\n";
 	$seqtype = "protein" if ($dnacount < $allcount * 0.75);
 	$length = "short" if $counter < 500;
 	return ($seqtype, $length, $format);
