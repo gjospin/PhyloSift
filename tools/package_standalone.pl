@@ -42,8 +42,10 @@ chdir("..");
 chdir("version-0.95");
 `perl Makefile.PL`;
 `make`;
-`mv blib/lib/version* ../Amphora-2/lib/`;
-`mv blib/arch/auto/version ../Amphora-2/lib/arch/auto/`;
+# put these in "legacy" because we only want to use them if the perl version is ancient -- including them breaks newer perls
+`mkdir ../Amphora-2/legacy/`;
+`mv blib/lib/version* ../Amphora-2/legacy/`;
+`mv blib/arch/auto/version ../Amphora-2/legacy/arch/auto/`;
 chdir("..");
 
 my @timerval = localtime();

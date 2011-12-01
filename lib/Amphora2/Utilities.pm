@@ -3,6 +3,8 @@ package Amphora2::Utilities;
 #use 5.006;
 use strict;
 use warnings;
+use FindBin qw($Bin);
+BEGIN { unshift(@INC, "$FindBin::Bin/legacy/") if $[ < 5.010; }
 use File::Basename;
 use Bio::AlignIO;
 use Bio::SimpleAlign;
@@ -10,7 +12,6 @@ use Bio::Align::Utilities qw(:all);
 use POSIX ();
 use LWP::Simple;
 use Carp;
-use FindBin qw($Bin);
 require File::Fetch;
 if($^O=~/arwin/){
 	use lib "$FindBin::Bin/osx/darwin-thread-multi-2level/";
