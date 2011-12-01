@@ -612,15 +612,18 @@ sub concatenateAlignments {
 my %timers;
 sub start_timer {
     my $timername = shift;
-    my @timerval=localtime(time);
-    $timers{$timername} = \@timerval;
+    my $t = time;
+    my @timerval=localtime($t);
+    $timers{$timername} = $t;
     debug join("Before $timername %4d-%02d-%02d %02d:%02d:%02d\n",$timerval[5]+1900,$timerval[4]+1,$timerval[3],$timerval[2],$timerval[1],$timerval[0]);
 }
 
 sub end_timer {
     my $timername = shift;
-    my @timerval=localtime(time);
+    my $t = time;
+    my @timerval=localtime($t);
     debug join("After $timername %4d-%02d-%02d %02d:%02d:%02d\n",$timerval[5]+1900,$timerval[4]+1,$timerval[3],$timerval[2],$timerval[1],$timerval[0]);
+    return $t-$timers{$timername};
 }
 
 
