@@ -31,9 +31,9 @@ for(my $bI=0; $bI<@benchmark_data; $bI++){
 	$ff->fetch(to=>"./	");
 	# run through the command-line just to test the interface as well
 	print STDOUT "Running $amphora2/amphora2 all -f $seqname\n";
-	start_timer($seqname);
+	Amphora2::Utilities::start_timer($seqname);
 	system("$amphora2/amphora2 all -f $seqname");
-	my $seconds = end_timer($seqname);
+	my $seconds = Amphora2::Utilities::end_timer($seqname);
 
 	# now benchmark
 	$a2->{"readsFile"} = $seqname;
