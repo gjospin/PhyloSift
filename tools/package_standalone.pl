@@ -43,7 +43,7 @@ chdir("version-0.95");
 `perl Makefile.PL`;
 `make`;
 # put these in "legacy" because we only want to use them if the perl version is ancient -- including them breaks newer perls
-`mkdir ../Amphora-2/legacy/`;
+`mkdir -p ../Amphora-2/legacy/arch/auto`;
 `mv blib/lib/version* ../Amphora-2/legacy/`;
 `mv blib/arch/auto/version ../Amphora-2/legacy/arch/auto/`;
 chdir("..");
