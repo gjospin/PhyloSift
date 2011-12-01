@@ -4,7 +4,7 @@ package Amphora2::Utilities;
 use strict;
 use warnings;
 use FindBin qw($Bin);
-BEGIN { unshift(@INC, "$FindBin::Bin/legacy/") if $[ < 5.010; }
+BEGIN { unshift(@INC, "$FindBin::Bin/legacy/") if $] < 5.01; }
 use File::Basename;
 use Bio::AlignIO;
 use Bio::SimpleAlign;
