@@ -27,7 +27,7 @@ chdir("Bio-Phylo-0.45");
 `mv blib/lib/Bio/Phylo* ../Amphora-2/lib/Bio/`;
 chdir("..");
 
-`wget http://cpan.uwinnipeg.ca/cpan/authors/id/T/TO/TODDR/Locale-Maketext-1.19.tar.gz`;
+`wget http://search.cpan.org/CPAN/authors/id/T/TO/TODDR/Locale-Maketext-1.19.tar.gz`;
 `tar xvzf Locale-Maketext-1.19.tar.gz`;
 chdir("Locale-Maketext-1.19");
 # remove the following files because they break Todd's ancient perldoc
