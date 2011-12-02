@@ -492,7 +492,7 @@ sub writeCandidates{
 				$frame *= -1 if( $curhit[2] > $curhit[3]);
 				my $seqlen = abs($curhit[2] - $curhit[3])+1;
 				# check length again in AA units
-				$min_len = $markerLength{$markerHit} / 3 < $seq->length ? $markerLength{$markerHit} / 3 : $seq->length;
+				$min_len = $markerLength{$markerHit} < $seq->length / 3? $markerLength{$markerHit} : $seq->length / 3;
 				next unless (($seqlen/3)/$min_len >= $align_fraction);
 				if($seqlen % 3 == 0){
 					$newSeq = translateFrame($seq->id,$seq->seq,$start,$end,$frame,$markerHit,$self->{"dna"});
