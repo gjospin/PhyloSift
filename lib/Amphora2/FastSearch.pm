@@ -338,7 +338,7 @@ sub get_hits_contigs{
 				if(	$prevhit[2] < $prevhit[3] && $query_start < $query_end &&
 					$prevhit[2] < $query_end - $max_hit_overlap && 
 					$query_start + $max_hit_overlap < $prevhit[3]){
-					print STDERR "Found overlap $query and $markerName, $query_start:$query_end\n";
+#					print STDERR "Found overlap $query and $markerName, $query_start:$query_end\n";
 					$contig_hits{$query}->[$i] = [$markerName, $bitScore, $query_start, $query_end] if ($bitScore > $prevhit[1]);
 					last;
 				}
@@ -346,7 +346,7 @@ sub get_hits_contigs{
 				if(	$prevhit[2] > $prevhit[3] && $query_start > $query_end &&
 					$prevhit[3] < $query_start - $max_hit_overlap && 
 					$query_end + $max_hit_overlap < $prevhit[2]){
-					print STDERR "Found overlap $query and $markerName, $query_start:$query_end\n";
+#					print STDERR "Found overlap $query and $markerName, $query_start:$query_end\n";
 					$contig_hits{$query}->[$i] = [$markerName, $bitScore, $query_start, $query_end] if ($bitScore > $prevhit[1]);
 					last;
 				}
@@ -355,7 +355,6 @@ sub get_hits_contigs{
 				# no overlap was found, include this hit
 				my @hitdata = [$markerName, $bitScore, $query_start, $query_end];
 				push(@{$contig_hits{$query}}, @hitdata);
-				print "Including additional hit, hit count now ".scalar(@{$contig_hits{$query}})."\n";
 			}
 		}elsif(!defined($contig_top_bitscore{$query}{$markerName})){
 			my @hitdata = [$markerName, $bitScore, $query_start, $query_end];
@@ -477,7 +476,6 @@ sub writeCandidates{
 			# if it looks like the query seq goes off the marker boundary
 			my $min_len = $markerLength{$markerHit} < $seq->length ? $markerLength{$markerHit} : $seq->length;
 			next unless (($end-$start)/$min_len >= $align_fraction);
-			print STDERR "min_len $min_len, start $start, end $end, alnfrac $align_fraction\n";
 
 			$start -= FLANKING_LENGTH;
 			$end += FLANKING_LENGTH;
