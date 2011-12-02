@@ -114,7 +114,6 @@ sub RunSearch {
     }else{
 	$searchtype = "rap";
         $resultsfile = executeRap($self);
-	build_lookup_table($self);
     }
 
     # parse the hits to marker genes
@@ -141,28 +140,6 @@ sub readMarkerLengths{
 			}
 		}
 	}
-}
-
-=head2 build_lookup_table
-
-=cut
-
-sub build_lookup_table{
-    my $self=shift;
-    debug "Building the lookup table for all markers";
-    foreach my $markName (@markers){
-	open(markIN,$Amphora2::Utilities::marker_dir."/".$markName.".faa");
-	while(<markIN>){
-	    chomp($_);
-	    if ($_ =~ m/^>(\S+)/){
-		$marker_lookup{$1}=$markName;
-	    }
-	}
-	close(markIN);
-	debug ".";
-    }
-    debug "\n";
-    return $self;
 }
 
 =head2 blastXoof_table
@@ -413,11 +390,6 @@ sub get_hits{
 		$query_end, $eight, $nine, $ten, $bitScore) = split(/\t/,$_);	
 	my $markerName = getMarkerName($subject, $searchtype);
 
-#	if($searchtype ne "blast" && $self->{"dna"}){
-		# RAPsearch seems to have an off-by-one on its DNA coordinates
-#		$query_start -= 2;
-#		$query_end -= 2;
-#	}
 	#parse once to get the top score for each marker (if isolate is ON, parse again to check the bitscore ranges)
 	if($isolateMode==1){
 	    # running on a genome assembly, allow only 1 hit per marker (TOP hit)
@@ -473,7 +445,6 @@ sub getMarkerName{
 	}else{
 		my @marker=split(/\_\_/,$subject);
 		$markerName = $marker[0];
-#		$markerName = $marker_lookup{$subject};
 	}
 	return $markerName;
 }
@@ -506,6 +477,7 @@ sub writeCandidates{
 			# if it looks like the query seq goes off the marker boundary
 			my $min_len = $markerLength{$markerHit} < $seq->length ? $markerLength{$markerHit} : $seq->length;
 			next unless (($end-$start)/$min_len >= $align_fraction);
+			print STDERR "min_len $min_len, start $start, end $end, alnfrac $align_fraction\n";
 
 			$start -= FLANKING_LENGTH;
 			$end += FLANKING_LENGTH;
@@ -522,6 +494,7 @@ sub writeCandidates{
 				$frame *= -1 if( $curhit[2] > $curhit[3]);
 				my $seqlen = abs($curhit[2] - $curhit[3])+1;
 				# check length again in AA units
+				$min_len = $markerLength{$markerHit} / 3 < $seq->length ? $markerLength{$markerHit} / 3 : $seq->length;
 				next unless (($seqlen/3)/$min_len >= $align_fraction);
 				if($seqlen % 3 == 0){
 					$newSeq = translateFrame($seq->id,$seq->seq,$start,$end,$frame,$markerHit,$self->{"dna"});
