@@ -413,7 +413,7 @@ sub runMarkerAlign{
     #Align Markers
     my $threadNum=1;
     Amphora2::MarkerAlign::MarkerAlign( $self, $markRef );
-    Amphora2::BeastInterface::Export($self, $markRef, $self->{"fileDir"}."/beast.xml");
+#    Amphora2::BeastInterface::Export($self, $markRef, $self->{"fileDir"}."/beast.xml");
     Amphora2::Utilities::end_timer("Alignments");
     if($continue != 0){
 	$self->{"mode"} = 'placer';
