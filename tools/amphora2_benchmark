@@ -2,6 +2,7 @@
 use strict;
 use warnings;
 use File::Basename;
+use Cwd;
 
 my $amphora2 = $ARGV[0];
 my $report_path = $ARGV[1];
