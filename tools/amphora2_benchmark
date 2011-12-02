@@ -38,7 +38,7 @@ for(my $bI=0; $bI<@benchmark_data; $bI++){
 
 	# now benchmark
 	$a2->{"readsFile"} = $seqname;
-	$a2->{"fileDir"} = dirname(".");
+	$a2->{"fileDir"} = cwd()."/Amph_temp/$seqname/";;
 	Amphora2::Benchmark::runBenchmark($a2, $report_path);
 	
 	$times{$seqname} = $seconds;

@@ -89,6 +89,7 @@ sub readSeqSummary{
     #comparing the sequence_taxa information with the Source taxons
 #    my %overallScore;
     my %matchTop=();
+    init_taxonomy_levels(\%matchTop);
     foreach my $readID (keys %topReadScore){
 	#look at each taxonomic level for each Read
 	my @ancArrayRead = getAncestorArray($topReadScore{$readID}->[1]);
@@ -112,6 +113,8 @@ sub readSeqSummary{
     my $totalProb=0;
     my %rankTotalProb = ();
     my %matchAll=();
+    init_taxonomy_levels(\%matchAll);
+    init_taxonomy_levels(\%rankTotalProb,0.0000000000000001);	# avoid divide by zero
     foreach my $readID (keys %allPlacedScore){
 	foreach my $tax (keys %{$allPlacedScore{$readID}}){
 	    $allReadNumber++;
@@ -137,9 +140,9 @@ sub readSeqSummary{
 	    }
         }
     }
-	chdir($output_path) if defined($output_path);
+
 #	report_text($self, "accuracy.txt", \%matchTop, \%matchAll, $readNumber, $allReadNumber, $totalProb, \%rankTotalProb);
-	report_csv($self, \%matchTop, \%matchAll, $readNumber, $allReadNumber, $totalProb, \%rankTotalProb);
+	report_csv($self, $output_path, \%matchTop, \%matchAll, $readNumber, $allReadNumber, $totalProb, \%rankTotalProb);
 }
 
 #    foreach my $m (keys %matchTop){
@@ -147,6 +150,22 @@ sub readSeqSummary{
 	#print "Match : $m\t".$match{$m}/$readNumber."\n";
 #	print "Top placed Matches : $m\t".$matchTop{$m}."\n";
 #}
+
+sub init_taxonomy_levels{
+	my $ncbihash = shift;
+	my $initval = shift;
+	$initval = 0 unless defined $initval;
+	$ncbihash->{"superkingdom"}=$initval;
+	$ncbihash->{"phylum"}=$initval;
+	$ncbihash->{"subphylum"}=$initval;
+	$ncbihash->{"class"}=$initval;
+	$ncbihash->{"order"}=$initval;
+	$ncbihash->{"family"}=$initval;
+	$ncbihash->{"genus"}=$initval;
+	$ncbihash->{"species"}=$initval;
+	$ncbihash->{"subspecies"}=$initval;
+	$ncbihash->{"no rank"}=$initval;
+}
 
 sub report_flot_json{
 	my $mtref = shift;
@@ -193,6 +212,7 @@ sub reportTiming{
 
 sub report_csv{
 	my $self = shift;
+	my $report_dir = shift;
 	my $mtref = shift;
 	my $maref = shift;
 	my $readNumber = shift;
@@ -203,7 +223,7 @@ sub report_csv{
 	my %matchAll = %$maref;
 	my %rankTotalProb = %$rtpref;
 
-	my $tophitfile = $self->{"readsFile"}."tophits.csv";
+	my $tophitfile = $report_dir."/".$self->{"readsFile"}.".tophit.csv";
 	unless(-f $tophitfile){
 		open(TOPHITS, ">$tophitfile");
 		print TOPHITS "Date,Superkingdom,Phylum,Subphylum,Class,Order,Family,Genus,Species,Subspecies,No Rank\n";
