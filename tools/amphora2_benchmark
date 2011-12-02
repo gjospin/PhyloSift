@@ -1,6 +1,7 @@
 #!/usr/bin/env perl
 use strict;
 use warnings;
+use File::Basename;
 
 my $amphora2 = $ARGV[0];
 my $report_path = $ARGV[1];
@@ -19,8 +20,8 @@ $a2->readAmphora2Config();
 Amphora2::Utilities::dataChecks($a2);
 
 my @benchmark_data = (
-["A simulated illumina dataset with 10 organisms","http://edhar.genomecenter.ucdavis.edu/~koadman/amphora2/accuracy/sim_illumina.fna"], 
 ["A simulated 454 dataset with 10 organisms","http://edhar.genomecenter.ucdavis.edu/~koadman/amphora2/accuracy/sim_454.fna"],
+["A simulated illumina dataset with 10 organisms","http://edhar.genomecenter.ucdavis.edu/~koadman/amphora2/accuracy/sim_illumina.fna"], 
 );
 
 my %times;
