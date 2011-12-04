@@ -21,6 +21,7 @@ my $reverseTranslate=0;
 my $besthit=0;
 my $updated=0;
 my $coverage;
+my $configuration;
 my $help=0;
 my $usage = qq~
 
@@ -69,6 +70,7 @@ GetOptions("threaded=i" => \$threadNum,
 	   "besthit" => \$besthit, #should we keep only the best hit when there are multiple?
 	   "coverage=s" => \$coverage, #provides a contig/scaffold coverage file
 	   "updated_markers"=> \$updated, #Indicates if Amphora2 uses the updated versions of the Markers.
+	   "config=s"=> \$configuration, #custom config file
 	   "h"=>\$help,#prints the usage part of the README file
 	   "help"=>\$help,#same as -h
     )|| die $usage;
@@ -108,6 +110,7 @@ $newObject->{"besthit"} = $besthit;
 $newObject->{"reverseTranslate"} = $reverseTranslate;
 $newObject->{"updated"}=$updated;
 $newObject->{"coverage"}=$coverage;
+$newObject->{"configuration"}=$configuration if defined($configuration);
 
 my $readsFile = $newObject->getReadsFile;
 debug "FORCE: ".$force."\n";

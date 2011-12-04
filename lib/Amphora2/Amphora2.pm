@@ -192,12 +192,13 @@ sub run {
 # reads the Amphora2 configuration file
 sub readAmphora2Config {
     my $self = shift;
+    my $custom_config = $self->{"configuration"};
     # first get the install prefix of this script
     my $scriptpath = dirname($0);
     # try first a config in the script dir, in case we're running from
     # a dev directory.  then config in system dir, then user's home.
     # let each one override its predecessor.
-    { package Amphora2::Settings; do "$scriptpath/amphora2rc"; do "$scriptpath/../amphora2rc"; do "$scriptpath/../etc/amphora2rc"; do "$ENV{HOME}/.amphora2rc" }
+    { package Amphora2::Settings; do "$scriptpath/amphora2rc"; do "$scriptpath/../amphora2rc"; do "$scriptpath/../etc/amphora2rc"; do "$ENV{HOME}/.amphora2rc"; do $custom_config if defined $custom_config; }
     return $self;
 }
 
