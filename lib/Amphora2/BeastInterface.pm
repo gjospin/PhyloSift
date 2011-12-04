@@ -5,7 +5,6 @@ use strict;
 use Cwd;
 use Bio::SeqIO;
 use Bio::AlignIO;
-use Math::Random qw(:all);
 
 =head1 NAME
 
@@ -108,6 +107,7 @@ sub Export($$$){
 		}	
 
 	}
+	return if(@metareadseqs == 0); # nothing to see here...move along
 	writeXML($outputFile, $markRef, \%refseqs, \@metareadseqs, \@alignio, \@metaalignio, 1);
 }
 

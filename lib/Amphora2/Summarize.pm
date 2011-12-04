@@ -7,7 +7,6 @@ use Amphora2::Amphora2;
 use Carp;
 use Bio::Phylo;
 use Bio::Phylo::Forest::Tree;
-require Math::Random;
 if($^O=~/arwin/){
 	use lib "$FindBin::Bin/osx/darwin-thread-multi-2level/";
 }
@@ -319,6 +318,16 @@ sub summarize {
     }
     close(TAXAHPDOUT);
 
+}
+
+#
+# non-functional until dependency on Math::Random can be eliminated
+#
+sub write_confidence_intervals{
+    my $self = shift;
+    my $ncbireadsref = shift;
+    my $totalreads = shift;
+    my %ncbireads = %$ncbireadsref;
     # normalize to a sampling distribution
     foreach my $key(keys(%ncbireads)){
         $ncbireads{$key}/=$totalreads + 1;
@@ -332,7 +341,8 @@ sub summarize {
     my $sample_count = 100;
     my %samples;
     for( my $sI=0; $sI<$sample_count; $sI++ ){
-        my @sample = Math::Random::random_multinomial( $totalreads, @valarray );
+#        my @sample = Math::Random::random_multinomial( $totalreads, @valarray );
+	my @sample;
         my $kI=0;
         foreach my $key(keys(%ncbireads)){
             push(@{ $samples{$key} }, $sample[$kI++]);
