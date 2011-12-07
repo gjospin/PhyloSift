@@ -92,10 +92,8 @@ sub get_program_path {
 	$progcheck = $Bin."/bin/".$progname unless( $progcheck =~ /$progname/  || !(-x $Bin."/bin/".$progname) );
 	# check the OS and use Mac binaries if needed
 	if($^O =~ /arwin/){
-		$progcheck = $Bin."/osx/".$progname unless( $progcheck =~ /$progname/  && !(-x $Bin."/".$progname) );
-	}else{
-	    #I don't think this line is needed because it is taken care of 5 lines before
-		#$progcheck = $Bin."/bin/".$progname unless( $progcheck =~ /$progname/  && !(-x $Bin."/".$progname) );
+		$progcheck = $Bin."/osx/".$progname unless( $progcheck =~ /$progname/  && !(-x $Bin."/".$progname)  );
+		$progcheck = $Bin."/osx/".$progname if($progcheck =~ /$Bin\/bin/); # don't use the linux binary!
 	}
 	return $progcheck;
 }
