@@ -668,6 +668,7 @@ sub get_sequence_input_type {
 		last if($counter > 500);	# found a long read
 	}
 	$seqtype = "protein" if ($dnacount < $allcount * 0.75);
+	$seqtype = "dna" if ($format eq "fastq"); # nobody using protein fastq (yet)
 	$length = "short" if $counter < 500;
 	return ($seqtype, $length, $format);
 }
