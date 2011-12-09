@@ -638,6 +638,7 @@ sub get_sequence_input_type {
 	open(FILE, $file);
 	my $filesize = -s "$file";
 	my $counter = 0;
+	my $maxfound = 0;
 	my $allcount = 0;
 	my $dnacount = 0;
 	my $seqtype="dna";
@@ -661,15 +662,17 @@ sub get_sequence_input_type {
 				$i++;
 			}else{
 				$counter += length($line);
-				$dnacount += $line =~ tr/[ACGTacgt]//;
+				$dnacount += $line =~ tr/[ACGTNacgtn]//;
 			}
 		}
+		$maxfound = $counter if $maxfound < $counter;
 		$allcount += $counter;
 		last if($counter > 500);	# found a long read
 	}
 	$seqtype = "protein" if ($dnacount < $allcount * 0.75);
 	$seqtype = "dna" if ($format eq "fastq"); # nobody using protein fastq (yet)
-	$length = "short" if $counter < 500;
+	my $aamult = $seqtype eq "protein" ? 3 : 1;
+	$length = "short" if $maxfound < (500 / $aamult);
 	return ($seqtype, $length, $format);
 }
 
