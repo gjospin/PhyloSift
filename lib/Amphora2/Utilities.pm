@@ -627,12 +627,52 @@ sub end_timer {
 
 =head2 get_sequence_input_type
 
+Checks whether input is either short sequence reads, e.g. < 500nt or assembled fragments.
+Reads the whole file to find the longest fragment.
+
+=cut
+
+sub get_sequence_input_type {
+	my $file = shift;
+	open(FILE, $file);
+	my $counter = 0;
+	my $maxfound = 0;
+	my $dnacount = 0;
+	my $seqtype="dna";
+	my $length="long";
+	my $format="unknown";
+	my $allcount=0;
+	while( my $line = <FILE> ){
+		if($line =~ /^>/){
+			$maxfound =  $counter > $maxfound ? $counter : $maxfound;
+			$counter = 0;
+			$format = "fasta" if $format eq "unknown";
+		}elsif($line =~ /^@/ || $line =~ /^\+/){
+			$counter = 0;
+			$format = "fastq" if $format eq "unknown";
+		}else{
+			$counter += length($line)-1;
+			$dnacount += $line =~ tr/[ACGTNacgtn]//;
+			$allcount += length($line)-1;
+		}
+	}
+	$maxfound =  $counter > $maxfound ? $counter : $maxfound;
+	$seqtype = "protein" if ($dnacount < $allcount * 0.75);
+	$seqtype = "dna" if ($format eq "fastq"); # nobody using protein fastq (yet)
+	my $aamult = $seqtype eq "protein" ? 3 : 1;
+	$length = "short" if $maxfound < (500 / $aamult);
+	return ($seqtype, $length, $format);
+}
+
+
+=head2 get_sequence_input_type_quickndirty
+
 Checks whether input is either short sequence reads, e.g. < 500nt or assembled fragments
 without reading the whole file.
 
 =cut
 
-sub get_sequence_input_type {
+sub get_sequence_input_type_quickndirty {
 	my $file = shift;
 	my $maxshortread = 500;
 	open(FILE, $file);
