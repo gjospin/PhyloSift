@@ -12,7 +12,6 @@
 #include <boost/dynamic_bitset.hpp>
 
 using namespace std;
-using namespace boost;
 
 void reconcile( PhyloTree< TreeNode >& reftree, string treefile, unordered_multimap<string, string>& gene_map, string output_fname  );
 
@@ -60,9 +59,9 @@ int main(int argc, char** argv){
 	return 0;
 }
 
-typedef adjacency_list<vecS, vecS, undirectedS, no_property, property< edge_weight_t, double, property< edge_color_t, default_color_type > > > Graph;
-typedef graph_traits< Graph >::vertex_descriptor Vertex;
-typedef graph_traits< Graph >::edge_descriptor GraphEdge;
+typedef boost::adjacency_list<boost::vecS, boost::vecS, boost::undirectedS, boost::no_property, boost::property< boost::edge_weight_t, double, boost::property< boost::edge_color_t, boost::default_color_type > > > Graph;
+typedef boost::graph_traits< Graph >::vertex_descriptor Vertex;
+typedef boost::graph_traits< Graph >::edge_descriptor GraphEdge;
 
 
 typedef std::pair < size_t, size_t >Edge;
@@ -72,7 +71,7 @@ struct PhyloGraph {
 	double* weights;
 	int V;
 	std::size_t E;
-	property_map < Graph, edge_weight_t >::type w;
+	boost::property_map < Graph, boost::edge_weight_t >::type w;
 };
 
 
@@ -81,8 +80,8 @@ struct edge_filter {
   edge_filter(Edge e, Graph* g) : e(e), g(g){ }
 
   bool operator()(const GraphEdge& edge) const {
-	size_t s = source(edge, *g);
-	size_t t = target(edge, *g);
+	size_t s = boost::source(edge, *g);
+	size_t t = boost::target(edge, *g);
 	if (( s == e.first && t == e.second ) ||
 		(s == e.second && t == e.first) ){
 		return false; 
@@ -93,14 +92,14 @@ struct edge_filter {
   Graph* g;
 };
 
-typedef filtered_graph<Graph, edge_filter > FilteredGraph;
-typedef graph_traits< Graph >::vertex_descriptor FilteredVertex;
-typedef graph_traits< Graph >::edge_descriptor FilteredGraphEdge;
+typedef boost::filtered_graph<Graph, edge_filter > FilteredGraph;
+typedef boost::graph_traits< Graph >::vertex_descriptor FilteredVertex;
+typedef boost::graph_traits< Graph >::edge_descriptor FilteredGraphEdge;
 
 class count_weight : public boost::default_dfs_visitor 
 {
 public:
-	count_weight( property_map < Graph, edge_weight_t >::type& pm, double& s ) : pmap(pm), sum(s), recording(true) {};
+	count_weight( boost::property_map < Graph, boost::edge_weight_t >::type& pm, double& s ) : pmap(pm), sum(s), recording(true) {};
 	count_weight( const count_weight& cw ) : pmap( cw.pmap ), sum( cw.sum ), v(cw.v), recording(cw.recording) {};
 	void start_vertex(Vertex v, const FilteredGraph& g){
 		this->v = v;
@@ -113,7 +112,7 @@ public:
 		if(recording)
 			sum += pmap[e];
 	}
-	property_map < Graph, edge_weight_t >::type& pmap;
+	boost::property_map < Graph, boost::edge_weight_t >::type& pmap;
 	double& sum;
 	int v;
 	bool recording;
@@ -123,7 +122,7 @@ public:
 class record_split : public boost::default_dfs_visitor 
 {
 public:
-	record_split( dynamic_bitset<>& bs, const vector<Vertex>& vertex_map ) : split(bs), vmap( vertex_map ), recording(true) {};
+	record_split( boost::dynamic_bitset<>& bs, const vector<Vertex>& vertex_map ) : split(bs), vmap( vertex_map ), recording(true) {};
 	record_split( const record_split& cw ) : split( cw.split ), v(cw.v), vmap( cw.vmap ), recording(cw.recording) {};
 	void start_vertex(FilteredVertex v, const FilteredGraph& g){
 		this->v = v;
@@ -138,7 +137,7 @@ public:
 		if(v == this->v)	
 			recording = false;
 	}
-	dynamic_bitset<>& split;
+	boost::dynamic_bitset<>& split;
 	const vector<Vertex>& vmap;
 	int v;
 	bool recording;
@@ -164,10 +163,10 @@ void make_graph( PhyloTree< TreeNode >& tree, PhyloGraph& pg ){
 	pg.g = Graph(pg.edge_array, pg.edge_array + pg.E, pg.V);
 
 	// add edge weights
-	pg.w = get(edge_weight, pg.g);
+	pg.w = get(boost::edge_weight, pg.g);
 	double *wp = pg.weights;
-	graph_traits < Graph >::edge_iterator e, e_end;
-	for (boost::tie(e, e_end) = edges(pg.g); e != e_end; ++e)
+	boost::graph_traits < Graph >::edge_iterator e, e_end;
+	for (boost::tie(e, e_end) = boost::edges(pg.g); e != e_end; ++e)
 		pg.w[*e] = *wp++;
 
 } 
@@ -189,18 +188,18 @@ void enumerate_splits( PhyloGraph& pg, vector< boost::dynamic_bitset<> >& splitl
 		edge_filter ef(pg.edge_array[i], &pg.g);
 		FilteredGraph g2(pg.g, ef);
 		Vertex dfsroot = pg.edge_array[i].first;
-		vector<default_color_type> color(num_vertices( g2 ) );
+		vector<boost::default_color_type> color(num_vertices( g2 ) );
 
 		// get the split at this node
-		dynamic_bitset<> split(leafcount);
+		boost::dynamic_bitset<> split(leafcount);
 		record_split rs(split, vertex_map);
 		depth_first_search(g2, rs, &color[0], dfsroot);
 		splitlist.push_back(split);
 	}
 }
 
-void normalize_split( dynamic_bitset<>& split, const vector< vector< int > >& splitmap, int target_size ){
-	dynamic_bitset<> newsplit( target_size );
+void normalize_split( boost::dynamic_bitset<>& split, const vector< vector< int > >& splitmap, int target_size ){
+	boost::dynamic_bitset<> newsplit( target_size );
 	for( int i=0; i<splitmap.size(); i++ )
 		for(int j=0; j<splitmap[i].size(); j++)
 			newsplit.set( splitmap[i][j], split.test(i) );
@@ -217,20 +216,15 @@ void reconcile( PhyloTree< TreeNode >& reftree, string treefile, unordered_multi
 
 //
 // read a tree with edge numberings from pplacer
+// assume jplace format with treestring on second line
 //
 	string line;
 	string treestring;
-	while( getline( treein, line ) ){
-		if(line[0] == '#') line = line.substr(1);
-		stringstream line_str(line);
-		string tok;
-		line_str >> tok;
-		if(tok == "numbered"){
-			line_str >> tok; // reference
-			line_str >> tok; // tree:
-			getline(line_str, treestring);
-		}
-	}
+	getline( treein, line );
+	getline( treein, treestring );
+	size_t qpos = treestring.find("\"");
+	size_t rqpos = treestring.rfind("\"");
+	treestring = treestring.substr( qpos + 1, rqpos - qpos - 1);
 	stringstream treestr(treestring);
 
 	PhyloTree< TreeNode > tree;
@@ -238,20 +232,23 @@ void reconcile( PhyloTree< TreeNode >& reftree, string treefile, unordered_multi
 	cout << "The read tree has " << tree.size() << " nodes\n";
 //
 // remove edge numbers
+// assume jplace format
 //
 	unordered_map<int,int> edgenum_map;
 	for(int i=0; i<tree.size(); i++){
-		size_t atpos = tree[i].name.find("@");
-		int edgenum = -1;
+		size_t atpos = tree[i].name.find("{");
+		size_t ratpos = tree[i].name.rfind("}");
+		int edgenum = -1;		
 		if( atpos == string::npos ){
 			edgenum = atoi(tree[i].name.c_str());
 		}else{
-			edgenum = atoi(tree[i].name.substr(0,atpos).c_str());
-			tree[i].name = tree[i].name.substr(atpos+1);
+			edgenum = atoi(tree[i].name.substr(atpos+1, ratpos - atpos - 1).c_str());
+//			cerr << "node " << i << " edgenum is " << tree[i].name.substr(atpos+1, ratpos - atpos - 1) << " name is " << tree[i].name.substr(0, atpos) << endl;
+			tree[i].name = tree[i].name.substr(0, atpos);
 		}
 		edgenum_map.insert(make_pair(i,edgenum));
 	}
-
+//	cerr << "Done removing edge numbers\n";
 
 //
 // construct boost graphs of the trees
@@ -338,24 +335,24 @@ void reconcile( PhyloTree< TreeNode >& reftree, string treefile, unordered_multi
 //			cout << "gene tree " << other_map[ tree[qq].name ] << " treenode " << qq << " split id " << f << " edge " << i << endl;
 		}
 
-		dynamic_bitset<> treesplit1 = pg_splitlist[i];
-		dynamic_bitset<> treesplit2 = pg_splitlist[i];
+		boost::dynamic_bitset<> treesplit1 = pg_splitlist[i];
+		boost::dynamic_bitset<> treesplit2 = pg_splitlist[i];
 		treesplit2.flip();
 
 		for( size_t j=0; j < refpg.E; j++ ){
 			// logical AND
-			dynamic_bitset<> refsplit1 = ref_splitlist[j];
-			dynamic_bitset<> refsplit2 = ref_splitlist[j];
+			boost::dynamic_bitset<> refsplit1 = ref_splitlist[j];
+			boost::dynamic_bitset<> refsplit2 = ref_splitlist[j];
 			refsplit2.flip();
 //			cout << "rs1.count() " << refsplit1.count() << "\trs2.count() " << refsplit2.count() << endl;
 			normalize_split( refsplit1, species_to_gene_map, pg_splitlist[i].size() );
 			normalize_split( refsplit2, species_to_gene_map, pg_splitlist[i].size() );
 //			cout << "normalized rs1.count() " << refsplit1.count() << "\trs2.count() " << refsplit2.count() << endl;
 			
-			dynamic_bitset<> and11 = treesplit1 & refsplit1;
-			dynamic_bitset<> and21 = treesplit2 & refsplit1;
-			dynamic_bitset<> and12 = treesplit1 & refsplit2;
-			dynamic_bitset<> and22 = treesplit2 & refsplit2;
+			boost::dynamic_bitset<> and11 = treesplit1 & refsplit1;
+			boost::dynamic_bitset<> and21 = treesplit2 & refsplit1;
+			boost::dynamic_bitset<> and12 = treesplit1 & refsplit2;
+			boost::dynamic_bitset<> and22 = treesplit2 & refsplit2;
 			double a11score = (double)and11.count() / (double)treesplit1.count();
 			double a22score = (double)and22.count() / (double)treesplit2.count();
 			double a1122score = (a11score + a22score) / 2.0;
