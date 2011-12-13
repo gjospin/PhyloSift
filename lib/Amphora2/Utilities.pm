@@ -108,6 +108,7 @@ our $formatdb = "";
 our $rapSearch= "";
 our $preRapSearch = "";
 our $raxml = "";
+our $readconciler = "";
 sub programChecks {
 	eval 'require Bio::Seq;';
 	if ($@) {
@@ -157,6 +158,8 @@ sub programChecks {
 	    carp("raxmlHPC was not found\n");
 	    return 1;
 	}
+
+	$readconciler = get_program_path("readconciler",$Amphora2::Settings::a2_path);
 	return 0;
 }
 
@@ -714,6 +717,23 @@ sub get_sequence_input_type_quickndirty {
 	my $aamult = $seqtype eq "protein" ? 3 : 1;
 	$length = "short" if $maxfound < (500 / $aamult);
 	return ($seqtype, $length, $format);
+}
+
+
+=head2 get_date_YYYYMMDD
+
+Gets the current date and formats it by YYYYMMDD
+
+=cut
+
+sub get_date_YYYYMMDD {
+	my @timerval = localtime();
+	my $datestr = (1900+$timerval[5]);
+	$datestr .= 0 if $timerval[4] <= 9; 
+	$datestr .= ($timerval[4]+1);
+	$datestr .= 0 if $timerval[3] <= 9; 
+	$datestr .= $timerval[3];
+	return $datestr;
 }
 
 =head1 AUTHOR
