@@ -455,16 +455,16 @@ head -n 2 \$1.updated.fasta | tail -n 1 >> \$1.updated.tmpread.fasta
 taxit create -a "Aaron Darling" -d "simple package for reconciliation only" -l \$1 -f \$1.updated.fasta -t \$1.updated.tre -s \$1.updated.fasttree.log -Y FastTree -P \$1
 pplacer -c \$1 -p \$1.updated.tmpread.fasta
 # readconciler uses a pplacer tree from a .jplace file to parse out the 
-perl -p -i -e "s/:(.+?)\\\{(\\d+?)\\\}/\\\{\\\$2\\\}:\\\$1/g" \$1.updated.tmpread.jplace
-readconciler ncbi_tree.updated.tre \$1.updated.tmpread.jplace marker_taxon_map.updated.txt \$1.updated.taxonmap
+mangler.pl < \$1.updated.tmpread.jplace > \$1.updated.tmpread.jplace.mangled
+readconciler ncbi_tree.updated.tre \$1.updated.tmpread.jplace.mangled marker_taxon_map.updated.txt \$1.updated.taxonmap
 
 # then do the codon tree
 echo ">blahblahblah" > \$1.codon.updated.tmpread.fasta
 head -n 2 \$1.codon.updated.fasta | tail -n 1 >> \$1.codon.updated.tmpread.fasta
 taxit create -a "Aaron Darling" -d "simple package for reconciliation only" -l \$1 -f \$1.codon.updated.fasta -t \$1.codon.updated.tre -s \$1.codon.updated.fasttree.log -Y FastTree -P \$1
 pplacer -c \$1 -p \$1.codon.updated.tmpread.fasta
-perl -p -i -e "s/:(.+?)\\\{(\\d+?)\\\}/\\\{\\\$2\\\}:\\\$1/g" \$1.updated.tmpread.jplace
-readconciler ncbi_tree.updated.tre \$1.codon.updated.tmpread.jplace marker_taxon_map.updated.txt \$1.codon.updated.taxonmap
+mangler.pl < \$1.codon.updated.tmpread.jplace > \$1.codon.updated.tmpread.jplace.mangled
+readconciler ncbi_tree.updated.tre \$1.codon.updated.tmpread.jplace.mangled marker_taxon_map.updated.txt \$1.codon.updated.taxonmap
 EOF
 
 	`chmod 755 /tmp/a2_reconcile.sh`;
