@@ -271,6 +271,7 @@ sub alignAndMask{
 	writeAlignedSeq($self, $updatedout, $null, $prev_name, $prev_seq, $seqCount) if $seqCount <= $refcount;
 	writeAlignedSeq($self, $aliout, $unmaskedout, $prev_name, $prev_seq, $seqCount) if $seqCount > $refcount;
 	$seqCount -= $refcount;
+	close $unmaskedout;
 
 	# do we need to output a nucleotide alignment in addition to the AA alignment?
 	if($reverseTranslate && -e $outputFastaAA){
