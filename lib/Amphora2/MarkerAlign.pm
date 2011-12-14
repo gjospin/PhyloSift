@@ -200,85 +200,79 @@ sub hmmsearchParse{
 
 =cut
 
+sub writeAlignedSeq{
+	my $self = shift;
+	my $output = shift;
+	my $unmaskedout = shift;
+	my $prev_name = shift;
+	my $prev_seq = shift;
+	my $seq_count = shift;
+	my $orig_seq = $prev_seq;
+
+	$prev_seq =~ s/[a-z]//g;	# lowercase chars didnt align to model
+	$prev_seq =~ s/\.//g;		# shouldnt be any dots
+	#skip paralogs if we don't want them
+	return if $seq_count > 0 && $self->{"besthit"};
+	my $aligned_count = 0;
+	$aligned_count++ while $prev_seq =~ m/[A-Z]/g;
+	return if $aligned_count < $minAlignedResidues;
+
+	#substitute all the non letter or number characters into _ in the IDs to avoid parsing issues in tree viewing programs or others
+	$prev_name =~ s/[^\w\d]/_/g;
+	#add a paralog ID if we're running in isolate mode and more than one good hit
+	$prev_name .= "_p$seq_count" if $seq_count > 0 && $self->{"isolate"};
+	#print the new trimmed alignment
+	print $output ">$prev_name\n$prev_seq\n";
+	print $unmaskedout ">$prev_name\n$orig_seq\n" if defined($unmaskedout);
+}
+
 sub alignAndMask{
     my $self = shift;
     my $reverseTranslate = shift;
     my $markRef = shift;
     for(my $index=0; $index < @{$markRef}; $index++){
 	my $marker=${$markRef}[$index];
-	#Align the hits to the reference alignment using Hmmer3
-	`$Amphora2::Utilities::hmmalign --trim --outformat afa -o $self->{"alignDir"}/$marker.aln_hmmer3.fasta --mapali $self->{"alignDir"}/$marker.seed.stock $self->{"alignDir"}/$marker.stock.hmm $self->{"alignDir"}/$marker.newCandidate`;
-	#find out all the indexes that have a . in the reference sequences
-	my $trimfinalFile = Amphora2::Utilities::getTrimfinalMarkerFile($self,$marker);
-	my $originAli = new Bio::AlignIO(-file=>"$Amphora2::Utilities::marker_dir/$trimfinalFile", -format=>'fasta');
-	my %referenceSeqs = ();
-	while(my $aln = $originAli->next_aln()){
-	    foreach my $seq($aln->each_seq()){
-		$referenceSeqs{$seq->id}=1;
-	    }
-	}
-	my %insertHash=();
-	#reading the 
-	my $aliIN = new Bio::AlignIO(-file =>$self->{"alignDir"}."/$marker.aln_hmmer3.fasta", -format=>'fasta');
-	my $masqseq;
-	while(my $aln = $aliIN->next_aln()){
-	    # mask out the columns that didn't align to the marker, we'll want to remove
-	    # them below
-	    foreach my $seq ($aln->each_seq()){
-		if(exists $referenceSeqs{$seq->id}){
-		    $masqseq = $seq->seq();
-		    last;
+	
+	my $refcount = 0;
+	open( HMM, $self->{"alignDir"}."/$marker.stock.hmm" );
+	while( my $line = <HMM> ){
+		if($line =~ /NSEQ\s+(\d+)/){
+			$refcount = $1;
+			last;
 		}
-	    }
 	}
+
+	# Align the hits to the reference alignment using Hmmer3
+	# pipe in the aligned sequences, trim them further, and write them back out
+	my $hmmalign = "$Amphora2::Utilities::hmmalign --outformat afa --mapali ".$self->{"alignDir"}."/$marker.seed.stock ".$self->{"alignDir"}."/$marker.stock.hmm ".$self->{"alignDir"}."/$marker.newCandidate |";
 	my $outputFastaAA = $self->{"alignDir"}."/".Amphora2::Utilities::getAlignerOutputFastaAA($marker);
 	my $outputFastaDNA = $self->{"alignDir"}."/".Amphora2::Utilities::getAlignerOutputFastaDNA($marker);
-	# reading and trimming out non-marker alignment columns from Hmmalign output (Hmmer3)
-	my $hmmer3Ali = new Bio::AlignIO(-file =>$self->{"alignDir"}."/$marker.aln_hmmer3.fasta",-format=>'fasta');
-	open(ALIOUT,">".$outputFastaAA) or die "Couldn't open $outputFastaAA for writing\n";
+	open(my $aliout,">".$outputFastaAA) or die "Couldn't open $outputFastaAA for writing\n";
+	open(my $updatedout,">".$self->{"alignDir"}."/$marker.updated.hmm.fasta");
+	my $prev_seq;
+	my $prev_name;
 	my $seqCount = 0;
-	while(my $aln = $hmmer3Ali->next_aln()){
-	    foreach my $seq ($aln->each_seq()){
-		#initialize empty array
-		my @characters=();
-		#if the sequence isn't a reference sequence remove all the characters at the indices that have a 1 value in the %insertHash
-		if(!exists $referenceSeqs{$seq->id}){
-		    # strip out all the columns that had a . (indicated by masqseq)
-		    my $newSeq = $seq->seq();
-		    my $ctr = 0;
-		    for(my $i=0; $i<length($masqseq); $i++){
-			substr($newSeq, $ctr, 1) = "" if substr($masqseq, $i, 1) eq ".";
-			$ctr++ unless substr($masqseq, $i, 1) eq ".";
-		    }
-		    my $seqLen= 0;
-		    #sequence length before masking
-		    $seqLen++ while $newSeq =~ m/[^-\.]/g;
-                    #change the remaining . into - for pplacer to not complain
-		    $newSeq =~ s/\./-/g;
-		    my $alignCount=0;
-		    $alignCount++ while $newSeq =~ m/[^-]/g;
-		    my $collen = length($newSeq);
-		    my $minRatio = min (($alignCount / $collen),($alignCount / $seqLen));
-                    #print STDERR $seq->id."\t$minRatio\t$alignCount\n";
-		    next if ($minRatio < $alnLengthCutoff && $alignCount < $minAlignedResidues);
-		    my $newIDs = $seq->id;
-		    #get rid of reading frame at this stage
-		    $newIDs =~ s/_[fr][012]$//g;
-		    #substitute all the non letter or number characters into _ in the IDs to avoid parsing issues in tree viewing programs or others
-		    $newIDs =~ s/[^\w\d]/_/g;
-		    #skip paralogs if we don't want them
-		    next if $seqCount > 0 && $self->{"besthit"};
-		    #add a paralog ID if we're running in isolate mode and more than one good hit
-		    $newIDs .= "_p$seqCount" if $seqCount > 0 && $self->{"isolate"};
-                    #print the new trimmed alignment
-		    print ALIOUT ">".$newIDs."\n".$newSeq."\n";
-		    $seqCount++;
+	open( HMMALIGN, $hmmalign );
+	open( my $unmaskedout, ">".$self->{"alignDir"}."/$marker.unmasked");
+	my $null;
+	while( my $line = <HMMALIGN> ){
+		chomp $line;
+		if($line =~ /^>(.+)/){
+			my $new_name = $1;
+			writeAlignedSeq($self, $updatedout, $null, $prev_name, $prev_seq, $seqCount) if $seqCount <= $refcount && $seqCount > 0;
+			writeAlignedSeq($self, $aliout, $unmaskedout, $prev_name, $prev_seq, $seqCount) if $seqCount > $refcount;
+			$seqCount++;
+			$prev_name = $new_name;
+			$prev_seq = "";
+		}else{
+			$prev_seq .= $line;
 		}
-	    }
 	}
-	close(ALIOUT);
+	writeAlignedSeq($self, $updatedout, $null, $prev_name, $prev_seq, $seqCount) if $seqCount <= $refcount;
+	writeAlignedSeq($self, $aliout, $unmaskedout, $prev_name, $prev_seq, $seqCount) if $seqCount > $refcount;
+	$seqCount -= $refcount;
 
-	#if the reverse option is on AND the submitted sequences are DNA, then output a Nucleotide alignment in addition to the AA alignment
+	# do we need to output a nucleotide alignment in addition to the AA alignment?
 	if($reverseTranslate && -e $outputFastaAA){
 	    #if it exists read the reference nucleotide sequences for the candidates
 	    my %referenceNuc = ();
@@ -297,12 +291,17 @@ sub alignAndMask{
 		}
 		close(REFSEQSIN);
 	    }
+		print STDERR "Found ".scalar(keys(%referenceNuc))." nuc seqs for $marker\n";
+
 	    open(ALITRANSOUT, ">".$outputFastaDNA) or die "Couldn't open ".$outputFastaDNA/" for writing\n";
-	    my $aa_ali = new Bio::AlignIO(-file =>$outputFastaAA,-format=>'fasta');
+	    my $aa_ali = new Bio::AlignIO(-file =>$self->{"alignDir"}."/$marker.unmasked",-format=>'fasta');
 	    if(my $aln = $aa_ali->next_aln()){
 		    my $dna_ali = &aa_to_dna_aln($aln,\%referenceNuc);
 		    foreach my $seq ($dna_ali->each_seq()){
-			print ALITRANSOUT ">".$seq->id."\n".$seq->seq."\n";
+			my $cleanseq = $seq->seq;
+			$cleanseq =~ s/\.//g;
+			$cleanseq =~ s/[a-z]//g;
+			print ALITRANSOUT ">".$seq->id."\n".$cleanseq."\n";
 		    }	
 	    }
 	    close(ALITRANSOUT);
