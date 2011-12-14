@@ -1,9 +1,9 @@
 package Amphora2::pplacer;
+
 use Cwd;
 use Getopt::Long;
 use Bio::AlignIO;
 use Amphora2::Amphora2;
-
 =head1 NAME
 
 Amphora2::pplacer - place aligned reads onto a phylogenetic tree with pplacer
@@ -13,7 +13,9 @@ Amphora2::pplacer - place aligned reads onto a phylogenetic tree with pplacer
 Version 0.01
 
 =cut
+
 our $VERSION = '0.01';
+
 
 =head1 SYNOPSIS
 
@@ -33,55 +35,56 @@ if you don't export anything, such as for a purely object-oriented module.
 =head2 pplacer
 
 =cut
+
 sub pplacer {
-	my $self    = shift;
-	my $markRef = shift;
-	directoryPrepAndClean($self);
+    my $self = shift;
+    my $markRef = shift;
+    directoryPrepAndClean($self);
+    #debug "PPLACER MARKS\t @{$markRef}\n";
 
-	#debug "PPLACER MARKS\t @{$markRef}\n";
-	foreach my $marker ( @{$markRef} ) {
-		my $trimfinalFastaFile = "$Amphora2::Utilities::marker_dir/" . Amphora2::Utilities::getTrimfinalFastaMarkerFile( $self, $marker );
-		my $trimfinalFile = "$Amphora2::Utilities::marker_dir/" . Amphora2::Utilities::getTrimfinalMarkerFile( $self, $marker );
-		my $treeFile = "$Amphora2::Utilities::marker_dir/" . Amphora2::Utilities::getTreeMarkerFile( $self, $marker );
-		my $treeStatsFile = "$Amphora2::Utilities::marker_dir/" . Amphora2::Utilities::getTreeStatsMarkerFile( $self, $marker );
-		my $readAlignmentFile = $self->{"alignDir"} . "/" . Amphora2::Utilities::getAlignerOutputFastaAA($marker);
 
-		# Pplacer requires the alignment files to have a .fasta extension
-		if ( !-e "$trimfinalFastaFile" ) {
-			`cp $trimfinalFile $trimfinalFastaFile`;
-		}
+    foreach my $marker(@{$markRef}){
 
-		#adding a printed statement to check on the progress
-		print STDERR "Running Placer on $marker ....\t";
-
-		#running Pplacer
-		my $placeFile = Amphora2::Utilities::getReadPlacementFile($marker);
-		if ( !-e $self->{"treeDir"} . "/$placeFile" ) {
-			`$Amphora2::Utilities::pplacer -p -r $trimfinalFastaFile -t $treeFile -s $treeStatsFile $readAlignmentFile`;
-		}
-
-		#adding a printed statement to check on the progress (not really working if using parrallel jobs)
-		print STDERR "Done !\n";
-
-		#Pplacer write its output to the directory it is called from. Need to move the output to the trees directory
-		if ( -e $self->{"workingDir"} . "/$placeFile" ) {
-			`mv $self->{"workingDir"}/$placeFile $self->{"treeDir"}`;
-		}
+	my $trimfinalFastaFile = "$Amphora2::Utilities::marker_dir/".Amphora2::Utilities::getTrimfinalFastaMarkerFile($self,$marker);
+	my $trimfinalFile = "$Amphora2::Utilities::marker_dir/".Amphora2::Utilities::getTrimfinalMarkerFile($self,$marker);
+	my $treeFile = "$Amphora2::Utilities::marker_dir/".Amphora2::Utilities::getTreeMarkerFile($self,$marker);
+	my $treeStatsFile = "$Amphora2::Utilities::marker_dir/".Amphora2::Utilities::getTreeStatsMarkerFile($self,$marker);
+	my $readAlignmentFile = $self->{"alignDir"}."/".Amphora2::Utilities::getAlignerOutputFastaAA($marker);
+	
+	# Pplacer requires the alignment files to have a .fasta extension
+	if(!-e "$trimfinalFastaFile" ){
+	    `cp $trimfinalFile $trimfinalFastaFile`;
 	}
+
+	#adding a printed statement to check on the progress
+	print STDERR "Running Placer on $marker ....\t";
+	#running Pplacer
+	my $placeFile = Amphora2::Utilities::getReadPlacementFile($marker);
+	if(!-e $self->{"treeDir"}."/$placeFile"){
+	    `$Amphora2::Utilities::pplacer -p -r $trimfinalFastaFile -t $treeFile -s $treeStatsFile $readAlignmentFile`;
+	}
+	#adding a printed statement to check on the progress (not really working if using parrallel jobs)
+	print STDERR "Done !\n";
+	#Pplacer write its output to the directory it is called from. Need to move the output to the trees directory
+	if(-e $self->{"workingDir"}."/$placeFile"){
+	    `mv $self->{"workingDir"}/$placeFile $self->{"treeDir"}`;
+	}		
+    }
 }
+
 
 =head2 directoryPrepAndClean
 
 =cut
 
-sub directoryPrepAndClean {
-	my $self    = shift;
-	my @markers = @_;
-	`mkdir $self->{"tempDir"}` unless ( -e $self->{"tempDir"} );
+sub directoryPrepAndClean{
 
-	#create a directory for the Reads file being processed.
-	`mkdir $self->{"fileDir"}` unless ( -e $self->{"fileDir"} );
-	`mkdir $self->{"treeDir"}` unless ( -e $self->{"treeDir"} );
+    my $self = shift;
+    my @markers = @_;
+    `mkdir $self->{"tempDir"}` unless (-e $self->{"tempDir"});
+    #create a directory for the Reads file being processed.
+    `mkdir $self->{"fileDir"}` unless (-e $self->{"fileDir"});
+    `mkdir $self->{"treeDir"}` unless (-e $self->{"treeDir"});
 }
 
 =head1 SUBROUTINES/METHODS
@@ -90,37 +93,38 @@ sub directoryPrepAndClean {
 
 =cut
 
+
 sub nameTaxa {
-	my $filename = shift;
+    my $filename = shift;
 
-	# read in the taxon name map
-	my %namemap;
-	open( NAMETABLE, "$Amphora2::Utilities::marker_dir/name.table" ) or die "Couldn't open $Amphora2::Utilities::marker_dir/name.table\n";
-	while ( my $line = <NAMETABLE> ) {
-		chomp $line;
-		my @pair = split( /\t/, $line );
-		$namemap{ $pair[0] } = $pair[1];
+    # read in the taxon name map
+    my %namemap;
+    open(NAMETABLE, "$Amphora2::Utilities::marker_dir/name.table")or die "Couldn't open $Amphora2::Utilities::marker_dir/name.table\n";
+    while( my $line = <NAMETABLE> ){
+	chomp $line;
+	my @pair = split(/\t/, $line);
+	$namemap{$pair[0]} = $pair[1];
+    }
+    
+    # parse the tree file to get leaf node names
+    # replace leaf node names with taxon labels
+    open( TREEFILE, $filename );
+    my @treedata = <TREEFILE>;
+    close TREEFILE;
+    open( TREEFILE, ">$filename" );
+    foreach my $tree(@treedata){
+	my @taxanames = split( /[\(\)\,]/, $tree );
+	foreach my $taxon( @taxanames ){
+	    next if $taxon =~ /^\:/;        # internal node, no taxon label
+	    my @taxondata = split( /\:/, $taxon );
+	    next unless @taxondata > 0;
+	    if(defined($namemap{$taxondata[0]})){
+		my $commonName = $namemap{$taxondata[0]}."-".$taxondata[0];
+		$tree =~ s/$taxondata[0]/$commonName/g;
+	    }
 	}
-
-	# parse the tree file to get leaf node names
-	# replace leaf node names with taxon labels
-	open( TREEFILE, $filename );
-	my @treedata = <TREEFILE>;
-	close TREEFILE;
-	open( TREEFILE, ">$filename" );
-	foreach my $tree (@treedata) {
-		my @taxanames = split( /[\(\)\,]/, $tree );
-		foreach my $taxon (@taxanames) {
-			next if $taxon =~ /^\:/;    # internal node, no taxon label
-			my @taxondata = split( /\:/, $taxon );
-			next unless @taxondata > 0;
-			if ( defined( $namemap{ $taxondata[0] } ) ) {
-				my $commonName = $namemap{ $taxondata[0] } . "-" . $taxondata[0];
-				$tree =~ s/$taxondata[0]/$commonName/g;
-			}
-		}
-		print TREEFILE $tree;
-	}
+	print TREEFILE $tree;
+    }
 }
 
 =head1 AUTHOR
@@ -182,4 +186,5 @@ See http://dev.perl.org/licenses/ for more information.
 
 
 =cut
-1;    # End of Amphora2::pplacer.pm
+
+1; # End of Amphora2::pplacer.pm
