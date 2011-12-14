@@ -10,9 +10,6 @@ use Bio::SeqIO;
 use List::Util qw(min);
 use Amphora2::Amphora2;
 use Amphora2::Utilities qw(:all);
-use Bio::Tools::CodonTable;
-use Bio::Align::Utilities qw(:all);
-#use Parallel::ForkManager;
 
 
 =head1 NAME
@@ -226,6 +223,66 @@ sub writeAlignedSeq{
 	print $unmaskedout ">$prev_name\n$orig_seq\n" if defined($unmaskedout);
 }
 
+use constant CODONSIZE => 3;
+my $GAP = '-';
+my $CODONGAP = $GAP x CODONSIZE;
+
+=head2 aa_to_dna_aln
+Function based on BioPerl's aa_to_dna_aln. This one has been modified to preserve . characters and upper/lower casing of the protein
+sequence during reverse translation. Needed to mask out HMM aligned sequences.
+=cut
+
+sub aa_to_dna_aln {
+    my ($aln,$dnaseqs) = @_;
+    unless( defined $aln && 
+	    ref($aln) &&
+	    $aln->isa('Bio::Align::AlignI') ) { 
+	croak('Must provide a valid Bio::Align::AlignI object as the first argument to aa_to_dna_aln, see the documentation for proper usage and the method signature');
+    }
+    my $alnlen = $aln->length;
+    my $dnaalign = Bio::SimpleAlign->new();
+
+    foreach my $seq ( $aln->each_seq ) {    
+	my $aa_seqstr = $seq->seq();
+	my $id = $seq->display_id;
+	my $dnaseq = $dnaseqs->{$id} || $aln->throw("cannot find ".
+						     $seq->display_id);
+	my $start_offset = ($seq->start - 1) * CODONSIZE;
+
+	$dnaseq = $dnaseq->seq();
+	my $dnalen = $dnaseqs->{$id}->length;
+	my $nt_seqstr;
+	my $j = 0;
+	for( my $i = 0; $i < $alnlen; $i++ ) {
+	    my $char = substr($aa_seqstr,$i + $start_offset,1);	    
+	    if ( $char eq $GAP )  { 
+		$nt_seqstr .= $CODONGAP;
+	    }elsif ( $char eq "." ){
+		$nt_seqstr .= "...";
+	    } else {
+		if($char eq uc($char)){
+			$nt_seqstr .= uc(substr($dnaseq,$j,CODONSIZE));
+		}else{
+			$nt_seqstr .= lc(substr($dnaseq,$j,CODONSIZE));
+		}
+		$j += CODONSIZE;
+	    }
+	}
+	$nt_seqstr .= $GAP x (($alnlen * 3) - length($nt_seqstr));
+
+	my $newdna = Bio::LocatableSeq->new(-display_id  => $id,
+					   -alphabet    => 'dna',
+					   -start       => $start_offset+1,
+					   -end         => ($seq->end * 
+							    CODONSIZE),
+					   -strand      => 1,
+					   -seq         => $nt_seqstr);    
+	$dnaalign->add_seq($newdna);
+    }
+    return $dnaalign;
+}
+
+
 sub alignAndMask{
     my $self = shift;
     my $reverseTranslate = shift;
@@ -274,10 +331,9 @@ sub alignAndMask{
 	close $unmaskedout;
 
 	# do we need to output a nucleotide alignment in addition to the AA alignment?
-	if($reverseTranslate && -e $outputFastaAA){
+	if(-e $self->{"blastDir"}."/$marker.candidate.ffn" && -e $outputFastaAA){
 	    #if it exists read the reference nucleotide sequences for the candidates
 	    my %referenceNuc = ();
-	    if(-e $outputFastaAA){
 		open(REFSEQSIN,$self->{"blastDir"}."/$marker.candidate.ffn") or die "Couldn't open ".$self->{"alignDir"}."/$marker.candidate.ffn for reading\n";
 		my $currID="";
 		my $currSeq="";
@@ -291,8 +347,6 @@ sub alignAndMask{
 		    }
 		}
 		close(REFSEQSIN);
-	    }
-		print STDERR "Found ".scalar(keys(%referenceNuc))." nuc seqs for $marker\n";
 
 	    open(ALITRANSOUT, ">".$outputFastaDNA) or die "Couldn't open ".$outputFastaDNA/" for writing\n";
 	    my $aa_ali = new Bio::AlignIO(-file =>$self->{"alignDir"}."/$marker.unmasked",-format=>'fasta');
