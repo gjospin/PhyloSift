@@ -234,7 +234,7 @@ void reconcile( PhyloTree< TreeNode >& reftree, string treefile, unordered_multi
 // remove edge numbers
 // assume jplace format
 //
-	unordered_map<int,int> edgenum_map;
+	std::unordered_map<int,int> edgenum_map;
 	for(int i=0; i<tree.size(); i++){
 		size_t atpos = tree[i].name.find("{");
 		size_t ratpos = tree[i].name.rfind("}");
@@ -243,9 +243,10 @@ void reconcile( PhyloTree< TreeNode >& reftree, string treefile, unordered_multi
 			edgenum = atoi(tree[i].name.c_str());
 		}else{
 			edgenum = atoi(tree[i].name.substr(atpos+1, ratpos - atpos - 1).c_str());
-//			cerr << "node " << i << " edgenum is " << tree[i].name.substr(atpos+1, ratpos - atpos - 1) << " name is " << tree[i].name.substr(0, atpos) << endl;
+			cerr << "node " << i << " edgenum is " << tree[i].name.substr(atpos+1, ratpos - atpos - 1) << " name is " << tree[i].name.substr(0, atpos) << endl;
 			tree[i].name = tree[i].name.substr(0, atpos);
 		}
+		cerr << "mapping " << i << " to " << edgenum << "\n";
 		edgenum_map.insert(make_pair(i,edgenum));
 	}
 //	cerr << "Done removing edge numbers\n";
@@ -370,6 +371,7 @@ void reconcile( PhyloTree< TreeNode >& reftree, string treefile, unordered_multi
 				continue;
 			string refnodename = reftree[ refpg.edge_array[j].first ].name;
 			cout << "gene tree edge " << i << " linking " << other_map[tree[pg.edge_array[i].first].name] << " best reftree edge " << refnodename << endl; 
+			cout << "found edge " << pg.edge_array[i].first << "\n";
 			mapout << edgenum_map[pg.edge_array[i].first] << "\t" << refnodename << endl;
 		}
 //		if(pg_splitlist[i].count() == 1)
