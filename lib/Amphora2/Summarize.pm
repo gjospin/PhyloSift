@@ -79,20 +79,14 @@ sub makeNcbiTreeFromUpdate {
 	my $markerdir = shift;
 	readNcbiTaxonNameMap();
 	readNcbiTaxonomyStructure();
-	my @orgnames = `ls -1 $results_dir | grep fasta`; 
-	my @taxonids;
+	open(AAIDS, "$markerdir/gene_ids.aa.txt");
 	open( MARKERTAXONMAP, ">$markerdir/marker_taxon_map.updated.txt" );
-	foreach my $org(@orgnames){
-		$org =~ /\.(\d+)\.fasta/;
-		if(!defined($1)){
-			print MARKERTAXONMAP treeName($org)."\t".treeName($org)."\n";
-			next;
-		}
-		print STDERR "Bad taxon ID $1 for $org" unless defined($parent{$1});
-		next unless defined($parent{$1});
-		push(@taxonids, $1);
-		chomp($org);
-		print MARKERTAXONMAP "$1\t$1\n";
+	my @taxonids;
+	while( my $line = <AAIDS> ){
+		chomp $line;
+		my ($marker, $taxon, $uniqueid) = split(/\t/, $line);
+		push(@taxonids, $taxon) if $taxon =~ /^\d+$/;
+		print MARKERTAXONMAP "$uniqueid\t$taxon\n";
 	}
 	close MARKERTAXONMAP;
 	my %tidnodes;

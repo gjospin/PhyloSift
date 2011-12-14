@@ -181,17 +181,6 @@ sub report_flot_json{
 #	open(JSON, ">amphora2_accuracy.json");
 }
 
-# get the date in YYYYMMDD format
-sub get_date_YYYYMMDD {
-	my @timerval = localtime();
-	my $datestr = (1900+$timerval[5]);
-	$datestr .= 0 if $timerval[4] < 9; 
-	$datestr .= ($timerval[4]+1);
-	$datestr .= 0 if $timerval[3] < 9; 
-	$datestr .= $timerval[3];
-	return $datestr;
-}
-
 sub reportTiming{
 	my $self = shift;
 	my $data = shift;
@@ -203,11 +192,21 @@ sub reportTiming{
 		close TIMING;
 	}
 	open(TIMING, ">>$timing_file");
-	print TIMING get_date_YYYYMMDD;
+	print TIMING Amphora2::Utilities::get_date_YYYYMMDD;
 	foreach my $time(keys(%$data)){
 		print TIMING ",".$data->{$time};
 	}
 	print TIMING "\n";
+}
+
+sub as_percent{
+	my $num = shift;
+	my $denom = shift;
+	if(defined $num && defined $denom && $denom > 0){
+		my $pretty = sprintf("%.2f", 100*$num / $denom);
+		return $pretty;
+	}
+	return "";
 }
 
 sub report_csv{
@@ -230,21 +229,21 @@ sub report_csv{
 		close TOPHITS;
 	}
 
-	my $date = get_date_YYYYMMDD();
+	my $date = Amphora2::Utilities::get_date_YYYYMMDD();
 
 	# append an entry to the tophits file
 	open(TOPHITS, ">>$tophitfile");
 	print TOPHITS $date;
-	print TOPHITS ",".100*$matchTop{"superkingdom"}/$readNumber;
-	print TOPHITS ",".100*$matchTop{"phylum"}/$readNumber;
-	print TOPHITS ",".100*$matchTop{"subphylum"}/$readNumber;
-	print TOPHITS ",".100*$matchTop{"class"}/$readNumber;
-	print TOPHITS ",".100*$matchTop{"order"}/$readNumber;
-	print TOPHITS ",".100*$matchTop{"family"}/$readNumber;
-	print TOPHITS ",".100*$matchTop{"genus"}/$readNumber;
-	print TOPHITS ",".100*$matchTop{"species"}/$readNumber;
-	print TOPHITS ",".100*$matchTop{"subspecies"}/$readNumber;
-	print TOPHITS ",".100*$matchTop{"no rank"}/$readNumber;
+	print TOPHITS ",".as_percent($matchTop{"superkingdom"},$readNumber);
+	print TOPHITS ",".as_percent($matchTop{"phylum"},$readNumber);
+	print TOPHITS ",".as_percent($matchTop{"subphylum"},$readNumber);
+	print TOPHITS ",".as_percent($matchTop{"class"},$readNumber);
+	print TOPHITS ",".as_percent($matchTop{"order"},$readNumber);
+	print TOPHITS ",".as_percent($matchTop{"family"},$readNumber);
+	print TOPHITS ",".as_percent($matchTop{"genus"},$readNumber);
+	print TOPHITS ",".as_percent($matchTop{"species"},$readNumber);
+	print TOPHITS ",".as_percent($matchTop{"subspecies"},$readNumber);
+	print TOPHITS ",".as_percent($matchTop{"no rank"},$readNumber);
 	print TOPHITS "\n";
 	
 }

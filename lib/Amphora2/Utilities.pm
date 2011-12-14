@@ -92,10 +92,8 @@ sub get_program_path {
 	$progcheck = $Bin."/bin/".$progname unless( $progcheck =~ /$progname/  || !(-x $Bin."/bin/".$progname) );
 	# check the OS and use Mac binaries if needed
 	if($^O =~ /arwin/){
-		$progcheck = $Bin."/osx/".$progname unless( $progcheck =~ /$progname/  && !(-x $Bin."/".$progname) );
-	}else{
-	    #I don't think this line is needed because it is taken care of 5 lines before
-		#$progcheck = $Bin."/bin/".$progname unless( $progcheck =~ /$progname/  && !(-x $Bin."/".$progname) );
+		$progcheck = $Bin."/osx/".$progname unless( $progcheck =~ /$progname/  && !(-x $Bin."/".$progname)  );
+		$progcheck = $Bin."/osx/".$progname if($progcheck =~ /$Bin\/bin/); # don't use the linux binary!
 	}
 	return $progcheck;
 }
@@ -110,6 +108,7 @@ our $formatdb = "";
 our $rapSearch= "";
 our $preRapSearch = "";
 our $raxml = "";
+our $readconciler = "";
 sub programChecks {
 	eval 'require Bio::Seq;';
 	if ($@) {
@@ -159,6 +158,8 @@ sub programChecks {
 	    carp("raxmlHPC was not found\n");
 	    return 1;
 	}
+
+	$readconciler = get_program_path("readconciler",$Amphora2::Settings::a2_path);
 	return 0;
 }
 
@@ -629,17 +630,58 @@ sub end_timer {
 
 =head2 get_sequence_input_type
 
-Checks whether input is either short sequence reads, e.g. < 500nt or assembled fragments
-without reading the whole file.
+Checks whether input is either short sequence reads, e.g. < 500nt or assembled fragments.
+Reads the whole file to find the longest fragment.
 
 =cut
 
 sub get_sequence_input_type {
 	my $file = shift;
+	open(FILE, $file);
+	my $counter = 0;
+	my $maxfound = 0;
+	my $dnacount = 0;
+	my $seqtype="dna";
+	my $length="long";
+	my $format="unknown";
+	my $allcount=0;
+	while( my $line = <FILE> ){
+		if($line =~ /^>/){
+			$maxfound =  $counter > $maxfound ? $counter : $maxfound;
+			$counter = 0;
+			$format = "fasta" if $format eq "unknown";
+		}elsif($line =~ /^@/ || $line =~ /^\+/){
+			$counter = 0;
+			$format = "fastq" if $format eq "unknown";
+		}else{
+			$counter += length($line)-1;
+			$dnacount += $line =~ tr/[ACGTNacgtn]//;
+			$allcount += length($line)-1;
+		}
+	}
+	$maxfound =  $counter > $maxfound ? $counter : $maxfound;
+	$seqtype = "protein" if ($dnacount < $allcount * 0.75);
+	$seqtype = "dna" if ($format eq "fastq"); # nobody using protein fastq (yet)
+	my $aamult = $seqtype eq "protein" ? 3 : 1;
+	$length = "short" if $maxfound < (500 / $aamult);
+	return ($seqtype, $length, $format);
+}
+
+
+=head2 get_sequence_input_type_quickndirty
+
+Checks whether input is either short sequence reads, e.g. < 500nt or assembled fragments
+without reading the whole file.
+
+=cut
+
+sub get_sequence_input_type_quickndirty {
+	my $file = shift;
 	my $maxshortread = 500;
 	open(FILE, $file);
 	my $filesize = -s "$file";
 	my $counter = 0;
+	my $maxfound = 0;
 	my $allcount = 0;
 	my $dnacount = 0;
 	my $seqtype="dna";
@@ -663,15 +705,35 @@ sub get_sequence_input_type {
 				$i++;
 			}else{
 				$counter += length($line);
-				$dnacount += $line =~ tr/[ACGTacgt]//;
+				$dnacount += $line =~ tr/[ACGTNacgtn]//;
 			}
 		}
+		$maxfound = $counter if $maxfound < $counter;
 		$allcount += $counter;
 		last if($counter > 500);	# found a long read
 	}
 	$seqtype = "protein" if ($dnacount < $allcount * 0.75);
-	$length = "short" if $counter < 500;
+	$seqtype = "dna" if ($format eq "fastq"); # nobody using protein fastq (yet)
+	my $aamult = $seqtype eq "protein" ? 3 : 1;
+	$length = "short" if $maxfound < (500 / $aamult);
 	return ($seqtype, $length, $format);
+}
+
+
+=head2 get_date_YYYYMMDD
+
+Gets the current date and formats it by YYYYMMDD
+
+=cut
+
+sub get_date_YYYYMMDD {
+	my @timerval = localtime();
+	my $datestr = (1900+$timerval[5]);
+	$datestr .= 0 if $timerval[4] <= 9; 
+	$datestr .= ($timerval[4]+1);
+	$datestr .= 0 if $timerval[3] <= 9; 
+	$datestr .= $timerval[3];
+	return $datestr;
 }
 
 =head1 AUTHOR
