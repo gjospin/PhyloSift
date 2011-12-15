@@ -467,7 +467,7 @@ sub getTrimfinalMarkerFile{
     if($self->{"updated"} == 0){
         return "$marker.trimfinal";
     }else{
-        return "$marker.updated.unique.fasta";
+        return "$marker.updated.fasta";
     }
 }
 
@@ -484,8 +484,8 @@ sub getTrimfinalFastaMarkerFile{
     if($self->{"updated"} == 0){
 	return "$marker.trimfinal.fasta";
     }else{
-        return $self->{"alignDir"}."/$marker.updated.hmm.fasta";
-#        return "$Amphora2::Utilities::marker_dir/$marker.updated.fasta";
+#        return $self->{"alignDir"}."/$marker.updated.hmm.fasta";
+        return "$marker.updated.fasta";
     }
 }
 
