@@ -281,14 +281,18 @@ sub collate_markers($$){
 		fix_names_in_alignment("$marker_dir/$marker.updated.fasta");
 		fix_names_in_alignment("$marker_dir/$marker.codon.updated.fasta");
 	}
-	`cat $results_dir/*/alignDir/concat.fa >> concat.fa`;
+	`rm -f $marker_dir/concat.updated.fasta`;
+	`rm -f $marker_dir/concat.codon.updated.fasta`;
+	`cat $results_dir/*/alignDir/concat.fasta >> $marker_dir/concat.updated.fasta`;
+	`cat $results_dir/*/alignDir/concat-dna.fasta >> $marker_dir/concat.codon.updated.fasta`;
+	fix_names_in_alignment("$marker_dir/concat.updated.fasta");
+	fix_names_in_alignment("$marker_dir/concat.codon.updated.fasta");
 }
 
 
 # assign 10 digit unique identifiers to each gene
 # todo: will need to move into alphabetical space here
 sub assign_seqids($$){
-	my $results_dir = shift;
 	my $marker_dir = shift;
 	# get list of markers
 	chdir($marker_dir);
@@ -297,8 +301,8 @@ sub assign_seqids($$){
 	my $codon_counter = 0;
 	open(my $aa_idtable, ">gene_ids.aa.txt");
 	open(my $codon_idtable, ">gene_ids.codon.txt");
+	push(@markerlist, "concat");
 	foreach my $marker(@markerlist){
-		my $alignment = "$marker.updated.fasta";
 		$aa_counter = assign_seqids_for_marker($marker, "$marker.updated.fasta", $aa_idtable, $aa_counter);
 		$codon_counter = assign_seqids_for_marker($marker, "$marker.codon.updated.fasta", $codon_idtable, $codon_counter);
 	}
@@ -356,6 +360,7 @@ sub build_marker_trees_fasttree($){
 
 	chdir($marker_dir);
 	my @markerlist = get_marker_list($marker_dir);
+	push(@markerlist, "concat");
 
 	my @jobids;
 	foreach my $marker(@markerlist){
@@ -390,6 +395,7 @@ rm RAxML*.\$1*
 
 	chdir($marker_dir);
 	my @markerlist = get_marker_list($marker_dir);
+	push(@markerlist, "concat");
 
 	my @jobids;
 	foreach my $marker(@markerlist){
@@ -440,7 +446,7 @@ sub reconcile_with_ncbi($$$){
 	my $results_dir = shift;
 	my $marker_dir = shift;
 	print STDERR "Updating NCBI tree and taxon map...";
-#	Amphora2::Summarize::makeNcbiTreeFromUpdate($self, $results_dir, $marker_dir);
+	Amphora2::Summarize::makeNcbiTreeFromUpdate($self, $results_dir, $marker_dir);
 	print STDERR "done\n";
 
 	open(RECONCILESCRIPT, ">/tmp/a2_reconcile.sh");
@@ -452,24 +458,27 @@ sub reconcile_with_ncbi($$$){
 # first do the AA tree
 echo ">blahblahblah" > \$1.updated.tmpread.fasta
 head -n 2 \$1.updated.fasta | tail -n 1 >> \$1.updated.tmpread.fasta
-taxit create -a "Aaron Darling" -d "simple package for reconciliation only" -l \$1 -f \$1.updated.fasta -t \$1.updated.tre -s \$1.updated.fasttree.log -Y FastTree -P \$1
+taxit create -a "Aaron Darling" -d "simple package for reconciliation only" -l \$1 -f \$1.updated.fasta -t \$1.updated.tre -s \$1.updated.fasttree.log -Y FastTree -P \$1.updated
 pplacer -c \$1 -p \$1.updated.tmpread.fasta
-# readconciler uses a pplacer tree from a .jplace file to parse out the 
+# readconciler uses a pplacer tree from a .jplace file to parse out the branch numbers
 mangler.pl < \$1.updated.tmpread.jplace > \$1.updated.tmpread.jplace.mangled
 readconciler ncbi_tree.updated.tre \$1.updated.tmpread.jplace.mangled marker_taxon_map.updated.txt \$1.updated.taxonmap
+rm \$1.updated.tmpread.jplace \$1.updated.tmpread.jplace.mangled \$1.updated.tmpread.fasta \$1.updated.fasttree.log
 
 # then do the codon tree
 echo ">blahblahblah" > \$1.codon.updated.tmpread.fasta
 head -n 2 \$1.codon.updated.fasta | tail -n 1 >> \$1.codon.updated.tmpread.fasta
-taxit create -a "Aaron Darling" -d "simple package for reconciliation only" -l \$1 -f \$1.codon.updated.fasta -t \$1.codon.updated.tre -s \$1.codon.updated.fasttree.log -Y FastTree -P \$1
-pplacer -c \$1 -p \$1.codon.updated.tmpread.fasta
+taxit create -a "Aaron Darling" -d "simple package for reconciliation only" -l \$1 -f \$1.codon.updated.fasta -t \$1.codon.updated.tre -s \$1.codon.updated.fasttree.log -Y FastTree -P \$1.codon.updated
+pplacer -c \$1.codon.updated -p \$1.codon.updated.tmpread.fasta
 mangler.pl < \$1.codon.updated.tmpread.jplace > \$1.codon.updated.tmpread.jplace.mangled
 readconciler ncbi_tree.updated.tre \$1.codon.updated.tmpread.jplace.mangled marker_taxon_map.updated.txt \$1.codon.updated.taxonmap
+rm \$1.codon.updated.tmpread.jplace \$1.codon.updated.tmpread.jplace.mangled \$1.codon.updated.tmpread.fasta \$1.codon.updated.fasttree.log
 EOF
 
 	`chmod 755 /tmp/a2_reconcile.sh`;
 
 	my @markerlist = get_marker_list($marker_dir);
+	push(@markerlist, "concat");
 	my @jobids;
 	foreach my $marker(@markerlist){
 		# run reconciliation on them
