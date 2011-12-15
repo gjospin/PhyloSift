@@ -211,7 +211,7 @@ sub download_data {
 }
 
 
-my $marker_update_url = "http://edhar.genomecenter.ucdavis.edu/~koadman/markers.tgz";
+my $marker_update_url = "http://edhar.genomecenter.ucdavis.edu/~koadman/amphora2_markers/markers.tgz";
 my $ncbi_url = "http://edhar.genomecenter.ucdavis.edu/~koadman/ncbi.tgz";
 
 sub dataChecks {
