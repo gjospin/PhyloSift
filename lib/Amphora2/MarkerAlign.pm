@@ -56,7 +56,6 @@ if you don't export anything, such as for a purely object-oriented module.
 
 =cut
 
-my $alnLengthCutoff = 0.4;
 my $minAlignedResidues = 20;
 my $reverseTranslate;
 
@@ -76,16 +75,16 @@ sub MarkerAlign {
     debug "after HMMSEARCH PARSE\n";
     alignAndMask($self,$reverseTranslate,$markersRef);
     debug "AFTER ALIGN and MASK\n";
-    if($self->{"isolate"} && $self->{"besthit"}){
+#    if($self->{"isolate"} && $self->{"besthit"}){
 	    my @markeralignments = getMarkerAlignmentFiles($self,\@allmarkers);
 	    Amphora2::Utilities::concatenateAlignments($self->{"alignDir"}."/concat.fasta", $self->{"alignDir"}."/mrbayes.nex", 1, @markeralignments);
-	    if($self->{"reverseTranslate"}){
+	    if($self->{"dna"}){
 		for(my $i=0; $i<@markeralignments; $i++){
-			$markeralignments[$i].= ".ffn";
+			$markeralignments[$i] =~ s/trim.fasta/trim.fna.fasta/g;
 		}
 		Amphora2::Utilities::concatenateAlignments($self->{"alignDir"}."/concat-dna.fasta", $self->{"alignDir"}."/mrbayes-dna.nex", 3, @markeralignments);
 	    }
-    }
+ #   }
     debug "AFTER concatenateALI\n";
     return $self;
 }
@@ -162,8 +161,6 @@ sub hmmsearchParse{
 		my $hitname = $1;
 		my $basehitname = $1;
 		my $hitscore = $4;
-		# in case we're using 6-frame translation
-		$basehitname =~ s/_[fr][123]$//g;
 		if(!defined($hmmScores{$basehitname}) || $hmmScores{$basehitname} < $hitscore ){
 		    $hmmScores{$basehitname}=$hitscore;
 		    $hmmHits{$basehitname}=$hitname;
@@ -183,7 +180,6 @@ sub hmmsearchParse{
 	my $seqin = new Bio::SeqIO('-file'=>$self->{"blastDir"}."/$marker.candidate");
 	while(my $sequence = $seqin->next_seq){
 	    my $baseid = $sequence->id;
-	    $baseid =~ s/_[fr][123]$//g;
 	    if(exists $hmmHits{$baseid} && $hmmHits{$baseid} eq $sequence->id){
 		print NEWCANDIDATE ">".$sequence->id."\n".$sequence->seq."\n";
 	    }
@@ -215,7 +211,7 @@ sub writeAlignedSeq{
 	return if $aligned_count < $minAlignedResidues;
 
 	#substitute all the non letter or number characters into _ in the IDs to avoid parsing issues in tree viewing programs or others
-	$prev_name =~ s/[^\w\d]/_/g;
+	$prev_name = Amphora2::Summarize::treeName($prev_name);
 	#add a paralog ID if we're running in isolate mode and more than one good hit
 	$prev_name .= "_p$seq_count" if $seq_count > 0 && $self->{"isolate"};
 	#print the new trimmed alignment
@@ -378,7 +374,7 @@ sub getMarkerAlignmentFiles{
     my @markeralignments = ();
     for(my $index=0; $index < @{$markRef}; $index++){
 	my $marker=${$markRef}[$index];
-	push( @markeralignments, $self->{"alignDir"}."/$marker.aln_hmmer3.trim" );
+	push( @markeralignments, $self->{"alignDir"}."/".Amphora2::Utilities::getAlignerOutputFastaAA($marker) );
     }
     return @markeralignments;
 }
