@@ -57,7 +57,7 @@ my $clean = 0; #option set up, but not used for later
 my $threadNum = 4; #default value runs on 1 processor only.
 my $isolateMode=0; # set to 1 if running on an isolate assembly instead of raw reads
 my $bestHitsBitScoreRange=30; # all hits with a bit score within this amount of the best will be used
-my $align_fraction = 0.5; # at least this amount of min[length(query),length(marker)] must align to be considered a hit
+my $align_fraction = 0.3; # at least this amount of min[length(query),length(marker)] must align to be considered a hit
 my $pair=0; #used if using paired FastQ files
 my @markers;
 my (%hitsStart,%hitsEnd, %topscore, %hits, %markerHits,%markerNuc)=();
@@ -184,7 +184,7 @@ sub translateFrame{
     my $newseq = Bio::LocatableSeq->new( -seq => $localseq, -id => 'temp');
     $newseq = $newseq->revcom() if($frame<0);
     if($reverseTranslate){
-	$id =~ s/[\.\:\/\-]/_/g;
+	$id = Amphora2::Summarize::treeName($id);
 	if(exists  $markerNuc{$marker}){
 	    $markerNuc{$marker} .= ">".$id."\n".$newseq->seq."\n";
 	}else{
@@ -417,8 +417,10 @@ sub get_hits{
 		my ($query, $subject, $two, $three, $four, $five, $query_start,
 			$query_end, $eight, $nine, $ten, $bitScore) = split(/\t/,$_);	
 		my $markerName = getMarkerName($subject, $searchtype);
-		if($markerTopScores{$markerName} < $bitScore + $bestHitsBitScoreRange){
-			my @hitdata = [$markerName, $bitScore, $query_start, $query_end];
+		my @hitdata = [$markerName, $bitScore, $query_start, $query_end];
+		if(!$self->{"besthit"} && $markerTopScores{$markerName} < $bitScore + $bestHitsBitScoreRange){
+			push(@{$contig_hits{$query}}, @hitdata);
+		}elsif($markerTopScores{$markerName} <= $bitScore){
 			push(@{$contig_hits{$query}}, @hitdata);
 		}
 	}
