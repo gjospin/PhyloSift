@@ -67,12 +67,14 @@ sub pplacer {
 	    `$pp`;
 	}else{
 		#run pplacer on amino acid data
-		my $pp = "$Amphora2::Utilities::pplacer -c $markerPackage $readAlignmentFile";
+		my $pp = "$Amphora2::Utilities::pplacer -c $markerPackage --no-pre-mask $readAlignmentFile";
 		print "Running $pp\n";
 	    system($pp);
 		#run pplacer on nucleotide data
 		if(-e $readAlignmentDNAFile){
-			my $pp = "$Amphora2::Utilities::pplacer -c $markerPackage.codon $readAlignmentDNAFile";
+			my $codonmarkers = $markerPackage;
+			$codonmarkers =~ s/.updated/.codon.updated/g;
+			my $pp = "$Amphora2::Utilities::pplacer -c $codonmarkers --no-pre-mask $readAlignmentDNAFile";
 			print "Running $pp\n";
 		    system($pp);
 		}
