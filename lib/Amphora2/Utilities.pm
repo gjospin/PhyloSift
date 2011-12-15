@@ -12,6 +12,7 @@ use Bio::Align::Utilities qw(:all);
 use POSIX ();
 use LWP::Simple;
 use Carp;
+use Cwd;
 require File::Fetch;
 if($^O=~/arwin/){
 	use lib "$FindBin::Bin/osx/darwin-thread-multi-2level/";
@@ -402,6 +403,22 @@ sub getFastaMarkerFile{
     }
 }
 
+=head2 getMarkerPackage
+
+Returns the path to the marker package
+
+=cut
+
+sub getMarkerPackage{
+    my $self = shift;
+    my $marker= shift;
+    if($self->{"updated"} == 0){
+	return "$marker_dir/$marker";
+    }else{
+	return "$marker_dir/$marker.updated";
+    }
+}
+
 
 =head2 getAlignerOutputFastaAA
 Returns the FastA file containing amino acid read or contig alignments to the marker
@@ -431,6 +448,10 @@ given by markerName
 sub getReadPlacementFile{
     my $marker= shift;
     return "$marker.trim.jplace";
+}
+sub getReadPlacementFileDNA{
+    my $marker= shift;
+    return "$marker.trim.fna.jplace";
 }
 
 =head2 getTrimfinalMarkerFile
