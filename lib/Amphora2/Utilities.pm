@@ -399,7 +399,7 @@ sub getFastaMarkerFile{
     if($self->{"updated"} == 0){
 	return "$marker.faa";
     }else{
-	return "$marker.updated.fasta.fasta";
+	return "$marker.faa";
     }
 }
 
