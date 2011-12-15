@@ -219,8 +219,10 @@ sub summarize {
 	my $placeFile = $self->{"treeDir"}."/".Amphora2::Utilities::getReadPlacementFile($marker);
 	next unless( -e $placeFile );
 
-        # first read the taxonomy mapping
-        open( TAXONMAP, "$markerdir/$marker.ncbimap") || croak("Unable to read file $markerdir/$marker.ncbimap\n");
+        # first read the taxonomy mapping        
+    my $markermapfile = "$markerdir/$marker.ncbimap";
+    $markermapfile = "$markerdir/$marker.updated.taxonmap" if $self->{"updated"};
+    open( TAXONMAP, $markermapfile) || croak("Unable to read file $markerdir/$marker.ncbimap\n");
 	my %markerncbimap;
 	while( my $line = <TAXONMAP> ){
                 chomp($line);
@@ -245,7 +247,10 @@ sub summarize {
 			foreach my $edge(keys(%curplaces)){
 				my $weightRatio = $curplaces{$edge};
 				$weightRatio *= $coverage{$qname} if defined($coverage{$qname});
+				print STDERR "Marker $marker missing mapping from phylogeny edge $edge to taxonomy\n" unless defined($markerncbimap{$edge});
+				next unless defined($markerncbimap{$edge});
 				my $mapcount = scalar(@{$markerncbimap{$edge}});
+				print STDERR "Found 0 taxa for edge $edge\n" if( scalar(@{$markerncbimap{$edge}}) == 0 );
 				foreach my $taxon( @{$markerncbimap{$edge}} ){
 					my ($taxon_name, $taxon_level, $taxon_id) = getTaxonInfo($taxon);
 					$placements{$qname} = () unless defined($placements{$qname});
@@ -392,6 +397,8 @@ sub treeName {
     $inName=~s/[\(\)]//g;
     $inName=~s/-/_/g;
     $inName=~s/\//_/g;
+    $inName=~s/#/_/g;
+    $inName=~s/\:/_/g;
     return $inName;
 }
 
