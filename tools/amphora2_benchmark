@@ -34,7 +34,7 @@ for(my $bI=0; $bI<@benchmark_data; $bI++){
 	# run through the command-line just to test the interface as well
 	print STDOUT "Running $amphora2/amphora2 all -f $seqname\n";
 	Amphora2::Utilities::start_timer($seqname);
-	system("$amphora2/amphora2 all --config benchmarkrc --updated -f $seqname");
+	system("$amphora2/amphora2 all --config benchmarkrc -f $seqname");
 	my $seconds = Amphora2::Utilities::end_timer($seqname);
 
 	# now benchmark
