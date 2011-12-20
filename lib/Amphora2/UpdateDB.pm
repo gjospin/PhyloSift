@@ -183,10 +183,11 @@ sub get_ncbi_draft_genomes($){
 		}
 		# unpack the nucleotide tarball and cat the scaffolds/contigs.
 		my @tarfiles = `tar xvzf $fna`;
+		my $tarstatus = ($? >> 8);
 		my $catline = join(" ",@tarfiles);
 		$catline =~ s/\n//g;
 		`rm -f $fasta_out`;
-		`cat $catline >> $fasta_out`;
+		`cat $catline >> $fasta_out` if($tarstatus==0);
 		`rm $catline`;
 	}
 }
@@ -292,7 +293,7 @@ sub collate_markers($$){
 
 # assign 10 digit unique identifiers to each gene
 # todo: will need to move into alphabetical space here
-sub assign_seqids($$){
+sub assign_seqids($){
 	my $marker_dir = shift;
 	# get list of markers
 	chdir($marker_dir);
@@ -315,20 +316,27 @@ sub assign_seqids_for_marker($$$){
 	my $counter = shift;
 	open( INALN, $alignment );
 	open( OUTALN, ">$alignment.seqids" );
+	my %seen_ids;
+	my $printing=0;
 	while( my $line = <INALN> ){
 		chomp $line;
 		if($line =~ /^>(.+)/){
 			my $header = $1;
+			if(defined($seen_ids{$header})){
+				$printing=0;
+				next;
+			}
+			$seen_ids{$header}=1;
+			$printing=1;
 			my $countstring = sprintf("%010u", $counter);
 			print $idtable "$marker\t$header\t$countstring\n";
 			$line = ">$countstring";
 			$counter++;
 		}
-		print OUTALN $line."\n";
+		print OUTALN $line."\n" if $printing;
 	}
 	close INALN;
 	close OUTALN;
-	`mv $alignment $alignment.backup`;
 	`mv $alignment.seqids $alignment`;
 	return $counter;
 }
@@ -382,6 +390,8 @@ sub build_marker_trees_raxml($){
 #\$ -cwd
 #\$ -V
 #\$ -pe threaded 3
+#\$ -S /bin/bash
+
 rm RAxML*\$1*
 raxmlHPC -m GTRGAMMA -n \$1.codon.updated -s \$1.codon.updated.phy -T 4
 raxmlHPC -m PROTGAMMAWAGF -n \$1.updated -s \$1.updated.phy -T 4
@@ -425,6 +435,9 @@ rm RAxML*.\$1*
 
 sub fix_names_in_alignment($){
 	my $alignment = shift;
+	my %markertaxa;
+	# naive means to remove most trivial duplicates. TODO: allow divergent paralogs to remain.
+	my $printing = 1;
 	open( INALN, $alignment );
 	open( OUTALN, ">$alignment.fixed" );
 	while( my $line = <INALN> ){
@@ -432,9 +445,11 @@ sub fix_names_in_alignment($){
 			my $header = $1;
 			if($header =~ /_(\d+)_fasta/){
 				$line = ">$1\n";
+				$printing = defined($markertaxa{$1}) ? 0 : 1;
+				$markertaxa{$1}=1;
 			}
 		}
-		print OUTALN $line;
+		print OUTALN $line if $printing;
 	}
 	close INALN;
 	close OUTALN;
@@ -454,12 +469,13 @@ sub reconcile_with_ncbi($$$){
 #!/bin/sh
 #\$ -cwd
 #\$ -V
+#\$ -S /bin/bash
 
 # first do the AA tree
 echo ">blahblahblah" > \$1.updated.tmpread.fasta
 head -n 2 \$1.updated.fasta | tail -n 1 >> \$1.updated.tmpread.fasta
 taxit create -a "Aaron Darling" -d "simple package for reconciliation only" -l \$1 -f \$1.updated.fasta -t \$1.updated.tre -s \$1.updated.fasttree.log -Y FastTree -P \$1.updated
-pplacer -c \$1 -p \$1.updated.tmpread.fasta
+pplacer -c \$1.updated -p \$1.updated.tmpread.fasta
 # readconciler uses a pplacer tree from a .jplace file to parse out the branch numbers
 mangler.pl < \$1.updated.tmpread.jplace > \$1.updated.tmpread.jplace.mangled
 readconciler ncbi_tree.updated.tre \$1.updated.tmpread.jplace.mangled marker_taxon_map.updated.txt \$1.updated.taxonmap
@@ -468,10 +484,10 @@ rm \$1.updated.tmpread.jplace \$1.updated.tmpread.jplace.mangled \$1.updated.tmp
 # then do the codon tree
 echo ">blahblahblah" > \$1.codon.updated.tmpread.fasta
 head -n 2 \$1.codon.updated.fasta | tail -n 1 >> \$1.codon.updated.tmpread.fasta
-taxit create -a "Aaron Darling" -d "simple package for reconciliation only" -l \$1 -f \$1.codon.updated.fasta -t \$1.codon.updated.tre -s \$1.codon.updated.fasttree.log -Y FastTree -P \$1.codon.updated
-pplacer -c \$1.codon.updated -p \$1.codon.updated.tmpread.fasta
-mangler.pl < \$1.codon.updated.tmpread.jplace > \$1.codon.updated.tmpread.jplace.mangled
-readconciler ncbi_tree.updated.tre \$1.codon.updated.tmpread.jplace.mangled marker_taxon_map.updated.txt \$1.codon.updated.taxonmap
+#taxit create -a "Aaron Darling" -d "simple package for reconciliation only" -l \$1 -f \$1.codon.updated.fasta -t \$1.codon.updated.tre -s \$1.codon.updated.fasttree.log -Y FastTree -P \$1.codon.updated
+#pplacer -c \$1.codon.updated -p \$1.codon.updated.tmpread.fasta
+#mangler.pl < \$1.codon.updated.tmpread.jplace > \$1.codon.updated.tmpread.jplace.mangled
+#readconciler ncbi_tree.updated.tre \$1.codon.updated.tmpread.jplace.mangled marker_taxon_map.updated.txt \$1.codon.updated.taxonmap
 rm \$1.codon.updated.tmpread.jplace \$1.codon.updated.tmpread.jplace.mangled \$1.codon.updated.tmpread.fasta \$1.codon.updated.fasttree.log
 EOF
 
@@ -488,6 +504,8 @@ EOF
 		push(@jobids, $1);
 	}
 	wait_for_jobs(@jobids);
+	`rm a2_reconcile.sh.o*`;
+	`rm a2_reconcile.sh.e*`;
 }
 
 sub package_markers($){
