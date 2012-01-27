@@ -64,24 +64,12 @@ sub readSeqSummary{
 #	    print $read." $taxPlacementID[1]\t$taxPlacementID[2]:\t@readAncestor\n";
 	    my $rank = $taxPlacementID[1];
 	    #keep only the top hits for all ranks for each Read
-	    if(exists $topReadScore{$read}){
-		if($topReadScore{$read}->[0] < $probability ){
-		    if( $topReadScore{$read}->[2] < scalar(@readAncestor)){
-			my @array = ($probability,$taxPlacementID[2],scalar(@readAncestor));
+		my @array = ($probability,$taxPlacementID[2],scalar(@readAncestor));
+	    if(!exists $topReadScore{$read} || $topReadScore{$read}->[0] < $probability){
+			print STDERR "Replacing prob" if exists($topReadScore{$read});
 			$topReadScore{$read} = \@array;
-		    }
-		}else{
-		    # Do nothing
 		}
-	    }else{
-		my @array =($probability,$taxPlacementID[2],scalar(@readAncestor));
-		$topReadScore{$read} = \@array;
-	    }
-	    my @array =($probability,$taxPlacementID[2],scalar(@readAncestor));
 	    $allPlacedScore{$read}{$taxPlacement} = \@array;
-#	    exit;
-	}else{
-#	    debug "Warning : Line format not recognized .... Skipping line from sequence_taxa.txt\n";
 	}
     }
     close(fileIN);
@@ -92,18 +80,17 @@ sub readSeqSummary{
     init_taxonomy_levels(\%matchTop);
     foreach my $readID (keys %topReadScore){
 	#look at each taxonomic level for each Read
+	my $trueTaxon = $readSource{$readID};
 	my @ancArrayRead = getAncestorArray($topReadScore{$readID}->[1]);
-	pop(@ancArrayRead);
-	push(@ancArrayRead,$topReadScore{$readID}->[1]);
-	foreach my $id (@ancArrayRead){
-	    if(exists $sourceIDs{$id}){
+	my @tt = Amphora2::Summarize::getTaxonInfo($trueTaxon);
+	my @firstTaxon = Amphora2::Summarize::getTaxonInfo($ancArrayRead[0]);
+	print "Read $readID assigned to $firstTaxon[0], true $tt[0]\n";
+	foreach my $id (@ancArrayRead){		
+	    if(exists $refTaxa{$trueTaxon}{$id}){
 		my @currTaxon = Amphora2::Summarize::getTaxonInfo($id);
 		my $currRank = $currTaxon[1];
-		if(exists $matchTop{$currRank}){
-		    $matchTop{$currRank}++;
-		}else{
-		    $matchTop{$currRank}=1;
-		}
+		$matchTop{$currRank}=0 unless exists($matchTop{$currRank});
+	    $matchTop{$currRank}++;
 	    }
 	}
     }
@@ -123,7 +110,7 @@ sub readSeqSummary{
 	    push(@ancArrayRead,$allPlacedScore{$readID}{$tax}->[1]);
 	    foreach my $id (@ancArrayRead){
 		my @currTaxon = Amphora2::Summarize::getTaxonInfo($id);
-		my $currRank = $currTaxon[1];
+		my $currRank = $currTaxon[1];		
 		if(exists $sourceIDs{$id}){
 		    if(exists $matchAll{$currRank}){
 			$matchAll{$currRank} += $allPlacedScore{$readID}{$tax}->[0];
@@ -345,7 +332,9 @@ sub getInputTaxa{
 	    $sourceReadCounts{$2}++;
 	}else{
 	    $sourceReadCounts{$2}=0;
-	    $sourceTaxa{$2}=getAncestorArray($2);
+		foreach my $id (@ancestors){
+		    $sourceTaxa{$2}{$id}=1;
+		}
 	}
     }
     close(fileIN);
@@ -368,8 +357,8 @@ sub getAncestorArray{
     my $curID = $taxID;
     my @ancestor=();
     while($curID !=1){
-	$curID = ${$parent{$curID}}[0];
 	push(@ancestor,$curID);
+	$curID = ${$parent{$curID}}[0];
     }
     return @ancestor;
 }
