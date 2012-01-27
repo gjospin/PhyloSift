@@ -41,6 +41,14 @@ sub pplacer {
     my $markRef = shift;
     directoryPrepAndClean($self);
 
+	if($self->{"updated"}){
+		my $markerPackage = Amphora2::Utilities::getMarkerPackage($self,"concat");
+		my $pp = "$Amphora2::Utilities::pplacer -c $markerPackage ".$self->{"alignDir"}."/concat.trim.fasta";
+		print "Running $pp\n";
+	    system($pp);
+	    `mv $self->{"workingDir"}/concat.trim.fasta.jplace $self->{"treeDir"}` if(-e $self->{"workingDir"}."/concat.trim.fasta.jplace");
+	    return;
+	}
 
     foreach my $marker(@{$markRef}){
 
