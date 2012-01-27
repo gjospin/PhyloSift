@@ -77,12 +77,14 @@ sub MarkerAlign {
     debug "AFTER ALIGN and MASK\n";
 #    if($self->{"isolate"} && $self->{"besthit"}){
 	    my @markeralignments = getMarkerAlignmentFiles($self,\@allmarkers);
-	    Amphora2::Utilities::concatenateAlignments($self->{"alignDir"}."/concat.fasta", $self->{"alignDir"}."/mrbayes.nex", 1, @markeralignments);
+		my $outputFastaAA = $self->{"alignDir"}."/".Amphora2::Utilities::getAlignerOutputFastaAA("concat");
+	    Amphora2::Utilities::concatenateAlignments($outputFastaAA, $self->{"alignDir"}."/mrbayes.nex", 1, @markeralignments);
 	    if($self->{"dna"}){
 		for(my $i=0; $i<@markeralignments; $i++){
 			$markeralignments[$i] =~ s/trim.fasta/trim.fna.fasta/g;
 		}
-		Amphora2::Utilities::concatenateAlignments($self->{"alignDir"}."/concat-dna.fasta", $self->{"alignDir"}."/mrbayes-dna.nex", 3, @markeralignments);
+		my $outputFastaDNA = $self->{"alignDir"}."/".Amphora2::Utilities::getAlignerOutputFastaDNA("concat");
+		Amphora2::Utilities::concatenateAlignments($outputFastaDNA, $self->{"alignDir"}."/mrbayes-dna.nex", 3, @markeralignments);
 	    }
  #   }
     debug "AFTER concatenateALI\n";
