@@ -214,6 +214,7 @@ sub summarize {
     # map them onto the ncbi taxonomy
     # this is a hash structured as {sequenceID}{taxonID}=probabilitySum
     my %placements;
+    unshift(@{$markRef}, "concat") if $self->{"updated"};
     foreach my $marker(@{$markRef}){
 	# don't bother with this one if there's no read placements
 	my $placeFile = $self->{"treeDir"}."/".Amphora2::Utilities::getReadPlacementFile($marker);
