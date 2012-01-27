@@ -370,7 +370,7 @@ sub taxonomyAssignments {
 sub benchmark{
     my $self = shift;
     debug "RUNNING Benchmark\n";
-    Amphora2::Benchmark::runBenchmark($self);
+    Amphora2::Benchmark::runBenchmark($self, "./");
 }
 =head2 runPplacer
 
