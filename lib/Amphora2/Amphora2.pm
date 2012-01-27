@@ -15,6 +15,9 @@ use Amphora2::MarkerAlign;
 use Amphora2::pplacer;
 use Amphora2::Summarize;
 use Amphora2::FastSearch;
+use Amphora2::Benchmark;
+use Amphora2::BeastInterface;
+
 =head2 new
 
     Returns : Amphora2 project object
@@ -37,6 +40,7 @@ sub new{
     $self->{"dna"}=undef;
     $self->{"updated"}=undef;
     $self->{"coverage"}=undef;
+    $self->{"16s"}=undef;
     bless($self);
     return $self;
 }
@@ -72,6 +76,7 @@ sub initialize{
     $self->{"treeDir"} = $self->{"fileDir"}."/treeDir"; 
     $self->{"dna"}=0;
     $self->{"updated"}=0;
+    $self->{"16s"}=0;
     return $self;
     
 }
@@ -160,16 +165,7 @@ sub run {
     debug "@markers\n";
     debug "MODE :: ".$self->{"mode"}."\n";
     if($self->{"mode"} eq 'blast' || $self->{"mode"} eq 'all'){
-	$self->{"searchtype"} = "rap";
-	$self->{"searchtype"} = "blast" if defined($self->{"isolate"}) && $self->{"isolate"} ne "0";
-	# check what kind of input was provided
-	my $inputtype = Amphora2::Utilities::get_sequence_input_type($self->{"readsFile"});
-	$self->{"searchtype"} = "blast" if($inputtype eq "long");	# RAP can not handle the long reads and contigs
-	$self->{"dna"} = $inputtype eq "protein" ? 0 : 1;	# Is the input protein sequences?
-	print "Inputtype is $inputtype\n";
-	debug "Search type is ".$self->{"searchtype"}."\n";
-	# need to use BLAST for isolate mode, since RAP only handles very short reads
-	$self=$self->runSearch($continue,$custom,$self->{"searchtype"},\@markers);
+	$self=$self->runSearch($continue,$custom,\@markers);
 	debug "MODE :: ".$self->{"mode"}."\n";
     }
 
@@ -178,10 +174,14 @@ sub run {
 	$self=$self->runMarkerAlign($continue,\@markers);
     }
     if($self->{"mode"} eq 'placer' || $self->{"mode"} eq 'all'){
+	croak "No marker gene hits found in the input data. Unable to reconstruct phylogeny and taxonomy." if(scalar(@markers)==0);
 	$self=$self->runPplacer($continue,\@markers);
     }
     if($self->{"mode"} eq 'summary' || $self->{"mode"} eq 'all'){
 	$self=$self->taxonomyAssignments($continue,\@markers);
+    }
+    if($self->{"mode"} eq 'benchmark'){
+	$self=$self->benchmark();
     }
 }
 
@@ -194,12 +194,13 @@ sub run {
 # reads the Amphora2 configuration file
 sub readAmphora2Config {
     my $self = shift;
+    my $custom_config = $self->{"configuration"};
     # first get the install prefix of this script
     my $scriptpath = dirname($0);
     # try first a config in the script dir, in case we're running from
     # a dev directory.  then config in system dir, then user's home.
     # let each one override its predecessor.
-    { package Amphora2::Settings; do "$scriptpath/amphora2rc"; do "$scriptpath/../amphora2rc"; do "$scriptpath/../etc/amphora2rc"; do "$ENV{HOME}/.amphora2rc" }
+    { package Amphora2::Settings; do "$scriptpath/amphora2rc"; do "$scriptpath/../amphora2rc"; do "$scriptpath/../etc/amphora2rc"; do "$ENV{HOME}/.amphora2rc"; do $custom_config if defined $custom_config; }
     return $self;
 }
 
@@ -362,8 +363,17 @@ sub taxonomyAssignments {
     Amphora2::Utilities::start_timer("taxonomy assignments");
     Amphora2::Summarize::summarize( $self,$markListRef );
     Amphora2::Utilities::end_timer("taxonomy assignments");
+    return $self;
 }
 
+=head2 benchmark
+
+=cut
+sub benchmark{
+    my $self = shift;
+    debug "RUNNING Benchmark\n";
+    Amphora2::Benchmark::runBenchmark($self);
+}
 =head2 runPplacer
 
     Performs the appropriate checks before runing the Read placement parts of the pipeline
@@ -406,6 +416,7 @@ sub runMarkerAlign{
     #Align Markers
     my $threadNum=1;
     Amphora2::MarkerAlign::MarkerAlign( $self, $markRef );
+#    Amphora2::BeastInterface::Export($self, $markRef, $self->{"fileDir"}."/beast.xml");
     Amphora2::Utilities::end_timer("Alignments");
     if($continue != 0){
 	$self->{"mode"} = 'placer';

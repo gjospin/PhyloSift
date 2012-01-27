@@ -57,6 +57,7 @@ my $clean = 0; #option set up, but not used for later
 my $threadNum = 4; #default value runs on 1 processor only.
 my $isolateMode=0; # set to 1 if running on an isolate assembly instead of raw reads
 my $bestHitsBitScoreRange=30; # all hits with a bit score within this amount of the best will be used
+my $align_fraction = 0.3; # at least this amount of min[length(query),length(marker)] must align to be considered a hit
 my $pair=0; #used if using paired FastQ files
 my @markers;
 my (%hitsStart,%hitsEnd, %topscore, %hits, %markerHits,%markerNuc)=();
@@ -69,10 +70,11 @@ my $reverseTranslate=0;
 my $blastdb_name = "blastrep.faa";
 my $blastp_params = "-p blastp -e 0.1 -b 50000 -v 50000 -a $threadNum -m 8";
 
+my %markerLength;
+
 sub RunSearch {
     my $self = shift;
     my $custom = shift;
-    my $searchtype = shift;
     my $markersRef = shift;
     @markers = @{$markersRef};
     %markerHits = ();
@@ -82,27 +84,41 @@ sub RunSearch {
     $isolateMode = $self->{"isolate"};
     $reverseTranslate = $self->{"reverseTranslate"};
 
+	# check what kind of input was provided
+	my ($seqtype, $length, $format) = Amphora2::Utilities::get_sequence_input_type($self->{"readsFile"});
+	$self->{"dna"} = $seqtype eq "protein" ? 0 : 1;	# Is the input protein sequences?	
+	debug "Input type is $seqtype, $length, $format\n";
+	# need to use BLAST for isolate mode, since RAP only handles very short reads
+
     # ensure databases and sequences are prepared for search
     debug "before rapPrepandclean\n";
     prepAndClean($self);
     if($self->{"readsFile_2"} ne ""){
-	debug "before fastqtoFASTA\n";
-	fastqToFasta($self);
+	carp "Error, paired mode requires FastQ format input data" unless $format eq "fastq";
+	debug "before fastqtoMergedFasta\n";
+	fastqToMergedFasta($self);
+    }elsif($format eq "fastq"){
+	fastqToFasta($self->{"readsFile"}, $self->{"blastDir"}."/$readsCore.fasta");
+	$self->{"readsFile"} = $self->{"blastDir"}."/$readsCore.fasta";
     }
+    readMarkerLengths();
 
     # search reads/contigs against marker database
     my $resultsfile;
-    if($searchtype eq "blast"){
+    my $searchtype = "blast";
+    if($length eq "long" && $seqtype eq "protein"){
+	$resultsfile = executeBlast($self, $self->{"readsFile"});
+    }elsif($length eq "long"){
 	$resultsfile = blastXoof_table($self, $self->{"readsFile"});
 	$reverseTranslate=1;
     }else{
+	$searchtype = "rap";
         $resultsfile = executeRap($self);
-	build_lookup_table($self);
     }
 
     # parse the hits to marker genes
     my $hitsref;
-    if(defined $self->{"coverage"} && (!defined $self->{"isolate"} || $self->{"isolate"} != 1)){
+    if($length eq "long" && $seqtype ne "protein" && (!defined $self->{"isolate"} || $self->{"isolate"} != 1)){
 	$hitsref = get_hits_contigs($self,$resultsfile, $searchtype);
     }else{
 	$hitsref = get_hits($self,$resultsfile, $searchtype);
@@ -110,30 +126,20 @@ sub RunSearch {
 
     # write out sequence regions hitting marker genes to candidate files
     writeCandidates($self,$hitsref);
-    
+    exit;
     return $self;
 }
 
-=head2 build_lookup_table
-
-=cut
-
-sub build_lookup_table{
-    my $self=shift;
-    debug "Building the lookup table for all markers";
-    foreach my $markName (@markers){
-	open(markIN,$Amphora2::Utilities::marker_dir."/".$markName.".faa");
-	while(<markIN>){
-	    chomp($_);
-	    if ($_ =~ m/^>(\S+)/){
-		$marker_lookup{$1}=$markName;
-	    }
+sub readMarkerLengths{
+	foreach my $marker(@markers){
+		open( HMM, $Amphora2::Utilities::marker_dir."/$marker.hmm");
+		while( my $line = <HMM> ){
+			if($line =~ /LENG\s+(\d+)/){
+				$markerLength{$marker} = $1;
+				last;
+			}
+		}
 	}
-	close(markIN);
-	debug ".";
-    }
-    debug "\n";
-    return $self;
 }
 
 =head2 blastXoof_table
@@ -178,7 +184,7 @@ sub translateFrame{
     my $newseq = Bio::LocatableSeq->new( -seq => $localseq, -id => 'temp');
     $newseq = $newseq->revcom() if($frame<0);
     if($reverseTranslate){
-	$id =~ s/[\.\:\/\-]/_/g;
+	$id = Amphora2::Summarize::treeName($id);
 	if(exists  $markerNuc{$marker}){
 	    $markerNuc{$marker} .= ">".$id."\n".$newseq->seq."\n";
 	}else{
@@ -230,11 +236,31 @@ sub executeBlast{
 
 =head2 fastqToFasta
 
-    Writes a fastA file from 2 fastQ files from the Amphora2 object
+Convert a FastQ file to FastA
 
 =cut
 
 sub fastqToFasta{
+	my $infile = shift;
+	my $outfile = shift;	
+	my $count = 0;
+	debug "Reading $infile\n";
+	open(FASTQ_1, $infile)or croak( "Couldn't open the FastQ file $infile\n" );
+	open(FASTA, ">$outfile")or croak( "Couldn't open $outfile for writing\n" ) ;
+	while(my $head1 = <FASTQ_1>){
+		$head1 =~ s/^@/>/g if($count%4==0);
+		print FASTA $head1 if($count%4<2);
+		$count++;
+	}
+}
+
+=head2 fastqToMergedFasta
+
+    Writes a fastA file from 2 fastQ files from the Amphora2 object
+
+=cut
+
+sub fastqToMergedFasta{
     my $self = shift;
     if($self->{"readsFile_2"} ne ""){
 	debug "FILENAME ".$self->{"fileName"}."\n";
@@ -245,10 +271,10 @@ sub fastqToFasta{
 	my $curr_ID = "";
 	my $skip = 0;
 	debug "Reading ".$self->{"readsFile"}."\n";
-	open(FASTQ_1, $self->{"readsFile"})or die "Couldn't open ".$self->{"readsFile"}." in run_blast.pl reading the FastQ file\n";
-	open(FASTQ_2, $self->{"readsFile_2"})or die "Couldn't open ".$self->{"readsFile_2"}." in run_blast.pl reading the FastQ file\n";            
+	open(FASTQ_1, $self->{"readsFile"})or croak "Couldn't open ".$self->{"readsFile"}." in run_blast.pl reading the FastQ file\n";
+	open(FASTQ_2, $self->{"readsFile_2"})or croak "Couldn't open ".$self->{"readsFile_2"}." in run_blast.pl reading the FastQ file\n";            
 	debug "Writing ".$readsCore.".fasta\n";
-	open(FASTA, ">".$self->{"blastDir"}."/$readsCore.fasta")or die "Couldn't open ".$self->{"blastDir"}."/$readsCore.fasta for writing in run_blast.pl\n";
+	open(FASTA, ">".$self->{"blastDir"}."/$readsCore.fasta")or croak "Couldn't open ".$self->{"blastDir"}."/$readsCore.fasta for writing in run_blast.pl\n";
 	while(my $head1 = <FASTQ_1>){
 		my $read1 = <FASTQ_1>;
 		my $qhead1 = <FASTQ_1>;
@@ -302,7 +328,7 @@ sub get_hits_contigs{
 		# running on long reads or an assembly
 		# allow each region of a sequence to have a top hit
 		# do not allow overlap
-		if(defined($contig_top_bitscore{$query}{$markerName}) && $contig_top_bitscore{$query}{$markerName} - $bestHitsBitScoreRange < $bitScore){
+		if(defined($contig_top_bitscore{$query}{$markerName})){
 			my $i=0;
 			for(; $i<@{$contig_hits{$query}}; $i++){
 				my $prevhitref=$contig_hits{$query}->[$i];
@@ -312,7 +338,7 @@ sub get_hits_contigs{
 				if(	$prevhit[2] < $prevhit[3] && $query_start < $query_end &&
 					$prevhit[2] < $query_end - $max_hit_overlap && 
 					$query_start + $max_hit_overlap < $prevhit[3]){
-					print STDERR "Found overlap $query and $markerName, $query_start:$query_end\n";
+#					print STDERR "Found overlap $query and $markerName, $query_start:$query_end\n";
 					$contig_hits{$query}->[$i] = [$markerName, $bitScore, $query_start, $query_end] if ($bitScore > $prevhit[1]);
 					last;
 				}
@@ -320,7 +346,7 @@ sub get_hits_contigs{
 				if(	$prevhit[2] > $prevhit[3] && $query_start > $query_end &&
 					$prevhit[3] < $query_start - $max_hit_overlap && 
 					$query_end + $max_hit_overlap < $prevhit[2]){
-					print STDERR "Found overlap $query and $markerName, $query_start:$query_end\n";
+#					print STDERR "Found overlap $query and $markerName, $query_start:$query_end\n";
 					$contig_hits{$query}->[$i] = [$markerName, $bitScore, $query_start, $query_end] if ($bitScore > $prevhit[1]);
 					last;
 				}
@@ -363,11 +389,6 @@ sub get_hits{
 		$query_end, $eight, $nine, $ten, $bitScore) = split(/\t/,$_);	
 	my $markerName = getMarkerName($subject, $searchtype);
 
-#	if($searchtype ne "blast" && $self->{"dna"}){
-		# RAPsearch seems to have an off-by-one on its DNA coordinates
-#		$query_start -= 0;
-#		$query_end -= 0;
-#	}
 	#parse once to get the top score for each marker (if isolate is ON, parse again to check the bitscore ranges)
 	if($isolateMode==1){
 	    # running on a genome assembly, allow only 1 hit per marker (TOP hit)
@@ -384,7 +405,7 @@ sub get_hits{
 		}#else do nothing
 	}
     }
-    close(blastIN);
+	    close(blastIN);
     if($isolateMode==1){
 	# reading the output a second to check the bitscore ranges from the top score
 	open(blastIN,$hitfilename)or die "Couldn't open $hitfilename\n";
@@ -396,8 +417,10 @@ sub get_hits{
 		my ($query, $subject, $two, $three, $four, $five, $query_start,
 			$query_end, $eight, $nine, $ten, $bitScore) = split(/\t/,$_);	
 		my $markerName = getMarkerName($subject, $searchtype);
-		if($markerTopScores{$markerName} < $bitScore + $bestHitsBitScoreRange){
-			my @hitdata = [$markerName, $bitScore, $query_start, $query_end];
+		my @hitdata = [$markerName, $bitScore, $query_start, $query_end];
+		if(!$self->{"besthit"} && $markerTopScores{$markerName} < $bitScore + $bestHitsBitScoreRange){
+			push(@{$contig_hits{$query}}, @hitdata);
+		}elsif($markerTopScores{$markerName} <= $bitScore){
 			push(@{$contig_hits{$query}}, @hitdata);
 		}
 	}
@@ -423,7 +446,6 @@ sub getMarkerName{
 	}else{
 		my @marker=split(/\_\_/,$subject);
 		$markerName = $marker[0];
-#		$markerName = $marker_lookup{$subject};
 	}
 	return $markerName;
 }
@@ -440,16 +462,31 @@ sub writeCandidates{
 	my %contig_hits = %$contigHitsRef;
 	debug "ReadsFile:  $self->{\"readsFile\"}"."\n";
 	my $seqin = new Bio::SeqIO('-file'=>$self->{"readsFile"});
+	open(nonHITS,">",$self->{"blastDir"}."/nonHits.faa")or die "Couldn't open ".$self->{"blastDir"}."/nonHits.faa for writing\n";
 	while (my $seq = $seqin->next_seq) {
 		# skip this one if there are no hits
-		next unless( exists $contig_hits{$seq->id} );
-		for( my $i=0; $i<@{$contig_hits{$seq->id}}; $i++){
+#		next unless( exists $contig_hits{$seq->id} );
+	    if(!exists $contig_hits{$seq->id}){
+		print "16s : ".$self->{"16s"}."\n";
+		if($self->{"16s"}){
+		    print nonHITS ">".$seq->id."\n".$seq->seq."\n";
+		}
+		next;
+	    }
+	    for( my $i=0; $i<@{$contig_hits{$seq->id}}; $i++){
 			my $curhitref=$contig_hits{$seq->id}->[$i];
 			my @curhit=@$curhitref;
 			my $markerHit = $curhit[0];
 			my $start = $curhit[2];
 			my $end = $curhit[3];
 			($start,$end) = ($end,$start) if($start > $end); # swap if start bigger than end
+
+			# check to ensure hit covers enough of the marker
+			# TODO: make this smarter about boundaries, e.g. allow a smaller fraction to hit
+			# if it looks like the query seq goes off the marker boundary
+			my $min_len = $markerLength{$markerHit} < $seq->length ? $markerLength{$markerHit} : $seq->length;
+			next unless (($end-$start)/$min_len >= $align_fraction);
+
 			$start -= FLANKING_LENGTH;
 			$end += FLANKING_LENGTH;
 			# ensure flanking region is a multiple of 3 to avoid breaking frame in DNA
@@ -464,6 +501,9 @@ sub writeCandidates{
 				my $frame = $curhit[2] % 3 + 1;
 				$frame *= -1 if( $curhit[2] > $curhit[3]);
 				my $seqlen = abs($curhit[2] - $curhit[3])+1;
+				# check length again in AA units
+				$min_len = $markerLength{$markerHit} < $seq->length / 3? $markerLength{$markerHit} : $seq->length / 3;
+				next unless (($seqlen/3)/$min_len >= $align_fraction);
 				if($seqlen % 3 == 0){
 					$newSeq = translateFrame($seq->id,$seq->seq,$start,$end,$frame,$markerHit,$self->{"dna"});
 					$newSeq =~ s/\*/X/g;	# bioperl uses * for stop codons but we want to give X to hmmer later
@@ -485,10 +525,11 @@ sub writeCandidates{
 		close(fileOUT);
 		if($self->{"dna"}){
 			open(fileOUT,">".$self->{"blastDir"}."/$marker.candidate.ffn")or die " Couldn't open ".$self->{"blastDir"}."/$marker.candidate.ffn for writing\n";
-			print fileOUT $markerNuc{$marker};
+			print fileOUT $markerNuc{$marker} if defined($markerNuc{$marker});
 			close(fileOUT);
 		}
 	}
+	close(nonHITS);
 }
 
 =head2 prepAndClean

@@ -21,7 +21,9 @@ my $reverseTranslate=0;
 my $besthit=0;
 my $updated=0;
 my $coverage;
+my $configuration;
 my $help=0;
+my $s16=0;
 my $usage = qq~
 
 $0 Usage
@@ -54,7 +56,6 @@ Options Available at this time :
                         Reversing the sequences for the second file listed
                         and appending to the corresponding pair from the first file listed.
    --continue            Enables the pipeline to continue to subsequent steps when not using the 'all' mode
-   --reverse             If the submitted sequences were nucleotides, the program prints out an alignment for all the markers in DNA space in addition to the one in Protein space.
    --isolate             Use this mode if you are running data from an Isolate genome
 
 ~;
@@ -70,8 +71,10 @@ GetOptions("threaded=i" => \$threadNum,
 	   "besthit" => \$besthit, #should we keep only the best hit when there are multiple?
 	   "coverage=s" => \$coverage, #provides a contig/scaffold coverage file
 	   "updated_markers"=> \$updated, #Indicates if Amphora2 uses the updated versions of the Markers.
+	   "config=s"=> \$configuration, #custom config file
 	   "h"=>\$help,#prints the usage part of the README file
 	   "help"=>\$help,#same as -h
+	   "16s"=>\$s16,#runs the pipeline on 16s data in addition to the regular marker genes
     )|| die $usage;
 
 if($help != 0){
@@ -109,7 +112,8 @@ $newObject->{"besthit"} = $besthit;
 $newObject->{"reverseTranslate"} = $reverseTranslate;
 $newObject->{"updated"}=$updated;
 $newObject->{"coverage"}=$coverage;
-
+$newObject->{"configuration"}=$configuration if defined($configuration);
+$newObject->{"16s"}=$s16;
 my $readsFile = $newObject->getReadsFile;
 debug "FORCE: ".$force."\n";
 debug "Continue : ".$continue."\n";
