@@ -458,6 +458,18 @@ sub fix_names_in_alignment($){
 	`mv $alignment.fixed $alignment`;
 }
 
+sub createTempReadFasta{
+	my $file = shift;
+	open(TMPREAD,">$file.tmpread.fasta");
+	print TMPREAD ">blahblahblah\n";
+	open(ALNIN,"$file.fasta");
+	my $line = <ALNIN>;
+	while($line = <ALNIN>){
+		last if $line =~ /^>/;
+		print TMPREAD $line;
+	}
+}
+
 sub reconcile_with_ncbi($$$){
 	my $self = shift;
 	my $results_dir = shift;
@@ -474,8 +486,6 @@ sub reconcile_with_ncbi($$$){
 #\$ -S /bin/bash
 
 # first do the AA tree
-echo ">blahblahblah" > \$1.updated.tmpread.fasta
-head -n 2 \$1.updated.fasta | tail -n 1 >> \$1.updated.tmpread.fasta
 taxit create -a "Aaron Darling" -d "simple package for reconciliation only" -l \$1 -f \$1.updated.fasta -t \$1.updated.tre -s \$1.updated.fasttree.log -Y FastTree -P \$1.updated
 pplacer -c \$1.updated -p \$1.updated.tmpread.fasta
 # readconciler uses a pplacer tree from a .jplace file to parse out the branch numbers
@@ -484,8 +494,6 @@ readconciler ncbi_tree.updated.tre \$1.updated.tmpread.jplace.mangled marker_tax
 rm \$1.updated.tmpread.jplace \$1.updated.tmpread.jplace.mangled \$1.updated.tmpread.fasta \$1.updated.fasttree.log
 
 # then do the codon tree
-echo ">blahblahblah" > \$1.codon.updated.tmpread.fasta
-head -n 2 \$1.codon.updated.fasta | tail -n 1 >> \$1.codon.updated.tmpread.fasta
 taxit create -a "Aaron Darling" -d "simple package for reconciliation only" -l \$1 -f \$1.codon.updated.fasta -t \$1.codon.updated.tre -s \$1.codon.updated.fasttree.log -Y FastTree -P \$1.codon.updated
 pplacer -c \$1.codon.updated -p \$1.codon.updated.tmpread.fasta
 mangler.pl < \$1.codon.updated.tmpread.jplace > \$1.codon.updated.tmpread.jplace.mangled
@@ -499,6 +507,9 @@ EOF
 	unshift(@markerlist, "concat");
 	my @jobids;
 	foreach my $marker(@markerlist){
+		# create some read files for pplacer to place so we can get its jplace
+		createTempReadFasta("$marker.updated");
+		createTempReadFasta("$marker.codon.updated");
 		# run reconciliation on them
 		my $qsub_cmd = "qsub -q all.q -q eisen.q /tmp/a2_reconcile.sh $marker";
 		my $job = `$qsub_cmd`;
