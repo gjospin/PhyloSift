@@ -3,6 +3,8 @@ package Amphora2::Utilities;
 #use 5.006;
 use strict;
 use warnings;
+use FindBin qw($Bin);
+BEGIN { unshift(@INC, "$FindBin::Bin/legacy/") if $] < 5.01; }
 use File::Basename;
 use Bio::AlignIO;
 use Bio::SimpleAlign;
@@ -10,7 +12,7 @@ use Bio::Align::Utilities qw(:all);
 use POSIX ();
 use LWP::Simple;
 use Carp;
-use FindBin qw($Bin);
+use Cwd;
 require File::Fetch;
 if($^O=~/arwin/){
 	use lib "$FindBin::Bin/osx/darwin-thread-multi-2level/";
@@ -88,12 +90,11 @@ sub get_program_path {
 	}
 	# last ditch attempt, check the directories from where the script is running
 	$progcheck = $Bin."/".$progname unless( $progcheck =~ /$progname/ || !(-x $Bin."/".$progname) );
+	$progcheck = $Bin."/bin/".$progname unless( $progcheck =~ /$progname/  || !(-x $Bin."/bin/".$progname) );
 	# check the OS and use Mac binaries if needed
 	if($^O =~ /arwin/){
-		$progcheck = $Bin."/osx/".$progname unless( $progcheck =~ /$progname/  && !(-x $Bin."/".$progname) );
-	}else{
-	    #I don't think this line is needed because it is taken care of 5 lines before
-		#$progcheck = $Bin."/bin/".$progname unless( $progcheck =~ /$progname/  && !(-x $Bin."/".$progname) );
+		$progcheck = $Bin."/osx/".$progname unless( $progcheck =~ /$progname/  && !(-x $Bin."/".$progname)  );
+		$progcheck = $Bin."/osx/".$progname if($progcheck =~ /$Bin\/bin/); # don't use the linux binary!
 	}
 	return $progcheck;
 }
@@ -108,6 +109,7 @@ our $formatdb = "";
 our $rapSearch= "";
 our $preRapSearch = "";
 our $raxml = "";
+our $readconciler = "";
 sub programChecks {
 	eval 'require Bio::Seq;';
 	if ($@) {
@@ -157,6 +159,8 @@ sub programChecks {
 	    carp("raxmlHPC was not found\n");
 	    return 1;
 	}
+
+	$readconciler = get_program_path("readconciler",$Amphora2::Settings::a2_path);
 	return 0;
 }
 
@@ -207,7 +211,7 @@ sub download_data {
 }
 
 
-my $marker_update_url = "http://edhar.genomecenter.ucdavis.edu/~koadman/markers.tgz";
+my $marker_update_url = "http://edhar.genomecenter.ucdavis.edu/~koadman/amphora2_markers/markers.tgz";
 my $ncbi_url = "http://edhar.genomecenter.ucdavis.edu/~koadman/ncbi.tgz";
 
 sub dataChecks {
@@ -395,7 +399,23 @@ sub getFastaMarkerFile{
     if($self->{"updated"} == 0){
 	return "$marker.faa";
     }else{
-	return "$marker.updated.fasta.fasta";
+	return "$marker.faa";
+    }
+}
+
+=head2 getMarkerPackage
+
+Returns the path to the marker package
+
+=cut
+
+sub getMarkerPackage{
+    my $self = shift;
+    my $marker= shift;
+    if($self->{"updated"} == 0){
+	return "$marker_dir/$marker";
+    }else{
+	return "$marker_dir/$marker.updated";
     }
 }
 
@@ -429,6 +449,10 @@ sub getReadPlacementFile{
     my $marker= shift;
     return "$marker.trim.jplace";
 }
+sub getReadPlacementFileDNA{
+    my $marker= shift;
+    return "$marker.trim.fna.jplace";
+}
 
 =head2 getTrimfinalMarkerFile
 
@@ -443,7 +467,8 @@ sub getTrimfinalMarkerFile{
     if($self->{"updated"} == 0){
         return "$marker.trimfinal";
     }else{
-        return "$marker.updated.unique.fasta";
+        return "$marker.trimfinal";
+#        return "$marker.updated.fasta";
     }
 }
 
@@ -458,9 +483,11 @@ sub getTrimfinalFastaMarkerFile{
     my $self = shift;
     my $marker= shift;
     if($self->{"updated"} == 0){
-        return "$marker.trimfinal.fasta";
+	return "$marker.trimfinal.fasta";
     }else{
-        return "$marker.updated.fasta";
+	return "$marker.trimfinal.fasta";
+#        return $self->{"alignDir"}."/$marker.updated.hmm.fasta";
+#        return "$Amphora2::Utilities::marker_dir/$marker.updated.fasta";
     }
 }
 
@@ -609,53 +636,127 @@ sub concatenateAlignments {
 my %timers;
 sub start_timer {
     my $timername = shift;
-    my @timerval=localtime(time);
-    $timers{$timername} = \@timerval;
-    debug join("Before $timername %4d-%02d-%02d %02d:%02d:%02d\n",$timerval[5]+1900,$timerval[4]+1,$timerval[3],$timerval[2],$timerval[1],$timerval[0]);
+    my $t = time;
+    my @timerval=localtime($t);
+    $timers{$timername} = $t;
+    debug sprintf("Before $timername %4d-%02d-%02d %02d:%02d:%02d\n",$timerval[5]+1900,$timerval[4]+1,$timerval[3],$timerval[2],$timerval[1],$timerval[0]);
 }
 
 sub end_timer {
     my $timername = shift;
-    my @timerval=localtime(time);
-    debug join("After $timername %4d-%02d-%02d %02d:%02d:%02d\n",$timerval[5]+1900,$timerval[4]+1,$timerval[3],$timerval[2],$timerval[1],$timerval[0]);
+    my $t = time;
+    my @timerval=localtime($t);
+    debug sprintf("After $timername %4d-%02d-%02d %02d:%02d:%02d\n",$timerval[5]+1900,$timerval[4]+1,$timerval[3],$timerval[2],$timerval[1],$timerval[0]);
+    return $t-$timers{$timername};
 }
 
 
 =head2 get_sequence_input_type
+
+Checks whether input is either short sequence reads, e.g. < 500nt or assembled fragments.
+Reads the whole file to find the longest fragment.
+
+=cut
+
+sub get_sequence_input_type {
+	my $file = shift;
+	open(FILE, $file);
+	my $counter = 0;
+	my $maxfound = 0;
+	my $dnacount = 0;
+	my $seqtype="dna";
+	my $length="long";
+	my $format="unknown";
+	my $allcount=0;
+	while( my $line = <FILE> ){
+		if($line =~ /^>/){
+			$maxfound =  $counter > $maxfound ? $counter : $maxfound;
+			$counter = 0;
+			$format = "fasta" if $format eq "unknown";
+		}elsif($line =~ /^@/ || $line =~ /^\+/){
+			$counter = 0;
+			$format = "fastq" if $format eq "unknown";
+		}else{
+			$counter += length($line)-1;
+			$dnacount += $line =~ tr/[ACGTNacgtn]//;
+			$allcount += length($line)-1;
+		}
+	}
+	$maxfound =  $counter > $maxfound ? $counter : $maxfound;
+	$seqtype = "protein" if ($dnacount < $allcount * 0.75);
+	$seqtype = "dna" if ($format eq "fastq"); # nobody using protein fastq (yet)
+	my $aamult = $seqtype eq "protein" ? 3 : 1;
+	$length = "short" if $maxfound < (500 / $aamult);
+	return ($seqtype, $length, $format);
+}
+
+
+=head2 get_sequence_input_type_quickndirty
 
 Checks whether input is either short sequence reads, e.g. < 500nt or assembled fragments
 without reading the whole file.
 
 =cut
 
-sub get_sequence_input_type {
+sub get_sequence_input_type_quickndirty {
 	my $file = shift;
 	my $maxshortread = 500;
 	open(FILE, $file);
 	my $filesize = -s "$file";
 	my $counter = 0;
+	my $maxfound = 0;
 	my $allcount = 0;
 	my $dnacount = 0;
+	my $seqtype="dna";
+	my $length="long";
+	my $format="unknown";
 	
 	for( my $i=0; $i<200; $i++ ){
 		my $seekpos = int(rand($filesize-100));
+		$seekpos = 0 if($i==0); # always start with the first line in case the sequence is on a single line!
 		seek(FILE, $seekpos, 0);
 		$counter = 0;
 		my $line = <FILE>;	# burn a line to be sure we get to sequence
 		while( $line = <FILE> ){
-			last if $line =~ />/; # fasta
-			last if $line =~ /@/; # fastq
-			last if $line =~ /\+/; # fastq
-			$counter += length($line);		
-			$dnacount += $line =~ tr/[ACGTacgt]//;
+			if($line =~ /^>/){
+				$format = "fasta";
+				last if $i>0;
+				$i++;
+			}elsif($line =~ /^@/ || $line =~ /^\+/){
+				$format = "fastq";
+				last if $i>0;
+				$i++;
+			}else{
+				$counter += length($line);
+				$dnacount += $line =~ tr/[ACGTNacgtn]//;
+			}
 		}
+		$maxfound = $counter if $maxfound < $counter;
 		$allcount += $counter;
 		last if($counter > 500);	# found a long read
 	}
-	print STDERR "dna frac is ".($dnacount / $allcount)."\n";
-	return "protein" if ($dnacount < $allcount * 0.75);
-	return "short" if $counter < 500;
-	return "long";
+	$seqtype = "protein" if ($dnacount < $allcount * 0.75);
+	$seqtype = "dna" if ($format eq "fastq"); # nobody using protein fastq (yet)
+	my $aamult = $seqtype eq "protein" ? 3 : 1;
+	$length = "short" if $maxfound < (500 / $aamult);
+	return ($seqtype, $length, $format);
+}
+
+
+=head2 get_date_YYYYMMDD
+
+Gets the current date and formats it by YYYYMMDD
+
+=cut
+
+sub get_date_YYYYMMDD {
+	my @timerval = localtime();
+	my $datestr = (1900+$timerval[5]);
+	$datestr .= 0 if $timerval[4] <= 9; 
+	$datestr .= ($timerval[4]+1);
+	$datestr .= 0 if $timerval[3] <= 9; 
+	$datestr .= $timerval[3];
+	return $datestr;
 }
 
 =head1 AUTHOR
