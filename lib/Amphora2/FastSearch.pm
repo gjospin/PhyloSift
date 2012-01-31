@@ -69,7 +69,8 @@ my $reverseTranslate=0;
 
 my $blastdb_name = "blastrep.faa";
 my $blastp_params = "-p blastp -e 0.1 -b 50000 -v 50000 -a $threadNum -m 8";
-
+my $s16db_name = "16srep.faa";
+my $blastn_params =  "-p blastn -e 0.1 -b 50000 -v 50000 -a $threadNum -m 8";
 my %markerLength;
 
 sub RunSearch {
@@ -105,15 +106,16 @@ sub RunSearch {
 
     # search reads/contigs against marker database
     my $resultsfile;
+    my $s16_resultsfile;
     my $searchtype = "blast";
     if($length eq "long" && $seqtype eq "protein"){
-	$resultsfile = executeBlast($self, $self->{"readsFile"});
+	$resultsfile = executeBlast($self, $self->{"readsFile"},$self->{"blastDir"}."/readsCore.blastp",$blastp_params);
     }elsif($length eq "long"){
 	$resultsfile = blastXoof_table($self, $self->{"readsFile"});
 	$reverseTranslate=1;
     }else{
 	$searchtype = "rap";
-        $resultsfile = executeRap($self);
+        $resultsfile = executeRap($self,$self->{"readsFile"},"$Amphora2::Utilities::marker_dir/representatives/rep",$readsCore);
     }
 
     # parse the hits to marker genes
@@ -126,6 +128,23 @@ sub RunSearch {
 
     # write out sequence regions hitting marker genes to candidate files
     writeCandidates($self,$hitsref);
+    
+    #run the 16S pipeline
+    if($self->{"16s"} && $seqtype eq "protein"){
+	carp("Cannot compare 16S ribosomal data with protein sequences\n");
+    }elsif($self->{"16s"} && $length eq "long"){
+	$s16_resultsfile = executeBlast($self,$self->{"blastDir"}."/nonHits.faa",$self->{"blastDir"}."/16s.blastn",$blastn_params);
+    }elsif($self->{"16s"}){
+	debug "Running rapsearch on 16S data\n";
+	$s16_resultsfile = executeRap($self,$self->{"blastDir"}."/nonHits.faa",$self->{"blastDir"}."/16srep","16s");
+    }
+
+    my $s16_hitsref;
+    if($length eq "long" && $self->{"16s"} ){
+	$s16_hitsref = get_hits_16s($self,$resultsfile, $searchtype);
+    }elsif($self->{"16s"}){
+	$s16_hitsref = get_hits_16s($self,$resultsfile, $searchtype);
+    }
     exit;
     return $self;
 }
@@ -149,10 +168,10 @@ sub readMarkerLengths{
 sub blastXoof_table{
     my $self = shift;
     my $query_file = shift;
-       debug "INSIDE tabular OOF blastx\n";
+       debug "INSIDE tabular OOF blastx\n$blastdb_name\n";
        `$Amphora2::Utilities::blastall -p blastx -i $query_file -e 0.1 -w 20 -b 50000 -v 50000 -d $self->{"blastDir"}/$blastdb_name -o $self->{"blastDir"}/$readsCore.tabblastx -m 8 -a $threadNum`;
      return $self->{"blastDir"}."/$readsCore.tabblastx";
- }
+}
 
 =head2 blastXoof_full
 
@@ -203,18 +222,22 @@ sub translateFrame{
 
 sub executeRap{
     my $self = shift;
-    if($self->{"readsFile"} !~ m/^\//){
-	debug "Making sure rapsearch can find the readsfile\n";
-	$self->{"readsFile"}=getcwd()."/".$self->{"readsFile"};
-	debug "New readsFile ".$self->{"readsFile"}."\n";
+    my $inputFile = shift;
+    my $db = shift;
+    my $outputCore = shift;
+    if($inputFile !~ m/^\//){
+	debug "Making sure rapsearch can find the inputfile\n";
+	$inputFile=getcwd()."/".$inputFile;
+	debug "New inputFile ".$inputFile."\n";
     }
-    my $dbDir = "$Amphora2::Utilities::marker_dir/representatives";
-    $dbDir = $self->{"blastDir"} if($custom ne "");
-	if(!-e $self->{"blastDir"}."/$readsCore.rapSearch.m8"){
-	    debug "INSIDE custom markers RAPSearch\n";
-	    `cd $self->{"blastDir"} ; $Amphora2::Utilities::rapSearch -q $self->{"readsFile"} -d $dbDir/rep -o $readsCore.rapSearch -e -1`;
-	}
-    return $self->{"blastDir"}."/".$readsCore.".rapSearch.m8";
+#    my $dbDir = "$Amphora2::Utilities::marker_dir/representatives";
+    $db = $self->{"blastDir"}."/rep" if($custom ne "" && $inputFile =~ m/16s/);
+    
+    if(!-e $self->{"blastDir"}."/$outputCore.rapSearch.m8"){
+	debug "INSIDE RAPSearch\n";
+	`cd $self->{"blastDir"} ; $Amphora2::Utilities::rapSearch -q $inputFile -d $db -o $outputCore.rapSearch -e -1`;
+    }
+    return $self->{"blastDir"}."/".$outputCore.".rapSearch.m8";   
 }
 
 =head2 executeBlast
@@ -224,13 +247,18 @@ sub executeRap{
 sub executeBlast{
     my $self = shift;
     my $query_file = shift;
+    my $outFile = shift;
+    my $params = shift;
     my $dbDir = "$Amphora2::Utilities::marker_dir/representatives";
-    $dbDir = $self->{"blastDir"} if $custom ne "";
-    debug "INSIDE BLAST\n";
-    if(!-e $self->{"blastDir"}."/$readsCore.blastp"){
-	`$Amphora2::Utilities::blastall $blastp_params -i $query_file -d $dbDir/$blastdb_name -o $self->{"blastDir"}/$readsCore.blastp`;
+    $dbDir = $self->{"blastDir"} if $custom ne "" && $params !~ /blastn/;
+    $blastdb_name = $s16db_name if $params =~ /blastn/;
+    debug "INSIDE BLAST\n$dbDir\nDBname $dbDir/$blastdb_name\n";
+#    if(!-e $self->{"blastDir"}."/$readsCore.blastp"){
+    if(!-e $outFile){
+	`$Amphora2::Utilities::blastall $params -i $query_file -d $dbDir/$blastdb_name -o $outFile`;
     }
-    return $self->{"blastDir"}."/$readsCore.blastp";
+    debug "Blast Done !\n";
+    return $outFile;
 }
 
 
@@ -467,7 +495,6 @@ sub writeCandidates{
 		# skip this one if there are no hits
 #		next unless( exists $contig_hits{$seq->id} );
 	    if(!exists $contig_hits{$seq->id}){
-		print "16s : ".$self->{"16s"}."\n";
 		if($self->{"16s"}){
 		    print nonHITS ">".$seq->id."\n".$seq->seq."\n";
 		}
@@ -622,8 +649,24 @@ sub prepAndClean {
     `cp $dbDir/$blastdb_name $self->{"blastDir"}`;
     `$Amphora2::Utilities::formatdb -i $self->{"blastDir"}/$blastdb_name -o F -p T -t RepDB`;
     }
+#make a DB for 16s data for rapSearch
+    if($self->{"16s"} && !-e $self->{"blastDir"}."/16srep.des" ||  !-e $self->{"blastDir"}."/16srep.fbn" || !-e $self->{"blastDir"}."/16srep.inf" || !-e $self->{"blastDir"}."/16srep.swt"){
+	#debug "creating the rapsearchDB for 16s data\n";
+	`cd $self->{"blastDir"} ; cp $Amphora2::Utilities::marker_dir/representatives/16srep.faa $self->{"blastDir"}  ; $Amphora2::Utilities::preRapSearch -d 16srep.faa -n 16srep`;
+    }
     return $self;
 }
+
+=head2 identify16sCandidates
+
+=item *
+
+runs 
+
+=back
+
+=cut
+
 
 
 =head1 AUTHOR
