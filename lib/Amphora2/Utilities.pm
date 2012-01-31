@@ -4,33 +4,31 @@ package Amphora2::Utilities;
 use strict;
 use warnings;
 use FindBin qw($Bin);
-BEGIN { unshift(@INC, "$FindBin::Bin/legacy/") if $] < 5.01; }
+BEGIN { unshift( @INC, "$FindBin::Bin/legacy/" ) if $] < 5.01; }
 use File::Basename;
 use Bio::AlignIO;
 use Bio::SimpleAlign;
-use Bio::Align::Utilities qw(:all); 
+use Bio::Align::Utilities qw(:all);
 use POSIX ();
 use LWP::Simple;
 use Carp;
 use Cwd;
 require File::Fetch;
-if($^O=~/arwin/){
+
+if ( $^O =~ /arwin/ ) {
 	use lib "$FindBin::Bin/osx/darwin-thread-multi-2level/";
 }
-
 use Exporter;
-use vars            qw[ @EXPORT @EXPORT_OK %EXPORT_TAGS @ISA ];;
-
-@ISA            = 'Exporter';
-@EXPORT         = qw[start_timer end_timer debug];
-@EXPORT_OK      = qw[];
-
-%EXPORT_TAGS    = (
-STD     => \@EXPORT,
-all     => [ @EXPORT, @EXPORT_OK ],
-);        
-
+use vars qw[ @EXPORT @EXPORT_OK %EXPORT_TAGS @ISA ];
+@ISA       = 'Exporter';
+@EXPORT    = qw[start_timer end_timer debug];
+@EXPORT_OK = qw[];
+%EXPORT_TAGS = (
+				 STD => \@EXPORT,
+				 all => [ @EXPORT, @EXPORT_OK ],
+);
 our $debuglevel = 3;
+
 sub debug {
 	my $msg = shift;
 	my $msglevel = shift || 2;
@@ -46,9 +44,7 @@ Amphora2::Utilities - Implements miscellaneous accessory functions for Amphora2
 Version 0.01
 
 =cut
-
 our $VERSION = '0.01';
-
 
 =head1 SYNOPSIS
 
@@ -77,184 +73,183 @@ returns 1 or 0 depending on success of failure.
 =cut
 
 sub get_program_path {
-	my $progname = shift;
-	my $progpath = shift;
+	my $progname  = shift;
+	my $progpath  = shift;
 	my $progcheck = "";
-#	print STDERR "BIN : $Bin\n";
-#	exit;
-	if( defined($progpath) && $progpath ne "" && -x $progpath."/".$progname ){
-		$progcheck = $progpath."/".$progname;
-	}else{
+
+	#	print STDERR "BIN : $Bin\n";
+	#	exit;
+	if ( defined($progpath) && $progpath ne "" && -x $progpath . "/" . $progname ) {
+		$progcheck = $progpath . "/" . $progname;
+	} else {
 		$progcheck = `which $progname`;
 		chomp $progcheck;
 	}
+
 	# last ditch attempt, check the directories from where the script is running
-	$progcheck = $Bin."/".$progname unless( $progcheck =~ /$progname/ || !(-x $Bin."/".$progname) );
-	$progcheck = $Bin."/bin/".$progname unless( $progcheck =~ /$progname/  || !(-x $Bin."/bin/".$progname) );
+	$progcheck = $Bin . "/" . $progname     unless ( $progcheck =~ /$progname/ || !( -x $Bin . "/" . $progname ) );
+	$progcheck = $Bin . "/bin/" . $progname unless ( $progcheck =~ /$progname/ || !( -x $Bin . "/bin/" . $progname ) );
+
 	# check the OS and use Mac binaries if needed
-	if($^O =~ /arwin/){
-		$progcheck = $Bin."/osx/".$progname unless( $progcheck =~ /$progname/  && !(-x $Bin."/".$progname)  );
-		$progcheck = $Bin."/osx/".$progname if($progcheck =~ /$Bin\/bin/); # don't use the linux binary!
+	if ( $^O =~ /arwin/ ) {
+		$progcheck = $Bin . "/osx/" . $progname unless ( $progcheck =~ /$progname/ && !( -x $Bin . "/" . $progname ) );
+		$progcheck = $Bin . "/osx/" . $progname if ( $progcheck =~ /$Bin\/bin/ );    # don't use the linux binary!
 	}
 	return $progcheck;
 }
 
 # external programs used by Amphora2
-our $pplacer = "";
-our $hmmalign = "";
-our $hmmsearch = "";
-our $hmmbuild = "";
-our $blastall = "";
-our $formatdb = "";
-our $rapSearch= "";
+our $pplacer      = "";
+our $hmmalign     = "";
+our $hmmsearch    = "";
+our $hmmbuild     = "";
+our $blastall     = "";
+our $formatdb     = "";
+our $rapSearch    = "";
 our $preRapSearch = "";
-our $raxml = "";
+our $raxml        = "";
 our $readconciler = "";
+
 sub programChecks {
 	eval 'require Bio::Seq;';
 	if ($@) {
-	    carp "Bioperl was NOT found\n";
-	    return 1;
+		carp "Bioperl was NOT found\n";
+		return 1;
 	}
+	$pplacer = get_program_path( "pplacer", $Amphora2::Settings::pplacer_path );
+	if ( $pplacer eq "" ) {
 
-	$pplacer = get_program_path("pplacer", $Amphora2::Settings::pplacer_path);
-	if($pplacer eq ""){
-	    #program not found return;
-	    carp("pplacer v1.1.alpha09 not found");
-	    return 1;
-	}elsif(`$pplacer --version` !~ m/v1.1.alpha09/){
-	    # pplacer was found but the version doens't match the one tested with Amphora
-	    carp("Warning : a different version of pplacer was found. Amphora-2 was tested with pplacer v1.1.alpha09\n");
+		#program not found return;
+		carp("pplacer v1.1.alpha09 not found");
+		return 1;
+	} elsif ( `$pplacer --version` !~ m/v1.1.alpha09/ ) {
+
+		# pplacer was found but the version doens't match the one tested with Amphora
+		carp("Warning : a different version of pplacer was found. Amphora-2 was tested with pplacer v1.1.alpha09\n");
 	}
+	$hmmalign = get_program_path( "hmmalign", $Amphora2::Settings::hmmer3_path );
+	if ( $hmmalign eq "" ) {
 
-	$hmmalign = get_program_path("hmmalign", $Amphora2::Settings::hmmer3_path);
-	if($hmmalign eq ""){
-	    #program not found return;
-	    carp("HMMER3 not found");
-	    return 1;
-	}elsif(`$hmmalign -h` !~ m/HMMER 3.0rc1/){
-	    # pplacer was found but the version doens't match the one tested with Amphora
-	    carp "Warning : a different version of HMMER was found. Amphora-2 was tested with HMMER 3.0rc1\n";
+		#program not found return;
+		carp("HMMER3 not found");
+		return 1;
+	} elsif ( `$hmmalign -h` !~ m/HMMER 3.0rc1/ ) {
+
+		# pplacer was found but the version doens't match the one tested with Amphora
+		carp "Warning : a different version of HMMER was found. Amphora-2 was tested with HMMER 3.0rc1\n";
 	}
-	$hmmsearch = get_program_path("hmmsearch", $Amphora2::Settings::hmmer3_path);
-	$hmmbuild = get_program_path("hmmbuild", $Amphora2::Settings::hmmer3_path);
-
-	$rapSearch = get_program_path("rapsearch",$Amphora2::Settings::a2_path);
-	if($rapSearch eq ""){
-	    carp("rapsearch was not found\n");
-	    return 1;
+	$hmmsearch = get_program_path( "hmmsearch", $Amphora2::Settings::hmmer3_path );
+	$hmmbuild  = get_program_path( "hmmbuild",  $Amphora2::Settings::hmmer3_path );
+	$rapSearch = get_program_path( "rapsearch", $Amphora2::Settings::a2_path );
+	if ( $rapSearch eq "" ) {
+		carp("rapsearch was not found\n");
+		return 1;
 	}
-
-	$preRapSearch = get_program_path("prerapsearch",$Amphora2::Settings::a2_path);
-
-	$blastall = get_program_path("blastall",$Amphora2::Settings::a2_path);
-	if($blastall eq ""){
-	    carp("blastall was not found\n");
-	    return 1;
+	$preRapSearch = get_program_path( "prerapsearch", $Amphora2::Settings::a2_path );
+	$blastall     = get_program_path( "blastall",     $Amphora2::Settings::a2_path );
+	if ( $blastall eq "" ) {
+		carp("blastall was not found\n");
+		return 1;
 	}
-	$formatdb = get_program_path("formatdb",$Amphora2::Settings::a2_path);
-
-	$raxml = get_program_path("raxmlHPC",$Amphora2::Settings::a2_path);
-	if($raxml eq ""){
-	    carp("raxmlHPC was not found\n");
-	    return 1;
+	$formatdb = get_program_path( "formatdb", $Amphora2::Settings::a2_path );
+	$raxml    = get_program_path( "raxmlHPC", $Amphora2::Settings::a2_path );
+	if ( $raxml eq "" ) {
+		carp("raxmlHPC was not found\n");
+		return 1;
 	}
-
-	$readconciler = get_program_path("readconciler",$Amphora2::Settings::a2_path);
+	$readconciler = get_program_path( "readconciler", $Amphora2::Settings::a2_path );
 	return 0;
 }
-
 
 =head2 dataChecks
 
 Check for requisite Amphora-2 marker datasets
 
 =cut
-
 our $marker_dir = "";
-our $ncbi_dir = "";
+our $ncbi_dir   = "";
 
 sub get_data_path {
-	my $dataname = shift;
-	my $datapath = shift;
+	my $dataname  = shift;
+	my $datapath  = shift;
 	my $datacheck = "";
-	if( defined($datapath) && $datapath ne "" ){
-		$datacheck = $datapath."/".$dataname;
-	}else{
+	if ( defined($datapath) && $datapath ne "" ) {
+		$datacheck = $datapath . "/" . $dataname;
+	} else {
 		my $scriptpath = dirname($0);
 		$scriptpath =~ s/bin\/?$//g;
-		$datacheck = $scriptpath."/share/amphora2/".$dataname;
+		$datacheck = $scriptpath . "/share/amphora2/" . $dataname;
 		return $datacheck if ( -x $datacheck );
+
 		# if the system data dir doesn't exist, default to the user's home
-		$datacheck = $ENV{"HOME"}."/share/amphora2/".$dataname;
+		$datacheck = $ENV{"HOME"} . "/share/amphora2/" . $dataname;
 	}
 	return $datacheck;
 }
 
 sub download_data {
-	my $url = shift;
+	my $url         = shift;
 	my $destination = shift;
 	`mkdir -p $destination`;
+
 	# FIXME this is insecure!
 	# but then again, so is just about every other line of code in this program...
-	my $ff = File::Fetch->new(uri=>$url);
-	$ff->fetch(to=>"$destination/..");
+	my $ff = File::Fetch->new( uri => $url );
+	$ff->fetch( to => "$destination/.." );
 	debug "URL : $url\n";
 	$url =~ /\/(\w+)\.tgz/;
 	my $archive = $1;
 	debug "ARCHIVE : $archive\n";
-	if(-e "$destination/.. "){
-	    `rm -rf $destination/..`;
+	if ( -e "$destination/.. " ) {
+		`rm -rf $destination/..`;
 	}
 	`cd $destination/../ ; tar xzf $archive.tgz ; touch $archive`;
 	`rm $destination/../$archive.tgz`;
 }
-
-
 my $marker_update_url = "http://edhar.genomecenter.ucdavis.edu/~koadman/amphora2_markers/markers.tgz";
-my $ncbi_url = "http://edhar.genomecenter.ucdavis.edu/~koadman/ncbi.tgz";
+my $ncbi_url          = "http://edhar.genomecenter.ucdavis.edu/~koadman/ncbi.tgz";
 
 sub dataChecks {
 	$marker_dir = get_data_path( "markers", $Amphora2::Settings::marker_path );
-	my ($content_type, $document_length, $modified_time, $expires, $server)= head("$marker_update_url");
-	debug "MARKER_PATH : ".$marker_dir."\n";
-	if(-x $marker_dir){
-	    my $mtime = (stat($marker_dir))[9];
-	    debug "TEST LOCAL :".localtime($mtime)."\n";	
-	    if(!defined($modified_time)){
-		warn "Warning: unable to connect to marker update server, please check your internet connection\n";
-	    }elsif($modified_time > $mtime){
-		debug "TEST REMOTE:".localtime($modified_time)."\n";
-		warn "Found newer version of the marker data\n";
+	my ( $content_type, $document_length, $modified_time, $expires, $server ) = head("$marker_update_url");
+	debug "MARKER_PATH : " . $marker_dir . "\n";
+	if ( -x $marker_dir ) {
+		my $mtime = ( stat($marker_dir) )[9];
+		debug "TEST LOCAL :" . localtime($mtime) . "\n";
+		if ( !defined($modified_time) ) {
+			warn "Warning: unable to connect to marker update server, please check your internet connection\n";
+		} elsif ( $modified_time > $mtime ) {
+			debug "TEST REMOTE:" . localtime($modified_time) . "\n";
+			warn "Found newer version of the marker data\n";
+			warn "Downloading from $marker_update_url\n";
+			download_data( $marker_update_url, $marker_dir );
+		}
+	} else {
+		if ( !defined($modified_time) ) {
+			croak "Marker data not found and unable to connect to marker update server, please check your amphora2 configuration and internet connection!\n";
+		}
+		warn "Unable to find marker data!\n";
 		warn "Downloading from $marker_update_url\n";
 		download_data( $marker_update_url, $marker_dir );
-	    }
-	}else{
-	    if(!defined($modified_time)){
-		croak "Marker data not found and unable to connect to marker update server, please check your amphora2 configuration and internet connection!\n";
-	    }
-	    warn "Unable to find marker data!\n";
-	    warn "Downloading from $marker_update_url\n";
-	    download_data($marker_update_url, $marker_dir);
 	}
 	$ncbi_dir = get_data_path( "ncbi", $Amphora2::Settings::ncbi_path );
-	($content_type, $document_length, $modified_time, $expires, $server)= head("$ncbi_url");
-	if( -x $ncbi_dir ){
-	    my $ncbi_time =(stat($ncbi_dir))[9];
-	    if(!defined($modified_time)){
-		warn "Warning: unable to connect to NCBI taxonomy update server, please check your internet connection\n";
-	    }elsif($modified_time > $ncbi_time){
-		warn "Found newer version of NCBI taxonomy data!\n";
+	( $content_type, $document_length, $modified_time, $expires, $server ) = head("$ncbi_url");
+	if ( -x $ncbi_dir ) {
+		my $ncbi_time = ( stat($ncbi_dir) )[9];
+		if ( !defined($modified_time) ) {
+			warn "Warning: unable to connect to NCBI taxonomy update server, please check your internet connection\n";
+		} elsif ( $modified_time > $ncbi_time ) {
+			warn "Found newer version of NCBI taxonomy data!\n";
+			warn "Downloading from $ncbi_url\n";
+			download_data( $ncbi_url, $ncbi_dir );
+		}
+	} else {
+		if ( !defined($modified_time) ) {
+			croak "NCBI taxonomy data not found and unable to connect to update server, please check your amphora2 configuration and internet connection!\n";
+		}
+		warn "Unable to find NCBI taxonomy data!\n";
 		warn "Downloading from $ncbi_url\n";
 		download_data( $ncbi_url, $ncbi_dir );
-	    }
-	}else{
-	    if(!defined($modified_time)){
-		croak "NCBI taxonomy data not found and unable to connect to update server, please check your amphora2 configuration and internet connection!\n";
-	    }
-	    warn "Unable to find NCBI taxonomy data!\n";
-	    warn "Downloading from $ncbi_url\n";
-	    download_data( $ncbi_url, $ncbi_dir);
 	}
 }
 
@@ -265,60 +260,61 @@ Convert a bunch of fasta files to stockholm format
 =cut
 
 sub fasta2stockholm {
-	my $fasta = shift;
+	my $fasta  = shift;
 	my $output = shift;
 	open( STOCKOUT, ">$output" );
+
 	# read FASTA file
-	    my @seq;
-	    my @name;
-	    my $name;
-	    my $curseq = "";
-	    open FASTA, "<$fasta" or die "Couldn't open '$fasta': $!";
-	    while (<FASTA>) {
+	my @seq;
+	my @name;
+	my $name;
+	my $curseq = "";
+	open FASTA, "<$fasta" or die "Couldn't open '$fasta': $!";
+	while (<FASTA>) {
 		if (/^\s*>\s*(\S+)/) {
-		    if(length($curseq)>0){
-			push @seq, $curseq;
-			push @name, $name;
-			$curseq = "";
-		    }
-		    $name = $1;
+			if ( length($curseq) > 0 ) {
+				push @seq,  $curseq;
+				push @name, $name;
+				$curseq = "";
+			}
+			$name = $1;
 		} else {
-		    if (/\S/ && !defined $name) {
-			warn "Ignoring: $_";
-		    } else {
-			s/\s//g;
-			$curseq .= $_;
-		    }
+			if ( /\S/ && !defined $name ) {
+				warn "Ignoring: $_";
+			} else {
+				s/\s//g;
+				$curseq .= $_;
+			}
 		}
-	    }
-	    if(length($curseq)>0){
-		push @seq, $curseq;
+	}
+	if ( length($curseq) > 0 ) {
+		push @seq,  $curseq;
 		push @name, $name;
 		$curseq = "";
-	    }
-	    close FASTA;
+	}
+	close FASTA;
 
 	# check all seqs are same length
-	    my $length;
-	    my $lname;
-	    for( my $sI=0; $sI<@name; $sI++){
-	    	my $nname= $name[$sI];
-		my $sseq = $seq[$sI];
-		my $l = length $sseq;
-		if (defined $length) {
-		    croak "Sequences not all same length ($lname is $length, $nname is $l)" unless $length == $l;
+	my $length;
+	my $lname;
+	for ( my $sI = 0 ; $sI < @name ; $sI++ ) {
+		my $nname = $name[$sI];
+		my $sseq  = $seq[$sI];
+		my $l     = length $sseq;
+		if ( defined $length ) {
+			croak "Sequences not all same length ($lname is $length, $nname is $l)" unless $length == $l;
 		} else {
-		    $length = length $sseq;
-		    $lname = $nname;
+			$length = length $sseq;
+			$lname  = $nname;
 		}
-	    }
+	}
 
 	# print Stockholm output
-	    print STOCKOUT "# STOCKHOLM 1.0\n";
-	    for( my $sI=0; $sI<@name; $sI++){
+	print STOCKOUT "# STOCKHOLM 1.0\n";
+	for ( my $sI = 0 ; $sI < @name ; $sI++ ) {
 		print STOCKOUT $name[$sI], " ", $seq[$sI], "\n";
-	    }
-	    print STOCKOUT "//\n";
+	}
+	print STOCKOUT "//\n";
 }
 
 =head2 makeNameTable
@@ -331,30 +327,30 @@ Requires a marker directory as an argument
 sub readNameTable {
 	my $markerDir = shift;
 	my %result;
-	open(ALINAMES, "grep \">\" $markerDir/*.ali |");
-	while( my $line = <ALINAMES> ){
+	open( ALINAMES, "grep \">\" $markerDir/*.ali |" );
+	while ( my $line = <ALINAMES> ) {
 		$line =~ s/.+\:\>//g;
 		my $commonName;
-		if($line =~ /\{(.+)\}.+\[.+\]/){
+		if ( $line =~ /\{(.+)\}.+\[.+\]/ ) {
 			$commonName = $1;
-		}elsif($line =~ /\[(.+)\]$/){
+		} elsif ( $line =~ /\[(.+)\]$/ ) {
 			$commonName = $1;
 		}
-		my @fields = split(/\s+/, $line);
-		$result{$fields[0]}=$commonName;
+		my @fields = split( /\s+/, $line );
+		$result{ $fields[0] } = $commonName;
 	}
 	return %result;
 }
 
 sub makeDummyFile {
-	my $file = shift;
-	my $todelete = shift;
+	my $file          = shift;
+	my $todelete      = shift;
 	my $gapmultiplier = shift;
-	my $stock = $file;	
+	my $stock         = $file;
 	$stock =~ s/aln_hmmer3\.trim/trimfinal/g;
 	$stock =~ s/\.ffn//g;
 	$stock = basename($stock);
-	$stock = $Amphora2::Utilities::marker_dir."/$stock";
+	$stock = $Amphora2::Utilities::marker_dir . "/$stock";
 	open( STOCK, $stock );
 	my $burn1 = <STOCK>;
 	$burn1 = <STOCK>;
@@ -363,7 +359,7 @@ sub makeDummyFile {
 	my $glen;
 	$glen = "P" x $len x $gapmultiplier if $gapmultiplier == 1;
 	$glen = "A" x $len x $gapmultiplier if $gapmultiplier == 3;
-	my $newseq = Bio::LocatableSeq->new( -seq => $glen, -id => "dummydummydummy", start=>0, end=>($len*$gapmultiplier));
+	my $newseq = Bio::LocatableSeq->new( -seq => $glen, -id => "dummydummydummy", start => 0, end => ( $len * $gapmultiplier ) );
 	my $aln = Bio::SimpleAlign->new();
 	$aln->add_seq($newseq);
 	return $aln;
@@ -376,15 +372,16 @@ If the user chooses the updated markers, the updated filename is returned
 
 =cut
 
-sub getAlignemntMarkerFile{
-    my $self = shift;
-    my $marker= shift;
-    if($self->{"updated"} == 0){
-	return "$marker.ali";
-    }else{
-	return "$marker.updated.fasta";
-    }
+sub getAlignemntMarkerFile {
+	my $self   = shift;
+	my $marker = shift;
+	if ( $self->{"updated"} == 0 ) {
+		return "$marker.ali";
+	} else {
+		return "$marker.updated.fasta";
+	}
 }
+
 =head2 getFastaMarkerFile
 
 Returns the fasta file for the markerName passed in as an argument
@@ -392,15 +389,14 @@ If the user chooses the updated markers, the updated filename is returned
 
 =cut
 
-
-sub getFastaMarkerFile{
-    my $self = shift;
-    my $marker= shift;
-    if($self->{"updated"} == 0){
-	return "$marker.faa";
-    }else{
-	return "$marker.faa";
-    }
+sub getFastaMarkerFile {
+	my $self   = shift;
+	my $marker = shift;
+	if ( $self->{"updated"} == 0 ) {
+		return "$marker.faa";
+	} else {
+		return "$marker.faa";
+	}
 }
 
 =head2 getMarkerPackage
@@ -409,25 +405,24 @@ Returns the path to the marker package
 
 =cut
 
-sub getMarkerPackage{
-    my $self = shift;
-    my $marker= shift;
-    if($self->{"updated"} == 0){
-	return "$marker_dir/$marker";
-    }else{
-	return "$marker_dir/$marker.updated";
-    }
+sub getMarkerPackage {
+	my $self   = shift;
+	my $marker = shift;
+	if ( $self->{"updated"} == 0 ) {
+		return "$marker_dir/$marker";
+	} else {
+		return "$marker_dir/$marker.updated";
+	}
 }
-
 
 =head2 getAlignerOutputFastaAA
 Returns the FastA file containing amino acid read or contig alignments to the marker
 given by markerName
 =cut
 
-sub getAlignerOutputFastaAA{
-    my $marker= shift;
-    return "$marker.trim.fasta";
+sub getAlignerOutputFastaAA {
+	my $marker = shift;
+	return "$marker.trim.fasta";
 }
 
 =head2 getAlignerOutputFastaDNA
@@ -435,9 +430,9 @@ Returns the FastA file containing DNA read or contig alignments to the marker
 given by markerName
 =cut
 
-sub getAlignerOutputFastaDNA{
-    my $marker= shift;
-    return "$marker.trim.fna.fasta";
+sub getAlignerOutputFastaDNA {
+	my $marker = shift;
+	return "$marker.trim.fna.fasta";
 }
 
 =head2 getAlignerOutputFastaDNA
@@ -445,13 +440,14 @@ Returns the FastA file containing DNA read or contig alignments to the marker
 given by markerName
 =cut
 
-sub getReadPlacementFile{
-    my $marker= shift;
-    return "$marker.trim.jplace";
+sub getReadPlacementFile {
+	my $marker = shift;
+	return "$marker.trim.jplace";
 }
-sub getReadPlacementFileDNA{
-    my $marker= shift;
-    return "$marker.trim.fna.jplace";
+
+sub getReadPlacementFileDNA {
+	my $marker = shift;
+	return "$marker.trim.fna.jplace";
 }
 
 =head2 getTrimfinalMarkerFile
@@ -461,15 +457,16 @@ If the user chooses the updated markers, the updated filename is returned
 
 =cut
 
-sub getTrimfinalMarkerFile{
-    my $self = shift;
-    my $marker= shift;
-    if($self->{"updated"} == 0){
-        return "$marker.trimfinal";
-    }else{
-        return "$marker.trimfinal";
-#        return "$marker.updated.fasta";
-    }
+sub getTrimfinalMarkerFile {
+	my $self   = shift;
+	my $marker = shift;
+	if ( $self->{"updated"} == 0 ) {
+		return "$marker.trimfinal";
+	} else {
+		return "$marker.trimfinal";
+
+		#        return "$marker.updated.fasta";
+	}
 }
 
 =head2 getTrimfinalFastaMarkerFile
@@ -479,16 +476,17 @@ If the use chooses the updated markers, the updated file is returned instead
 
 =cut
 
-sub getTrimfinalFastaMarkerFile{
-    my $self = shift;
-    my $marker= shift;
-    if($self->{"updated"} == 0){
-	return "$marker.trimfinal.fasta";
-    }else{
-	return "$marker.trimfinal.fasta";
-#        return $self->{"alignDir"}."/$marker.updated.hmm.fasta";
-#        return "$Amphora2::Utilities::marker_dir/$marker.updated.fasta";
-    }
+sub getTrimfinalFastaMarkerFile {
+	my $self   = shift;
+	my $marker = shift;
+	if ( $self->{"updated"} == 0 ) {
+		return "$marker.trimfinal.fasta";
+	} else {
+		return "$marker.trimfinal.fasta";
+
+		#        return $self->{"alignDir"}."/$marker.updated.hmm.fasta";
+		#        return "$Amphora2::Utilities::marker_dir/$marker.updated.fasta";
+	}
 }
 
 =head2 getTreeFile
@@ -498,18 +496,15 @@ The user chooses the updated or stock version
 
 =cut
 
-sub getTreeMarkerFile{
-
-    my $self = shift;
-    my $marker= shift;
-    if($self->{"updated"} == 0){
-        return "$marker.final.tre";
-    }else{
-        return "$marker.updated.tre";
-    }
-
+sub getTreeMarkerFile {
+	my $self   = shift;
+	my $marker = shift;
+	if ( $self->{"updated"} == 0 ) {
+		return "$marker.final.tre";
+	} else {
+		return "$marker.updated.tre";
+	}
 }
-
 
 =head2 getTreeStatsFile
 
@@ -517,16 +512,14 @@ Return the updated or stock version of the Tree stats file
 
 =cut
 
-sub getTreeStatsMarkerFile{
-
-    my $self = shift;
-    my $marker= shift;
-    if($self->{"updated"} == 0){
-        return "$marker.in_phyml_stats.txt";
-    }else{
-        return "$marker.updated.RAxML_info";
-    }
-
+sub getTreeStatsMarkerFile {
+	my $self   = shift;
+	my $marker = shift;
+	if ( $self->{"updated"} == 0 ) {
+		return "$marker.in_phyml_stats.txt";
+	} else {
+		return "$marker.updated.RAxML_info";
+	}
 }
 
 =head2 getNcbiMapFile
@@ -535,18 +528,15 @@ Returns the updated of stock version of the NCBI map file
 
 =cut
 
-sub getNcbiMapFile{
-
-    my $self = shift;
-    my $marker= shift;
-    if($self->{"updated"} == 0){
-        return "$marker.ncbimap";
-    }else{
-        return "$marker.updated.ncbimap";
-    }
+sub getNcbiMapFile {
+	my $self   = shift;
+	my $marker = shift;
+	if ( $self->{"updated"} == 0 ) {
+		return "$marker.ncbimap";
+	} else {
+		return "$marker.updated.ncbimap";
+	}
 }
-
-
 
 =head2 concatenateAlignments
 
@@ -556,100 +546,111 @@ Requires a marker directory as an argument
 =cut
 
 sub concatenateAlignments {
-	my $outputFasta = shift;
+	my $outputFasta   = shift;
 	my $outputMrBayes = shift;
-	my $gapmultiplier = shift;	# 1 for protein, 3 for reverse-translated DNA
-	my @alignments = @_;
-	my $catobj = 0;
-	open(MRBAYES, ">$outputMrBayes");
-	my $partlist = "partition genes = ".scalar(@alignments).": ";
-	my $prevlen = 0;
+	my $gapmultiplier = shift;    # 1 for protein, 3 for reverse-translated DNA
+	my @alignments    = @_;
+	my $catobj        = 0;
+	open( MRBAYES, ">$outputMrBayes" );
+	my $partlist = "partition genes = " . scalar(@alignments) . ": ";
+	my $prevlen  = 0;
 	my @todelete;
-	foreach my $file(@alignments){
+
+	foreach my $file (@alignments) {
 		my $aln;
-		unless( -e $file ){
+		unless ( -e $file ) {
+
 			# this marker doesn't exist, need to create a dummy with the right number of gap columns
-			$aln = makeDummyFile($file, \@todelete, $gapmultiplier);
-		}else{
-			my $in  = Bio::AlignIO->new(-file => $file , '-format' => 'fasta');
-			unless( $aln = $in->next_aln() ){
+			$aln = makeDummyFile( $file, \@todelete, $gapmultiplier );
+		} else {
+			my $in = Bio::AlignIO->new( -file => $file, '-format' => 'fasta' );
+			unless ( $aln = $in->next_aln() ) {
+
 				# empty marker alignment file, need to create a dummy with the right number of gap columns
-				$aln = makeDummyFile($file, \@todelete, $gapmultiplier);
+				$aln = makeDummyFile( $file, \@todelete, $gapmultiplier );
 			}
 		}
 		my $csname = $file;
 		$csname =~ s/\..+//g;
 		$partlist .= "," if $catobj != 0;
 		$partlist .= $csname;
-		print MRBAYES "charset $csname = ".($prevlen+1)."-".($prevlen+$aln->length())."\n";
+		print MRBAYES "charset $csname = " . ( $prevlen + 1 ) . "-" . ( $prevlen + $aln->length() ) . "\n";
 		$prevlen += $aln->length();
 		my $prevseq = 0;
-		my $newaln = $aln->select(1,1);
-		foreach my $curseq( $aln->each_alphabetically() ){
-			if($prevseq==0){
+		my $newaln = $aln->select( 1, 1 );
+
+		foreach my $curseq ( $aln->each_alphabetically() ) {
+			if ( $prevseq == 0 ) {
 				$prevseq = $curseq;
 				next;
 			}
-			if($prevseq->id ne $curseq->id){
+			if ( $prevseq->id ne $curseq->id ) {
 				$newaln->add_seq($curseq);
 			}
 			$prevseq = $curseq;
 		}
 		$aln = $newaln;
-
-		if($catobj == 0){
+		if ( $catobj == 0 ) {
 			$catobj = $aln;
 			next;
 		}
 
 		# add any sequences missing from this sequence
-		foreach my $catseq ( $catobj->each_alphabetically() ){
-			if(length( $aln->each_seq_with_id( $catseq->id ) == 0) ){
+		foreach my $catseq ( $catobj->each_alphabetically() ) {
+			if ( length( $aln->each_seq_with_id( $catseq->id ) == 0 ) ) {
+
 				# add this sequence as all gaps
 				my $tmpseq = "-" x $aln->length();
-				my $newseq = Bio::LocatableSeq->new( -seq => $tmpseq, -id => $catseq->id, start=>0, end=>$aln->length());
+				my $newseq = Bio::LocatableSeq->new( -seq => $tmpseq, -id => $catseq->id, start => 0, end => $aln->length() );
 				$aln->add_seq($newseq);
 			}
 		}
+
 		# vice versa
-		foreach my $alnseq ( $aln->each_alphabetically() ){
-			if(length( $catobj->each_seq_with_id( $alnseq->id ) == 0) ){
+		foreach my $alnseq ( $aln->each_alphabetically() ) {
+			if ( length( $catobj->each_seq_with_id( $alnseq->id ) == 0 ) ) {
+
 				# add this sequence as all gaps
 				my $tmpseq = "-" x $catobj->length();
-				my $newseq = Bio::LocatableSeq->new( -seq => $tmpseq, -id => $alnseq->id, start=>0, end=>$catobj->length());
+				my $newseq = Bio::LocatableSeq->new( -seq => $tmpseq, -id => $alnseq->id, start => 0, end => $catobj->length() );
 				$catobj->add_seq($newseq);
 			}
 		}
 		$catobj = cat( $catobj, $aln );
 	}
 	print MRBAYES "$partlist;\n";
-	my $out = Bio::AlignIO->new(-file => ">$outputFasta" , '-format' => 'fasta');
-	foreach my $dummyseq( $catobj->each_seq_with_id("dummydummydummy") ){
-		$catobj->remove_seq( $dummyseq );
+	my $out = Bio::AlignIO->new( -file => ">$outputFasta", '-format' => 'fasta' );
+	foreach my $dummyseq ( $catobj->each_seq_with_id("dummydummydummy") ) {
+		$catobj->remove_seq($dummyseq);
 	}
 	$out->write_aln($catobj);
-	foreach my $delfile(@todelete){
+	foreach my $delfile (@todelete) {
 		`rm $delfile`;
 	}
 }
-
 my %timers;
+
 sub start_timer {
-    my $timername = shift;
-    my $t = time;
-    my @timerval=localtime($t);
-    $timers{$timername} = $t;
-    debug sprintf("Before $timername %4d-%02d-%02d %02d:%02d:%02d\n",$timerval[5]+1900,$timerval[4]+1,$timerval[3],$timerval[2],$timerval[1],$timerval[0]);
+	my $timername = shift;
+	my $t         = time;
+	my @timerval  = localtime($t);
+	$timers{$timername} = $t;
+	debug sprintf( "Before $timername %4d-%02d-%02d %02d:%02d:%02d\n",
+				   $timerval[5] + 1900,
+				   $timerval[4] + 1,
+				   $timerval[3], $timerval[2], $timerval[1], $timerval[0] );
 }
 
 sub end_timer {
-    my $timername = shift;
-    my $t = time;
-    my @timerval=localtime($t);
-    debug sprintf("After $timername %4d-%02d-%02d %02d:%02d:%02d\n",$timerval[5]+1900,$timerval[4]+1,$timerval[3],$timerval[2],$timerval[1],$timerval[0]);
-    return $t-$timers{$timername};
+	my $timername = shift;
+	my $t         = time;
+	my @timerval  = localtime($t);
+	debug sprintf( "After $timername %4d-%02d-%02d %02d:%02d:%02d\n",
+				   $timerval[5] + 1900,
+				   $timerval[4] + 1,
+				   $timerval[3], $timerval[2], $timerval[1], $timerval[0] );
+	return $t - $timers{$timername};
 }
-
 
 =head2 get_sequence_input_type
 
@@ -660,36 +661,36 @@ Reads the whole file to find the longest fragment.
 
 sub get_sequence_input_type {
 	my $file = shift;
-	open(FILE, $file);
-	my $counter = 0;
+	open( FILE, $file );
+	my $counter  = 0;
 	my $maxfound = 0;
 	my $dnacount = 0;
-	my $seqtype="dna";
-	my $length="long";
-	my $format="unknown";
-	my $allcount=0;
-	while( my $line = <FILE> ){
-		if($line =~ /^>/){
-			$maxfound =  $counter > $maxfound ? $counter : $maxfound;
-			$counter = 0;
-			$format = "fasta" if $format eq "unknown";
-		}elsif($line =~ /^@/ || $line =~ /^\+/){
+	my $seqtype  = "dna";
+	my $length   = "long";
+	my $format   = "unknown";
+	my $allcount = 0;
+	while ( my $line = <FILE> ) {
+
+		if ( $line =~ /^>/ ) {
+			$maxfound = $counter > $maxfound ? $counter : $maxfound;
+			$counter  = 0;
+			$format   = "fasta" if $format eq "unknown";
+		} elsif ( $line =~ /^@/ || $line =~ /^\+/ ) {
 			$counter = 0;
 			$format = "fastq" if $format eq "unknown";
-		}else{
-			$counter += length($line)-1;
+		} else {
+			$counter  += length($line) - 1;
 			$dnacount += $line =~ tr/[ACGTNacgtn]//;
-			$allcount += length($line)-1;
+			$allcount += length($line) - 1;
 		}
 	}
-	$maxfound =  $counter > $maxfound ? $counter : $maxfound;
-	$seqtype = "protein" if ($dnacount < $allcount * 0.75);
-	$seqtype = "dna" if ($format eq "fastq"); # nobody using protein fastq (yet)
+	$maxfound = $counter > $maxfound ? $counter : $maxfound;
+	$seqtype = "protein" if ( $dnacount < $allcount * 0.75 );
+	$seqtype = "dna" if ( $format eq "fastq" );    # nobody using protein fastq (yet)
 	my $aamult = $seqtype eq "protein" ? 3 : 1;
-	$length = "short" if $maxfound < (500 / $aamult);
-	return ($seqtype, $length, $format);
+	$length = "short" if $maxfound < ( 500 / $aamult );
+	return ( $seqtype, $length, $format );
 }
-
 
 =head2 get_sequence_input_type_quickndirty
 
@@ -699,49 +700,47 @@ without reading the whole file.
 =cut
 
 sub get_sequence_input_type_quickndirty {
-	my $file = shift;
+	my $file         = shift;
 	my $maxshortread = 500;
-	open(FILE, $file);
+	open( FILE, $file );
 	my $filesize = -s "$file";
-	my $counter = 0;
+	my $counter  = 0;
 	my $maxfound = 0;
 	my $allcount = 0;
 	my $dnacount = 0;
-	my $seqtype="dna";
-	my $length="long";
-	my $format="unknown";
-	
-	for( my $i=0; $i<200; $i++ ){
-		my $seekpos = int(rand($filesize-100));
-		$seekpos = 0 if($i==0); # always start with the first line in case the sequence is on a single line!
-		seek(FILE, $seekpos, 0);
+	my $seqtype  = "dna";
+	my $length   = "long";
+	my $format   = "unknown";
+	for ( my $i = 0 ; $i < 200 ; $i++ ) {
+		my $seekpos = int( rand( $filesize - 100 ) );
+		$seekpos = 0 if ( $i == 0 );    # always start with the first line in case the sequence is on a single line!
+		seek( FILE, $seekpos, 0 );
 		$counter = 0;
-		my $line = <FILE>;	# burn a line to be sure we get to sequence
-		while( $line = <FILE> ){
-			if($line =~ /^>/){
+		my $line = <FILE>;              # burn a line to be sure we get to sequence
+		while ( $line = <FILE> ) {
+			if ( $line =~ /^>/ ) {
 				$format = "fasta";
-				last if $i>0;
+				last if $i > 0;
 				$i++;
-			}elsif($line =~ /^@/ || $line =~ /^\+/){
+			} elsif ( $line =~ /^@/ || $line =~ /^\+/ ) {
 				$format = "fastq";
-				last if $i>0;
+				last if $i > 0;
 				$i++;
-			}else{
+			} else {
 				$counter += length($line);
 				$dnacount += $line =~ tr/[ACGTNacgtn]//;
 			}
 		}
 		$maxfound = $counter if $maxfound < $counter;
 		$allcount += $counter;
-		last if($counter > 500);	# found a long read
+		last if ( $counter > 500 );    # found a long read
 	}
-	$seqtype = "protein" if ($dnacount < $allcount * 0.75);
-	$seqtype = "dna" if ($format eq "fastq"); # nobody using protein fastq (yet)
+	$seqtype = "protein" if ( $dnacount < $allcount * 0.75 );
+	$seqtype = "dna" if ( $format eq "fastq" );    # nobody using protein fastq (yet)
 	my $aamult = $seqtype eq "protein" ? 3 : 1;
-	$length = "short" if $maxfound < (500 / $aamult);
-	return ($seqtype, $length, $format);
+	$length = "short" if $maxfound < ( 500 / $aamult );
+	return ( $seqtype, $length, $format );
 }
-
 
 =head2 get_date_YYYYMMDD
 
@@ -751,10 +750,10 @@ Gets the current date and formats it by YYYYMMDD
 
 sub get_date_YYYYMMDD {
 	my @timerval = localtime();
-	my $datestr = (1900+$timerval[5]);
-	$datestr .= 0 if $timerval[4] <= 9; 
-	$datestr .= ($timerval[4]+1);
-	$datestr .= 0 if $timerval[3] <= 9; 
+	my $datestr  = ( 1900 + $timerval[5] );
+	$datestr .= 0 if $timerval[4] <= 9;
+	$datestr .= ( $timerval[4] + 1 );
+	$datestr .= 0 if $timerval[3] <= 9;
 	$datestr .= $timerval[3];
 	return $datestr;
 }
@@ -818,5 +817,4 @@ See http://dev.perl.org/licenses/ for more information.
 
 
 =cut
-
-1; # End of Amphora2::Utilities
+1;    # End of Amphora2::Utilities
