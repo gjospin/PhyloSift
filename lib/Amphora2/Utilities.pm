@@ -27,7 +27,7 @@ use vars qw[ @EXPORT @EXPORT_OK %EXPORT_TAGS @ISA ];
 				 STD => \@EXPORT,
 				 all => [ @EXPORT, @EXPORT_OK ],
 );
-our $debuglevel = 3;
+our $debuglevel = 1;
 
 sub debug {
 	my $msg = shift;
