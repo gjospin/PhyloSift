@@ -142,7 +142,7 @@ sub blastXoof_table {
 	my $self       = shift;
 	my $query_file = shift;
 	debug "INSIDE tabular OOF blastx\n";
-`$Amphora2::Utilities::blastall -p blastx -i $query_file -e 0.1 -w 20 -b 50000 -v 50000 -d $self->{"blastDir"}/$blastdb_name -o $self->{"blastDir"}/$readsCore.tabblastx -m 8 -a $threadNum`;
+`$Amphora2::Utilities::blastall -p blastx -i $query_file -e 0.1 -w 20 -b 50000 -v 50000 -d $self->{"blastDir"}/$blastdb_name -o $self->{"blastDir"}/$readsCore.tabblastx -m 8 -a $threadNum 2> /dev/null`;
 	return $self->{"blastDir"} . "/$readsCore.tabblastx";
 }
 
@@ -154,7 +154,7 @@ sub blastXoof_full {
 	my $query_file = shift;
 	my $self       = shift;
 	debug "INSIDE full OOF blastx\n";
-`$Amphora2::Utilities::blastall -p blastx -i $query_file -e 0.1 -w 20 -b 50000 -v 50000 -d $self->{"blastDir"}/$blastdb_name -o $self->{"blastDir"}/$readsCore.blastx -a $threadNum`;
+`$Amphora2::Utilities::blastall -p blastx -i $query_file -e 0.1 -w 20 -b 50000 -v 50000 -d $self->{"blastDir"}/$blastdb_name -o $self->{"blastDir"}/$readsCore.blastx -a $threadNum 2> /dev/null`;
 	return $self;
 }
 
