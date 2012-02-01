@@ -231,6 +231,9 @@ sub summarize {
 		my $placeFile = $self->{"treeDir"} . "/" . Amphora2::Utilities::getReadPlacementFile($marker);
 		next unless ( -e $placeFile );
 
+		my $pp_covfile;
+		open($pp_covfile, ">".Amphora2::Utilities::getReadPlacementFile($marker).".cov") if ( defined $self->{"coverage"} );
+
 		# first read the taxonomy mapping
 		my $markermapfile = "$markerdir/$marker.ncbimap";
 		$markermapfile = "$markerdir/$marker.updated.taxonmap" if $self->{"updated"};
@@ -248,14 +251,17 @@ sub summarize {
 		my $placeline = 0;
 		my %curplaces;
 		while ( my $line = <PLACEFILE> ) {
+			print $pp_covfile $line if ( defined $self->{"coverage"} );
 			$placeline = 1 if ( $line =~ /"placements"/ );
 			next if ( $line =~ /^\>/ );
 			next if ( $line =~ /^\s*\#/ );
 			if ( $placeline == 1 && $line =~ /\[(\d+),\s.\d+\.?\d+,\s(\d+\.?\d*),/ ) {
 				$curplaces{$1} = $2;
 			}
+			# have we reached the end of a placement entry?
 			if ( $placeline == 1 && $line =~ /\"n\"\:\s+\[\"(.+?)\"\]/ ) {
 				my $qname = $1;
+				# tally up the probabilities on different NCBI groups
 				foreach my $edge ( keys(%curplaces) ) {
 					my $weightRatio = $curplaces{$edge};
 					$weightRatio *= $coverage{$qname} if defined( $coverage{$qname} );
@@ -271,10 +277,17 @@ sub summarize {
 						$ncbireads{$taxon} = 0 unless defined $ncbireads{$taxon};
 						$ncbireads{$taxon} += $weightRatio / $mapcount;    # split the p.p. across the possible edge mappings
 					}
+					
+					# if we have read coverage information, add it to an updated placement file
+					my $mass = 1;
+					$mass = $coverage{$qname} if defined( $coverage{$qname} );
+					my $massline = ", \"m\": \"$mass\"\n";
+					print $pp_covfile $line if ( defined $self->{"coverage"} );
 				}
 				%curplaces = ();
 			}
 		}
+		close $pp_covfile if ( defined $self->{"coverage"} );
 	}
 
 	# also write out the taxon assignments for sequences
