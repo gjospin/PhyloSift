@@ -359,7 +359,7 @@ sub makeDummyFile {
 	my $glen;
 	$glen = "P" x $len x $gapmultiplier if $gapmultiplier == 1;
 	$glen = "A" x $len x $gapmultiplier if $gapmultiplier == 3;
-	my $newseq = Bio::LocatableSeq->new( -seq => $glen, -id => "dummydummydummy", start => 0, end => ( $len * $gapmultiplier ) );
+	my $newseq = Bio::LocatableSeq->new( -seq => $glen, -id => "dummydummydummy", start => 1, end => ( $len * $gapmultiplier ) );
 	my $aln = Bio::SimpleAlign->new();
 	$aln->add_seq($newseq);
 	return $aln;
@@ -578,6 +578,7 @@ sub concatenateAlignments {
 		$prevlen += $aln->length();
 		my $prevseq = 0;
 		my $newaln = $aln->select( 1, 1 );
+		$newaln->verbose(-1);
 
 		foreach my $curseq ( $aln->each_alphabetically() ) {
 			if ( $prevseq == 0 ) {
@@ -585,6 +586,7 @@ sub concatenateAlignments {
 				next;
 			}
 			if ( $prevseq->id ne $curseq->id ) {
+				$curseq->verbose(-1);
 				$newaln->add_seq($curseq);
 			}
 			$prevseq = $curseq;
@@ -601,7 +603,8 @@ sub concatenateAlignments {
 
 				# add this sequence as all gaps
 				my $tmpseq = "-" x $aln->length();
-				my $newseq = Bio::LocatableSeq->new( -seq => $tmpseq, -id => $catseq->id, start => 0, end => $aln->length() );
+				my $newseq = Bio::LocatableSeq->new( -seq => $tmpseq, -alphabet => "protein", -id => $catseq->id, start => 0, end => 0 );
+				$newseq->verbose(-1);
 				$aln->add_seq($newseq);
 			}
 		}
@@ -612,11 +615,13 @@ sub concatenateAlignments {
 
 				# add this sequence as all gaps
 				my $tmpseq = "-" x $catobj->length();
-				my $newseq = Bio::LocatableSeq->new( -seq => $tmpseq, -id => $alnseq->id, start => 0, end => $catobj->length() );
+				my $newseq = Bio::LocatableSeq->new( -seq => $tmpseq, -alphabet => "protein", -id => $alnseq->id, start => 0, end => 0 );
+				$newseq->verbose(-1);
 				$catobj->add_seq($newseq);
 			}
 		}
 		$catobj = cat( $catobj, $aln );
+		$catobj->verbose(-1);
 	}
 	print MRBAYES "$partlist;\n";
 	my $out = Bio::AlignIO->new( -file => ">$outputFasta", '-format' => 'fasta' );

@@ -81,7 +81,6 @@ sub MarkerAlign {
 		Amphora2::Utilities::concatenateAlignments( $outputFastaDNA, $self->{"alignDir"} . "/mrbayes-dna.nex", 3, @markeralignments );
 	}
 
-	#   }
 	debug "AFTER concatenateALI\n";
 	return $self;
 }
@@ -263,10 +262,11 @@ sub aa_to_dna_aln {
 		my $newdna = Bio::LocatableSeq->new(
 											 -display_id => $id,
 											 -alphabet   => 'dna',
-											 -start      => $start_offset + 1,
-											 -end        => ( $seq->end * CODONSIZE ),
+											 -start      => 1,
+											 -end        => $j,
 											 -strand     => 1,
-											 -seq        => $nt_seqstr
+											 -seq        => $nt_seqstr,
+											 -nowarnonempty => 1
 		);
 		$dnaalign->add_seq($newdna);
 	}
@@ -341,7 +341,7 @@ sub alignAndMask {
 				if ( $line =~ m/^>(.*)/ ) {
 					$currID = $1;
 				} else {
-					my $tempseq = Bio::LocatableSeq->new( -seq => $line, -id => $currID );
+					my $tempseq = Bio::PrimarySeq->new( -seq => $line, -id => $currID, -nowarnonempty => 1 );
 					$referenceNuc{$currID} = $tempseq;
 				}
 			}
