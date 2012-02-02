@@ -759,6 +759,60 @@ sub get_date_YYYYMMDD {
 	return $datestr;
 }
 
+=head2 get_filename_parts
+
+input filename
+Parses the file name to return the core of the file name and the extension
+both file names work "/path/core.ext" OR "core.ext"
+
+=cut
+
+sub get_core_filename{
+	my $file_name = shift;
+	my $core_name,
+	my $ext;
+	if( $file_name =~ m/\/(\S+)\.(\S+)$/){
+		$core_name=$1;
+		$ext=$2;
+	}elsif($file_name=~m/^(\S+)\.(\S+)/){
+		$core_name=$1;
+		$ext=$2;
+	}
+	return ($core_name,$ext);
+}
+
+=head2 generate_hmm
+
+input: alignment_file, target_directory
+generates a HMM profile from an alignement in FASTA format (arg) using hmmbuild.  The hmm is placed in the target_directory
+
+=cut
+
+sub generate_hmm{
+	my $file_name = shift;
+	my $target_dir= shift;
+	my ($core_name,$ext) = get_core_filename($file_name);
+	`hmmbuild --informat afa $target_dir/$core_name.hmm $file_name`;
+	return "$target_dir/$core_name.hmm";
+}
+
+=head2 hmmalign_to_model
+
+input : hmm_profile,sequence_file,target_dir
+
+=cut
+
+sub hmmalign_to_model{
+	my $hmm_profile=shift;
+	my $sequence_file=shift;
+	my $target_dir=shift;
+	my ($core_name,$ext) = get_core_filename($sequence_file);
+	`hmmalign --trim --outformat afa -o $target_dir/$core_name.aln $hmm_profile $sequence_file`;
+	return "$target_dir/$core_name.aln";
+	
+	
+}
+
 =head1 AUTHOR
 
 Aaron Darling, C<< <aarondarling at ucdavis.edu> >>
