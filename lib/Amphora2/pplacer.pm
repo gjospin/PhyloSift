@@ -13,6 +13,7 @@ Amphora2::pplacer - place aligned reads onto a phylogenetic tree with pplacer
 Version 0.01
 
 =cut
+
 our $VERSION = '0.01';
 
 =head1 SYNOPSIS
@@ -40,7 +41,7 @@ sub pplacer {
 	directoryPrepAndClean($self);
 	if ( $self->{"updated"} ) {
 		my $markerPackage = Amphora2::Utilities::getMarkerPackage( $self, "concat" );
-		my $pp = "$Amphora2::Utilities::pplacer -c $markerPackage --groups 10 " . $self->{"alignDir"} . "/concat.trim.fasta";
+		my $pp = "$Amphora2::Utilities::pplacer -c $markerPackage -j " . $self->{"threads"} . " --groups 10 " . $self->{"alignDir"} . "/concat.trim.fasta";
 		print "Running $pp\n";
 		system($pp);
 		`mv $self->{"workingDir"}/concat.trim.fasta.jplace $self->{"treeDir"}` if ( -e $self->{"workingDir"} . "/concat.trim.fasta.jplace" );
@@ -65,12 +66,12 @@ sub pplacer {
 			if ( !-e "$trimfinalFastaFile" ) {
 				`cp $trimfinalFile $trimfinalFastaFile`;
 			}
-			my $pp = "$Amphora2::Utilities::pplacer -p -r $trimfinalFastaFile -t $treeFile -s $treeStatsFile $readAlignmentFile";
+			my $pp = "$Amphora2::Utilities::pplacer -p -j " . $self->{"threads"} . " -r $trimfinalFastaFile -t $treeFile -s $treeStatsFile $readAlignmentFile";
 			`$pp`;
 		} else {
 
 			#run pplacer on amino acid data
-			my $pp = "$Amphora2::Utilities::pplacer -c $markerPackage $readAlignmentFile";
+			my $pp = "$Amphora2::Utilities::pplacer -j " . $self->{"threads"} . " -c $markerPackage $readAlignmentFile";
 			print "Running $pp\n";
 			system($pp);
 
@@ -78,7 +79,7 @@ sub pplacer {
 			if ( -e $readAlignmentDNAFile ) {
 				my $codonmarkers = $markerPackage;
 				$codonmarkers =~ s/.updated/.codon.updated/g;
-				my $pp = "$Amphora2::Utilities::pplacer -c $codonmarkers $readAlignmentDNAFile";
+				my $pp = "$Amphora2::Utilities::pplacer -j " . $self->{"threads"} . " -c $codonmarkers $readAlignmentDNAFile";
 				print "Running $pp\n";
 				system($pp);
 			}
@@ -203,4 +204,5 @@ See http://dev.perl.org/licenses/ for more information.
 
 
 =cut
+
 1;    # End of Amphora2::pplacer.pm

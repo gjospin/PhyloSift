@@ -49,7 +49,6 @@ if you don't export anything, such as for a purely object-oriented module.
 
 =cut
 my $clean                 = 0;      #option set up, but not used for later
-my $threadNum             = 4;      #default value runs on 1 processor only.
 my $isolateMode           = 0;      # set to 1 if running on an isolate assembly instead of raw reads
 my $bestHitsBitScoreRange = 30;     # all hits with a bit score within this amount of the best will be used
 my $align_fraction        = 0.3;    # at least this amount of min[length(query),length(marker)] must align to be considered a hit
@@ -62,7 +61,7 @@ my %marker_lookup    = ();
 my %frames           = ();
 my $reverseTranslate = 0;
 my $blastdb_name     = "blastrep.faa";
-my $blastp_params    = "-p blastp -e 0.1 -b 50000 -v 50000 -a $threadNum -m 8";
+my $blastp_params    = "-p blastp -e 0.1 -b 50000 -v 50000 -m 8";
 my %markerLength;
 
 sub RunSearch {
@@ -142,7 +141,7 @@ sub blastXoof_table {
 	my $self       = shift;
 	my $query_file = shift;
 	debug "INSIDE tabular OOF blastx\n";
-`$Amphora2::Utilities::blastall -p blastx -i $query_file -e 0.1 -w 20 -b 50000 -v 50000 -d $self->{"blastDir"}/$blastdb_name -o $self->{"blastDir"}/$readsCore.tabblastx -m 8 -a $threadNum 2> /dev/null`;
+`$Amphora2::Utilities::blastall -p blastx -i $query_file -e 0.1 -w 20 -b 50000 -v 50000 -d $self->{"blastDir"}/$blastdb_name -o $self->{"blastDir"}/$readsCore.tabblastx -m 8 -a $self->{"threads"} 2> /dev/null`;
 	return $self->{"blastDir"} . "/$readsCore.tabblastx";
 }
 
@@ -154,7 +153,7 @@ sub blastXoof_full {
 	my $query_file = shift;
 	my $self       = shift;
 	debug "INSIDE full OOF blastx\n";
-`$Amphora2::Utilities::blastall -p blastx -i $query_file -e 0.1 -w 20 -b 50000 -v 50000 -d $self->{"blastDir"}/$blastdb_name -o $self->{"blastDir"}/$readsCore.blastx -a $threadNum 2> /dev/null`;
+`$Amphora2::Utilities::blastall -p blastx -i $query_file -e 0.1 -w 20 -b 50000 -v 50000 -d $self->{"blastDir"}/$blastdb_name -o $self->{"blastDir"}/$readsCore.blastx -a $self->{"threads"} 2> /dev/null`;
 	return $self;
 }
 
@@ -202,7 +201,7 @@ sub executeRap {
 	$dbDir = $self->{"blastDir"} if ( $custom ne "" );
 	if ( !-e $self->{"blastDir"} . "/$readsCore.rapSearch.m8" ) {
 		debug "INSIDE custom markers RAPSearch\n";
-		`cd $self->{"blastDir"} ; $Amphora2::Utilities::rapSearch -q $self->{"readsFile"} -d $dbDir/rep -o $readsCore.rapSearch -e -1`;
+		`cd $self->{"blastDir"} ; $Amphora2::Utilities::rapSearch -q $self->{"readsFile"} -d $dbDir/rep -o $readsCore.rapSearch -e -1 -z $self->{"threads"}`;
 	}
 	return $self->{"blastDir"} . "/" . $readsCore . ".rapSearch.m8";
 }
@@ -218,7 +217,7 @@ sub executeBlast {
 	$dbDir = $self->{"blastDir"} if $custom ne "";
 	debug "INSIDE BLAST\n";
 	if ( !-e $self->{"blastDir"} . "/$readsCore.blastp" ) {
-		`$Amphora2::Utilities::blastall $blastp_params -i $query_file -d $dbDir/$blastdb_name -o $self->{"blastDir"}/$readsCore.blastp`;
+		`$Amphora2::Utilities::blastall $blastp_params -i $query_file -d $dbDir/$blastdb_name -o $self->{"blastDir"}/$readsCore.blastp -a $self->{"threads"}`;
 	}
 	return $self->{"blastDir"} . "/$readsCore.blastp";
 }
