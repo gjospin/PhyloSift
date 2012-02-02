@@ -97,6 +97,7 @@ if ( $pair == 0 ) {
 	debug "INSIDE paired\n";
 	$newObject = $newObject->initialize( $ARGV[0], $ARGV[1], $ARGV[2] );
 }
+$newObject->{"threads"}          = $threadNum;
 $newObject->{"isolate"}          = $isolate;
 $newObject->{"besthit"}          = $besthit;
 $newObject->{"reverseTranslate"} = $reverseTranslate;
@@ -108,4 +109,3 @@ debug "FORCE: " . $force . "\n";
 debug "Continue : " . $continue . "\n";
 $newObject->run( $force, $custom, $continue );
 
-#Amphora2::Amphora2::run(@ARGV);
