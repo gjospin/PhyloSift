@@ -763,6 +763,35 @@ sub get_date_YYYYMMDD {
 	return $datestr;
 }
 
+=head2 print_citations
+
+prints out suggested citations for the analysis
+
+=cut
+
+sub print_citations {
+	print "amphora2 -- phylogenetic analysis of genomes and metagenomes\n";
+	print "(c) 2011, 2012 Aaron Darling and Guillaume Jospin\n";
+	print "\nCITATION:\n";
+	print "amphora2. A. Darling, H. Bik, G. Jospin, J.A.Eisen. Manuscript in preparation\n";
+	print "\n\namphora2 incorporates several other software packages, please consider also citing the following papers:\n";
+	print qq{
+
+		pplacer: linear time maximum-likelihood and Bayesian phylogenetic placement of sequences onto a fixed reference tree.
+		Frederick A Matsen, Robin B Kodner, and E Virginia Armbrust
+		BMC Bioinformatics 2010, 11:538
+		
+		RAPSearch2: a fast and memory-efficient protein similarity search tool for next generation sequencing data.
+		Yongan Zhao, Haixu Tang, and Yuzhen Ye
+		Bioinformatics (2011)
+		
+		Gapped BLAST and PSI-BLAST: a new generation of protein database search programs.
+		S. F. Altschul, T. L. Madden, A. A. Schäffer, J. Zhang, Z. Zhang, W. Miller, and D. J. Lipman
+ 		Nucleic Acids Research, 1997, Vol. 25, No. 17 3389–3402
+ 		
+	};
+}
+
 =head1 AUTHOR
 
 Aaron Darling, C<< <aarondarling at ucdavis.edu> >>

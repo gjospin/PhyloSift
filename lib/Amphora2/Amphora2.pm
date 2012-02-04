@@ -138,6 +138,9 @@ sub run {
 	my $custom   = shift;
 	my $continue = shift;
 	debug "force : $force\n";
+	
+	Amphora2::Utilities::print_citations();
+	
 	start_timer("START");
 	$self->readAmphora2Config();
 	$self->runProgCheck();
