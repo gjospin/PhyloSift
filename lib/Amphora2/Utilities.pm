@@ -110,6 +110,7 @@ our $rapSearch= "";
 our $preRapSearch = "";
 our $raxml = "";
 our $readconciler = "";
+our $fast_tree = "";
 sub programChecks {
 	eval 'require Bio::Seq;';
 	if ($@) {
@@ -159,7 +160,6 @@ sub programChecks {
 	    carp("raxmlHPC was not found\n");
 	    return 1;
 	}
-
 	$readconciler = get_program_path("readconciler",$Amphora2::Settings::a2_path);
 	return 0;
 }
@@ -759,28 +759,6 @@ sub get_date_YYYYMMDD {
 	return $datestr;
 }
 
-=head2 get_filename_parts
-
-input filename
-Parses the file name to return the core of the file name and the extension
-both file names work "/path/core.ext" OR "core.ext"
-
-=cut
-
-sub get_core_filename{
-	my $file_name = shift;
-	my $core_name,
-	my $ext;
-	if( $file_name =~ m/\/(\S+)\.(\S+)$/){
-		$core_name=$1;
-		$ext=$2;
-	}elsif($file_name=~m/^(\S+)\.(\S+)/){
-		$core_name=$1;
-		$ext=$2;
-	}
-	return ($core_name,$ext);
-}
-
 =head2 generate_hmm
 
 input: alignment_file, target_directory
@@ -791,7 +769,7 @@ generates a HMM profile from an alignement in FASTA format (arg) using hmmbuild.
 sub generate_hmm{
 	my $file_name = shift;
 	my $target_dir= shift;
-	my ($core_name,$ext) = get_core_filename($file_name);
+	my ($core_name,$path,$ext) = fileparse($file_name,qr/\.\S*$/);
 	`hmmbuild --informat afa $target_dir/$core_name.hmm $file_name`;
 	return "$target_dir/$core_name.hmm";
 }
@@ -799,18 +777,39 @@ sub generate_hmm{
 =head2 hmmalign_to_model
 
 input : hmm_profile,sequence_file,target_dir
-
+Aligns sequences to an HMM model and outputs an alignment
 =cut
 
 sub hmmalign_to_model{
 	my $hmm_profile=shift;
 	my $sequence_file=shift;
 	my $target_dir=shift;
-	my ($core_name,$ext) = get_core_filename($sequence_file);
+	my ($core_name,$path,$ext) = fileparse($sequence_file,qr/\.[^.]*$/);
 	`hmmalign --trim --outformat afa -o $target_dir/$core_name.aln $hmm_profile $sequence_file`;
 	return "$target_dir/$core_name.aln";
-	
-	
+}
+
+=head2 generate_fasttree
+
+input: alignment_file,target_directory
+generates a tree using fasttree and write the output along with the log/info files to the target directory.
+
+=cut
+
+sub generate_fasttree{
+    my $aln_file = shift;
+    my $target_dir = shift;
+    my ($core,$path,$ext) = fileparse($aln_file,qr/\.[^.]*$/);
+    my ($seqtype, $length, $format) = get_sequence_input_type($aln_file);
+#    print "A2 path : ".$Amphora2::Settings::a2_path."\n";
+#    $fast_tree = get_program_path("FastTree",$Amphora2::Settings::a2_path);
+#    print $fast_tree."\n";
+#    exit;
+    if($seqtype eq "dna"){
+	`FastTree -nt -gtr -log $target_dir/$core.log $aln_file > $target_dir/$core.tre`;
+    }else{
+	`FastTree -gtr -log $target_dir/$core.log $aln_file > $target_dir/$core.tre`
+    }
 }
 
 =head1 AUTHOR
