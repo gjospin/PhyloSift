@@ -3,8 +3,8 @@
 =head1 BuildRefPack.pl
 
 Takes in an alignment file in FASTA format as an argument and creates a reference package to use as a marker by Amphora
-Usage perl BuildRefPack.pl <alignment_file> <package_name>
-
+Usage perl BuildRefPack.pl <alignment_file> <package_name> <cutoff>
+>perl tools/BuildRefPack.pl PMPROK00003.trimfinal PMPROK00003 0.01
 Amphora2/lib needs to be in the user's $PERL5PATH
 WARNING : requires FastTree to be accessible from the user's $PATH
 
