@@ -116,8 +116,26 @@ All results are generated within the Amphora-2 directory in the the Amph_temp/<f
     treeDir : All files related to the tree placements of the candidate sequences by Pplacer.
     	      *.place 		     Placement file for the newCandidate sequences
 
-    taxasummary.txt 		     Taxa found to be present in the input file
-    taxaconfidence.txt		     Confidence values for each taxa in the taxasummary.txt file
+    taxasummary.txt 		     Probability mass over taxa present in the sample, tab-delimited text
+		Column 1 -- NCBI Taxon ID
+		Column 2 -- Taxonomic rank (genus, species, phylum, etc)
+		Column 3 -- Name
+		Column 4 -- Read/sequence probability sum placed at this taxon
+			    The values in this column can be normalized to sum to 1, the result will be a rank-abundance distribution
+
+    taxaconfidence.txt		     Quantiles over the probability distribution for number of reads at a taxonomic level
+                                     under a multinomial model of read sampling from taxa during the sequencing process.
+		Column 1 -- NCBI Taxon ID
+		Column 2 -- Taxonomic rank (genus, species, phylum, etc)
+		Column 3 -- Name
+		Column 4 -- Minimum number of reads
+		Column 5 -- Number of reads at 10th percentile
+		Column 6 -- Number of reads at 25th percentile
+		Column 7 -- Median number of reads
+		Column 8 -- Number of reads at 75th percentile
+		Column 9 -- Number of reads at 90th percentile
+		Column 10 -- Maximum number of reads
+
 
 
 

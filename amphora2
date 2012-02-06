@@ -1,25 +1,23 @@
 #!/usr/bin/env perl
-
 use warnings;
 use strict;
-
-use FindBin qw($Bin); use lib "$Bin/lib";
+use FindBin qw($Bin);
+use lib "$Bin/lib";
 use Getopt::Long;
 use Amphora2::Amphora2;
 use Carp;
 use Amphora2::Utilities qw(debug);
 use POSIX;
-
-my $pair=0;
-my $threadNum=1;
-my $clean=0;
-my $force=0;
-my $continue=0;
-my $isolate=0;
-my $custom = "";
-my $reverseTranslate=0;
-my $besthit=0;
-my $updated=0;
+my $pair             = 0;
+my $threadNum        = 1;
+my $clean            = 0;
+my $force            = 0;
+my $continue         = 0;
+my $isolate          = 0;
+my $custom           = "";
+my $reverseTranslate = 0;
+my $besthit          = 0;
+my $updated          = 0;
 my $coverage;
 my $configuration;
 my $help=0;
@@ -81,43 +79,37 @@ if($help != 0){
     print $usage."\n";
     die "End of Help message\n";
 }
-
-debug( "@ARGV\n" );
-if($pair ==0){
-    croak $usage unless ($ARGV[0] && $ARGV[1]);
-}elsif(scalar(@ARGV) == 3){
-    croak $usage unless ($ARGV[0] && $ARGV[1] && $ARGV[2]);
-}else{
-    croak $usage."\nOR\n".$usage."\n";
+debug("@ARGV\n");
+if ( $pair == 0 ) {
+	croak $usage unless ( $ARGV[0] && $ARGV[1] );
+} elsif ( scalar(@ARGV) == 3 ) {
+	croak $usage unless ( $ARGV[0] && $ARGV[1] && $ARGV[2] );
+} else {
+	croak $usage. "\nOR\n" . $usage . "\n";
 }
-
-
-unless((POSIX::uname)[4] =~ /64/ || $^O =~ /arwin/){
-	print STDERR (POSIX::uname)[4]."\n";
+unless ( (POSIX::uname)[4] =~ /64/ || $^O =~ /arwin/ ) {
+	print STDERR (POSIX::uname)[4] . "\n";
 	die "Sorry, Amphora 2 requires a 64-bit OS to run.\n";
 }
-
 my $newObject = new Amphora2::Amphora2();
 debug "PAIR : $pair\n";
-if($pair == 0){
-    debug "notpaired @ARGV\n";
-    $newObject = $newObject->initialize($ARGV[0],$ARGV[1]);
-}else{
-    debug "INSIDE paired\n";
-    $newObject = $newObject->initialize($ARGV[0],$ARGV[1],$ARGV[2]);
+if ( $pair == 0 ) {
+	debug "notpaired @ARGV\n";
+	$newObject = $newObject->initialize( $ARGV[0], $ARGV[1] );
+} else {
+	debug "INSIDE paired\n";
+	$newObject = $newObject->initialize( $ARGV[0], $ARGV[1], $ARGV[2] );
 }
-
-$newObject->{"isolate"} = $isolate;
-$newObject->{"besthit"} = $besthit;
+$newObject->{"threads"}          = $threadNum;
+$newObject->{"isolate"}          = $isolate;
+$newObject->{"besthit"}          = $besthit;
 $newObject->{"reverseTranslate"} = $reverseTranslate;
-$newObject->{"updated"}=$updated;
-$newObject->{"coverage"}=$coverage;
-$newObject->{"configuration"}=$configuration if defined($configuration);
 $newObject->{"16s"}=$s16;
+$newObject->{"updated"}          = $updated;
+$newObject->{"coverage"}         = $coverage;
+$newObject->{"configuration"}    = $configuration if defined($configuration);
 my $readsFile = $newObject->getReadsFile;
-debug "FORCE: ".$force."\n";
-debug "Continue : ".$continue."\n";
-$newObject->run($force,$custom,$continue);
-
-#Amphora2::Amphora2::run(@ARGV);
+debug "FORCE: " . $force . "\n";
+debug "Continue : " . $continue . "\n";
+$newObject->run( $force, $custom, $continue );
 

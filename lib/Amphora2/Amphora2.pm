@@ -1,6 +1,5 @@
 #!/usr/bin/perl
 package Amphora2::Amphora2;
-
 use 5.006;
 use strict;
 use warnings;
@@ -25,24 +24,24 @@ use Amphora2::BeastInterface;
 
 =cut
 
-sub new{
-    my $self = {};
-    $self->{"fileName"}= undef;
-    $self->{"workingDir"}=undef;
-    $self->{"mode"} = undef;
-    $self->{"readsFile"} = undef;
-    $self->{"readsFile_2"} = undef;
-    $self->{"tempDir"} = undef;
-    $self->{"fileDir"} = undef;
-    $self->{"blastDir"} = undef;
-    $self->{"alignDir"} = undef;
-    $self->{"treeDir"} = undef;
-    $self->{"dna"}=undef;
-    $self->{"updated"}=undef;
-    $self->{"coverage"}=undef;
-    $self->{"16s"}=undef;
-    bless($self);
-    return $self;
+sub new {
+	my $self = {};
+	$self->{"fileName"}    = undef;
+	$self->{"workingDir"}  = undef;
+	$self->{"mode"}        = undef;
+	$self->{"readsFile"}   = undef;
+	$self->{"readsFile_2"} = undef;
+	$self->{"tempDir"}     = undef;
+	$self->{"fileDir"}     = undef;
+	$self->{"blastDir"}    = undef;
+	$self->{"alignDir"}    = undef;
+	$self->{"treeDir"}     = undef;
+	$self->{"dna"}         = undef;
+	$self->{"updated"}     = undef;
+	$self->{"coverage"}    = undef;
+	$self->{"16s"}         = undef;
+	bless($self);
+	return $self;
 }
 
 =head2 initialize
@@ -51,34 +50,32 @@ sub new{
     Using the standard pathnames and the filename
 
 =cut
-    
-sub initialize{
-    my $self = shift;
-    my $mode = shift;
-    my $readsFile = shift;
-    debug "READSFILE\t".$readsFile."\n";
-    my $readsFile_2="";
-    if(scalar(@_) == 1){
-	debug "FOUND a second file\n";
-	$readsFile_2 = shift;
-    }
-    
-    my $position = rindex($readsFile,"/");
-    $self->{"fileName"}= substr($readsFile,$position+1,length($readsFile)-$position-1);
-    $self->{"workingDir"}=getcwd;
-    $self->{"mode"} = $mode; 
-    $self->{"readsFile"} = $readsFile; 
-    $self->{"readsFile_2"} = $readsFile_2; 
-    $self->{"tempDir"} = $self->{"workingDir"}."/Amph_temp"; 
-    $self->{"fileDir"} = $self->{"tempDir"}."/".$self->{"fileName"}; 
-    $self->{"blastDir"} = $self->{"fileDir"}."/blastDir"; 
-    $self->{"alignDir"} = $self->{"fileDir"}."/alignDir";
-    $self->{"treeDir"} = $self->{"fileDir"}."/treeDir"; 
-    $self->{"dna"}=0;
-    $self->{"updated"}=0;
-    $self->{"16s"}=0;
-    return $self;
-    
+
+sub initialize {
+	my $self      = shift;
+	my $mode      = shift;
+	my $readsFile = shift;
+	debug "READSFILE\t" . $readsFile . "\n";
+	my $readsFile_2 = "";
+	if ( scalar(@_) == 1 ) {
+		debug "FOUND a second file\n";
+		$readsFile_2 = shift;
+	}
+	my $position = rindex( $readsFile, "/" );
+	$self->{"fileName"}    = substr( $readsFile, $position + 1, length($readsFile) - $position - 1 );
+	$self->{"workingDir"}  = getcwd;
+	$self->{"mode"}        = $mode;
+	$self->{"readsFile"}   = $readsFile;
+	$self->{"readsFile_2"} = $readsFile_2;
+	$self->{"tempDir"}     = $self->{"workingDir"} . "/Amph_temp";
+	$self->{"fileDir"}     = $self->{"tempDir"} . "/" . $self->{"fileName"};
+	$self->{"blastDir"}    = $self->{"fileDir"} . "/blastDir";
+	$self->{"alignDir"}    = $self->{"fileDir"} . "/alignDir";
+	$self->{"treeDir"}     = $self->{"fileDir"} . "/treeDir";
+	$self->{"dna"}         = 0;
+	$self->{"updated"}     = 0;
+	$self->{"16s"}         = 0;
+	return $self;
 }
 
 =head2 getReadsFile
@@ -87,10 +84,9 @@ sub initialize{
 
 =cut
 
-sub getReadsFile{
-    my $self = shift;
-    return $self->{"readsFile"};
-
+sub getReadsFile {
+	my $self = shift;
+	return $self->{"readsFile"};
 }
 
 =head1 NAME
@@ -104,7 +100,6 @@ Version 0.01
 =cut
 
 our $VERSION = '0.01';
-
 
 =head1 SYNOPSIS
 
@@ -135,54 +130,49 @@ if you don't export anything, such as for a purely object-oriented module.
 
 =cut
 
-my $continue=0;
-my ($mode,$readsFile,$readsFile_2, $fileName, $tempDir, $fileDir,$blastDir,$alignDir,$treeDir)="";
-my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst)=0;
+my $continue = 0;
+my ( $mode, $readsFile, $readsFile_2, $fileName, $tempDir, $fileDir, $blastDir, $alignDir, $treeDir ) = "";
+my ( $sec,  $min,       $hour,        $mday,     $mon,     $year,    $wday,     $yday,     $isdst )   = 0;
 my $workingDir = getcwd;
+
 #where everything will be written when Amphora-2 is running
-
-
 sub run {
-    my $self = shift;
-    my $force = shift;
-    my $custom = shift;
-    my $continue = shift;
-    debug "force : $force\n";
-    start_timer("START");
+	my $self     = shift;
+	my $force    = shift;
+	my $custom   = shift;
+	my $continue = shift;
+	debug "force : $force\n";
+	start_timer("START");
+	$self->readAmphora2Config();
+	$self->runProgCheck();
+	Amphora2::Utilities::dataChecks($self);
+	$self->fileCheck();
+	$self->directoryPrep($force);
+	$self->{"readsFile"} = $self->prepIsolateFiles( $self->{"readsFile"} ) if $self->{"isolate"} == 1;
 
-    $self->readAmphora2Config();
-    $self->runProgCheck();
-    Amphora2::Utilities::dataChecks($self);
-    $self->fileCheck();
-    $self->directoryPrep($force);
-
-    $self->{"readsFile"} = $self->prepIsolateFiles($self->{"readsFile"}) if $self->{"isolate"}==1;
-
-    #create a file with a list of markers called markers.list
-    debug "CUSTOM = ".$custom."\n";
-
-    my @markers = $self->markerGather($custom);
-    debug "@markers\n";
-    debug "MODE :: ".$self->{"mode"}."\n";
-    if($self->{"mode"} eq 'blast' || $self->{"mode"} eq 'all'){
-	$self=$self->runSearch($continue,$custom,\@markers);
-	debug "MODE :: ".$self->{"mode"}."\n";
-    }
-
-    debug "MODE :: ".$self->{"mode"}."\n";
-    if($self->{"mode"} eq 'align' || $self->{"mode"} eq 'all'){
-	$self=$self->runMarkerAlign($continue,\@markers);
-    }
-    if($self->{"mode"} eq 'placer' || $self->{"mode"} eq 'all'){
-	croak "No marker gene hits found in the input data. Unable to reconstruct phylogeny and taxonomy." if(scalar(@markers)==0);
-	$self=$self->runPplacer($continue,\@markers);
-    }
-    if($self->{"mode"} eq 'summary' || $self->{"mode"} eq 'all'){
-	$self=$self->taxonomyAssignments($continue,\@markers);
-    }
-    if($self->{"mode"} eq 'benchmark'){
-	$self=$self->benchmark();
-    }
+	#create a file with a list of markers called markers.list
+	debug "CUSTOM = " . $custom . "\n";
+	my @markers = $self->markerGather($custom);
+	debug "@markers\n";
+	debug "MODE :: " . $self->{"mode"} . "\n";
+	if ( $self->{"mode"} eq 'blast' || $self->{"mode"} eq 'all' ) {
+		$self = $self->runSearch( $continue, $custom, \@markers );
+		debug "MODE :: " . $self->{"mode"} . "\n";
+	}
+	debug "MODE :: " . $self->{"mode"} . "\n";
+	if ( $self->{"mode"} eq 'align' || $self->{"mode"} eq 'all' ) {
+		$self = $self->runMarkerAlign( $continue, \@markers );
+	}
+	if ( $self->{"mode"} eq 'placer' || $self->{"mode"} eq 'all' ) {
+		croak "No marker gene hits found in the input data. Unable to reconstruct phylogeny and taxonomy." if ( scalar(@markers) == 0 );
+		$self = $self->runPplacer( $continue, \@markers );
+	}
+	if ( $self->{"mode"} eq 'summary' || $self->{"mode"} eq 'all' ) {
+		$self = $self->taxonomyAssignments( $continue, \@markers );
+	}
+	if ( $self->{"mode"} eq 'benchmark' ) {
+		$self = $self->benchmark();
+	}
 }
 
 =head2 function2
@@ -193,15 +183,25 @@ sub run {
 
 # reads the Amphora2 configuration file
 sub readAmphora2Config {
-    my $self = shift;
-    my $custom_config = $self->{"configuration"};
-    # first get the install prefix of this script
-    my $scriptpath = dirname($0);
-    # try first a config in the script dir, in case we're running from
-    # a dev directory.  then config in system dir, then user's home.
-    # let each one override its predecessor.
-    { package Amphora2::Settings; do "$scriptpath/amphora2rc"; do "$scriptpath/../amphora2rc"; do "$scriptpath/../etc/amphora2rc"; do "$ENV{HOME}/.amphora2rc"; do $custom_config if defined $custom_config; }
-    return $self;
+	my $self          = shift;
+	my $custom_config = $self->{"configuration"};
+
+	# first get the install prefix of this script
+	my $scriptpath = dirname($0);
+
+	# try first a config in the script dir, in case we're running from
+	# a dev directory.  then config in system dir, then user's home.
+	# let each one override its predecessor.
+	{
+
+		package Amphora2::Settings;
+		do "$scriptpath/amphora2rc";
+		do "$scriptpath/../amphora2rc";
+		do "$scriptpath/../etc/amphora2rc";
+		do "$ENV{HOME}/.amphora2rc";
+		do $custom_config if defined $custom_config;
+	}
+	return $self;
 }
 
 =head2 fileCheck
@@ -210,27 +210,29 @@ sub readAmphora2Config {
 
 =cut
 
-sub fileCheck{
-    my $self = shift;
-    if(!-e $self->{"readsFile"} ){
-	die $self->{"readsFile"}."  was not found \n";
-    }
-    #check if the input file is a file and not a directory
-    if( !-f $self->{"readsFile"}){
-	die $self->{"readsFile"}. " is not a plain file, could be a directory\n";
-    }
-    if($self->{"readsFile_2"} ne ""){
-	#check the input file exists
-	if(!-e $self->{"readsFile_2"}){
-	    die $self->{"readsFile_2"}." was not found\n";
+sub fileCheck {
+	my $self = shift;
+	if ( !-e $self->{"readsFile"} ) {
+		die $self->{"readsFile"} . "  was not found \n";
 	}
-	#check if the input file is a file and not a directory
-	if( !-e $self->{"readsFile_2"}){
-	    die $self->{"readsFile_2"}." is not a plain file, could be a directory\n";
-	}
-    }
 
-    return $self;
+	#check if the input file is a file and not a directory
+	if ( !-f $self->{"readsFile"} ) {
+		die $self->{"readsFile"} . " is not a plain file, could be a directory\n";
+	}
+	if ( $self->{"readsFile_2"} ne "" ) {
+
+		#check the input file exists
+		if ( !-e $self->{"readsFile_2"} ) {
+			die $self->{"readsFile_2"} . " was not found\n";
+		}
+
+		#check if the input file is a file and not a directory
+		if ( !-e $self->{"readsFile_2"} ) {
+			die $self->{"readsFile_2"} . " is not a plain file, could be a directory\n";
+		}
+	}
+	return $self;
 }
 
 =head2 runProgCheck
@@ -240,16 +242,17 @@ sub fileCheck{
 
 =cut
 
-sub runProgCheck{
-    my $self = shift;
-    #check if the various programs used in this pipeline are installed on the machine
-    my $progCheck = Amphora2::Utilities::programChecks($self);
-    if($progCheck!=0){
-	croak "A required program was not found during the checks aborting\n";
-    }elsif($progCheck==0){
-	debug "All systems are good to go, continuing the screening\n";
-    }
-    return $self;
+sub runProgCheck {
+	my $self = shift;
+
+	#check if the various programs used in this pipeline are installed on the machine
+	my $progCheck = Amphora2::Utilities::programChecks($self);
+	if ( $progCheck != 0 ) {
+		croak "A required program was not found during the checks aborting\n";
+	} elsif ( $progCheck == 0 ) {
+		debug "All systems are good to go, continuing the screening\n";
+	}
+	return $self;
 }
 
 =head2 prepIsolateFiles
@@ -266,13 +269,13 @@ and isolate names in memory and using that at later stages of the pipeline
 
 sub prepIsolateFiles {
 	my $self = shift;
-	open( OUTFILE, ">".$self->{"fileDir"}."/isolates.fasta" );
-	while(my $file = shift){
+	open( OUTFILE, ">" . $self->{"fileDir"} . "/isolates.fasta" );
+	while ( my $file = shift ) {
 		open( ISOLATEFILE, $file ) || croak("Unable to read $file\n");
-		my $fname = $self->{"fileDir"}."/".basename($file);
+		my $fname = $self->{"fileDir"} . "/" . basename($file);
 		debug "Operating on isolate file $fname\n";
-		print OUTFILE ">".basename($file)."\n";
-		while( my $line = <ISOLATEFILE> ){
+		print OUTFILE ">" . basename($file) . "\n";
+		while ( my $line = <ISOLATEFILE> ) {
 			next if $line =~ /^>/;
 			print OUTFILE $line;
 		}
@@ -280,7 +283,7 @@ sub prepIsolateFiles {
 	}
 	close OUTFILE;
 	$self->{"readsFile"} = "isolates.fasta";
-	return $self->{"fileDir"}."/isolates.fasta";
+	return $self->{"fileDir"} . "/isolates.fasta";
 }
 
 =head2 markerGather
@@ -297,27 +300,30 @@ sub prepIsolateFiles {
 =cut
 
 sub markerGather {
-    my $self = shift;
-    my $markerFile = shift;
-    my @marks=();
-    #create a file with a list of markers called markers.list
-    if($markerFile ne ""){
-	#gather a custom list of makers, list convention is 1 marker per line
-	open(markersIN,$markerFile);
-	while(<markersIN>){
-	    chomp($_);
-	    push(@marks,$_);
+	my $self       = shift;
+	my $markerFile = shift;
+	my @marks      = ();
+
+	#create a file with a list of markers called markers.list
+	if ( $markerFile ne "" ) {
+
+		#gather a custom list of makers, list convention is 1 marker per line
+		open( markersIN, $markerFile );
+		while (<markersIN>) {
+			chomp($_);
+			push( @marks, $_ );
+		}
+		close(markersIN);
+	} else {
+
+		#gather all markers
+		my @files = <$Amphora2::Utilities::marker_dir/*.faa>;
+		foreach my $file (@files) {
+			$file =~ m/\/(\w+).faa/;
+			push( @marks, $1 );
+		}
 	}
-	close(markersIN);
-    }else{
-	#gather all markers
-	my @files = <$Amphora2::Utilities::marker_dir/*.faa>;
-	foreach my $file (@files){
-	    $file =~ m/\/(\w+).faa/;
-	    push(@marks,$1);
-	}
-    }
-    return @marks;
+	return @marks;
 }
 
 =head2 directoryPrep
@@ -327,27 +333,32 @@ sub markerGather {
 =cut
 
 sub directoryPrep {
-    my $self = shift; 
-    my $force = shift;
-#    print "FORCE DIRPREP   $force\t mode   ".$self->{"mode"}."\n";
-#    exit;
-    #remove the directory from a previous run
-    if($force && $self->{"mode"} eq 'all'){
-	debug("deleting an old run\n", 0);
-	my $dir = $self->{"fileDir"};
-	`rm -rf $dir`;
-    }elsif(-e $self->{"fileDir"} && $self->{"mode"} eq 'all'){
-	croak("A previous run was found using the same file name aborting the current run\n".
-	"Either delete that run from ".$self->{"fileDir"}.", or force overwrite with the -f command-line option\n");
-    }
-    #check if the temporary directory exists, if it doesn't create it.
-    `mkdir $self->{"tempDir"}` unless (-e $self->{"tempDir"});
-    #create a directory for the Reads file being processed.
-    `mkdir $self->{"fileDir"}` unless (-e $self->{"fileDir"});
-    `mkdir $self->{"blastDir"}` unless (-e $self->{"blastDir"});
-    `mkdir $self->{"alignDir"}` unless (-e $self->{"alignDir"});
-    `mkdir $self->{"treeDir"}` unless (-e $self->{"treeDir"});
-    return $self;
+	my $self  = shift;
+	my $force = shift;
+
+	#    print "FORCE DIRPREP   $force\t mode   ".$self->{"mode"}."\n";
+	#    exit;
+	#remove the directory from a previous run
+	if ( $force && $self->{"mode"} eq 'all' ) {
+		debug( "deleting an old run\n", 0 );
+		my $dir = $self->{"fileDir"};
+		`rm -rf $dir`;
+	} elsif ( -e $self->{"fileDir"} && $self->{"mode"} eq 'all' ) {
+		croak(   "A previous run was found using the same file name aborting the current run\n"
+			   . "Either delete that run from "
+			   . $self->{"fileDir"}
+			   . ", or force overwrite with the -f command-line option\n" );
+	}
+
+	#check if the temporary directory exists, if it doesn't create it.
+	`mkdir $self->{"tempDir"}` unless ( -e $self->{"tempDir"} );
+
+	#create a directory for the Reads file being processed.
+	`mkdir $self->{"fileDir"}`  unless ( -e $self->{"fileDir"} );
+	`mkdir $self->{"blastDir"}` unless ( -e $self->{"blastDir"} );
+	`mkdir $self->{"alignDir"}` unless ( -e $self->{"alignDir"} );
+	`mkdir $self->{"treeDir"}`  unless ( -e $self->{"treeDir"} );
+	return $self;
 }
 
 =head2 taxonomyAssignments
@@ -357,23 +368,35 @@ sub directoryPrep {
 =cut
 
 sub taxonomyAssignments {
-    my $self = shift;
-    my $continue = shift;
-    my $markListRef = shift;
-    Amphora2::Utilities::start_timer("taxonomy assignments");
-    Amphora2::Summarize::summarize( $self,$markListRef );
-    Amphora2::Utilities::end_timer("taxonomy assignments");
-    return $self;
+	my $self        = shift;
+	my $continue    = shift;
+	my $markListRef = shift;
+	Amphora2::Utilities::start_timer("taxonomy assignments");
+	Amphora2::Summarize::summarize( $self, $markListRef );
+	Amphora2::Utilities::end_timer("taxonomy assignments");
+	return $self;
 }
 
 =head2 benchmark
 
 =cut
-sub benchmark{
-    my $self = shift;
-    debug "RUNNING Benchmark\n";
-    Amphora2::Benchmark::runBenchmark($self);
+
+sub benchmark {
+	my $self = shift;
+	debug "RUNNING Benchmark\n";
+	Amphora2::Benchmark::runBenchmark( $self, "./" );
 }
+
+=head2 benchmark
+
+=cut
+
+sub benchmark {
+	my $self = shift;
+	debug "RUNNING Benchmark\n";
+	Amphora2::Benchmark::runBenchmark($self);
+}
+
 =head2 runPplacer
 
     Performs the appropriate checks before runing the Read placement parts of the pipeline
@@ -382,20 +405,21 @@ sub benchmark{
 
 =cut
 
-sub runPplacer{
-    my $self = shift;
-    my $continue = shift;
-    my $markListRef = shift;
-    debug "PPLACER MARKS @{$markListRef}\n";
-    Amphora2::Utilities::start_timer("runPPlacer");
-    my $treeDir =$self->{"treeDir"};
-    `rm $treeDir/*` if (<$treeDir/*>);
-    Amphora2::pplacer::pplacer($self,$markListRef);
-    Amphora2::Utilities::end_timer("runPPlacer");
-    if($continue != 0){
-	$self->{"mode"} = 'summary';
-    }
-    return $self;
+sub runPplacer {
+	my $self        = shift;
+	my $continue    = shift;
+	my $markListRef = shift;
+	debug "PPLACER MARKS @{$markListRef}\n";
+	Amphora2::Utilities::start_timer("runPPlacer");
+	my $treeDir = $self->{"treeDir"};
+	`rm $treeDir/*` if (<$treeDir/*>);
+	Amphora2::pplacer::pplacer( $self, $markListRef );
+	Amphora2::Utilities::end_timer("runPPlacer");
+
+	if ( $continue != 0 ) {
+		$self->{"mode"} = 'summary';
+	}
+	return $self;
 }
 
 =head2 runMarkerAlign
@@ -404,24 +428,27 @@ sub runPplacer{
     if -continue or all mode are used, then run the next part of the pipeline
 
 =cut
-    
-sub runMarkerAlign{
-    my $self = shift;
-    my $continue = shift;
-    my $markRef = shift;
-    Amphora2::Utilities::start_timer("Alignments");
-    #clearing the alignment directory if needed
-    my $alignDir = $self->{"alignDir"};
-    `rm $alignDir/*` if(<$alignDir/*>);
-    #Align Markers
-    my $threadNum=1;
-    Amphora2::MarkerAlign::MarkerAlign( $self, $markRef );
-#    Amphora2::BeastInterface::Export($self, $markRef, $self->{"fileDir"}."/beast.xml");
-    Amphora2::Utilities::end_timer("Alignments");
-    if($continue != 0){
-	$self->{"mode"} = 'placer';
-    }
-    return $self;
+
+sub runMarkerAlign {
+	my $self     = shift;
+	my $continue = shift;
+	my $markRef  = shift;
+	Amphora2::Utilities::start_timer("Alignments");
+
+	#clearing the alignment directory if needed
+	my $alignDir = $self->{"alignDir"};
+	`rm $alignDir/*` if (<$alignDir/*>);
+
+	#Align Markers
+	my $threadNum = 1;
+	Amphora2::MarkerAlign::MarkerAlign( $self, $markRef );
+
+	#    Amphora2::BeastInterface::Export($self, $markRef, $self->{"fileDir"}."/beast.xml");
+	Amphora2::Utilities::end_timer("Alignments");
+	if ( $continue != 0 ) {
+		$self->{"mode"} = 'placer';
+	}
+	return $self;
 }
 
 =head2 runBlast
@@ -435,23 +462,24 @@ sub runMarkerAlign{
 =cut
 
 sub runSearch {
-    my $self = shift;
-    my $continue = shift;
-    my $custom = shift;
-    my $type = shift;
-    my $markerListRef = shift;
-    Amphora2::Utilities::start_timer("runBlast");
-    #clearing the blast directory
-    my $blastDir = $self->{"blastDir"};
-    `rm $self->{"blastDir"}/*` if(<$blastDir/*>);
-    #run Blast
-    Amphora2::FastSearch::RunSearch($self,$custom,$type,$markerListRef);
-    Amphora2::Utilities::end_timer("runBlast");
-    
-    if($continue != 0){
-	$self->{"mode"} = 'align';
-    }
-    return $self;
+	my $self          = shift;
+	my $continue      = shift;
+	my $custom        = shift;
+	my $type          = shift;
+	my $markerListRef = shift;
+	Amphora2::Utilities::start_timer("runBlast");
+
+	#clearing the blast directory
+	my $blastDir = $self->{"blastDir"};
+	`rm $self->{"blastDir"}/*` if (<$blastDir/*>);
+
+	#run Blast
+	Amphora2::FastSearch::RunSearch( $self, $custom, $type, $markerListRef );
+	Amphora2::Utilities::end_timer("runBlast");
+	if ( $continue != 0 ) {
+		$self->{"mode"} = 'align';
+	}
+	return $self;
 }
 
 =head1 AUTHOR
@@ -513,4 +541,4 @@ See http://dev.perl.org/licenses/ for more information.
 
 =cut
 
-1; # End of Amphora2::Amphora2
+1;    # End of Amphora2::Amphora2

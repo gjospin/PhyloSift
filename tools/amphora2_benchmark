@@ -1,0 +1,49 @@
+#!/usr/bin/env perl
+use strict;
+use warnings;
+use File::Basename;
+use Cwd;
+
+my $amphora2 = $ARGV[0];
+my $report_path = $ARGV[1];
+
+use lib "$ARGV[0]/lib";
+use FindBin qw($Bin); use lib "$Bin/lib";
+use Amphora2::Amphora2;
+use Carp;
+use Amphora2::Utilities qw(debug);
+use Amphora2::Benchmark;
+
+die "Usage: amphora2_benchmarks <path to amphora2> <path to report output>\n" if(@ARGV !=2);
+
+my $a2 = new Amphora2::Amphora2();
+$a2->readAmphora2Config();
+Amphora2::Utilities::dataChecks($a2);
+
+my @benchmark_data = (
+["A simulated 454 dataset with 10 organisms","http://edhar.genomecenter.ucdavis.edu/~koadman/amphora2/accuracy/sim_454.fna"],
+["A simulated illumina dataset with 10 organisms","http://edhar.genomecenter.ucdavis.edu/~koadman/amphora2/accuracy/sim_illumina.fna"], 
+);
+
+my %times;
+for(my $bI=0; $bI<@benchmark_data; $bI++){
+	my $url = $benchmark_data[$bI][1];
+	my $ff = File::Fetch->new(uri=>$url);
+	my $seqname = $1 if $url =~ /.+\/(.+?)$/;
+	$ff->fetch(to=>".");
+	# run through the command-line just to test the interface as well
+	print STDOUT "Running $amphora2/amphora2 all -f $seqname\n";
+	Amphora2::Utilities::start_timer($seqname);
+	system("$amphora2/amphora2 all --config benchmarkrc -f $seqname");
+	my $seconds = Amphora2::Utilities::end_timer($seqname);
+
+	# now benchmark
+	$a2->{"readsFile"} = $seqname;
+	$a2->{"fileDir"} = cwd()."/Amph_temp/$seqname/";;
+	Amphora2::Benchmark::runBenchmark($a2, $report_path);
+	
+	$times{$seqname} = $seconds;
+}
+
+# create a seconds elapsed report
+Amphora2::Benchmark::reportTiming($a2, \%times, $report_path);
