@@ -47,7 +47,6 @@ Amphora2::Utilities - Implements miscellaneous accessory functions for Amphora2
 Version 0.01
 
 =cut
-
 our $VERSION = '0.01';
 
 =head1 SYNOPSIS
@@ -171,7 +170,6 @@ sub programChecks {
 Check for requisite Amphora-2 marker datasets
 
 =cut
-
 our $marker_dir = "";
 our $ncbi_dir   = "";
 
@@ -813,12 +811,11 @@ sub generate_fasttree {
 	my $target_dir = shift;
 	my ( $core, $path, $ext ) = fileparse( $aln_file, qr/\.[^.]*$/ );
 	my ( $seqtype, $length, $format ) = get_sequence_input_type($aln_file);
-	if ( !-e "$target_dir/$core.tre" ) {
-		if ( $seqtype eq "dna" ) {
-			`FastTree -nt -gtr -log $target_dir/$core.log $aln_file > $target_dir/$core.tree 2> /dev/null`;
-		} else {
-			`FastTree -gtr -log $target_dir/$core.log $aln_file > $target_dir/$core.tree 2> /dev/null`;
-		}
+	return ("$target_dir/$core.tree", "$target_dir/$core.log" ) if ( -e "$target_dir/$core.tree" );
+	if ( $seqtype eq "dna" ) {
+		  `FastTree -nt -gtr -log $target_dir/$core.log $aln_file > $target_dir/$core.tree 2> /dev/null`;
+	} else {
+		  `FastTree -gtr -log $target_dir/$core.log $aln_file > $target_dir/$core.tree 2> /dev/null`;
 	}
 	return ( "$target_dir/$core.tree", "$target_dir/$core.log" );
 }
@@ -831,27 +828,27 @@ uses the PDA program to prune a tree to get representative sequences
 =cut
 
 sub get_representatives_from_tree {
-	my $tree_file  = shift;
-	my $target_dir = shift;
-	my $cutoff     = shift;
-	my ( $core, $path, $ext ) = fileparse( $tree_file, qr/\.[^.]*$/ );
-	return "$target_dir/$core.pda" if -e "$target_dir/$core.pda";
+	  my $tree_file  = shift;
+	  my $target_dir = shift;
+	  my $cutoff     = shift;
+	  my ( $core, $path, $ext ) = fileparse( $tree_file, qr/\.[^.]*$/ );
+	  return "$target_dir/$core.pda" if -e "$target_dir/$core.pda";
 
-	#get the number of taxa in the tree
-	my $taxa_count = 0;
-	my $input_tree = new Bio::TreeIO( -file => $tree_file, -format => "newick" );
-	while ( my $tree = $input_tree->next_tree ) {
-		for my $node ( $tree->get_nodes ) {
-			if ( $node->is_Leaf ) {
-				$taxa_count++;
-			}
-		}
-	}
+	  #get the number of taxa in the tree
+	  my $taxa_count = 0;
+	  my $input_tree = new Bio::TreeIO( -file => $tree_file, -format => "newick" );
+	  while ( my $tree = $input_tree->next_tree ) {
+		  for my $node ( $tree->get_nodes ) {
+			  if ( $node->is_Leaf ) {
+				  $taxa_count++;
+			  }
+		  }
+	  }
 
-	#pda doesn't seem to want to run if $taxa_count is the number of leaves. Decrementing to let pda do the search.
-	$taxa_count--;
-	`cd $target_dir;pda -k $taxa_count -minlen $cutoff $tree_file $target_dir/$core.pda`;
-	return "$target_dir/$core.pda";
+	  #pda doesn't seem to want to run if $taxa_count is the number of leaves. Decrementing to let pda do the search.
+	  $taxa_count--;
+	  `cd $target_dir;pda -k $taxa_count -minlen $cutoff $tree_file $target_dir/$core.pda`;
+	  return "$target_dir/$core.pda";
 }
 
 =head2 get_fasta_from_pda_representatives 
@@ -862,40 +859,40 @@ reads the selected representatives from the pda file and prints the sequences to
 =cut
 
 sub get_fasta_from_pda_representatives {
-	my $pda_file        = shift;
-	my $target_dir      = shift;
-	my $reference_fasta = shift;
-	my ( $core, $path, $ext ) = fileparse( $pda_file, qr/\.[^.]*$/ );
+	  my $pda_file        = shift;
+	  my $target_dir      = shift;
+	  my $reference_fasta = shift;
+	  my ( $core, $path, $ext ) = fileparse( $pda_file, qr/\.[^.]*$/ );
 
-	#return the file name if it already exists
-	return "$target_dir/$core.rep" if ( -e "$target_dir/$core.rep" );
+	  #return the file name if it already exists
+	  return "$target_dir/$core.rep" if ( -e "$target_dir/$core.rep" );
 
-	#reading the pda file to get the representative IDs
-	open( REPSIN, $pda_file ) or carp("Could not open $pda_file\n");
-	my $taxa_number   = 0;
-	my %selected_taxa = ();
-	while (<REPSIN>) {
-		chomp($_);
-		if ( $_ =~ m/The optimal PD set has (\d+) taxa:/ ) {
-			$taxa_number = $1;
-		} elsif ( $_ =~ m/Corresponding sub-tree:/ ) {
-			last;
-		} elsif ( $taxa_number != 0 && scalar( keys(%selected_taxa) ) < $taxa_number ) {
-			$_ =~ m/^(\S+)$/;
-			$selected_taxa{$1} = 1;
-		}
-	}
-	close(REPSIN);
+	  #reading the pda file to get the representative IDs
+	  open( REPSIN, $pda_file ) or carp("Could not open $pda_file\n");
+	  my $taxa_number   = 0;
+	  my %selected_taxa = ();
+	  while (<REPSIN>) {
+		  chomp($_);
+		  if ( $_ =~ m/The optimal PD set has (\d+) taxa:/ ) {
+			  $taxa_number = $1;
+		  } elsif ( $_ =~ m/Corresponding sub-tree:/ ) {
+			  last;
+		  } elsif ( $taxa_number != 0 && scalar( keys(%selected_taxa) ) < $taxa_number ) {
+			  $_ =~ m/^(\S+)$/;
+			  $selected_taxa{$1} = 1;
+		  }
+	  }
+	  close(REPSIN);
 
-	#reading the reference sequences and printing the selected representatives using BioPerl
-	my $reference_seqs        = Bio::SeqIO->new( -file => $reference_fasta,         -format => "FASTA" );
-	my $representatives_fasta = Bio::SeqIO->new( -file => ">$target_dir/$core.rep", -format => "FASTA" );
-	while ( my $ref_seq = $reference_seqs->next_seq ) {
-		if ( exists $selected_taxa{ $ref_seq->id } ) {
-			$representatives_fasta->write_seq($ref_seq);
-		}
-	}
-	return "$target_dir/$core.rep";
+	  #reading the reference sequences and printing the selected representatives using BioPerl
+	  my $reference_seqs        = Bio::SeqIO->new( -file => $reference_fasta,         -format => "FASTA" );
+	  my $representatives_fasta = Bio::SeqIO->new( -file => ">$target_dir/$core.rep", -format => "FASTA" );
+	  while ( my $ref_seq = $reference_seqs->next_seq ) {
+		  if ( exists $selected_taxa{ $ref_seq->id } ) {
+			  $representatives_fasta->write_seq($ref_seq);
+		  }
+	  }
+	  return "$target_dir/$core.rep";
 }
 
 =head1 AUTHOR
@@ -957,5 +954,4 @@ See http://dev.perl.org/licenses/ for more information.
 
 
 =cut
-
 1;    # End of Amphora2::Utilities

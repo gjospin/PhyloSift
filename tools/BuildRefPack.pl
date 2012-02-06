@@ -14,7 +14,6 @@ WARNING : requires FastTree to be accessible from the user's $PATH
 Version 0.01
 
 =cut
-
 use warnings;
 use strict;
 use Amphora2::Utilities;
@@ -47,8 +46,9 @@ my $rep_fasta = Amphora2::Utilities::get_fasta_from_pda_representatives( $rep_fi
 
 #use taxit to create a new reference package required for running Amphora-2
 #needed are : 1 alignment file, 1 representatives fasta file, 1 hmm profile, 1 tree file, 1 log tree file.
-my $user = $ENV{"LOGNAME"};
-print STDERR $user . "\t" . $core . "\n";
 `cd $target_dir;taxit create -c -d "Creating a reference package for Amphora-2 for the $core marker" -l $core -f $target_dir/$core.aln -t $target_dir/$core.tree -s $target_dir/$core.log -Y FastTree -P $core`;
 
-#`taxit create -c -l $core -f $core.aln -t $core.tree -s $core.log -Y FastTree -P $core.refpkg`;
+`rm $target_dir/$core.pda`;
+`rm $target_dir/$core.tree`;
+`rm $target_dir/$core.log`;
+`rm $target_dir/$core.aln`;
