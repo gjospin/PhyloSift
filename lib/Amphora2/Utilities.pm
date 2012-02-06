@@ -100,6 +100,9 @@ sub get_program_path {
 
 # external programs used by Amphora2
 our $pplacer      = "";
+our $guppy        = "";
+our $rppr         = "";
+our $taxit        = "";
 our $hmmalign     = "";
 our $hmmsearch    = "";
 our $hmmbuild     = "";
@@ -122,11 +125,17 @@ sub programChecks {
 		#program not found return;
 		carp("pplacer v1.1.alpha09 not found");
 		return 1;
-	} elsif ( `$pplacer --version` !~ m/v1.1.alpha09/ ) {
+	} else {
+		`$pplacer --version` =~ m/v1.1.alpha(\d+)/;
+		if ( $1 < 10 ) {
 
-		# pplacer was found but the version doens't match the one tested with Amphora
-		carp("Warning : a different version of pplacer was found. Amphora-2 was tested with pplacer v1.1.alpha09\n");
+			# pplacer was found but the version doesn't match the one tested with Amphora
+			carp("Warning : a different version of pplacer was found. Amphora-2 was tested with pplacer v1.1.alpha09\n");
+		}
 	}
+	$guppy    = get_program_path( "guppy",    $Amphora2::Settings::a2_path );
+	$taxit    = get_program_path( "taxit",    $Amphora2::Settings::a2_path );
+	$rppr     = get_program_path( "rppr",     $Amphora2::Settings::a2_path );
 	$hmmalign = get_program_path( "hmmalign", $Amphora2::Settings::hmmer3_path );
 	if ( $hmmalign eq "" ) {
 
@@ -773,7 +782,7 @@ sub print_citations {
 	print "amphora2 -- phylogenetic analysis of genomes and metagenomes\n";
 	print "(c) 2011, 2012 Aaron Darling and Guillaume Jospin\n";
 	print "\nCITATION:\n";
-	print "amphora2. A. Darling, H. Bik, G. Jospin, J.A.Eisen. Manuscript in preparation\n";
+	print "		amphora2. A. Darling, H. Bik, G. Jospin, J.A.Eisen. Manuscript in preparation\n";
 	print "\n\namphora2 incorporates several other software packages, please consider also citing the following papers:\n";
 	print qq{
 

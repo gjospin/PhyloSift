@@ -16,6 +16,7 @@ use Amphora2::Summarize;
 use Amphora2::FastSearch;
 use Amphora2::Benchmark;
 use Amphora2::BeastInterface;
+use Amphora2::Comparison;
 
 =head2 new
 
@@ -171,6 +172,9 @@ sub run {
 	}
 	if ( $self->{"mode"} eq 'benchmark' ) {
 		$self = $self->benchmark();
+	}
+	if ( $self->{"mode"} eq 'compare' ) {
+		$self = $self->compare();
 	}
 }
 
@@ -384,6 +388,16 @@ sub benchmark {
 	my $self = shift;
 	debug "RUNNING Benchmark\n";
 	Amphora2::Benchmark::runBenchmark( $self, "./" );
+}
+
+=head2 compare
+
+=cut
+
+sub compare {
+	my $self = shift;
+	debug "RUNNING Compare\n";
+	Amphora2::Comparison::compare( $self, "./" );
 }
 
 =head2 runPplacer
