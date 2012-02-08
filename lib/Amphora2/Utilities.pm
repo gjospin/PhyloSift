@@ -777,7 +777,7 @@ generates a HMM profile from an alignement in FASTA format (arg) using hmmbuild.
 sub generate_hmm {
 	my $file_name  = shift;
 	my $target_dir = shift;
-	my ( $core_name, $path, $ext ) = fileparse( $file_name, qr/\.\S*$/ );
+	my ( $core_name, $path, $ext ) = fileparse( $file_name, qr/\.[^.]*$/ );
 	if ( !-e "$target_dir/$core_name.hmm" ) {
 		`hmmbuild --informat afa $target_dir/$core_name.hmm $file_name`;
 	}
