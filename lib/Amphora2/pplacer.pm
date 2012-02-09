@@ -41,10 +41,10 @@ sub pplacer {
 	directoryPrepAndClean($self);
 	if ( $self->{"updated"} ) {
 		my $markerPackage = Amphora2::Utilities::getMarkerPackage( $self, "concat" );
-		my $pp = "$Amphora2::Utilities::pplacer -c $markerPackage -j " . $self->{"threads"} . " --groups 10 " . $self->{"alignDir"} . "/concat.trim.fasta";
+		my $pp = "$Amphora2::Utilities::pplacer -p -c $markerPackage -j " . $self->{"threads"} . " --groups 10 " . $self->{"alignDir"} . "/concat.trim.fasta";
 		print "Running $pp\n";
 		system($pp);
-		`mv $self->{"workingDir"}/concat.trim.fasta.jplace $self->{"treeDir"}` if ( -e $self->{"workingDir"} . "/concat.trim.fasta.jplace" );
+		`mv $self->{"workingDir"}/concat.trim.jplace $self->{"treeDir"}` if ( -e $self->{"workingDir"} . "/concat.trim.jplace" );
 		return;
 	}
 	foreach my $marker ( @{$markRef} ) {
@@ -71,7 +71,7 @@ sub pplacer {
 		} else {
 
 			#run pplacer on amino acid data
-			my $pp = "$Amphora2::Utilities::pplacer -j " . $self->{"threads"} . " -c $markerPackage $readAlignmentFile";
+			my $pp = "$Amphora2::Utilities::pplacer -p -j " . $self->{"threads"} . " -c $markerPackage $readAlignmentFile";
 			print "Running $pp\n";
 			system($pp);
 
