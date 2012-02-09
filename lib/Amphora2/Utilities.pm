@@ -47,7 +47,6 @@ Amphora2::Utilities - Implements miscellaneous accessory functions for Amphora2
 Version 0.01
 
 =cut
-
 our $VERSION = '0.01';
 
 =head1 SYNOPSIS
@@ -171,7 +170,6 @@ sub programChecks {
 Check for requisite Amphora-2 marker datasets
 
 =cut
-
 our $marker_dir = "";
 our $ncbi_dir   = "";
 
@@ -849,7 +847,7 @@ sub get_representatives_from_tree {
 
 	#pda doesn't seem to want to run if $taxa_count is the number of leaves. Decrementing to let pda do the search.
 	$taxa_count--;
-	`cd $target_dir;pda -k $taxa_count -minlen $cutoff $tree_file $target_dir/$core.pda`;
+	`cd $target_dir;pda -g -k $taxa_count -minlen $cutoff $tree_file $target_dir/$core.pda`;
 	return "$target_dir/$core.pda";
 }
 
@@ -956,5 +954,4 @@ See http://dev.perl.org/licenses/ for more information.
 
 
 =cut
-
 1;    # End of Amphora2::Utilities

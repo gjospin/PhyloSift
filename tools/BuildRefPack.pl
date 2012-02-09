@@ -14,7 +14,6 @@ WARNING : requires FastTree to be accessible from the user's $PATH
 Version 0.01
 
 =cut
-
 use warnings;
 use strict;
 use Amphora2::Utilities;
