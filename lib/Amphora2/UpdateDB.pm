@@ -15,6 +15,7 @@ Amphora2::UpdateDB - Functionality to download new genomes and update the marker
 Version 0.01
 
 =cut
+
 our $VERSION = '0.01';
 
 =head1 SYNOPSIS
@@ -369,15 +370,52 @@ sub get_marker_list {
 	return @markerlist;
 }
 
-sub build_marker_trees_fasttree($) {
-	my $marker_dir = shift;
+sub get_marker_name_base {
+	my %args = @_;
+	my $name = $args{marker};
+	$name .= ".codon"   if $args{dna};
+	$name .= ".updated" if $args{updated};
+	$name .= ".pruned"  if $args{pruned};
+	return $name;
+}
+
+sub get_fasta_filename {
+	my %args = @_;
+	my $name = get_marker_name_base(%args);
+	$name .= ".fasta";
+	return $name;
+}
+
+sub get_fasttree_log_filename {
+	my %args = @_;
+	my $name = get_marker_name_base(%args);
+	$name .= ".fasttree.log";
+	return $name;
+}
+
+sub get_fasttree_tre_filename {
+	my %args = @_;
+	my $name = get_marker_name_base(%args);
+	$name .= ".tre";
+	return $name;
+}
+
+sub build_marker_trees_fasttree($$) {
+	my $marker_dir  = shift;
+	my $pruned      = shift;
+	my $codon_fasta = get_fasta_filename( marker => '\\$1', dna => 1, updated => 1, pruned => $pruned );
+	my $aa_fasta    = get_fasta_filename( marker => '\\$1', dna => 0, updated => 1, pruned => $pruned );
+	my $codon_tre   = get_fasttree_tre_filename( marker => '\\$1', dna => 1, updated => 1, pruned => $pruned );
+	my $aa_tre      = get_fasttree_tre_filename( marker => '\\$1', dna => 0, updated => 1, pruned => $pruned );
+	my $codon_log   = get_fasttree_log_filename( marker => '\\$1', dna => 1, updated => 1, pruned => $pruned );
+	my $aa_log      = get_fasttree_log_filename( marker => '\\$1', dna => 0, updated => 1, pruned => $pruned );
 	open( TREESCRIPT, ">/tmp/a2_tree.sh" );
 	print TREESCRIPT qq{#!/bin/sh
 #\$ -cwd
 #\$ -V
 #\$ -S /bin/bash
-/home/koadman/bin/FastTree -nt -gtr -log \$1.codon.updated.fasttree.log  \$1.codon.updated.fasta > \$1.codon.updated.tre
-/home/koadman/bin/FastTree -log \$1.updated.fasttree.log \$1.updated.fasta > \$1.updated.tre
+/home/koadman/bin/FastTree -nt -gtr -log $codon_log  $codon_fasta > $codon_tre
+/home/koadman/bin/FastTree -log $aa_log $aa_fasta > $aa_tre
 };
 	`chmod 755 /tmp/a2_tree.sh`;
 	chdir($marker_dir);
@@ -386,7 +424,7 @@ sub build_marker_trees_fasttree($) {
 	my @jobids;
 
 	foreach my $marker (@markerlist) {
-		next unless ( -e "$marker.updated.fasta" );
+		next unless ( -e $aa_fasta );
 
 		# run fasttree on them
 		my $qsub_cmd = "qsub -q all.q -q eisen.q /tmp/a2_tree.sh $marker";
@@ -486,13 +524,70 @@ sub createTempReadFasta {
 	}
 }
 
+sub prune_marker {
+	my %args      = @_;
+	my $prune_cmd = "pda -k 20000 -g -minlen $args{distance} $args{tre} $args{tre}.pruning.log";
+	system("$prune_cmd");
+
+	# read the list of taxa to keep
+	open( PRUNE, "$args{tre}.pruning.log" );
+	my $intaxa = 0;
+	my %keep_taxa;
+	while ( my $line = <PRUNE> ) {
+		$intaxa = 1 if ( $line =~ /optimal PD set has/ );
+		next unless $intaxa;
+		chomp $line;
+		$keep_taxa{$line} = 1;
+		last if ( length($line) < 2 );    # taxa set ends with empty line
+	}
+
+	# create a pruned fasta
+	open( FASTA,       $args{fasta} );
+	open( PRUNEDFASTA, $args{pruned_fasta} );
+	my $printing = 0;
+	while ( my $line = <FASTA> ) {
+		chomp $line;
+		if ( $line =~ /^>(.+)/ ) {
+			$printing = defined( $keep_taxa{$1} ) ? 1 : 0;
+		}
+		print PRUNEDFASTA "$line\n" if $printing;
+	}
+}
+
+sub pd_prune_markers($) {
+	my $marker_dir = shift;
+
+	# prune distance is different for AA and DNA
+	my %PRUNE_DISTANCE = ( 0 => 0.01, 1 => 0.003 );
+	my @markerlist = get_marker_list($marker_dir);
+	unshift( @markerlist, "concat" );
+	for ( my $dna = 0 ; $dna < 2 ; $dna++ ) {    # zero for aa, one for dna
+		foreach my $marker (@markerlist) {
+			my $tre    = get_fasttree_tre_filename( marker => $marker, dna => $dna, updated => 1, pruned => 0 );
+			my $fasta  = get_fasta_filename(        marker => $marker, dna => $dna, updated => 1, pruned => 0 );
+			my $pruned = get_fasta_filename(        marker => $marker, dna => $dna, updated => 1, pruned => 1 );
+			prune_marker( distance => $PRUNE_DISTANCE{$dna}, tre => $tre, fasta => $fasta, pruned_fasta => $pruned );
+		}
+	}
+}
+
 sub reconcile_with_ncbi($$$) {
 	my $self        = shift;
 	my $results_dir = shift;
 	my $marker_dir  = shift;
+	my $pruned      = shift;
+	
 	print STDERR "Updating NCBI tree and taxon map...";
 	Amphora2::Summarize::makeNcbiTreeFromUpdate( $self, $results_dir, $marker_dir );
 	print STDERR "done\n";
+
+	my $codon_fasta = get_fasta_filename( marker => '\\$1', dna => 1, updated => 1, pruned => $pruned );
+	my $aa_fasta    = get_fasta_filename( marker => '\\$1', dna => 0, updated => 1, pruned => $pruned );
+	my $codon_tre   = get_fasttree_tre_filename( marker => '\\$1', dna => 1, updated => 1, pruned => $pruned );
+	my $aa_tre      = get_fasttree_tre_filename( marker => '\\$1', dna => 0, updated => 1, pruned => $pruned );
+	my $codon_log   = get_fasttree_log_filename( marker => '\\$1', dna => 1, updated => 1, pruned => $pruned );
+	my $aa_log      = get_fasttree_log_filename( marker => '\\$1', dna => 0, updated => 1, pruned => $pruned );
+
 	open( RECONCILESCRIPT, ">/tmp/a2_reconcile.sh" );
 	print RECONCILESCRIPT <<EOF;
 #!/bin/sh
@@ -501,7 +596,7 @@ sub reconcile_with_ncbi($$$) {
 #\$ -S /bin/bash
 
 # first do the AA tree
-taxit create -a "Aaron Darling" -d "simple package for reconciliation only" -l \$1 -f \$1.updated.fasta -t \$1.updated.tre -s \$1.updated.fasttree.log -Y FastTree -P \$1.updated
+taxit create -a "Aaron Darling" -d "simple package for reconciliation only" -l \$1 -f $aa_fasta -t $aa_tre -s $aa_log -Y FastTree -P \$1.updated
 pplacer -c \$1.updated -p \$1.updated.tmpread.fasta
 # readconciler uses a pplacer tree from a .jplace file to parse out the branch numbers
 mangler.pl < \$1.updated.tmpread.jplace > \$1.updated.tmpread.jplace.mangled
@@ -509,7 +604,7 @@ readconciler ncbi_tree.updated.tre \$1.updated.tmpread.jplace.mangled marker_tax
 rm \$1.updated.tmpread.jplace \$1.updated.tmpread.jplace.mangled \$1.updated.tmpread.fasta \$1.updated.fasttree.log
 
 # then do the codon tree
-taxit create -a "Aaron Darling" -d "simple package for reconciliation only" -l \$1 -f \$1.codon.updated.fasta -t \$1.codon.updated.tre -s \$1.codon.updated.fasttree.log -Y FastTree -P \$1.codon.updated
+taxit create -a "Aaron Darling" -d "simple package for reconciliation only" -l \$1 -f $codon_fasta -t $codon_tre -s $codon_log -Y FastTree -P \$1.codon.updated
 pplacer -c \$1.codon.updated -p \$1.codon.updated.tmpread.fasta
 mangler.pl < \$1.codon.updated.tmpread.jplace > \$1.codon.updated.tmpread.jplace.mangled
 readconciler ncbi_tree.updated.tre \$1.codon.updated.tmpread.jplace.mangled marker_taxon_map.updated.txt \$1.codon.updated.taxonmap
