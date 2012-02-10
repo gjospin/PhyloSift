@@ -53,12 +53,29 @@ sub compare {
 		chomp $file;
 		push( @files, $file );
 	}
-#	my $squash_cl = "$Amphora2::Utilities::guppy squash --pp --prefix squash " . join( " ", @files );
-#	print STDERR "Squashing with: $squash_cl ";
-#	system($squash_cl);
+	my $squash_cl = "$Amphora2::Utilities::guppy squash --prefix squash " . join( " ", @files );
+	print STDERR "Squashing with: $squash_cl ";
+	system($squash_cl);
+#	output goes to cluster.tre
+
 	my $pca_cl = "$Amphora2::Utilities::guppy pca --prefix pca " . join( " ", @files );
 	print STDERR "pca with: $pca_cl ";
 	system($pca_cl);
+
+	my $merge_cl = "$Amphora2::Utilities::guppy merge -o $parent_directory/merged.jplace " . join( " ", @files);
+	system($merge_cl);
+	
+	my @processfiles = @files;
+	unshift(@files, "$parent_directory/merged.jplace");
+
+	foreach my $file(@files){
+		my $rarefact_cl = "$Amphora2::Utilities::guppy rarefact -o $file.rarefaction $file";
+		system($rarefact_cl);
+		my $compress_cl = "$Amphora2::Utilities::guppy compress -o $file.compression --cutoff 0.4 $file";
+		system($compress_cl);
+	}
+
+
 	rename_nodes( "pca.xml", "pca.named.xml" );
 	
 }
