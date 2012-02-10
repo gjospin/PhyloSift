@@ -72,13 +72,13 @@ sub MarkerAlign {
 	#    if($self->{"isolate"} && $self->{"besthit"}){
 	my @markeralignments = getMarkerAlignmentFiles( $self, \@allmarkers );
 	my $outputFastaAA = $self->{"alignDir"} . "/" . Amphora2::Utilities::getAlignerOutputFastaAA("concat");
-	Amphora2::Utilities::concatenateAlignments( $outputFastaAA, $self->{"alignDir"} . "/mrbayes.nex", 1, @markeralignments );
+	Amphora2::Utilities::concatenateAlignments( $self, $outputFastaAA, $self->{"alignDir"} . "/mrbayes.nex", 1, @markeralignments );
 	if ( $self->{"dna"} ) {
 		for ( my $i = 0 ; $i < @markeralignments ; $i++ ) {
 			$markeralignments[$i] =~ s/trim.fasta/trim.fna.fasta/g;
 		}
 		my $outputFastaDNA = $self->{"alignDir"} . "/" . Amphora2::Utilities::getAlignerOutputFastaDNA("concat");
-		Amphora2::Utilities::concatenateAlignments( $outputFastaDNA, $self->{"alignDir"} . "/mrbayes-dna.nex", 3, @markeralignments );
+		Amphora2::Utilities::concatenateAlignments( $self, $outputFastaDNA, $self->{"alignDir"} . "/mrbayes-dna.nex", 3, @markeralignments );
 	}
 
 	debug "AFTER concatenateALI\n";

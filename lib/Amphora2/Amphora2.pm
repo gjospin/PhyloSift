@@ -97,6 +97,7 @@ Amphora2::Amphora2 - Implements core functionality for Amphora2
 Version 0.01
 
 =cut
+
 our $VERSION = '0.01';
 
 =head1 SYNOPSIS
@@ -127,6 +128,7 @@ if you don't export anything, such as for a purely object-oriented module.
     Runs the Amphora-2 pipeline according to the functions passed as arguments
 
 =cut
+
 my $continue = 0;
 my ( $mode, $readsFile, $readsFile_2, $fileName, $tempDir, $fileDir, $blastDir, $alignDir, $treeDir ) = "";
 my ( $sec,  $min,       $hour,        $mday,     $mon,     $year,    $wday,     $yday,     $isdst )   = 0;
@@ -139,9 +141,7 @@ sub run {
 	my $custom   = shift;
 	my $continue = shift;
 	debug "force : $force\n";
-	
 	Amphora2::Utilities::print_citations();
-	
 	start_timer("START");
 	$self->readAmphora2Config();
 	$self->runProgCheck();
@@ -319,12 +319,24 @@ sub markerGather {
 		close(markersIN);
 	} else {
 
-		#gather all markers
+		# gather all markers
+		# this is for the original marker set
 		my @files = <$Amphora2::Utilities::marker_dir/*.faa>;
 		foreach my $file (@files) {
 			$file =~ m/\/(\w+).faa/;
 			push( @marks, $1 );
 		}
+
+		# now gather directory packaged markers (new style)
+#		open( MLIST, "find $Amphora2::Utilities::marker_dir -maxdepth 1 -mindepth 1 -type d |" );
+#		while ( my $line = <MLIST> ) {
+#			chomp $line;
+#			next if $line =~ /PMPROK/;
+#			next if $line =~ /concat/;
+#			next if $line =~ /representatives/;
+#			$line = basename($line);
+#			push( @marks, $line );
+#		}
 	}
 	return @marks;
 }
@@ -543,4 +555,5 @@ See http://dev.perl.org/licenses/ for more information.
 
 
 =cut
+
 1;    # End of Amphora2::Amphora2

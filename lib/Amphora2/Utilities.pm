@@ -27,11 +27,11 @@ use vars qw[ @EXPORT @EXPORT_OK %EXPORT_TAGS @ISA ];
 				 STD => \@EXPORT,
 				 all => [ @EXPORT, @EXPORT_OK ],
 );
-our $debuglevel = 1;
+our $debuglevel = 0;
 
 sub debug {
 	my $msg = shift;
-	my $msglevel = shift || 2;
+	my $msglevel = shift || 1;
 	print $msg if $debuglevel >= $msglevel;
 }
 
@@ -351,20 +351,27 @@ sub readNameTable {
 	return %result;
 }
 
-sub makeDummyFile {
-	my $file          = shift;
-	my $todelete      = shift;
+sub get_marker_length{
+	my $self = shift;
+	my $marker = shift;
+	my $hmm_file = get_marker_hmm_file($self,$marker);
+	my $length = 0;
+	open( HMM, $marker_dir . "/$hmm_file" );
+	while ( my $line = <HMM> ) {
+		if ( $line =~ /LENG\s+(\d+)/ ) {
+			$length = $1;
+			last;
+		}
+	}
+	return $length;
+}
+
+sub make_dummy_file {
+	my $self          = shift;
+	my $marker        = shift;
 	my $gapmultiplier = shift;
-	my $stock         = $file;
-	$stock =~ s/aln_hmmer3\.trim/trimfinal/g;
-	$stock =~ s/\.ffn//g;
-	$stock = basename($stock);
-	$stock = $Amphora2::Utilities::marker_dir . "/$stock";
-	open( STOCK, $stock );
-	my $burn1 = <STOCK>;
-	$burn1 = <STOCK>;
-	chomp $burn1;
-	my $len = length($burn1);
+	my $len = get_marker_length($self,$marker);
+
 	my $glen;
 	$glen = "P" x $len x $gapmultiplier if $gapmultiplier == 1;
 	$glen = "A" x $len x $gapmultiplier if $gapmultiplier == 3;
@@ -388,6 +395,42 @@ sub getAlignemntMarkerFile {
 		return "$marker.ali";
 	} else {
 		return "$marker.updated.fasta";
+	}
+}
+
+=head2 get_marker_aln_file
+
+Returns the aligned fasta file for the marker
+
+=cut
+
+sub get_marker_aln_file {
+	my $self   = shift;
+	my $marker = shift;
+	if ( $self->{"updated"} == 0 ) {
+		return "$marker.ali" if(-e "$marker_dir/$marker.ali");
+		# using new-style marker directories
+		return "$marker/$marker.aln";
+	} else {
+		return "$marker.updated/$marker.ali";
+	}
+}
+
+=head2 get_marker_hmm_file
+
+Returns the HMM file for the marker
+
+=cut
+
+sub get_marker_hmm_file {
+	my $self   = shift;
+	my $marker = shift;
+	if ( $self->{"updated"} == 0 ) {
+		return "$marker.hmm" if(-e "$marker_dir/$marker.hmm");
+		# using new-style marker directories
+		return "$marker/$marker.hmm";
+	} else {
+		return "$marker.hmm";
 	}
 }
 
@@ -470,7 +513,8 @@ sub getTrimfinalMarkerFile {
 	my $self   = shift;
 	my $marker = shift;
 	if ( $self->{"updated"} == 0 ) {
-		return "$marker.trimfinal";
+		return "$marker.trimfinal" if -e "$marker_dir/$marker.trimfinal";
+		return "$marker/$marker.aln";
 	} else {
 		return "$marker.trimfinal";
 
@@ -489,12 +533,10 @@ sub getTrimfinalFastaMarkerFile {
 	my $self   = shift;
 	my $marker = shift;
 	if ( $self->{"updated"} == 0 ) {
-		return "$marker.trimfinal.fasta";
+		return "$marker.trimfinal.fasta" if -e "$marker_dir/$marker.trimfinal.fasta";
+		return "$marker/$marker.aln";
 	} else {
 		return "$marker.trimfinal.fasta";
-
-		#        return $self->{"alignDir"}."/$marker.updated.hmm.fasta";
-		#        return "$Amphora2::Utilities::marker_dir/$marker.updated.fasta";
 	}
 }
 
@@ -509,7 +551,8 @@ sub getTreeMarkerFile {
 	my $self   = shift;
 	my $marker = shift;
 	if ( $self->{"updated"} == 0 ) {
-		return "$marker.final.tre";
+		return "$marker.final.tre" if -e "$marker_dir/$marker.final.tre";
+		return "$marker/$marker.tre";
 	} else {
 		return "$marker.updated.tre";
 	}
@@ -555,6 +598,7 @@ Requires a marker directory as an argument
 =cut
 
 sub concatenateAlignments {
+	my $self          = shift;
 	my $outputFasta   = shift;
 	my $outputMrBayes = shift;
 	my $gapmultiplier = shift;    # 1 for protein, 3 for reverse-translated DNA
@@ -563,20 +607,21 @@ sub concatenateAlignments {
 	open( MRBAYES, ">$outputMrBayes" );
 	my $partlist = "partition genes = " . scalar(@alignments) . ": ";
 	my $prevlen  = 0;
-	my @todelete;
 
 	foreach my $file (@alignments) {
 		my $aln;
+		my $marker = $file;
+		$marker =~ s/\..+//g; # FIXME: this should really come from a list of markers
 		unless ( -e $file ) {
 
 			# this marker doesn't exist, need to create a dummy with the right number of gap columns
-			$aln = makeDummyFile( $file, \@todelete, $gapmultiplier );
+			$aln = make_dummy_file( $self, $marker, $gapmultiplier );
 		} else {
 			my $in = Bio::AlignIO->new( -file => $file, '-format' => 'fasta' );
 			unless ( $aln = $in->next_aln() ) {
 
 				# empty marker alignment file, need to create a dummy with the right number of gap columns
-				$aln = makeDummyFile( $file, \@todelete, $gapmultiplier );
+				$aln = make_dummy_file( $self, $marker, $gapmultiplier );
 			}
 		}
 		my $csname = $file;
@@ -638,9 +683,6 @@ sub concatenateAlignments {
 		$catobj->remove_seq($dummyseq);
 	}
 	$out->write_aln($catobj);
-	foreach my $delfile (@todelete) {
-		`rm $delfile`;
-	}
 }
 my %timers;
 
@@ -664,6 +706,18 @@ sub end_timer {
 				   $timerval[4] + 1,
 				   $timerval[3], $timerval[2], $timerval[1], $timerval[0] );
 	return $t - $timers{$timername};
+}
+
+=head2 marker_oldstyle
+
+Checks whether a marker is in the old style format (PMPROK*) or the new format (marker package directory)
+
+=cut
+
+sub marker_oldstyle {
+	my $marker = shift;
+	return 1 if($marker =~ /PMPROK/);
+	return 0;
 }
 
 =head2 get_sequence_input_type

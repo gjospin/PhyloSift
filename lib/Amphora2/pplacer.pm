@@ -55,19 +55,24 @@ sub pplacer {
 		my $placeFile    = Amphora2::Utilities::getReadPlacementFile($marker);
 		my $placeFileDNA = Amphora2::Utilities::getReadPlacementFileDNA($marker);
 		if ( $self->{"updated"} == 0 ) {
-
-			# run pplacer the old way, using phyml trees which aren't supported by reference packages
-			my $trimfinalFastaFile = "$Amphora2::Utilities::marker_dir/" . Amphora2::Utilities::getTrimfinalFastaMarkerFile( $self, $marker );
-			my $trimfinalFile = "$Amphora2::Utilities::marker_dir/" . Amphora2::Utilities::getTrimfinalMarkerFile( $self, $marker );
-			my $treeFile = "$Amphora2::Utilities::marker_dir/" . Amphora2::Utilities::getTreeMarkerFile( $self, $marker );
-			my $treeStatsFile = "$Amphora2::Utilities::marker_dir/" . Amphora2::Utilities::getTreeStatsMarkerFile( $self, $marker );
-
-			# Pplacer requires the alignment files to have a .fasta extension
-			if ( !-e "$trimfinalFastaFile" ) {
-				`cp $trimfinalFile $trimfinalFastaFile`;
+			my $pp = "";
+			if(Amphora2::Utilities::marker_oldstyle($marker)){
+				# run pplacer the old way, using phyml trees which aren't supported by reference packages
+				my $trimfinalFastaFile = "$Amphora2::Utilities::marker_dir/" . Amphora2::Utilities::getTrimfinalFastaMarkerFile( $self, $marker );
+				my $trimfinalFile = "$Amphora2::Utilities::marker_dir/" . Amphora2::Utilities::getTrimfinalMarkerFile( $self, $marker );
+				my $treeFile = "$Amphora2::Utilities::marker_dir/" . Amphora2::Utilities::getTreeMarkerFile( $self, $marker );
+				my $treeStatsFile = "$Amphora2::Utilities::marker_dir/" . Amphora2::Utilities::getTreeStatsMarkerFile( $self, $marker );
+	
+				# Pplacer requires the alignment files to have a .fasta extension
+				if ( !-e "$trimfinalFastaFile" ) {
+					`cp $trimfinalFile $trimfinalFastaFile`;
+				}
+				$pp = "$Amphora2::Utilities::pplacer -p -j " . $self->{"threads"} . " -r $trimfinalFastaFile -t $treeFile -s $treeStatsFile $readAlignmentFile";
+				$pp = "";
+			}else{
+				$pp = "$Amphora2::Utilities::pplacer -p -c $markerPackage -j " . $self->{"threads"} . " $readAlignmentFile";
 			}
-			my $pp = "$Amphora2::Utilities::pplacer -p -j " . $self->{"threads"} . " -r $trimfinalFastaFile -t $treeFile -s $treeStatsFile $readAlignmentFile";
-			`$pp`;
+			system("$pp");
 		} else {
 
 			#run pplacer on amino acid data

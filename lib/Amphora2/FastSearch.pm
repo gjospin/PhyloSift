@@ -93,7 +93,7 @@ sub RunSearch {
 		fastqToFasta( $self->{"readsFile"}, $self->{"blastDir"} . "/$readsCore.fasta" );
 		$self->{"readsFile"} = $self->{"blastDir"} . "/$readsCore.fasta";
 	}
-	readMarkerLengths();
+	readMarkerLengths($self);
 
 	# search reads/contigs against marker database
 	my $resultsfile;
@@ -118,18 +118,25 @@ sub RunSearch {
 
 	# write out sequence regions hitting marker genes to candidate files
 	writeCandidates( $self, $hitsref );
+	# delete files that we don't need anymore
+#	cleanup($self);
 	return $self;
 }
 
+sub cleanup {
+	my $self = shift;
+	`rm -f $self->{"blastDir"}/$readsCore.tabblastx`;
+	`rm -f $self->{"blastDir"}/$readsCore.blastx`;
+	`rm -f $self->{"blastDir"}/$readsCore.rapsearch.m8`;
+	`rm -f $self->{"blastDir"}/$readsCore.rapsearch.aln`;
+	`rm -f $self->{"blastDir"}/rep.faa`;
+	`rm -f $self->{"blastDir"}/$blastdb_name`;
+}
+
 sub readMarkerLengths {
+	my $self = shift;
 	foreach my $marker (@markers) {
-		open( HMM, $Amphora2::Utilities::marker_dir . "/$marker.hmm" );
-		while ( my $line = <HMM> ) {
-			if ( $line =~ /LENG\s+(\d+)/ ) {
-				$markerLength{$marker} = $1;
-				last;
-			}
-		}
+		$markerLength{$marker} = get_marker_length($marker);		
 	}
 }
 
@@ -201,7 +208,7 @@ sub executeRap {
 	$dbDir = $self->{"blastDir"} if ( $custom ne "" );
 	if ( !-e $self->{"blastDir"} . "/$readsCore.rapSearch.m8" ) {
 		debug "INSIDE custom markers RAPSearch\n";
-		`cd $self->{"blastDir"} ; $Amphora2::Utilities::rapSearch -q $self->{"readsFile"} -d $dbDir/rep -o $readsCore.rapSearch -e -1 -z $self->{"threads"}`;
+		`cd $self->{"blastDir"} ; $Amphora2::Utilities::rapSearch -q $self->{"readsFile"} -d rep -o $readsCore.rapSearch -v 20 -b 20 -e -1 -z $self->{"threads"}`;
 	}
 	return $self->{"blastDir"} . "/" . $readsCore . ".rapSearch.m8";
 }
@@ -442,6 +449,7 @@ sub getMarkerName {
 		my @marker = split( /\_\_/, $subject );
 		$markerName = $marker[0];
 	}
+#	debug "Using marker name $markerName";
 	return $markerName;
 }
 
@@ -472,6 +480,10 @@ sub writeCandidates {
 			# check to ensure hit covers enough of the marker
 			# TODO: make this smarter about boundaries, e.g. allow a smaller fraction to hit
 			# if it looks like the query seq goes off the marker boundary
+			if(!defined($markerHit)||!defined($markerLength{$markerHit})){
+				print "markerHit is $markerHit\n";
+				print $markerLength{$markerHit}."\n";
+			}
 			my $min_len = $markerLength{$markerHit} < $seq->length ? $markerLength{$markerHit} : $seq->length;
 			next unless ( ( $end - $start ) / $min_len >= $align_fraction );
 			$start -= FLANKING_LENGTH;
@@ -544,92 +556,34 @@ sub prepAndClean {
 	#create a directory for the Reads file being processed.
 	`mkdir $self->{"fileDir"}`  unless ( -e $self->{"fileDir"} );
 	`mkdir $self->{"blastDir"}` unless ( -e $self->{"blastDir"} );
-	if ( $custom ne "" ) {
 
-		#remove rep.faa if it already exists (starts clean is a previous job was stopped or crashed or included different markers)
-		if ( -e $self->{"blastDir"} . "/rep.faa" ) { `rm $self->{"blastDir"}/rep.faa`; }
-
-		#also makes 1 large file with all the marker sequences
-		open( REPFILE, ">" . $self->{"blastDir"} . "/rep.faa" );
-		foreach my $marker (@markers) {
-
-			#if a marker candidate file exists remove it, it is from a previous run and could not be related
-			if ( -e $self->{"blastDir"} . "/$marker.candidate" ) {
-				`rm $self->{"blastDir"}/$marker.candidate`;
-			}
-
-			#initiate the hash table for all markers incase 1 marker doesn't have a single hit, it'll still be in the results
-			#and will yield an empty candidate file
-			$markerHits{$marker} = "";
-
-			#append the rep sequences for all the markers included in the study to the rep.faa file
-			my $fastaName = Amphora2::Utilities::getFastaMarkerFile( $self, $marker );
-			open( FASTA, "$Amphora2::Utilities::marker_dir/$fastaName" );
-			while ( my $fline = <FASTA> ) {
-				if ( $fline =~ /^>/ ) {
-					my $mcat = $marker . "__";
-					$fline =~ s/^>/>$mcat/g;
-				}
-				print REPFILE $fline;
-			}
-
-			#	    `cat $Amphora2::Utilities::marker_dir/$fastaName.faa >> $self->{"blastDir"}/rep.faa`
-		}
-		close REPFILE;
-
-		#make a DB for rapSearch
-		if (    !-e $self->{"blastDir"} . "/rep.des"
-			 || !-e $self->{"blastDir"} . "/rep.fbn"
-			 || !-e $self->{"blastDir"} . "/rep.inf"
-			 || !-e $self->{"blastDir"} . "/rep.swt" )
-		{
-			`cd $self->{"blastDir"} ; $Amphora2::Utilities::preRapSearch -d $self->{"blastDir"}/rep.faa -n rep`;
-		}
-
-		#make one for BLAST
-		if ( !-e $self->{"blastDir"} . "/rep.faa.psq" || !-e $self->{"blastDir"} . "/rep.faa.pin" || !-e $self->{"blastDir"} . "/rep.faa.phr" ) {
-			`formatdb -i $self->{"blastDir"}/rep.faa -o F -p T -t RepDB`;
-		}
-	} else {
-
-		#when using the default marker package
-		my $dbDir = "$Amphora2::Utilities::marker_dir/representatives";
-		debug "Using the standard marker package\n";
-		debug "Using $dbDir as default directory\n";
-
-		#removing all the previous representative work from other runs in case we switch from Updated to stock markers
-		if ( -e "$dbDir/rep.faa" ) {
-			`rm $dbDir/rep.*`;
-		}
-		if ( !-e "$dbDir/rep.faa" ) {
-			open( REPFILE, ">$dbDir/rep.faa" );
-			foreach my $marker (@markers) {
-				$markerHits{$marker} = "";
-				my $fastaName = Amphora2::Utilities::getFastaMarkerFile( $self, $marker );
-				open( FASTA, "$Amphora2::Utilities::marker_dir/$fastaName" );
-				while ( my $fline = <FASTA> ) {
-					if ( $fline =~ /^>/ ) {
-						my $mcat = $marker . "__";
-						$fline =~ s/^>/>$mcat/g;
-					}
-					print REPFILE $fline;
-				}
-			}
-			close REPFILE;
-		}
-		if ( !-e "$dbDir/rep.des" || !-e "$dbDir/rep.fbn" || !-e "$dbDir/rep.inf" || !-e "$dbDir/rep.swt" ) {
-			`cd $dbDir ; $Amphora2::Utilities::preRapSearch -d rep.faa -n rep`;
-		}
-
-		# now make a DB for BLAST containing just representative sequences
-		if ( !-e "$dbDir/$blastdb_name" ) {
-			foreach my $marker (@markers) {
-				`cat $dbDir/$marker.rep >> $dbDir/$blastdb_name`;
+	#when using the default marker package
+	debug "Using the standard marker package\n";
+	
+	# use alignments to make an unaligned fasta database containing everything
+	# strip gaps from the alignments
+	open(DBOUT, ">".$self->{"blastDir"}."/$blastdb_name");
+	foreach my $marker (@markers) {
+		my $marker_aln = Amphora2::Utilities::get_marker_aln_file($self, $marker);
+		open(INALN, "$Amphora2::Utilities::marker_dir/$marker_aln");
+		while(my $line=<INALN>){
+			if($line =~ /^>(.+)/){
+				print DBOUT "\n>$marker"."__$1\n";
+			}else{
+				$line =~ s/[-\.\n\r]//g;
+				$line =~ tr/a-z/A-Z/;
+				print DBOUT $line;
 			}
 		}
-		`cp $dbDir/$blastdb_name $self->{"blastDir"}`;
-		`$Amphora2::Utilities::formatdb -i $self->{"blastDir"}/$blastdb_name -o F -p T -t RepDB`;
 	}
+	print DBOUT "\n";
+	close DBOUT;	# be sure to flush I/O
+	# make a blast database
+	`$Amphora2::Utilities::formatdb -i $self->{"blastDir"}/$blastdb_name -o F -p T -t RepDB`;
+	`cd $self->{"blastDir"} ; mv $blastdb_name rep.faa`;
+	# make a rapsearch database
+	`cd $self->{"blastDir"} ; $Amphora2::Utilities::preRapSearch -d rep.faa -n rep`;
+
 	return $self;
 }
 
