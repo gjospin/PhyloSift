@@ -15,7 +15,6 @@ Amphora2::UpdateDB - Functionality to download new genomes and update the marker
 Version 0.01
 
 =cut
-
 our $VERSION = '0.01';
 
 =head1 SYNOPSIS
@@ -34,16 +33,15 @@ if you don't export anything, such as for a purely object-oriented module.
 
 =cut
 
-sub get_ebi_genomes($$) {
-	my $directory  = shift;
-	my $newgenomes = shift;
+sub get_ebi_genomes {
+	my $directory = shift;
 	chdir($directory);
-	get_ebi_from_list( "http://www.ebi.ac.uk/genomes/organelle.details.txt",     $newgenomes );
-	get_ebi_from_list( "http://www.ebi.ac.uk/genomes/virus.details.txt",         $newgenomes );
-	get_ebi_from_list( "http://www.ebi.ac.uk/genomes/phage.details.txt",         $newgenomes );
-	get_ebi_from_list( "http://www.ebi.ac.uk/genomes/archaea.details.txt",       $newgenomes );
-	get_ebi_from_list( "http://www.ebi.ac.uk/genomes/archaealvirus.details.txt", $newgenomes );
-	get_ebi_from_list( "http://www.ebi.ac.uk/genomes/bacteria.details.txt",      $newgenomes );
+	get_ebi_from_list("http://www.ebi.ac.uk/genomes/organelle.details.txt");
+	get_ebi_from_list("http://www.ebi.ac.uk/genomes/virus.details.txt");
+	get_ebi_from_list("http://www.ebi.ac.uk/genomes/phage.details.txt");
+	get_ebi_from_list("http://www.ebi.ac.uk/genomes/archaea.details.txt");
+	get_ebi_from_list("http://www.ebi.ac.uk/genomes/archaealvirus.details.txt");
+	get_ebi_from_list("http://www.ebi.ac.uk/genomes/bacteria.details.txt");
 
 	#	get_ebi_from_list("http://www.ebi.ac.uk/genomes/eukaryota.details.txt");
 }
@@ -563,31 +561,28 @@ sub pd_prune_markers($) {
 	unshift( @markerlist, "concat" );
 	for ( my $dna = 0 ; $dna < 2 ; $dna++ ) {    # zero for aa, one for dna
 		foreach my $marker (@markerlist) {
-			my $tre    = get_fasttree_tre_filename( marker => $marker, dna => $dna, updated => 1, pruned => 0 );
-			my $fasta  = get_fasta_filename(        marker => $marker, dna => $dna, updated => 1, pruned => 0 );
-			my $pruned = get_fasta_filename(        marker => $marker, dna => $dna, updated => 1, pruned => 1 );
+			my $tre = get_fasttree_tre_filename( marker => $marker, dna => $dna, updated => 1, pruned => 0 );
+			my $fasta  = get_fasta_filename( marker => $marker, dna => $dna, updated => 1, pruned => 0 );
+			my $pruned = get_fasta_filename( marker => $marker, dna => $dna, updated => 1, pruned => 1 );
 			prune_marker( distance => $PRUNE_DISTANCE{$dna}, tre => $tre, fasta => $fasta, pruned_fasta => $pruned );
 		}
 	}
 }
 
-sub reconcile_with_ncbi($$$) {
+sub reconcile_with_ncbi($$$$) {
 	my $self        = shift;
 	my $results_dir = shift;
 	my $marker_dir  = shift;
 	my $pruned      = shift;
-	
 	print STDERR "Updating NCBI tree and taxon map...";
 	Amphora2::Summarize::makeNcbiTreeFromUpdate( $self, $results_dir, $marker_dir );
 	print STDERR "done\n";
-
 	my $codon_fasta = get_fasta_filename( marker => '\\$1', dna => 1, updated => 1, pruned => $pruned );
 	my $aa_fasta    = get_fasta_filename( marker => '\\$1', dna => 0, updated => 1, pruned => $pruned );
-	my $codon_tre   = get_fasttree_tre_filename( marker => '\\$1', dna => 1, updated => 1, pruned => $pruned );
-	my $aa_tre      = get_fasttree_tre_filename( marker => '\\$1', dna => 0, updated => 1, pruned => $pruned );
-	my $codon_log   = get_fasttree_log_filename( marker => '\\$1', dna => 1, updated => 1, pruned => $pruned );
-	my $aa_log      = get_fasttree_log_filename( marker => '\\$1', dna => 0, updated => 1, pruned => $pruned );
-
+	my $codon_tre = get_fasttree_tre_filename( marker => '\\$1', dna => 1, updated => 1, pruned => $pruned );
+	my $aa_tre    = get_fasttree_tre_filename( marker => '\\$1', dna => 0, updated => 1, pruned => $pruned );
+	my $codon_log = get_fasttree_log_filename( marker => '\\$1', dna => 1, updated => 1, pruned => $pruned );
+	my $aa_log    = get_fasttree_log_filename( marker => '\\$1', dna => 0, updated => 1, pruned => $pruned );
 	open( RECONCILESCRIPT, ">/tmp/a2_reconcile.sh" );
 	print RECONCILESCRIPT <<EOF;
 #!/bin/sh
