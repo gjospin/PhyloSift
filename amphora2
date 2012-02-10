@@ -18,6 +18,7 @@ my $custom           = "";
 my $reverseTranslate = 0;
 my $besthit          = 0;
 my $updated          = 0;
+my $my_debug         = 0;
 my $coverage;
 my $configuration;
 my $help  = 0;
@@ -71,11 +72,14 @@ GetOptions(
 	"config=s"        => \$configuration,       #custom config file
 	"h"               => \$help,                #prints the usage part of the README file
 	"help"            => \$help,                #same as -h
+	"debug"           => \$my_debug,            #print debugging messages?
 ) || die $usage;
 if ( $help != 0 ) {
 	print $usage. "\n";
 	die "End of Help message\n";
 }
+
+$Amphora2::Utilities::debuglevel = $my_debug;
 debug("@ARGV\n");
 if ( $pair == 0 ) {
 	croak $usage unless ( $ARGV[0] && $ARGV[1] );
