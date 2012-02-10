@@ -120,17 +120,22 @@ sub markerPrepAndRun {
 	my $markRef = shift;
 	debug "ALIGNDIR : " . $self->{"alignDir"} . "\n";
 	foreach my $marker ( @{$markRef} ) {
-		my $trimfinalFile = Amphora2::Utilities::getTrimfinalMarkerFile( $self, $marker );
-
-		#converting the marker's reference alignments from Fasta to Stockholm (required by Hmmer3)
-		Amphora2::Utilities::fasta2stockholm( "$Amphora2::Utilities::marker_dir/$trimfinalFile", $self->{"alignDir"} . "/$marker.seed.stock" );
-
-		#build the Hmm for the marker using Hmmer3
-		if ( !-e $self->{"alignDir"} . "/$marker.stock.hmm" ) {
-			`$Amphora2::Utilities::hmmbuild $self->{"alignDir"}/$marker.stock.hmm $self->{"alignDir"}/$marker.seed.stock`;
-		}
+		my $hmm_file = Amphora2::Utilities::get_marker_hmm_file( $self, $marker, 1 );
+		my $stockholm_file = Amphora2::Utilities::get_marker_stockholm_file( $self, $marker );
+		unless(-e $hmm_file && -e $stockholm_file){
+			my $trimfinalFile = Amphora2::Utilities::getTrimfinalMarkerFile( $self, $marker );
+	
+			#converting the marker's reference alignments from Fasta to Stockholm (required by Hmmer3)
+			Amphora2::Utilities::fasta2stockholm( "$Amphora2::Utilities::marker_dir/$trimfinalFile", $stockholm_file );
+	
+			#build the Hmm for the marker using Hmmer3
+			if ( !-e $hmm_file ) {
+				`$Amphora2::Utilities::hmmbuild $hmm_file $stockholm_file`;
+			}
+		}		
+		
 		if ( !-e $self->{"alignDir"} . "$marker.hmmsearch.out" ) {
-`$Amphora2::Utilities::hmmsearch -E 10 --cpu $self->{"threads"} --max --tblout $self->{"alignDir"}/$marker.hmmsearch.tblout $self->{"alignDir"}/$marker.stock.hmm $self->{"blastDir"}/$marker.candidate > $self->{"alignDir"}/$marker.hmmsearch.out`;
+`$Amphora2::Utilities::hmmsearch -E 10 --cpu $self->{"threads"} --max --tblout $self->{"alignDir"}/$marker.hmmsearch.tblout $hmm_file $self->{"blastDir"}/$marker.candidate > $self->{"alignDir"}/$marker.hmmsearch.out`;
 		}
 	}
 	return $self;
@@ -280,7 +285,9 @@ sub alignAndMask {
 	for ( my $index = 0 ; $index < @{$markRef} ; $index++ ) {
 		my $marker   = ${$markRef}[$index];
 		my $refcount = 0;
-		open( HMM, $self->{"alignDir"} . "/$marker.stock.hmm" );
+		my $stockholm_file = Amphora2::Utilities::get_marker_stockholm_file( $self, $marker );
+		my $hmm_file = Amphora2::Utilities::get_marker_hmm_file( $self, $marker, 1 );
+		open( HMM, $hmm_file );
 		while ( my $line = <HMM> ) {
 			if ( $line =~ /NSEQ\s+(\d+)/ ) {
 				$refcount = $1;
@@ -292,12 +299,11 @@ sub alignAndMask {
 		# pipe in the aligned sequences, trim them further, and write them back out
 		my $hmmalign =
 		    "$Amphora2::Utilities::hmmalign --outformat afa --mapali "
+		  . $stockholm_file
+		  . " $hmm_file "
 		  . $self->{"alignDir"}
-		  . "/$marker.seed.stock "
-		  . $self->{"alignDir"}
-		  . "/$marker.stock.hmm "
-		  . $self->{"alignDir"}
-		  . "/$marker.newCandidate |";
+		  . "/$marker.newCandidate";
+		$hmmalign .= " |";
 		my $outputFastaAA  = $self->{"alignDir"} . "/" . Amphora2::Utilities::getAlignerOutputFastaAA($marker);
 		my $outputFastaDNA = $self->{"alignDir"} . "/" . Amphora2::Utilities::getAlignerOutputFastaDNA($marker);
 		open( my $aliout, ">" . $outputFastaAA ) or die "Couldn't open $outputFastaAA for writing\n";

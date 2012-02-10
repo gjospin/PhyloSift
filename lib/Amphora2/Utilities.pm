@@ -356,7 +356,7 @@ sub get_marker_length{
 	my $marker = shift;
 	my $hmm_file = get_marker_hmm_file($self,$marker);
 	my $length = 0;
-	open( HMM, $marker_dir . "/$hmm_file" );
+	open( HMM, $hmm_file ) || croak "Unable to open $hmm_file\n";
 	while ( my $line = <HMM> ) {
 		if ( $line =~ /LENG\s+(\d+)/ ) {
 			$length = $1;
@@ -416,6 +416,24 @@ sub get_marker_aln_file {
 	}
 }
 
+=head2 get_marker_rep_file
+
+Returns the fasta file of unaligned full length representative sequences for the marker
+
+=cut
+
+sub get_marker_rep_file {
+	my $self   = shift;
+	my $marker = shift;
+	if ( $self->{"updated"} == 0 ) {
+		return "$marker.faa" if(-e "$marker_dir/$marker.faa");
+		# using new-style marker directories
+		return "$marker/$marker.rep";
+	} else {
+		return "$marker.updated/$marker.rep";
+	}
+}
+
 =head2 get_marker_hmm_file
 
 Returns the HMM file for the marker
@@ -425,12 +443,32 @@ Returns the HMM file for the marker
 sub get_marker_hmm_file {
 	my $self   = shift;
 	my $marker = shift;
+	my $local = shift || 0;
 	if ( $self->{"updated"} == 0 ) {
-		return "$marker.hmm" if(-e "$marker_dir/$marker.hmm");
+		return $self->{"alignDir"}."/$marker.hmm" if(-e "$marker_dir/$marker.hmm" && $local);
+		return "$marker_dir/$marker.hmm" if(-e "$marker_dir/$marker.hmm");
 		# using new-style marker directories
-		return "$marker/$marker.hmm";
+		return "$marker_dir/$marker/$marker.hmm";
 	} else {
-		return "$marker.hmm";
+		return "$marker_dir/$marker.hmm";
+	}
+}
+
+=head2 get_marker_stockholm_file
+
+Returns the stockholm file for the marker
+
+=cut
+
+sub get_marker_stockholm_file {
+	my $self   = shift;
+	my $marker = shift;
+	if ( $self->{"updated"} == 0 ) {
+		return $self->{"alignDir"}."/$marker.stk" if(-e "$marker_dir/$marker.ali");
+		# using new-style marker directories
+		return "$marker_dir/$marker/$marker.stk";
+	} else {
+		return "$marker_dir/$marker.updated/$marker.stk";
 	}
 }
 
@@ -610,7 +648,7 @@ sub concatenateAlignments {
 
 	foreach my $file (@alignments) {
 		my $aln;
-		my $marker = $file;
+		my $marker = basename( $file );
 		$marker =~ s/\..+//g; # FIXME: this should really come from a list of markers
 		unless ( -e $file ) {
 

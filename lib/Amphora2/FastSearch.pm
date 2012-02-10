@@ -136,7 +136,7 @@ sub cleanup {
 sub readMarkerLengths {
 	my $self = shift;
 	foreach my $marker (@markers) {
-		$markerLength{$marker} = get_marker_length($marker);		
+		$markerLength{$marker} = Amphora2::Utilities::get_marker_length($self,$marker);		
 	}
 }
 
@@ -564,8 +564,8 @@ sub prepAndClean {
 	# strip gaps from the alignments
 	open(DBOUT, ">".$self->{"blastDir"}."/$blastdb_name");
 	foreach my $marker (@markers) {
-		my $marker_aln = Amphora2::Utilities::get_marker_aln_file($self, $marker);
-		open(INALN, "$Amphora2::Utilities::marker_dir/$marker_aln");
+		my $marker_rep = Amphora2::Utilities::get_marker_rep_file($self, $marker);
+		open(INALN, "$Amphora2::Utilities::marker_dir/$marker_rep");
 		while(my $line=<INALN>){
 			if($line =~ /^>(.+)/){
 				print DBOUT "\n>$marker"."__$1\n";

@@ -328,15 +328,15 @@ sub markerGather {
 		}
 
 		# now gather directory packaged markers (new style)
-#		open( MLIST, "find $Amphora2::Utilities::marker_dir -maxdepth 1 -mindepth 1 -type d |" );
-#		while ( my $line = <MLIST> ) {
-#			chomp $line;
-#			next if $line =~ /PMPROK/;
-#			next if $line =~ /concat/;
-#			next if $line =~ /representatives/;
-#			$line = basename($line);
-#			push( @marks, $line );
-#		}
+		open( MLIST, "find $Amphora2::Utilities::marker_dir -maxdepth 1 -mindepth 1 -type d |" );
+		while ( my $line = <MLIST> ) {
+			chomp $line;
+			next if $line =~ /PMPROK/;
+			next if $line =~ /concat/;
+			next if $line =~ /representatives/;
+			$line = basename($line);
+			push( @marks, $line );
+		}
 	}
 	return @marks;
 }

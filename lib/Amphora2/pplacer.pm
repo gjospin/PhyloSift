@@ -3,6 +3,7 @@ use Cwd;
 use Getopt::Long;
 use Bio::AlignIO;
 use Amphora2::Amphora2;
+use Amphora2::Utilities qw(debug);
 
 =head1 NAME
 
@@ -68,10 +69,10 @@ sub pplacer {
 					`cp $trimfinalFile $trimfinalFastaFile`;
 				}
 				$pp = "$Amphora2::Utilities::pplacer -p -j " . $self->{"threads"} . " -r $trimfinalFastaFile -t $treeFile -s $treeStatsFile $readAlignmentFile";
-				$pp = "";
 			}else{
 				$pp = "$Amphora2::Utilities::pplacer -p -c $markerPackage -j " . $self->{"threads"} . " $readAlignmentFile";
 			}
+			debug "Running $pp\n";
 			system("$pp");
 		} else {
 
