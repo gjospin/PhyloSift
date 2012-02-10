@@ -765,6 +765,31 @@ sub get_date_YYYYMMDD {
 	return $datestr;
 }
 
+=head2 alignment_to_fasta
+
+intput: alignment file , target directory 
+Removes all gaps from an alignment file and writes the sequences in fasta format in the target directory
+
+=cut
+
+sub alignment_to_fasta{
+    my $aln_file = shift;
+    my $target_dir = shift;
+    my ( $core, $path, $ext ) = fileparse( $aln_file, qr/\.[^.]*$/ );
+    my $in = Bio::SeqIO->new(-file=>$aln_file);
+    open(FILEOUT, ">".$target_dir."/".$core.".fasta") or carp ("Couldn't open $target_dir$core.fasta for writing\n");
+    while( my $seq_object = $in->next_seq()){
+        my $seq = $seq_object->seq;
+        my $id = $seq_object->id;
+        $seq =~ s/-\.//g; # shouldnt be any gaps
+        print FILEOUT ">".$id."\n".$seq."\n";
+    }
+    close(FILEOUT);
+    return "$target_dir/$core.fasta";
+}
+
+
+
 =head2 generate_hmm
 
 input: alignment_file, target_directory
@@ -792,11 +817,44 @@ sub hmmalign_to_model {
 	my $hmm_profile   = shift;
 	my $sequence_file = shift;
 	my $target_dir    = shift;
+	my $ref_ali = shift;
 	my ( $core_name, $path, $ext ) = fileparse( $sequence_file, qr/\.[^.]*$/ );
 	if ( !-e "$target_dir/$core_name.aln" ) {
-		`hmmalign --trim --outformat afa -o $target_dir/$core_name.aln $hmm_profile $sequence_file`;
+	    `hmmalign --mapali $ref_ali --trim --outformat afa -o $target_dir/$core_name.aln $hmm_profile $sequence_file`;
+#	    `hmmalign --outformat afa -o $target_dir/$core_name.aln $hmm_profile $sequence_file`;
 	}
 	return "$target_dir/$core_name.aln";
+}
+
+=head2 mask_alignment
+
+input : aln_file
+Masks the unaligned columns out of an alignemnt file. Removes ( and ) from the sequence names 
+Also removes duplicate IDs
+=cut
+
+sub mask_and_clean_alignment{
+    my $aln_file = shift;
+    my $target_dir = shift;
+    my ( $core, $path, $ext ) = fileparse( $aln_file, qr/\.[^.]*$/ );
+#    open(FILEIN,$aln_file) or carp("Couldn't open $aln_file for reading \n");
+    my $in = Bio::SeqIO->new(-file=>$aln_file);
+    my %s = (); #hash remembering the IDs already printed
+    open(FILEOUT, ">".$target_dir."/".$core.".masked") or carp ("Couldn't open $target_dir/$core.masked for writing\n");
+    while( my $seq_object = $in->next_seq()){
+	my $seq = $seq_object->seq;
+	my $id = $seq_object->id;
+	$id =~ s/\(\)//g; #removes ( and ) from the header lines
+	$seq =~ s/[a-z]//g;    # lowercase chars didnt align to model
+	$seq =~ s/\.//g;       # shouldnt be any dots
+	if(!exists $s{$id}){
+	    print FILEOUT ">".$id."\n".$seq."\n";
+	}
+	$s{$id}=1;
+    }
+#    close(FILEIN);
+    close(FILEOUT);
+    return "$target_dir/$core.masked";
 }
 
 =head2 generate_fasttree
