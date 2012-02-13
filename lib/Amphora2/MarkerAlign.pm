@@ -136,7 +136,7 @@ sub markerPrepAndRun {
 			}
 		}		
 		
-		`rm $self->{"alignDir"}/$marker.hmmsearch.tblout`;
+		`rm -f $self->{"alignDir"}/$marker.hmmsearch.tblout`;
 		foreach my $type(@search_types){
 			my $candidate = $self->{"blastDir"}."/$marker$type.candidate";
 			next unless -e $candidate;
