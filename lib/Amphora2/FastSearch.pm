@@ -137,12 +137,16 @@ sub launch_searches {
 			debug "Launching search process $count\n";
 			# child processes will search sequences
 			my $hitstream;
+			my $candidate_type = ".$count";
 			if ( $count == 1 ) {
 				$hitstream = blastXoof_table($self, $blastx_pipe);
+				$candidate_type = ".blastx";
 			} elsif ( $count == 2 ) {
 				$hitstream = bowtie2( self=>$self, readtype=>$args{readtype}, reads1=>$bowtie2_r1_pipe, reads2=>$bowtie2_r2_pipe );
+				$candidate_type = ".rna";
 			} elsif ( $count == 3 ) {
 				$hitstream = executeBlast($self, $blastp_pipe);
+				$candidate_type = ".blastp";
 			}
 
 			debug "Parsing results from process $count\n";
@@ -157,7 +161,7 @@ sub launch_searches {
 
 			# write out sequence regions hitting marker genes to candidate files
 			debug "Writing candidates from process $count\n";
-			writeCandidates( $self, $hitsref, ".$count" );
+			writeCandidates( $self, $hitsref, "$candidate_type" );
 
 			exit 0;
 		} else {
@@ -659,8 +663,8 @@ sub writeCandidates {
 			# TODO: make this smarter about boundaries, e.g. allow a smaller fraction to hit
 			# if it looks like the query seq goes off the marker boundary
 			if ( !defined($markerHit) || !defined( $markerLength{$markerHit} ) ) {
-				print "markerHit is $markerHit\n";
-				print $markerLength{$markerHit} . "\n";
+				debug "markerHit is $markerHit\n";
+				debug $markerLength{$markerHit} . "\n";
 			}
 			my $min_len = $markerLength{$markerHit} < $seq->length ? $markerLength{$markerHit} : $seq->length;
 			next unless ( ( $end - $start ) / $min_len >= $align_fraction );
@@ -674,7 +678,7 @@ sub writeCandidates {
 			my $newSeq = substr( $seq->seq, $start, $end - $start );
 
 			#if we're working from DNA then need to translate to protein
-			if ( $self->{"dna"} ) {
+			if ( $self->{"dna"} && $type !~ /\.rna/ ) {
 
 				# compute the frame as modulo 3 of start site, reverse strand if end < start
 				my $frame = $curhit[2] % 3 + 1;
@@ -693,20 +697,17 @@ sub writeCandidates {
 			}
 			$markerHits{$markerHit} = "" unless defined( $markerHits{$markerHit} );
 			$markerHits{$markerHit} .= ">" . $seq->id . "\n" . $newSeq . "\n";
-
-			#			$markerHits{$markerHit} .= ">".$seq->id.":$start-$end\n".$newSeq."\n";
 		}
 	}
 
 	#write the read+ref_seqs for each markers in the list
 	foreach my $marker ( keys %markerHits ) {
-
 		#writing the hits to the candidate file
 		open( fileOUT, ">" . $self->{"blastDir"} . "/$marker$type.candidate" )
 		  or die " Couldn't open " . $self->{"blastDir"} . "/$marker$type.candidate for writing\n";
 		print fileOUT $markerHits{$marker};
 		close(fileOUT);
-		if ( $self->{"dna"} ) {
+		if ( $self->{"dna"}  && $type !~ /\.rna/) {
 			open( fileOUT, ">" . $self->{"blastDir"} . "/$marker$type.candidate.ffn" )
 			  or die " Couldn't open " . $self->{"blastDir"} . "/$marker$type.candidate.ffn for writing\n";
 			print fileOUT $markerNuc{$marker} if defined( $markerNuc{$marker} );
