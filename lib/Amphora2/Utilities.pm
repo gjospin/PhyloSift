@@ -366,15 +366,27 @@ sub readNameTable {
 sub get_marker_length{
 	my $self = shift;
 	my $marker = shift;
-	my $hmm_file = get_marker_hmm_file($self,$marker);
 	my $length = 0;
-	open( HMM, $hmm_file ) || croak "Unable to open $hmm_file\n";
-	while ( my $line = <HMM> ) {
-		if ( $line =~ /LENG\s+(\d+)/ ) {
-			$length = $1;
-			last;
+	if(is_protein_marker(marker=>$marker)){
+		my $hmm_file = get_marker_hmm_file($self,$marker);
+		open( HMM, $hmm_file ) || croak "Unable to open $hmm_file\n";
+		while ( my $line = <HMM> ) {
+			if ( $line =~ /LENG\s+(\d+)/ ) {
+				$length = $1;
+				last;
+			}
+		}
+	}else{
+		my $cm_file = get_marker_cm_file($self,$marker);
+		open( CM, $cm_file ) || croak "Unable to open $cm_file\n";
+		while ( my $line = <CM> ) {
+			if ( $line =~ /CLEN\s+(\d+)/ ) {
+				$length = $1;
+				last;
+			}
 		}
 	}
+	
 	return $length;
 }
 
@@ -464,6 +476,19 @@ sub get_marker_hmm_file {
 	} else {
 		return "$marker_dir/$marker.hmm";
 	}
+}
+
+=head2 get_marker_cm_file
+
+Returns the CM (infernal covarion model) file for the marker
+
+=cut
+
+sub get_marker_cm_file {
+	my $self   = shift;
+	my $marker = shift;
+	my $updated = $self->{"updated"} ? ".updated" : "";
+	return "$marker_dir/$marker$updated/$marker.cm";
 }
 
 =head2 get_marker_stockholm_file
@@ -858,6 +883,7 @@ sub get_sequence_input_type {
 	$type{seqtype} = "dna" if ( $type{format} eq "fastq" );    # nobody using protein fastq (yet)
 	$type{qtype} = "phred64" if $minq < 255;
 	$type{qtype} = "phred33" if $minq < 64;
+	$type{paired} = 0; # TODO: detect interleaved read pairing
 	return \%type;
 }
 
