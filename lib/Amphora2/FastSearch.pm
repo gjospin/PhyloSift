@@ -368,8 +368,7 @@ returns a stream file handle
 sub bowtie2 {
 	my %args = @_;
 	debug "INSIDE bowtie2\n";
-	my $bowtie2_cmd = "$Amphora2::Utilities::bowtie2align -x ".$args{self}->{"blastDir"}."/rnadb --sam-nohead --sam-nosq --maxins 1000 ";
-	# TODO: do we need --local?
+	my $bowtie2_cmd = "$Amphora2::Utilities::bowtie2align -x ".$args{self}->{"blastDir"}."/rnadb --sam-nohead --sam-nosq --maxins 1000 --local ";
 	$bowtie2_cmd .= " -f " if $args{readtype}->{format} eq "fasta";
 	if ( $args{readtype}->{paired} ) {
 		$bowtie2_cmd .= " -1 $args{reads1} -2 $args{reads2} ";
@@ -599,14 +598,15 @@ sub get_hits_sam {
 		my $markerName = getMarkerName( $fields[2], "sam" );
 		my $query      = $fields[0];
 		my $score      = $fields[4];
+		my $qlen = length( $fields[9] );
+		next if $qlen < 30;	# don't trust anything shorter than 30nt
 
 		# running on short reads, just do one marker per read
 		$topScore{$query} = 0 unless exists $topScore{$query};
 
 		#only keep the top hit
 		if ( $topScore{$query} <= $score ) {
-			my $qlen = length( $fields[9] );
-			$contig_hits{$query} = [ [ $markerName, $score, $fields[3], $qlen ] ];
+			$contig_hits{$query} = [ [ $markerName, $score, $fields[3], $fields[3]+$qlen-1, $fields[9] ] ];
 			$topScore{$query} = $score;
 		}
 	}
@@ -677,7 +677,9 @@ sub writeCandidates {
 			$start = abs($start) % 3 + 1 if ( $start < 0 );
 			my $seqLength = length( $seq->seq );
 			$end = $end - ceil( ( $end - $seqLength ) / 3 ) * 3 if ( $end >= $seqLength );
-			my $newSeq = substr( $seq->seq, $start, $end - $start );
+			my $newSeq;
+			$newSeq = substr( $seq->seq, $start, $end - $start ) unless $type =~ /\.rna/;
+			$newSeq = $curhit[4] if $type =~ /\.rna/;
 
 			#if we're working from DNA then need to translate to protein
 			if ( $self->{"dna"} && $type !~ /\.rna/ ) {
