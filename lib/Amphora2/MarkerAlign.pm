@@ -109,6 +109,8 @@ sub directoryPrepAndClean {
 	return $self;
 }
 
+my @search_types = (".1",".3",".rap");
+
 =cut
 
 =head2 markerPrepAndRun
@@ -134,8 +136,13 @@ sub markerPrepAndRun {
 			}
 		}		
 		
-		if ( !-e $self->{"alignDir"} . "$marker.hmmsearch.out" ) {
-`$Amphora2::Utilities::hmmsearch -E 10 --cpu $self->{"threads"} --max --tblout $self->{"alignDir"}/$marker.hmmsearch.tblout $hmm_file $self->{"blastDir"}/$marker.candidate > $self->{"alignDir"}/$marker.hmmsearch.out`;
+		`rm $self->{"alignDir"}/$marker.hmmsearch.tblout`;
+		foreach my $type(@search_types){
+			my $candidate = $self->{"blastDir"}."/$marker$type.candidate";
+			next unless -e $candidate;
+			`$Amphora2::Utilities::hmmsearch -E 10 --cpu $self->{"threads"} --max --tblout $self->{"alignDir"}/$marker.hmmsearch.tmp.tblout $hmm_file $candidate > $self->{"alignDir"}/$marker.hmmsearch.out`;
+			`cat $self->{"alignDir"}/$marker.hmmsearch.tmp.tblout >> $self->{"alignDir"}/$marker.hmmsearch.tblout`;
+			unlink($self->{"alignDir"}."/$marker.hmmsearch.tmp.tblout");
 		}
 	}
 	return $self;
@@ -176,11 +183,15 @@ sub hmmsearchParse {
 			next;
 		}
 		open( NEWCANDIDATE, ">" . $self->{"alignDir"} . "/$marker.newCandidate" );
-		my $seqin = new Bio::SeqIO( '-file' => $self->{"blastDir"} . "/$marker.candidate" );
-		while ( my $sequence = $seqin->next_seq ) {
-			my $baseid = $sequence->id;
-			if ( exists $hmmHits{$baseid} && $hmmHits{$baseid} eq $sequence->id ) {
-				print NEWCANDIDATE ">" . $sequence->id . "\n" . $sequence->seq . "\n";
+		foreach my $type(@search_types){
+			my $candidate = $self->{"blastDir"}."/$marker$type.candidate";
+			next unless -e $candidate;
+			my $seqin = new Bio::SeqIO( '-file' => $candidate );
+			while ( my $sequence = $seqin->next_seq ) {
+				my $baseid = $sequence->id;
+				if ( exists $hmmHits{$baseid} && $hmmHits{$baseid} eq $sequence->id ) {
+					print NEWCANDIDATE ">" . $sequence->id . "\n" . $sequence->seq . "\n";
+				}
 			}
 		}
 		close(NEWCANDIDATE);

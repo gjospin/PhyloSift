@@ -112,6 +112,8 @@ our $rapSearch    = "";
 our $preRapSearch = "";
 our $raxml        = "";
 our $readconciler = "";
+our $bowtie2align = "";
+our $bowtie2build = "";
 
 sub programChecks {
 	eval 'require Bio::Seq;';
@@ -123,14 +125,14 @@ sub programChecks {
 	if ( $pplacer eq "" ) {
 
 		#program not found return;
-		carp("pplacer v1.1.alpha09 not found");
+		carp("pplacer not found");
 		return 1;
 	} else {
 		`$pplacer --version` =~ m/v1.1.alpha(\d+)/;
 		if ( $1 < 10 ) {
 
 			# pplacer was found but the version doesn't match the one tested with Amphora
-			carp("Warning : a different version of pplacer was found. Amphora-2 was tested with pplacer v1.1.alpha09\n");
+			carp("Warning : a different version of pplacer was found. Amphora-2 was tested with pplacer v1.1.alpha10\n");
 		}
 	}
 	$guppy    = get_program_path( "guppy",    $Amphora2::Settings::a2_path );
@@ -167,6 +169,16 @@ sub programChecks {
 		return 1;
 	}
 	$readconciler = get_program_path( "readconciler", $Amphora2::Settings::a2_path );
+
+	$bowtie2align = get_program_path( "bowtie2-align", $Amphora2::Settings::bowtie2_path );
+	if ( $bowtie2align eq "" ) {
+
+		#program not found return;
+		carp("bowtie2 not found");
+		return 1;
+	}
+	$bowtie2build = get_program_path( "bowtie2-build", $Amphora2::Settings::bowtie2_path );
+	
 	return 0;
 }
 
@@ -472,6 +484,20 @@ sub get_marker_stockholm_file {
 	}
 }
 
+=head2 is_protein_marker
+
+Returns 1 if the marker named in 'marker' is protein sequence (0 if RNA or DNA)
+
+=cut
+sub is_protein_marker {
+	my %args = @_;
+	my $marker = $args{marker};
+	# only protein markers have HMMs
+	return 1 if( -e "$marker_dir/$marker/$marker.hmm" );
+	return 1 if( -e "$marker_dir/$marker.hmm" );
+	return 0;
+}
+
 =head2 getFastaMarkerFile
 
 Returns the fasta file for the markerName passed in as an argument
@@ -758,44 +784,81 @@ sub marker_oldstyle {
 	return 0;
 }
 
+=head2 open_sequence_file
+
+Opens a sequence file, either directly or by decompressing it with gzip or bzip2
+Returns an open filehandle
+
+=cut
+sub open_sequence_file {
+	my %args = @_;
+	my $F1IN;
+	if ( $args{file} =~ /\.gz$/ ) {
+		open( $F1IN, "zcat $args{file} |" );
+	} elsif ( $args{file} =~ /\.bz2$/ ) {
+		open( $F1IN, "bzcat $args{file} |" );
+	} else {
+		open( $F1IN, $args{file} );
+	}
+	return $F1IN;
+}
+
 =head2 get_sequence_input_type
 
-Checks whether input is either short sequence reads, e.g. < 500nt or assembled fragments.
-Reads the whole file to find the longest fragment.
+Checks whether input is FastA, FastQ, which quality type (33 or 64), and DNA or AA
+Returns a hash reference with the values 'seqtype', 'format', and 'qtype' populated.
 
 =cut
 
 sub get_sequence_input_type {
 	my $file = shift;
-	open( FILE, $file );
+	
+	my %type;
+	my $FILE = open_sequence_file(file=>$file);
+
 	my $counter  = 0;
 	my $maxfound = 0;
 	my $dnacount = 0;
-	my $seqtype  = "dna";
-	my $length   = "long";
-	my $format   = "unknown";
+	my $line_count = 0;
+	$type{seqtype} = "dna";
+	$type{format}= "unknown";
+	$type{qtype} = "none";
 	my $allcount = 0;
-	while ( my $line = <FILE> ) {
-
+	my $sequence = 1;
+	my $minq = 255;	# minimum fastq quality score (for detecting phred33/phred64)
+	while ( my $line = <$FILE> ) {
 		if ( $line =~ /^>/ ) {
 			$maxfound = $counter > $maxfound ? $counter : $maxfound;
 			$counter  = 0;
-			$format   = "fasta" if $format eq "unknown";
+			$type{format} = "fasta" if $type{format} eq "unknown";
 		} elsif ( $line =~ /^@/ || $line =~ /^\+/ ) {
 			$counter = 0;
-			$format = "fastq" if $format eq "unknown";
-		} else {
+			$sequence = 1;
+			$type{format} = "fastq" if $type{format} eq "unknown";
+		} elsif ( $line =~ /^\+/ ) {
+			$sequence = 0;
+			$type{format} = "fastq" if $type{format} eq "unknown";
+		} elsif ( $type{format} eq "fastq" && !$sequence ) {
+			# check whether qualities are phred33 or phred64
+			for my $q (split(//,$line)){
+				$minq = ord($q) if ord($q) < $minq;
+			}
+		} elsif ( $sequence ) {
 			$counter  += length($line) - 1;
 			$dnacount += $line =~ tr/[ACGTNacgtn]//;
 			$allcount += length($line) - 1;
 		}
+		$line_count++;
+		last if($line_count > 1000);
 	}
+	close($FILE);
+
 	$maxfound = $counter > $maxfound ? $counter : $maxfound;
-	$seqtype = "protein" if ( $dnacount < $allcount * 0.75 );
-	$seqtype = "dna" if ( $format eq "fastq" );    # nobody using protein fastq (yet)
-	my $aamult = $seqtype eq "protein" ? 3 : 1;
-	$length = "short" if $maxfound < ( 500 / $aamult );
-	return ( $seqtype, $length, $format );
+	$type{seqtype} = "protein" if ( $dnacount < $allcount * 0.75 );
+	$type{seqtype} = "dna" if ( $type{format} eq "fastq" );    # nobody using protein fastq (yet)
+	$type{qtype} = "phred64" if $minq < 255;
+	$type{qtype} = "phred33" if $minq < 64;
+	return \%type;
 }
 
 =head2 get_sequence_input_type_quickndirty
