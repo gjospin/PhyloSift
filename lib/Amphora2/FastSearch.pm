@@ -94,7 +94,7 @@ sub RunSearch {
 	$contigs = 1 if ( defined($self->{"coverage"}) && $type->{seqtype} ne "protein" && ( !defined $self->{"isolate"} || $self->{"isolate"} != 1 ) );
 
 	# launch the searches
-	launch_searches( self => $self, dir => $self->{"blastDir"}, contigs => $contigs );
+	launch_searches( self => $self, readtype => $type, dir => $self->{"blastDir"}, contigs => $contigs );
 
 	# delete files that we don't need anymore
 	#	cleanup($self);
@@ -114,15 +114,16 @@ sub launch_searches {
 	my $self            = $args{self};
 	my $rap_pipe        = $args{dir} . "/rap.pipe";
 	my $blastx_pipe     = $args{dir} . "/blastx.pipe";
-	my $bowtie2_r1_pipe = $args{dir} . "/bowtie2_r1.pipe";
-	my $bowtie2_r2_pipe = $args{dir} . "/bowtie2_r2.pipe";
 	my $blastp_pipe     = $args{dir} . "/blastp.pipe";
+	my $bowtie2_r1_pipe = $args{dir} . "/bowtie2_r1.pipe";
+	my $bowtie2_r2_pipe;
+	$bowtie2_r2_pipe = $args{dir} . "/bowtie2_r2.pipe" if $args{readtype}->{paired};
 
 	#	`mkfifo $rap_pipe`;	# rap doesn't support fifos
 	debug "Making fifos\n";
 	`mkfifo $blastx_pipe`;
 	`mkfifo $bowtie2_r1_pipe`;
-	`mkfifo $bowtie2_r2_pipe`;
+	`mkfifo $bowtie2_r2_pipe` if $args{readtype}->{paired};
 	`mkfifo $blastp_pipe`;
 
 	my @children;
@@ -139,7 +140,7 @@ sub launch_searches {
 			if ( $count == 1 ) {
 				$hitstream = blastXoof_table($self, $blastx_pipe);
 			} elsif ( $count == 2 ) {
-				$hitstream = bowtie2( $self, $bowtie2_r1_pipe, $bowtie2_r2_pipe );
+				$hitstream = bowtie2( self=>$self, readtype=>$args{readtype}, reads1=>$bowtie2_r1_pipe, reads2=>$bowtie2_r2_pipe );
 			} elsif ( $count == 3 ) {
 				$hitstream = executeBlast($self, $blastp_pipe);
 			}
@@ -168,7 +169,7 @@ sub launch_searches {
 	open( my $BLASTX_PIPE, ">$blastx_pipe" );
 	open( my $BOWTIE2_R1_PIPE, ">$bowtie2_r1_pipe" );
 	my $BOWTIE2_R2_PIPE;
-	open( $BOWTIE2_R2_PIPE, ">$bowtie2_r2_pipe" ) if defined($self->{"readsFile_2"});
+	open( $BOWTIE2_R2_PIPE, ">$bowtie2_r2_pipe" ) if $args{readtype}->{paired};
 	open( my $BLASTP_PIPE, ">$blastp_pipe" );
 
 	# parent process streams out sequences to fifos
@@ -259,9 +260,12 @@ sub demux_sequences {
 				}
 			}
 
+			# send the reads to bowtie
+			print $BOWTIE2_PIPE1 @lines1;
+			print $BOWTIE2_PIPE2 @lines2 if defined($F2IN);
+
 			# if either read is long, send both to blast
 			if ( length( $lines1[1] ) > 500 || ( defined($F2IN) && length( $lines2[1] ) > 500 ) ) {
-				debug "Read $lines1[0] is ".length( $lines1[1] )." long\n";
 				if ( $args{dna} ) {
 					print $BLASTX_PIPE @lines1;
 					print $BLASTX_PIPE @lines2 if defined($F2IN);
@@ -283,7 +287,7 @@ sub demux_sequences {
 
 	close($RAPSEARCH_PIPE);
 	close($BOWTIE2_PIPE1);
-	close($BOWTIE2_PIPE2);
+	close($BOWTIE2_PIPE2) if $args{readtype}->{paired};
 	close($BLASTX_PIPE);
 	close($BLASTP_PIPE);
 	close($RAPSEARCH_PIPE);
@@ -357,17 +361,17 @@ returns a stream file handle
 =cut
 
 sub bowtie2 {
-	my $self        = shift;
-	my $query_file1 = shift;
-	my $query_file2 = shift;
+	my %args = @_;
 	debug "INSIDE bowtie2\n";
-	my $bowtie2_cmd = "$Amphora2::Utilities::bowtie2align -x rnadb --sam-nohead --sam-nosq --maxins 1000 ";
-	if ( defined($query_file2) ) {
-		$bowtie2_cmd .= " -1 $query_file1 -2 $query_file2 ";
+	my $bowtie2_cmd = "$Amphora2::Utilities::bowtie2align -x ".$args{self}->{"blastDir"}."/rnadb --sam-nohead --sam-nosq --maxins 1000 ";
+	# TODO: do we need --local?
+	$bowtie2_cmd .= " -f " if $args{readtype}->{format} eq "fasta";
+	if ( $args{readtype}->{paired} ) {
+		$bowtie2_cmd .= " -1 $args{reads1} -2 $args{reads2} ";
 	} else {
-		$bowtie2_cmd .= " -U $query_file1 ";
+		$bowtie2_cmd .= " -U $args{reads1} ";
 	}
-	$bowtie2_cmd .= "--mm --threads " . $self->{"threads"} . "  |";
+	$bowtie2_cmd .= "--mm --threads " . $args{self}->{"threads"} . "  |";
 	debug "Running $bowtie2_cmd";
 	open( my $hitstream, $bowtie2_cmd );
 	return $hitstream;
