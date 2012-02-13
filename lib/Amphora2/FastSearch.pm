@@ -203,7 +203,8 @@ sub launch_searches {
 	}
 
 	# clean up
-	`rm $blastx_pipe $blastp_pipe $rap_pipe $bowtie2_r1_pipe $bowtie2_r2_pipe`;
+	`rm -f $blastx_pipe $blastp_pipe $rap_pipe $bowtie2_r1_pipe`;
+	`rm -f $bowtie2_r2_pipe` if defined($bowtie2_r2_pipe);
 }
 
 =head2 demux_sequences
@@ -594,6 +595,7 @@ sub get_hits_sam {
 		chomp($_);
 		next if ( $_ =~ /^\@/ );
 		my @fields = split( /\t/, $_ );
+		next if $fields[2] eq "*";	# no hit
 		my $markerName = getMarkerName( $fields[2], "sam" );
 		my $query      = $fields[0];
 		my $score      = $fields[4];
