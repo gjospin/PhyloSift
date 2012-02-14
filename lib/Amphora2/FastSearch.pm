@@ -22,6 +22,7 @@ Currently uses either BLAST or RAPsearch.
 Version 0.01
 
 =cut
+
 our $VERSION = '0.01';
 
 =head1 SYNOPSIS
@@ -48,6 +49,7 @@ if you don't export anything, such as for a purely object-oriented module.
 =head2 RunBlast
 
 =cut
+
 my $clean                 = 0;      #option set up, but not used for later
 my $isolateMode           = 0;      # set to 1 if running on an isolate assembly instead of raw reads
 my $bestHitsBitScoreRange = 30;     # all hits with a bit score within this amount of the best will be used
@@ -62,6 +64,8 @@ my %frames           = ();
 my $reverseTranslate = 0;
 my $blastdb_name     = "blastrep.faa";
 my $blastp_params    = "-p blastp -e 0.1 -b 50000 -v 50000 -m 8";
+my $s16db_name       = "16srep.faa";
+my $blastn_params    = "-p blastn -e 0.1 -b 50000 -v 50000 -m 8";
 my %markerLength;
 
 sub RunSearch {
@@ -96,16 +100,16 @@ sub RunSearch {
 	readMarkerLengths($self);
 
 	# search reads/contigs against marker database
-	my $resultsfile;
+	my ( $resultsfile, $s16_resultsfile );
 	my $searchtype = "blast";
 	if ( $length eq "long" && $seqtype eq "protein" ) {
-		$resultsfile = executeBlast( $self, $self->{"readsFile"} );
+		$resultsfile = executeBlast( $self, $self->{"readsFile"}, $self->{"blastDir"} . "/readsCore.blastp", $blastp_params );
 	} elsif ( $length eq "long" ) {
 		$resultsfile = blastXoof_table( $self, $self->{"readsFile"} );
 		$reverseTranslate = 1;
 	} else {
-		$searchtype  = "rap";
-		$resultsfile = executeRap($self);
+		$searchtype = "rap";
+		$resultsfile = executeRap( $self, $self->{"readsFile"}, "$Amphora2::Utilities::marker_dir/representatives/rep", $readsCore );
 	}
 
 	# parse the hits to marker genes
@@ -198,11 +202,14 @@ sub translateFrame {
 =cut
 
 sub executeRap {
-	my $self = shift;
-	if ( $self->{"readsFile"} !~ m/^\// ) {
-		debug "Making sure rapsearch can find the readsfile\n";
-		$self->{"readsFile"} = getcwd() . "/" . $self->{"readsFile"};
-		debug "New readsFile " . $self->{"readsFile"} . "\n";
+	my $self       = shift;
+	my $inputFile  = shift;
+	my $db         = shift;
+	my $outputCore = shift;
+	if ( $inputFile !~ m/^\// ) {
+		debug "Making sure rapsearch can find the inputfile\n";
+		$inputFile = getcwd() . "/" . $inputFile;
+		debug "New inputFile " . $inputFile . "\n";
 	}
 	my $dbDir = "$Amphora2::Utilities::marker_dir/representatives";
 	$dbDir = $self->{"blastDir"} if ( $custom ne "" );
@@ -210,7 +217,7 @@ sub executeRap {
 		debug "INSIDE custom markers RAPSearch\n";
 		`cd $self->{"blastDir"} ; $Amphora2::Utilities::rapSearch -q $self->{"readsFile"} -d rep -o $readsCore.rapSearch -v 20 -b 20 -e -1 -z $self->{"threads"}`;
 	}
-	return $self->{"blastDir"} . "/" . $readsCore . ".rapSearch.m8";
+	return $self->{"blastDir"} . "/" . $outputCore . ".rapSearch.m8";
 }
 
 =head2 executeBlast
@@ -220,13 +227,19 @@ sub executeRap {
 sub executeBlast {
 	my $self       = shift;
 	my $query_file = shift;
+	my $outFile    = shift;
+	my $params     = shift;
 	my $dbDir      = "$Amphora2::Utilities::marker_dir/representatives";
-	$dbDir = $self->{"blastDir"} if $custom ne "";
-	debug "INSIDE BLAST\n";
-	if ( !-e $self->{"blastDir"} . "/$readsCore.blastp" ) {
-		`$Amphora2::Utilities::blastall $blastp_params -i $query_file -d $dbDir/$blastdb_name -o $self->{"blastDir"}/$readsCore.blastp -a $self->{"threads"}`;
+	$dbDir = $self->{"blastDir"} if $custom ne "" && $params !~ /blastn/;
+	$blastdb_name = $s16db_name if $params =~ /blastn/;
+	debug "INSIDE BLAST\n$dbDir\nDBname $dbDir/$blastdb_name\n";
+
+	#    if(!-e $self->{"blastDir"}."/$readsCore.blastp"){
+	if ( !-e $outFile ) {
+		`$Amphora2::Utilities::blastall $params -i $query_file -d $dbDir/$blastdb_name -o $outFile`;
 	}
-	return $self->{"blastDir"} . "/$readsCore.blastp";
+	debug "Blast Done !\n";
+	return $outFile;
 }
 
 =head2 fastqToFasta
@@ -534,6 +547,7 @@ sub writeCandidates {
 			close(fileOUT);
 		}
 	}
+	close(nonHITS);
 }
 
 =head2 prepAndClean
@@ -646,4 +660,5 @@ See http://dev.perl.org/licenses/ for more information.
 
 
 =cut
+
 1;    # End of Amphora2::blast.pm

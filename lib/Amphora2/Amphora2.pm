@@ -40,6 +40,7 @@ sub new {
 	$self->{"dna"}         = undef;
 	$self->{"updated"}     = undef;
 	$self->{"coverage"}    = undef;
+	$self->{"16s"}         = undef;
 	bless($self);
 	return $self;
 }
@@ -74,6 +75,7 @@ sub initialize {
 	$self->{"treeDir"}     = $self->{"fileDir"} . "/treeDir";
 	$self->{"dna"}         = 0;
 	$self->{"updated"}     = 0;
+	$self->{"16s"}         = 0;
 	return $self;
 }
 
