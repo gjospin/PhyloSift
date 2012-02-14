@@ -47,6 +47,7 @@ Amphora2::Utilities - Implements miscellaneous accessory functions for Amphora2
 Version 0.01
 
 =cut
+
 our $VERSION = '0.01';
 
 =head1 SYNOPSIS
@@ -179,6 +180,7 @@ sub programChecks {
 Check for requisite Amphora-2 marker datasets
 
 =cut
+
 our $marker_dir = "";
 our $ncbi_dir   = "";
 
@@ -355,11 +357,11 @@ sub readNameTable {
 	return %result;
 }
 
-sub get_marker_length{
-	my $self = shift;
-	my $marker = shift;
-	my $hmm_file = get_marker_hmm_file($self,$marker);
-	my $length = 0;
+sub get_marker_length {
+	my $self     = shift;
+	my $marker   = shift;
+	my $hmm_file = get_marker_hmm_file( $self, $marker );
+	my $length   = 0;
 	open( HMM, $hmm_file ) || croak "Unable to open $hmm_file\n";
 	while ( my $line = <HMM> ) {
 		if ( $line =~ /LENG\s+(\d+)/ ) {
@@ -374,8 +376,7 @@ sub make_dummy_file {
 	my $self          = shift;
 	my $marker        = shift;
 	my $gapmultiplier = shift;
-	my $len = get_marker_length($self,$marker);
-
+	my $len           = get_marker_length( $self, $marker );
 	my $glen;
 	$glen = "P" x $len x $gapmultiplier if $gapmultiplier == 1;
 	$glen = "A" x $len x $gapmultiplier if $gapmultiplier == 3;
@@ -412,7 +413,8 @@ sub get_marker_aln_file {
 	my $self   = shift;
 	my $marker = shift;
 	if ( $self->{"updated"} == 0 ) {
-		return "$marker.ali" if(-e "$marker_dir/$marker.ali");
+		return "$marker.ali" if ( -e "$marker_dir/$marker.ali" );
+
 		# using new-style marker directories
 		return "$marker/$marker.aln";
 	} else {
@@ -430,7 +432,8 @@ sub get_marker_rep_file {
 	my $self   = shift;
 	my $marker = shift;
 	if ( $self->{"updated"} == 0 ) {
-		return "$marker.faa" if(-e "$marker_dir/$marker.faa");
+		return "$marker.faa" if ( -e "$marker_dir/$marker.faa" );
+
 		# using new-style marker directories
 		return "$marker/$marker.rep";
 	} else {
@@ -447,10 +450,11 @@ Returns the HMM file for the marker
 sub get_marker_hmm_file {
 	my $self   = shift;
 	my $marker = shift;
-	my $local = shift || 0;
+	my $local  = shift || 0;
 	if ( $self->{"updated"} == 0 ) {
-		return $self->{"alignDir"}."/$marker.hmm" if(-e "$marker_dir/$marker.hmm" && $local);
-		return "$marker_dir/$marker.hmm" if(-e "$marker_dir/$marker.hmm");
+		return $self->{"alignDir"} . "/$marker.hmm" if ( -e "$marker_dir/$marker.hmm" && $local );
+		return "$marker_dir/$marker.hmm" if ( -e "$marker_dir/$marker.hmm" );
+
 		# using new-style marker directories
 		return "$marker_dir/$marker/$marker.hmm";
 	} else {
@@ -468,7 +472,8 @@ sub get_marker_stockholm_file {
 	my $self   = shift;
 	my $marker = shift;
 	if ( $self->{"updated"} == 0 ) {
-		return $self->{"alignDir"}."/$marker.stk" if(-e "$marker_dir/$marker.ali");
+		return $self->{"alignDir"} . "/$marker.stk" if ( -e "$marker_dir/$marker.ali" );
+
 		# using new-style marker directories
 		return "$marker_dir/$marker/$marker.stk";
 	} else {
@@ -650,8 +655,8 @@ sub concatenateAlignments {
 
 	foreach my $file (@alignments) {
 		my $aln;
-		my $marker = basename( $file );
-		$marker =~ s/\..+//g; # FIXME: this should really come from a list of markers
+		my $marker = basename($file);
+		$marker =~ s/\..+//g;     # FIXME: this should really come from a list of markers
 		unless ( -e $file ) {
 
 			# this marker doesn't exist, need to create a dummy with the right number of gap columns
@@ -756,7 +761,7 @@ Checks whether a marker is in the old style format (PMPROK*) or the new format (
 
 sub marker_oldstyle {
 	my $marker = shift;
-	return 1 if($marker =~ /PMPROK/);
+	return 1 if ( $marker =~ /PMPROK/ );
 	return 0;
 }
 
@@ -893,6 +898,7 @@ sub print_citations {
  		Nucleic Acids Research, 1997, Vol. 25, No. 17 3389–3402
  		
 	};
+}
 
 =head2 alignment_to_fasta
 
@@ -901,23 +907,21 @@ Removes all gaps from an alignment file and writes the sequences in fasta format
 
 =cut
 
-sub alignment_to_fasta{
-    my $aln_file = shift;
-    my $target_dir = shift;
-    my ( $core, $path, $ext ) = fileparse( $aln_file, qr/\.[^.]*$/ );
-    my $in = Bio::SeqIO->new(-file=>$aln_file);
-    open(FILEOUT, ">".$target_dir."/".$core.".fasta") or carp ("Couldn't open $target_dir$core.fasta for writing\n");
-    while( my $seq_object = $in->next_seq()){
-        my $seq = $seq_object->seq;
-        my $id = $seq_object->id;
-        $seq =~ s/-\.//g; # shouldnt be any gaps
-        print FILEOUT ">".$id."\n".$seq."\n";
-    }
-    close(FILEOUT);
-    return "$target_dir/$core.fasta";
+sub alignment_to_fasta {
+	my $aln_file   = shift;
+	my $target_dir = shift;
+	my ( $core, $path, $ext ) = fileparse( $aln_file, qr/\.[^.]*$/ );
+	my $in = Bio::SeqIO->new( -file => $aln_file );
+	open( FILEOUT, ">" . $target_dir . "/" . $core . ".fasta" ) or carp("Couldn't open $target_dir$core.fasta for writing\n");
+	while ( my $seq_object = $in->next_seq() ) {
+		my $seq = $seq_object->seq;
+		my $id  = $seq_object->id;
+		$seq =~ s/-\.//g;    # shouldnt be any gaps
+		print FILEOUT ">" . $id . "\n" . $seq . "\n";
+	}
+	close(FILEOUT);
+	return "$target_dir/$core.fasta";
 }
-
-
 
 =head2 generate_hmm
 
@@ -946,11 +950,12 @@ sub hmmalign_to_model {
 	my $hmm_profile   = shift;
 	my $sequence_file = shift;
 	my $target_dir    = shift;
-	my $ref_ali = shift;
+	my $ref_ali       = shift;
 	my ( $core_name, $path, $ext ) = fileparse( $sequence_file, qr/\.[^.]*$/ );
 	if ( !-e "$target_dir/$core_name.aln" ) {
-	    `hmmalign --mapali $ref_ali --trim --outformat afa -o $target_dir/$core_name.aln $hmm_profile $sequence_file`;
-#	    `hmmalign --outformat afa -o $target_dir/$core_name.aln $hmm_profile $sequence_file`;
+		`hmmalign --mapali $ref_ali --trim --outformat afa -o $target_dir/$core_name.aln $hmm_profile $sequence_file`;
+
+		#	    `hmmalign --outformat afa -o $target_dir/$core_name.aln $hmm_profile $sequence_file`;
 	}
 	return "$target_dir/$core_name.aln";
 }
@@ -962,28 +967,30 @@ Masks the unaligned columns out of an alignemnt file. Removes ( and ) from the s
 Also removes duplicate IDs
 =cut
 
-sub mask_and_clean_alignment{
-    my $aln_file = shift;
-    my $target_dir = shift;
-    my ( $core, $path, $ext ) = fileparse( $aln_file, qr/\.[^.]*$/ );
-#    open(FILEIN,$aln_file) or carp("Couldn't open $aln_file for reading \n");
-    my $in = Bio::SeqIO->new(-file=>$aln_file);
-    my %s = (); #hash remembering the IDs already printed
-    open(FILEOUT, ">".$target_dir."/".$core.".masked") or carp ("Couldn't open $target_dir/$core.masked for writing\n");
-    while( my $seq_object = $in->next_seq()){
-	my $seq = $seq_object->seq;
-	my $id = $seq_object->id;
-	$id =~ s/\(\)//g; #removes ( and ) from the header lines
-	$seq =~ s/[a-z]//g;    # lowercase chars didnt align to model
-	$seq =~ s/\.//g;       # shouldnt be any dots
-	if(!exists $s{$id}){
-	    print FILEOUT ">".$id."\n".$seq."\n";
+sub mask_and_clean_alignment {
+	my $aln_file   = shift;
+	my $target_dir = shift;
+	my ( $core, $path, $ext ) = fileparse( $aln_file, qr/\.[^.]*$/ );
+
+	#    open(FILEIN,$aln_file) or carp("Couldn't open $aln_file for reading \n");
+	my $in = Bio::SeqIO->new( -file => $aln_file );
+	my %s = ();    #hash remembering the IDs already printed
+	open( FILEOUT, ">" . $target_dir . "/" . $core . ".masked" ) or carp("Couldn't open $target_dir/$core.masked for writing\n");
+	while ( my $seq_object = $in->next_seq() ) {
+		my $seq = $seq_object->seq;
+		my $id  = $seq_object->id;
+		$id  =~ s/\(\)//g;     #removes ( and ) from the header lines
+		$seq =~ s/[a-z]//g;    # lowercase chars didnt align to model
+		$seq =~ s/\.//g;       # shouldnt be any dots
+		if ( !exists $s{$id} ) {
+			print FILEOUT ">" . $id . "\n" . $seq . "\n";
+		}
+		$s{$id} = 1;
 	}
-	$s{$id}=1;
-    }
-#    close(FILEIN);
-    close(FILEOUT);
-    return "$target_dir/$core.masked";
+
+	#    close(FILEIN);
+	close(FILEOUT);
+	return "$target_dir/$core.masked";
 }
 
 =head2 generate_fasttree
@@ -1127,8 +1134,6 @@ L<http://search.cpan.org/dist/Amphora2-Amphora2/>
 
 
 =head1 ACKNOWLEDGEMENTS
-
-
 =head1 LICENSE AND COPYRIGHT
 
 Copyright 2011 Aaron Darling and Guillaume Jospin.
@@ -1141,4 +1146,5 @@ See http://dev.perl.org/licenses/ for more information.
 
 
 =cut
+
 1;    # End of Amphora2::Utilities
