@@ -13,7 +13,7 @@
 # $R_path="";
 # $pplacer_path="";
 # $a2_path="";
-
+$fast_tree_path="/home/gjospin/projects/Amphora-2/bin";
 #
 # paths to required datasets
 # leave these blank to use whatever is in $prefix/share/amphora2

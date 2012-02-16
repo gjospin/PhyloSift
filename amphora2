@@ -21,7 +21,8 @@ my $updated          = 0;
 my $my_debug         = 0;
 my $coverage;
 my $configuration;
-my $help  = 0;
+my $help=0;
+my $s16=0;
 my $usage = qq~
 
 $0 Usage
@@ -105,6 +106,7 @@ $newObject->{"threads"}          = $threadNum;
 $newObject->{"isolate"}          = $isolate;
 $newObject->{"besthit"}          = $besthit;
 $newObject->{"reverseTranslate"} = $reverseTranslate;
+$newObject->{"16s"}=$s16;
 $newObject->{"updated"}          = $updated;
 $newObject->{"coverage"}         = $coverage;
 $newObject->{"configuration"}    = $configuration if defined($configuration);
