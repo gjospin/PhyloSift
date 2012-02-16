@@ -828,6 +828,115 @@ sub open_sequence_file {
 	return $F1IN;
 }
 
+sub get_blastp_db {
+	return "$marker_dir/blastrep";
+}
+
+sub get_bowtie2_db {
+	return "$marker_dir/rnadb";
+}
+
+=head2 index_marker_db
+
+Indexes the marker database for searches with rapsearch2, blastall, and bowtie2
+
+=cut
+
+sub index_marker_db {
+	my %args = @_;
+	my @markers = @{$args{markers}};
+	# use alignments to make an unaligned fasta database containing everything
+	# strip gaps from the alignments
+	my $bowtie2_db = get_bowtie2_db();
+	my $bowtie2_db_fasta = "$bowtie2_db.fasta";
+	open( my $PDBOUT,   ">" . get_blastp_db() );
+	open( my $RNADBOUT, ">" . $bowtie2_db_fasta );
+	foreach my $marker (@markers) {
+		my $marker_rep = get_marker_rep_file( $args{self}, $marker );
+		my $DBOUT = $RNADBOUT;
+		$DBOUT = $PDBOUT if is_protein_marker( marker => $marker );
+		open( INALN, "$marker_dir/$marker_rep" );
+		while ( my $line = <INALN> ) {
+			if ( $line =~ /^>(.+)/ ) {
+				print $DBOUT "\n>$marker" . "__$1\n";
+			} else {
+				$line =~ s/[-\.\n\r]//g;
+				$line =~ tr/a-z/A-Z/;
+				print $DBOUT $line;
+			}
+		}
+	}
+	print $PDBOUT "\n";
+	print $RNADBOUT "\n";
+	close $PDBOUT;                        # be sure to flush I/O
+	close $RNADBOUT;
+
+	# make a blast database
+	my $blastp_db = get_blastp_db();
+	`$Amphora2::Utilities::formatdb -i $blastp_db -o F -p T -t RepDB`;
+	`cd $marker_dir ; mv $blastp_db rep.faa`;
+
+	# make a rapsearch database
+	`cd $marker_dir ; $Amphora2::Utilities::preRapSearch -d rep.faa -n rep`;
+	unlink ("$marker_dir/rep.faa"); # don't need this anymore!
+
+	# make a bowtie2 database
+	`cd $marker_dir ; $Amphora2::Utilities::bowtie2build $bowtie2_db_fasta $bowtie2_db`;
+}
+
+=head2 gather_markers
+
+=item *
+
+    ARGS : $markerFile - file to read the marker names from that will be used in the pipeline.
+    Reads markers from a file if specified by the user OR gathers all the markers from the markers directory
+    The Marker names are stored in an Array
+    If the filename is empty, use all the default markers.
+
+=back
+
+=cut
+
+sub gather_markers {
+	my %args = @_;
+	my $self       = $args{self};
+	my $markerFile = $args{marker_file};
+	my @marks      = ();
+
+	#create a file with a list of markers called markers.list
+	if ( $markerFile ne "" ) {
+
+		#gather a custom list of makers, list convention is 1 marker per line
+		open( markersIN, $markerFile );
+		while (<markersIN>) {
+			chomp($_);
+			push( @marks, $_ );
+		}
+		close(markersIN);
+	} else {
+
+		# gather all markers
+		# this is for the original marker set
+		my @files = <$Amphora2::Utilities::marker_dir/*.faa>;
+		foreach my $file (@files) {
+			$file =~ m/\/(\w+).faa/;
+			push( @marks, $1 );
+		}
+
+		# now gather directory packaged markers (new style)
+		open( MLIST, "find $Amphora2::Utilities::marker_dir -maxdepth 1 -mindepth 1 -type d |" );
+		while ( my $line = <MLIST> ) {
+			chomp $line;
+			next if $line =~ /PMPROK/;
+			next if $line =~ /concat/;
+			next if $line =~ /representatives/;
+			$line = basename($line);
+			push( @marks, $line );
+		}
+	}
+	return @marks;
+}
+
 =head2 get_sequence_input_type
 
 Checks whether input is FastA, FastQ, which quality type (33 or 64), and DNA or AA
@@ -974,6 +1083,10 @@ sub print_citations {
 		RAPSearch2: a fast and memory-efficient protein similarity search tool for next generation sequencing data.
 		Yongan Zhao, Haixu Tang, and Yuzhen Ye
 		Bioinformatics (2011)
+		
+		Infernal 1.0: Inference of RNA alignments
+		E. P. Nawrocki, D. L. Kolbe, and S. R. Eddy
+		Bioinformatics 25:1335-1337 (2009)
 		
 		Gapped BLAST and PSI-BLAST: a new generation of protein database search programs.
 		S. F. Altschul, T. L. Madden, A. A. Schäffer, J. Zhang, Z. Zhang, W. Miller, and D. J. Lipman
