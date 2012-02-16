@@ -327,9 +327,9 @@ sub blastXoof_table {
 	my $query_file = shift;
 	debug "INSIDE tabular OOF blastx\n";
 	my $blastxoof_cmd =
-	    "$Amphora2::Utilities::blastall -p blastx -i $query_file -e 0.1 -w 20 -b 50 -v 50 -d "
-	  . $self->{"blastDir"}
-	  . "/$blastdb_name -m 8 -a "
+	    "$Amphora2::Utilities::blastall -p blastx -i $query_file -e 0.1 -w 20 -b 50000 -v 50000 -d "
+	  . Amphora2::Utilities::get_blastp_db()
+	  . " -m 8 -a "
 	  . $self->{"threads"}
 	  . " 2> /dev/null |";
 	debug "Running $blastxoof_cmd";
@@ -347,10 +347,8 @@ sub blastXoof_full {
 	debug "INSIDE full OOF blastx\n";
 	my $blastxoof_cmd =
 	    "$Amphora2::Utilities::blastall -p blastx -i $query_file -e 0.1 -w 20 -b 50 -v 50 -d "
-	  . $self->{"blastDir"}
-	  . "/$blastdb_name -o "
-	  . $self->{"blastDir"}
-	  . "/$readsCore.blastx -a "
+	  . Amphora2::Utilities::get_blastp_db()
+	  . " -a "
 	  . $self->{"threads"}
 	  . " 2> /dev/null |";
 	debug "Running $blastxoof_cmd";
@@ -368,7 +366,7 @@ returns a stream file handle
 sub bowtie2 {
 	my %args = @_;
 	debug "INSIDE bowtie2\n";
-	my $bowtie2_cmd = "$Amphora2::Utilities::bowtie2align -x ".$args{self}->{"blastDir"}."/rnadb --sam-nohead --sam-nosq --maxins 1000 --local ";
+	my $bowtie2_cmd = "$Amphora2::Utilities::bowtie2align -x ".Amphora2::Utilities::get_bowtie2_db()." --sam-nohead --sam-nosq --maxins 1000 --local ";
 	$bowtie2_cmd .= " -f " if $args{readtype}->{format} eq "fasta";
 	if ( $args{readtype}->{paired} ) {
 		$bowtie2_cmd .= " -1 $args{reads1} -2 $args{reads2} ";
@@ -422,7 +420,7 @@ sub executeRap {
 	my $dbDir = "$Amphora2::Utilities::marker_dir/representatives";
 	$dbDir = $self->{"blastDir"} if ( $custom ne "" );
 	my $out_file = $self->{"blastDir"} . "/$readsCore.rapSearch";
-	my $rapsearch_cmd = "cd ".$self->{"blastDir"}."; $Amphora2::Utilities::rapSearch -q $query_file -d rep -o $out_file -v 20 -b 20 -e -1 -z " . $self->{"threads"};
+	my $rapsearch_cmd = "cd ".$self->{"blastDir"}."; $Amphora2::Utilities::rapSearch -q $query_file -d $Amphora2::Utilities::marker_dir/rep -o $out_file -v 20 -b 20 -e -1 -z " . $self->{"threads"};
 	debug "Running $rapsearch_cmd\n";
 	system($rapsearch_cmd);
 	open( my $RAP_HITS, "$out_file.m8" ) || croak "Unable to read from $out_file.m8";
@@ -439,13 +437,11 @@ Launches blastp, returns a stream
 sub executeBlast {
 	my $self       = shift;
 	my $query_file = shift;
-	my $dbDir      = "$Amphora2::Utilities::marker_dir/representatives";
-	$dbDir = $self->{"blastDir"} if $custom ne "";
+	my $db         = Amphora2::Utilities::get_blastp_db();
 	debug "INSIDE BLAST\n";
-	if ( !-e $self->{"blastDir"} . "/$readsCore.blastp" ) {
-		`$Amphora2::Utilities::blastall $blastp_params -i $query_file -d $dbDir/$blastdb_name -o $self->{"blastDir"}/$readsCore.blastp -a $self->{"threads"}`;
-	}
-	return $self->{"blastDir"} . "/$readsCore.blastp";
+	my $blast_cmd = "$Amphora2::Utilities::blastall $blastp_params -i $query_file -d $db -a ".$self->{"threads"}." |";
+	open(my $BLAST_HITS, $blast_cmd);
+	return $BLAST_HITS;
 }
 
 
@@ -740,43 +736,6 @@ sub prepAndClean {
 	#create a directory for the Reads file being processed.
 	`mkdir $self->{"fileDir"}`  unless ( -e $self->{"fileDir"} );
 	`mkdir $self->{"blastDir"}` unless ( -e $self->{"blastDir"} );
-
-	#when using the default marker package
-	debug "Using the standard marker package\n";
-
-	# use alignments to make an unaligned fasta database containing everything
-	# strip gaps from the alignments
-	open( my $PDBOUT,   ">" . $self->{"blastDir"} . "/$blastdb_name" );
-	open( my $RNADBOUT, ">" . $self->{"blastDir"} . "/rnadb.fasta" );
-	foreach my $marker (@markers) {
-		my $marker_rep = Amphora2::Utilities::get_marker_rep_file( $self, $marker );
-		my $DBOUT = $RNADBOUT;
-		$DBOUT = $PDBOUT if Amphora2::Utilities::is_protein_marker( marker => $marker );
-		open( INALN, "$Amphora2::Utilities::marker_dir/$marker_rep" );
-		while ( my $line = <INALN> ) {
-			if ( $line =~ /^>(.+)/ ) {
-				print $DBOUT "\n>$marker" . "__$1\n";
-			} else {
-				$line =~ s/[-\.\n\r]//g;
-				$line =~ tr/a-z/A-Z/;
-				print $DBOUT $line;
-			}
-		}
-	}
-	print $PDBOUT "\n";
-	print $RNADBOUT "\n";
-	close $PDBOUT;                        # be sure to flush I/O
-	close $RNADBOUT;
-
-	# make a blast database
-	`$Amphora2::Utilities::formatdb -i $self->{"blastDir"}/$blastdb_name -o F -p T -t RepDB`;
-	`cd $self->{"blastDir"} ; mv $blastdb_name rep.faa`;
-
-	# make a rapsearch database
-	`cd $self->{"blastDir"} ; $Amphora2::Utilities::preRapSearch -d rep.faa -n rep`;
-
-	# make a bowtie2 database
-	`cd $self->{"blastDir"} ; $Amphora2::Utilities::bowtie2build rnadb.fasta rnadb`;
 
 	return $self;
 }
