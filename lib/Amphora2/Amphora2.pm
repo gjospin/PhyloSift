@@ -152,7 +152,7 @@ sub run {
 
 	#create a file with a list of markers called markers.list
 	debug "CUSTOM = " . $custom . "\n";
-	my @markers = $self->markerGather($custom);
+	my @markers = Amphora2::Utilities::gather_markers( self=>$self, marker_file => $custom );
 	debug "@markers\n";
 	debug "MODE :: " . $self->{"mode"} . "\n";
 	if ( $self->{"mode"} eq 'blast' || $self->{"mode"} eq 'all' ) {
@@ -176,6 +176,10 @@ sub run {
 	if ( $self->{"mode"} eq 'compare' ) {
 		$self = $self->compare();
 	}
+	if ( $self->{"mode"} eq 'index' ) {
+		Amphora2::Utilities::index_marker_db( self=>$self, markers=>\@markers );
+	}
+	
 }
 
 =head2 function2
@@ -289,57 +293,6 @@ sub prepIsolateFiles {
 	return $self->{"fileDir"} . "/isolates.fasta";
 }
 
-=head2 markerGather
-
-=item *
-
-    ARGS : $markerFile - file to read the marker names from that will be used in the pipeline.
-    Reads markers from a file if specified by the user OR gathers all the markers from the markers directory
-    The Marker names are stored in an Array
-    If the filename is empty, use all the default markers.
-
-=back
-
-=cut
-
-sub markerGather {
-	my $self       = shift;
-	my $markerFile = shift;
-	my @marks      = ();
-
-	#create a file with a list of markers called markers.list
-	if ( $markerFile ne "" ) {
-
-		#gather a custom list of makers, list convention is 1 marker per line
-		open( markersIN, $markerFile );
-		while (<markersIN>) {
-			chomp($_);
-			push( @marks, $_ );
-		}
-		close(markersIN);
-	} else {
-
-		# gather all markers
-		# this is for the original marker set
-		my @files = <$Amphora2::Utilities::marker_dir/*.faa>;
-		foreach my $file (@files) {
-			$file =~ m/\/(\w+).faa/;
-			push( @marks, $1 );
-		}
-
-		# now gather directory packaged markers (new style)
-		open( MLIST, "find $Amphora2::Utilities::marker_dir -maxdepth 1 -mindepth 1 -type d |" );
-		while ( my $line = <MLIST> ) {
-			chomp $line;
-			next if $line =~ /PMPROK/;
-			next if $line =~ /concat/;
-			next if $line =~ /representatives/;
-			$line = basename($line);
-			push( @marks, $line );
-		}
-	}
-	return @marks;
-}
 
 =head2 directoryPrep
 
@@ -426,8 +379,6 @@ sub runPplacer {
 	my $markListRef = shift;
 	debug "PPLACER MARKS @{$markListRef}\n";
 	Amphora2::Utilities::start_timer("runPPlacer");
-	my $treeDir = $self->{"treeDir"};
-	`rm $treeDir/*` if (<$treeDir/*>);
 	Amphora2::pplacer::pplacer( $self, $markListRef );
 	Amphora2::Utilities::end_timer("runPPlacer");
 

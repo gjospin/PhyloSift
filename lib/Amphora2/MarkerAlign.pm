@@ -70,7 +70,7 @@ sub MarkerAlign {
 	debug "AFTER ALIGN and MASK\n";
 
 	#    if($self->{"isolate"} && $self->{"besthit"}){
-	my @markeralignments = getMarkerAlignmentFiles( $self, \@allmarkers );
+	my @markeralignments = getPMPROKMarkerAlignmentFiles( $self, \@allmarkers );
 	my $outputFastaAA = $self->{"alignDir"} . "/" . Amphora2::Utilities::getAlignerOutputFastaAA("concat");
 	Amphora2::Utilities::concatenateAlignments( $self, $outputFastaAA, $self->{"alignDir"} . "/mrbayes.nex", 1, @markeralignments );
 	if ( $self->{"dna"} ) {
@@ -107,7 +107,8 @@ sub directoryPrepAndClean {
 	}
 	return $self;
 }
-my @search_types = ( ".1", ".3", ".rap" );
+
+my @search_types = ("",".1",".3",".rap",".blast");
 
 =cut
 
@@ -120,7 +121,7 @@ sub markerPrepAndRun {
 	my $markRef = shift;
 	debug "ALIGNDIR : " . $self->{"alignDir"} . "\n";
 	foreach my $marker ( @{$markRef} ) {
-		next if !Amphora2::Utilities::is_protein_marker( marker => $marker );
+		next unless Amphora2::Utilities::is_protein_marker(marker=>$marker);
 		my $hmm_file = Amphora2::Utilities::get_marker_hmm_file( $self, $marker, 1 );
 		my $stockholm_file = Amphora2::Utilities::get_marker_stockholm_file( $self, $marker );
 		unless ( -e $hmm_file && -e $stockholm_file ) {
@@ -158,7 +159,7 @@ sub hmmsearchParse {
 		next if !Amphora2::Utilities::is_protein_marker( marker => $marker );
 		my %hmmHits   = ();
 		my %hmmScores = ();
-		open( TBLOUTIN, $self->{"alignDir"} . "/$marker.hmmsearch.tblout" );
+		open( TBLOUTIN, $self->{"alignDir"} . "/$marker.hmmsearch.tblout" ) || next;
 		my $countHits = 0;
 		while (<TBLOUTIN>) {
 			chomp($_);
@@ -297,8 +298,9 @@ sub alignAndMask {
 	my $reverseTranslate = shift;
 	my $markRef          = shift;
 	for ( my $index = 0 ; $index < @{$markRef} ; $index++ ) {
-		my $marker         = ${$markRef}[$index];
-		my $refcount       = 0;
+		my $marker   = ${$markRef}[$index];
+		my $refcount = 0;
+		next unless -e $self->{"alignDir"} . "/$marker.newCandidate";
 		my $stockholm_file = Amphora2::Utilities::get_marker_stockholm_file( $self, $marker );
 		my $hmmalign       = "";
 		my $cmalign        = "";
@@ -427,12 +429,12 @@ sub alignAndMask {
 	}
 }
 
-sub getMarkerAlignmentFiles {
+sub getPMPROKMarkerAlignmentFiles {
 	my $self             = shift;
 	my $markRef          = shift;
 	my @markeralignments = ();
-	for ( my $index = 0 ; $index < @{$markRef} ; $index++ ) {
-		my $marker = ${$markRef}[$index];
+	foreach my $marker(@{$markRef}){
+		next unless $marker =~ /PMPROK/;
 		push( @markeralignments, $self->{"alignDir"} . "/" . Amphora2::Utilities::getAlignerOutputFastaAA($marker) );
 	}
 	return @markeralignments;
