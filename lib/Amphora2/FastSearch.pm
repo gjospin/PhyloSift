@@ -149,7 +149,6 @@ sub launch_searches {
 				$candidate_type = ".blastp";
 			}
 
-			debug "Parsing results from process $count\n";
 			my $hitsref;
 			if ( $count == 2 ) {
 				$hitsref = get_hits_sam($self, $hitstream);
@@ -587,14 +586,26 @@ sub get_hits_sam {
 	return unless defined($HITSTREAM);
 	return \%contig_hits unless defined(fileno $HITSTREAM);
 	while (<$HITSTREAM>) {
-		chomp($_);
 		next if ( $_ =~ /^\@/ );
 		my @fields = split( /\t/, $_ );
 		next if $fields[2] eq "*";	# no hit
 		my $markerName = getMarkerName( $fields[2], "sam" );
 		my $query      = $fields[0];
 		my $score      = $fields[4];
+		my $cigar      = $fields[5];
 		my $qlen = length( $fields[9] );
+		# subtract off soft masking from query length (unaligned portion)
+		my $query_lend = 0;
+		$query_lend += $1 if $cigar =~ /^(\d+)S/;
+		
+		$qlen -= $1 if $cigar =~ /^(\d+)S/;
+		$qlen -= $1 if $cigar =~ /(\d+)S$/;
+		my $hit_seq = substr($fields[9],$query_lend,$qlen);
+		# flip our coordinates if we're in reverse complement
+		# and go back to the start
+		$query_lend = length( $fields[9] ) - $query_lend if($fields[1] & 0x10);
+		$query_lend = $query_lend - $qlen if($fields[1] & 0x10);
+		
 		next if $qlen < 30;	# don't trust anything shorter than 30nt
 
 		# running on short reads, just do one marker per read
@@ -602,7 +613,7 @@ sub get_hits_sam {
 
 		#only keep the top hit
 		if ( $topScore{$query} <= $score ) {
-			$contig_hits{$query} = [ [ $markerName, $score, $fields[3], $fields[3]+$qlen-1, $fields[9] ] ];
+			$contig_hits{$query} = [ [ $markerName, $score, $query_lend, $query_lend+$qlen-1, $hit_seq ] ];
 			$topScore{$query} = $score;
 		}
 	}
