@@ -80,7 +80,6 @@ sub MarkerAlign {
 		my $outputFastaDNA = $self->{"alignDir"} . "/" . Amphora2::Utilities::getAlignerOutputFastaDNA("concat");
 		Amphora2::Utilities::concatenateAlignments( $self, $outputFastaDNA, $self->{"alignDir"} . "/mrbayes-dna.nex", 3, @markeralignments );
 	}
-
 	debug "AFTER concatenateALI\n";
 	return $self;
 }
@@ -108,8 +107,7 @@ sub directoryPrepAndClean {
 	}
 	return $self;
 }
-
-my @search_types = (".1",".3",".rap");
+my @search_types = ( ".1", ".3", ".rap" );
 
 =cut
 
@@ -122,27 +120,27 @@ sub markerPrepAndRun {
 	my $markRef = shift;
 	debug "ALIGNDIR : " . $self->{"alignDir"} . "\n";
 	foreach my $marker ( @{$markRef} ) {
+		next if !Amphora2::Utilities::is_protein_marker( marker => $marker );
 		my $hmm_file = Amphora2::Utilities::get_marker_hmm_file( $self, $marker, 1 );
 		my $stockholm_file = Amphora2::Utilities::get_marker_stockholm_file( $self, $marker );
-		unless(-e $hmm_file && -e $stockholm_file){
+		unless ( -e $hmm_file && -e $stockholm_file ) {
 			my $trimfinalFile = Amphora2::Utilities::getTrimfinalMarkerFile( $self, $marker );
-	
+
 			#converting the marker's reference alignments from Fasta to Stockholm (required by Hmmer3)
 			Amphora2::Utilities::fasta2stockholm( "$Amphora2::Utilities::marker_dir/$trimfinalFile", $stockholm_file );
-	
+
 			#build the Hmm for the marker using Hmmer3
 			if ( !-e $hmm_file ) {
 				`$Amphora2::Utilities::hmmbuild $hmm_file $stockholm_file`;
 			}
-		}		
-		
+		}
 		`rm -f $self->{"alignDir"}/$marker.hmmsearch.tblout`;
-		foreach my $type(@search_types){
-			my $candidate = $self->{"blastDir"}."/$marker$type.candidate";
+		foreach my $type (@search_types) {
+			my $candidate = $self->{"blastDir"} . "/$marker$type.candidate";
 			next unless -e $candidate;
-			`$Amphora2::Utilities::hmmsearch -E 10 --cpu $self->{"threads"} --max --tblout $self->{"alignDir"}/$marker.hmmsearch.tmp.tblout $hmm_file $candidate > $self->{"alignDir"}/$marker.hmmsearch.out`;
+`$Amphora2::Utilities::hmmsearch -E 10 --cpu $self->{"threads"} --max --tblout $self->{"alignDir"}/$marker.hmmsearch.tmp.tblout $hmm_file $candidate > $self->{"alignDir"}/$marker.hmmsearch.out`;
 			`cat $self->{"alignDir"}/$marker.hmmsearch.tmp.tblout >> $self->{"alignDir"}/$marker.hmmsearch.tblout`;
-			unlink($self->{"alignDir"}."/$marker.hmmsearch.tmp.tblout");
+			unlink( $self->{"alignDir"} . "/$marker.hmmsearch.tmp.tblout" );
 		}
 	}
 	return $self;
@@ -156,7 +154,8 @@ sub hmmsearchParse {
 	my $self    = shift;
 	my $markRef = shift;
 	for ( my $index = 0 ; $index < @{$markRef} ; $index++ ) {
-		my $marker    = ${$markRef}[$index];
+		my $marker = ${$markRef}[$index];
+		next if !Amphora2::Utilities::is_protein_marker( marker => $marker );
 		my %hmmHits   = ();
 		my %hmmScores = ();
 		open( TBLOUTIN, $self->{"alignDir"} . "/$marker.hmmsearch.tblout" );
@@ -183,8 +182,8 @@ sub hmmsearchParse {
 			next;
 		}
 		open( NEWCANDIDATE, ">" . $self->{"alignDir"} . "/$marker.newCandidate" );
-		foreach my $type(@search_types){
-			my $candidate = $self->{"blastDir"}."/$marker$type.candidate";
+		foreach my $type (@search_types) {
+			my $candidate = $self->{"blastDir"} . "/$marker$type.candidate";
 			next unless -e $candidate;
 			my $seqin = new Bio::SeqIO( '-file' => $candidate );
 			while ( my $sequence = $seqin->next_seq ) {
@@ -199,7 +198,7 @@ sub hmmsearchParse {
 	return $self;
 }
 
-=head2 alignAndMask
+=head2 writeAlignedSeq
 
 =cut
 
@@ -276,12 +275,12 @@ sub aa_to_dna_aln {
 		}
 		$nt_seqstr .= $GAP x ( ( $alnlen * 3 ) - length($nt_seqstr) );
 		my $newdna = Bio::LocatableSeq->new(
-											 -display_id => $id,
-											 -alphabet   => 'dna',
-											 -start      => 1,
-											 -end        => $j,
-											 -strand     => 1,
-											 -seq        => $nt_seqstr,
+											 -display_id    => $id,
+											 -alphabet      => 'dna',
+											 -start         => 1,
+											 -end           => $j,
+											 -strand        => 1,
+											 -seq           => $nt_seqstr,
 											 -nowarnonempty => 1
 		);
 		$dnaalign->add_seq($newdna);
@@ -289,32 +288,61 @@ sub aa_to_dna_aln {
 	return $dnaalign;
 }
 
+=head2 alignAndMask
+
+=cut 
+
 sub alignAndMask {
 	my $self             = shift;
 	my $reverseTranslate = shift;
 	my $markRef          = shift;
 	for ( my $index = 0 ; $index < @{$markRef} ; $index++ ) {
-		my $marker   = ${$markRef}[$index];
-		my $refcount = 0;
+		my $marker         = ${$markRef}[$index];
+		my $refcount       = 0;
 		my $stockholm_file = Amphora2::Utilities::get_marker_stockholm_file( $self, $marker );
-		my $hmm_file = Amphora2::Utilities::get_marker_hmm_file( $self, $marker, 1 );
-		open( HMM, $hmm_file );
-		while ( my $line = <HMM> ) {
-			if ( $line =~ /NSEQ\s+(\d+)/ ) {
-				$refcount = $1;
-				last;
+		my $hmmalign       = "";
+		my $cmalign        = "";
+		if ( Amphora2::Utilities::is_protein_marker( marker => $marker ) ) {
+			my $hmm_file = Amphora2::Utilities::get_marker_hmm_file( $self, $marker, 1 );
+			open( HMM, $hmm_file );
+			while ( my $line = <HMM> ) {
+				if ( $line =~ /NSEQ\s+(\d+)/ ) {
+					$refcount = $1;
+					last;
+				}
 			}
-		}
 
-		# Align the hits to the reference alignment using Hmmer3
-		# pipe in the aligned sequences, trim them further, and write them back out
-		my $hmmalign =
-		    "$Amphora2::Utilities::hmmalign --outformat afa --mapali "
-		  . $stockholm_file
-		  . " $hmm_file "
-		  . $self->{"alignDir"}
-		  . "/$marker.newCandidate";
-		$hmmalign .= " |";
+			# Align the hits to the reference alignment using Hmmer3
+			# pipe in the aligned sequences, trim them further, and write them back out
+			$hmmalign =
+			    "$Amphora2::Utilities::hmmalign --outformat afa --mapali "
+			  . $stockholm_file
+			  . " $hmm_file "
+			  . $self->{"alignDir"}
+			  . "/$marker.newCandidate" . " |";
+		} else {
+			next if ( !-e $self->{"blastDir"} . "/$marker.rna.candidate" );
+			$refcount = Amphora2::Utilities::get_count_from_reps( $self, $marker );
+
+			#if the marker is rna, use infernal instead of hmmalign
+			$cmalign =
+			    "$Amphora2::Utilities::cmalign -q --dna "
+			  . Amphora2::Utilities::get_marker_cm_file( $self, $marker ) . " "
+			  . $self->{"blastDir"}
+			  . "/$marker.rna.candidate" . " | "
+			  . "perl $Amphora2::Utilities::stockholm2fasta -g | ";
+
+			#			my $infernal_stk = Bio::AlignIO->new( -file => $cmalign, -format => "Stockholm" );
+			#			my $cmalign_pipe = $self->{"alignDir"} . "/cmalign.pipe";
+			#			`mkfifo $cmalign_pipe`;
+			#my $infernal_aln = Bio::AlignIO->new( -file => ">".$cmalign_pipe, -format => "Fasta" );
+			#			my $infernal_aln = Bio::AlignIO->new( -file => ">".$self->{"alignDir"}."/".$marker."_infernal.aln", -format => "Fasta" );
+			#			while ( my $aln = $infernal_aln->next_aln ) {
+			#				$infernal_aln->write_aln($aln);
+			#			}
+			#			print $self->{"alignDir"}."/".$marker."_infernal.aln\n";
+			#open($hmmalign, $self->{"alignDir"}."/".$marker."_infernal.aln");
+		}
 		my $outputFastaAA  = $self->{"alignDir"} . "/" . Amphora2::Utilities::getAlignerOutputFastaAA($marker);
 		my $outputFastaDNA = $self->{"alignDir"} . "/" . Amphora2::Utilities::getAlignerOutputFastaDNA($marker);
 		open( my $aliout, ">" . $outputFastaAA ) or die "Couldn't open $outputFastaAA for writing\n";
@@ -322,16 +350,24 @@ sub alignAndMask {
 		my $prev_seq;
 		my $prev_name;
 		my $seqCount = 0;
-		open( HMMALIGN,        $hmmalign );
-		open( my $unmaskedout, ">" . $self->{"alignDir"} . "/$marker.unmasked" );
-		my $null;
 
+		if ( Amphora2::Utilities::is_protein_marker( marker => $marker ) ) {
+			open( HMMALIGN, $hmmalign );
+		} else {
+			open( HMMALIGN, $cmalign );
+		}
+		open( my $UNMASKEDOUT, ">" . $self->{"alignDir"} . "/$marker.unmasked" );
+		my $null;
 		while ( my $line = <HMMALIGN> ) {
 			chomp $line;
 			if ( $line =~ /^>(.+)/ ) {
 				my $new_name = $1;
-				writeAlignedSeq( $self, $updatedout, $null, $prev_name, $prev_seq, $seqCount ) if $seqCount <= $refcount && $seqCount > 0;
-				writeAlignedSeq( $self, $aliout, $unmaskedout, $prev_name, $prev_seq, $seqCount ) if $seqCount > $refcount;
+				if ( Amphora2::Utilities::is_protein_marker( marker => $marker ) ) {
+					writeAlignedSeq( $self, $updatedout, $null, $prev_name, $prev_seq, $seqCount ) if $seqCount <= $refcount && $seqCount > 0;
+					writeAlignedSeq( $self, $aliout, $UNMASKEDOUT, $prev_name, $prev_seq, $seqCount ) if $seqCount > $refcount;
+				} else {
+					writeAlignedSeq( $self, $aliout, $UNMASKEDOUT, $prev_name, $prev_seq, $seqCount ) if $seqCount > 0;
+				}
 				$seqCount++;
 				$prev_name = $new_name;
 				$prev_seq  = "";
@@ -339,10 +375,14 @@ sub alignAndMask {
 				$prev_seq .= $line;
 			}
 		}
-		writeAlignedSeq( $self, $updatedout, $null,        $prev_name, $prev_seq, $seqCount ) if $seqCount <= $refcount;
-		writeAlignedSeq( $self, $aliout,     $unmaskedout, $prev_name, $prev_seq, $seqCount ) if $seqCount > $refcount;
+		if ( Amphora2::Utilities::is_protein_marker( marker => $marker ) ) {
+			writeAlignedSeq( $self, $updatedout, $null,        $prev_name, $prev_seq, $seqCount ) if $seqCount <= $refcount;
+			writeAlignedSeq( $self, $aliout,     $UNMASKEDOUT, $prev_name, $prev_seq, $seqCount ) if $seqCount > $refcount;
+		} else {
+			writeAlignedSeq( $self, $aliout, $UNMASKEDOUT, $prev_name, $prev_seq, $seqCount );
+		}
 		$seqCount -= $refcount;
-		close $unmaskedout;
+		close $UNMASKEDOUT;
 
 		# do we need to output a nucleotide alignment in addition to the AA alignment?
 		if ( -e $self->{"blastDir"} . "/$marker.candidate.ffn" && -e $outputFastaAA ) {

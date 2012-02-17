@@ -114,6 +114,8 @@ our $raxml        = "";
 our $readconciler = "";
 our $bowtie2align = "";
 our $bowtie2build = "";
+our $stockholm2fasta = "";
+our $cmalign="";
 
 sub programChecks {
 	eval 'require Bio::Seq;';
@@ -138,7 +140,9 @@ sub programChecks {
 	$guppy    = get_program_path( "guppy",    $Amphora2::Settings::a2_path );
 	$taxit    = get_program_path( "taxit",    $Amphora2::Settings::a2_path );
 	$rppr     = get_program_path( "rppr",     $Amphora2::Settings::a2_path );
+	$cmalign = get_program_path( "cmalign" , $Amphora2::Settings::a2_path );
 	$hmmalign = get_program_path( "hmmalign", $Amphora2::Settings::hmmer3_path );
+	$stockholm2fasta = get_program_path("stockholm2fasta.pl", $Amphora2::Settings::a2_path);
 	if ( $hmmalign eq "" ) {
 
 		#program not found return;
@@ -677,6 +681,21 @@ sub getNcbiMapFile {
 	} else {
 		return "$marker.updated.ncbimap";
 	}
+}
+
+=head2 get_count_from_reps
+
+input marker name
+Returns the number of representatives for a marker using the .rep file from the reference package
+=cut
+
+sub get_count_from_reps{
+	my $self = shift;
+	my $marker = shift;
+	my $marker_file = get_marker_rep_file($self, $marker);
+	my $rep_num = `grep -c '>' $marker_dir/$marker_file`;
+	chomp($rep_num);
+	return $rep_num;
 }
 
 =head2 concatenateAlignments
