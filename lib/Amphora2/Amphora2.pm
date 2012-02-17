@@ -379,8 +379,6 @@ sub runPplacer {
 	my $markListRef = shift;
 	debug "PPLACER MARKS @{$markListRef}\n";
 	Amphora2::Utilities::start_timer("runPPlacer");
-	my $treeDir = $self->{"treeDir"};
-	`rm $treeDir/*` if (<$treeDir/*>);
 	Amphora2::pplacer::pplacer( $self, $markListRef );
 	Amphora2::Utilities::end_timer("runPPlacer");
 
