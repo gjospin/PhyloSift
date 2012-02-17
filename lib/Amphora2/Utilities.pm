@@ -474,6 +474,7 @@ sub get_marker_hmm_file {
 		# using new-style marker directories
 		return "$marker_dir/$marker/$marker.hmm";
 	} else {
+		return $self->{"alignDir"}."/$marker.hmm" if(-e "$marker_dir/$marker.hmm" && $local);
 		return "$marker_dir/$marker.hmm";
 	}
 }
@@ -839,6 +840,7 @@ sub get_bowtie2_db {
 =head2 index_marker_db
 
 Indexes the marker database for searches with rapsearch2, blastall, and bowtie2
+Input: marker list and self
 
 =cut
 
