@@ -300,11 +300,11 @@ sub alignAndMask {
 	for ( my $index = 0 ; $index < @{$markRef} ; $index++ ) {
 		my $marker   = ${$markRef}[$index];
 		my $refcount = 0;
-		next unless -e $self->{"alignDir"} . "/$marker.newCandidate";
 		my $stockholm_file = Amphora2::Utilities::get_marker_stockholm_file( $self, $marker );
 		my $hmmalign       = "";
 		my $cmalign        = "";
 		if ( Amphora2::Utilities::is_protein_marker( marker => $marker ) ) {
+			next unless -e $self->{"alignDir"} . "/$marker.newCandidate";
 			my $hmm_file = Amphora2::Utilities::get_marker_hmm_file( $self, $marker, 1 );
 			open( HMM, $hmm_file );
 			while ( my $line = <HMM> ) {
@@ -328,22 +328,10 @@ sub alignAndMask {
 
 			#if the marker is rna, use infernal instead of hmmalign
 			$cmalign =
-			    "$Amphora2::Utilities::cmalign -q --dna "
+			    "$Amphora2::Utilities::cmalign -q -l --dna "
 			  . Amphora2::Utilities::get_marker_cm_file( $self, $marker ) . " "
 			  . $self->{"blastDir"}
-			  . "/$marker.rna.candidate" . " | "
-			  . "perl $Amphora2::Utilities::stockholm2fasta -g | ";
-
-			#			my $infernal_stk = Bio::AlignIO->new( -file => $cmalign, -format => "Stockholm" );
-			#			my $cmalign_pipe = $self->{"alignDir"} . "/cmalign.pipe";
-			#			`mkfifo $cmalign_pipe`;
-			#my $infernal_aln = Bio::AlignIO->new( -file => ">".$cmalign_pipe, -format => "Fasta" );
-			#			my $infernal_aln = Bio::AlignIO->new( -file => ">".$self->{"alignDir"}."/".$marker."_infernal.aln", -format => "Fasta" );
-			#			while ( my $aln = $infernal_aln->next_aln ) {
-			#				$infernal_aln->write_aln($aln);
-			#			}
-			#			print $self->{"alignDir"}."/".$marker."_infernal.aln\n";
-			#open($hmmalign, $self->{"alignDir"}."/".$marker."_infernal.aln");
+			  . "/$marker.rna.candidate" . " | ";
 		}
 		my $outputFastaAA  = $self->{"alignDir"} . "/" . Amphora2::Utilities::getAlignerOutputFastaAA($marker);
 		my $outputFastaDNA = $self->{"alignDir"} . "/" . Amphora2::Utilities::getAlignerOutputFastaDNA($marker);
@@ -353,14 +341,18 @@ sub alignAndMask {
 		my $prev_name;
 		my $seqCount = 0;
 
+		my @lines;
 		if ( Amphora2::Utilities::is_protein_marker( marker => $marker ) ) {
 			open( HMMALIGN, $hmmalign );
+			@lines = <HMMALIGN>;
 		} else {
-			open( HMMALIGN, $cmalign );
+			open( my $CMALIGN, $cmalign );
+			my $sto = Amphora2::Utilities::stockholm2fasta(in=>$CMALIGN);
+			@lines = split(/\n/, $sto);
 		}
 		open( my $UNMASKEDOUT, ">" . $self->{"alignDir"} . "/$marker.unmasked" );
 		my $null;
-		while ( my $line = <HMMALIGN> ) {
+		foreach my $line ( @lines ) {
 			chomp $line;
 			if ( $line =~ /^>(.+)/ ) {
 				my $new_name = $1;
