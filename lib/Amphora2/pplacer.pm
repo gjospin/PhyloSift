@@ -61,6 +61,7 @@ sub pplacer {
 	foreach my $marker ( @{$markRef} ) {
 		my $readAlignmentFile    = $self->{"alignDir"} . "/" . Amphora2::Utilities::getAlignerOutputFastaAA($marker);
 		my $readAlignmentDNAFile = $self->{"alignDir"} . "/" . Amphora2::Utilities::getAlignerOutputFastaDNA($marker);
+		next unless -e $readAlignmentFile || -e $readAlignmentDNAFile;
 		my $markerPackage        = Amphora2::Utilities::getMarkerPackage( $self, $marker );
 		print STDERR "Running Placer on $marker ....\t";
 		my $placeFile    = Amphora2::Utilities::getReadPlacementFile($marker);
