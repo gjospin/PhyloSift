@@ -103,20 +103,22 @@ sub get_program_path {
 }
 
 # external programs used by Amphora2
-our $pplacer      = "";
-our $guppy        = "";
-our $rppr         = "";
-our $taxit        = "";
-our $hmmalign     = "";
-our $hmmsearch    = "";
-our $hmmbuild     = "";
-our $blastall     = "";
-our $formatdb     = "";
-our $rapSearch    = "";
-our $preRapSearch = "";
-our $fast_tree    = "";
-our $raxml        = "";
-our $readconciler = "";
+our $pplacer         = "";
+our $guppy           = "";
+our $rppr            = "";
+our $taxit           = "";
+our $hmmalign        = "";
+our $hmmsearch       = "";
+our $hmmbuild        = "";
+our $blastall        = "";
+our $formatdb        = "";
+our $rapSearch       = "";
+our $preRapSearch    = "";
+our $raxml           = "";
+our $readconciler    = "";
+our $bowtie2align    = "";
+our $bowtie2build    = "";
+our $cmalign         = "";
 
 sub programChecks {
 	eval 'require Bio::Seq;';
@@ -128,20 +130,21 @@ sub programChecks {
 	if ( $pplacer eq "" ) {
 
 		#program not found return;
-		carp("pplacer v1.1.alpha09 not found");
+		carp("pplacer not found");
 		return 1;
 	} else {
 		`$pplacer --version` =~ m/v1.1.alpha(\d+)/;
 		if ( $1 < 10 ) {
 
 			# pplacer was found but the version doesn't match the one tested with Amphora
-			carp("Warning : a different version of pplacer was found. Amphora-2 was tested with pplacer v1.1.alpha09\n");
+			carp("Warning : a different version of pplacer was found. Amphora-2 was tested with pplacer v1.1.alpha10\n");
 		}
 	}
-	$guppy    = get_program_path( "guppy",    $Amphora2::Settings::a2_path );
-	$taxit    = get_program_path( "taxit",    $Amphora2::Settings::a2_path );
-	$rppr     = get_program_path( "rppr",     $Amphora2::Settings::a2_path );
-	$hmmalign = get_program_path( "hmmalign", $Amphora2::Settings::hmmer3_path );
+	$guppy           = get_program_path( "guppy",              $Amphora2::Settings::a2_path );
+	$taxit           = get_program_path( "taxit",              $Amphora2::Settings::a2_path );
+	$rppr            = get_program_path( "rppr",               $Amphora2::Settings::a2_path );
+	$cmalign         = get_program_path( "cmalign",            $Amphora2::Settings::a2_path );
+	$hmmalign        = get_program_path( "hmmalign",           $Amphora2::Settings::hmmer3_path );
 	if ( $hmmalign eq "" ) {
 
 		#program not found return;
@@ -172,6 +175,16 @@ sub programChecks {
 		return 1;
 	}
 	$readconciler = get_program_path( "readconciler", $Amphora2::Settings::a2_path );
+
+	$bowtie2align = get_program_path( "bowtie2-align", $Amphora2::Settings::bowtie2_path );
+	if ( $bowtie2align eq "" ) {
+
+		#program not found return;
+		carp("bowtie2 not found");
+		return 1;
+	}
+	$bowtie2build = get_program_path( "bowtie2-build", $Amphora2::Settings::bowtie2_path );
+
 	return 0;
 }
 
@@ -271,6 +284,8 @@ sub dataChecks {
 =head2 fasta2stockholm
 
 Convert a bunch of fasta files to stockholm format
+This code is adapted from fasta2stockholm.pl, (c) Ian Holmes and licensed under the GPL
+See https://github.com/ihh/dart/ for the original source code
 
 =cut
 
@@ -332,6 +347,59 @@ sub fasta2stockholm {
 	print STOCKOUT "//\n";
 }
 
+=head2 stockholm2fasta
+
+Convert a stockholm file to fasta format
+This code is adapted from stockholm2fasta.pl, (c) Ian Holmes and licensed under the GPL
+See https://github.com/ihh/dart/ for the original source code
+
+=cut
+
+sub stockholm2fasta {
+	my %args = @_;
+	my $columns = $args{columns} || 80;	# number of columns in fasta
+	my $gapped  = $args{gapped} || 1;	# should gapped fasta (aligned) be written?
+	my $sorted = $args{sorted} || 1;		# should sequences be sorted?
+	my $STREAMIN = $args{in};
+
+	my %seq;
+	my $outbuffer="";
+	while (<$STREAMIN>) {
+		next unless /\S/;
+		next if /^\s*\#/;
+		if (/^\s*\/\//) { $outbuffer .= printseq(columns=>$columns, sorted=>$sorted, seq=>\%seq); }
+		else {
+			chomp;
+			my ( $name, $seq ) = split;
+			$seq =~ s/[\.\-]//g unless $gapped;
+			$seq{$name} .= $seq;
+		}
+	}
+	$outbuffer .= printseq(columns=>$columns, sorted=>$sorted, seq=>\%seq, out=>$args{out});
+	return $outbuffer;
+}
+
+sub printseq{
+	my %args = @_;
+	my $out = "";
+	if ($args{sorted}) {
+		foreach my $key ( sort keys %{$args{seq}} ) {
+			$out .= ">$key\n";
+			for ( my $i = 0 ; $i < length ($args{seq}->{$key}) ; $i += $args{columns} ) {
+				$out .= substr( $args{seq}->{$key}, $i, $args{columns} ) . "\n";
+			}
+		}
+	} else {
+		while ( my ( $name, $seq ) = each %{$args{seq}} ) {
+			$out .= ">$name\n";
+			for ( my $i = 0 ; $i < length $seq ; $i += $args{columns} ) {
+				$out .= substr( $seq, $i, $args{columns} ) . "\n";
+			}
+		}
+	}
+	return $out;
+}
+
 =head2 makeNameTable
 
 creates a file with a table of name to marker ID mappings
@@ -358,17 +426,29 @@ sub readNameTable {
 }
 
 sub get_marker_length {
-	my $self     = shift;
-	my $marker   = shift;
-	my $hmm_file = get_marker_hmm_file( $self, $marker );
-	my $length   = 0;
-	open( HMM, $hmm_file ) || croak "Unable to open $hmm_file\n";
-	while ( my $line = <HMM> ) {
-		if ( $line =~ /LENG\s+(\d+)/ ) {
-			$length = $1;
-			last;
+	my $self   = shift;
+	my $marker = shift;
+	my $length = 0;
+	if ( is_protein_marker( marker => $marker ) ) {
+		my $hmm_file = get_marker_hmm_file( $self, $marker );
+		open( HMM, $hmm_file ) || croak "Unable to open $hmm_file\n";
+		while ( my $line = <HMM> ) {
+			if ( $line =~ /LENG\s+(\d+)/ ) {
+				$length = $1;
+				last;
+			}
+		}
+	} else {
+		my $cm_file = get_marker_cm_file( $self, $marker );
+		open( CM, $cm_file ) || croak "Unable to open $cm_file\n";
+		while ( my $line = <CM> ) {
+			if ( $line =~ /CLEN\s+(\d+)/ ) {
+				$length = $1;
+				last;
+			}
 		}
 	}
+
 	return $length;
 }
 
@@ -458,8 +538,22 @@ sub get_marker_hmm_file {
 		# using new-style marker directories
 		return "$marker_dir/$marker/$marker.hmm";
 	} else {
+		return $self->{"alignDir"} . "/$marker.hmm" if ( -e "$marker_dir/$marker.hmm" && $local );
 		return "$marker_dir/$marker.hmm";
 	}
+}
+
+=head2 get_marker_cm_file
+
+Returns the CM (infernal covarion model) file for the marker
+
+=cut
+
+sub get_marker_cm_file {
+	my $self    = shift;
+	my $marker  = shift;
+	my $updated = $self->{"updated"} ? ".updated" : "";
+	return "$marker_dir/$marker$updated/$marker.cm";
 }
 
 =head2 get_marker_stockholm_file
@@ -479,6 +573,22 @@ sub get_marker_stockholm_file {
 	} else {
 		return "$marker_dir/$marker.updated/$marker.stk";
 	}
+}
+
+=head2 is_protein_marker
+
+Returns 1 if the marker named in 'marker' is protein sequence (0 if RNA or DNA)
+
+=cut
+
+sub is_protein_marker {
+	my %args   = @_;
+	my $marker = $args{marker};
+
+	# only protein markers have HMMs
+	return 1 if ( -e "$marker_dir/$marker/$marker.hmm" );
+	return 1 if ( -e "$marker_dir/$marker.hmm" );
+	return 0;
 }
 
 =head2 getFastaMarkerFile
@@ -635,6 +745,21 @@ sub getNcbiMapFile {
 	}
 }
 
+=head2 get_count_from_reps
+
+input marker name
+Returns the number of representatives for a marker using the .rep file from the reference package
+=cut
+
+sub get_count_from_reps {
+	my $self        = shift;
+	my $marker      = shift;
+	my $marker_file = get_marker_rep_file( $self, $marker );
+	my $rep_num     = `grep -c '>' $marker_dir/$marker_file`;
+	chomp($rep_num);
+	return $rep_num;
+}
+
 =head2 concatenateAlignments
 
 creates a file with a table of name to marker ID mappings
@@ -765,44 +890,196 @@ sub marker_oldstyle {
 	return 0;
 }
 
+=head2 open_sequence_file
+
+Opens a sequence file, either directly or by decompressing it with gzip or bzip2
+Returns an open filehandle
+
+=cut
+
+sub open_sequence_file {
+	my %args = @_;
+	my $F1IN;
+	if ( $args{file} =~ /\.gz$/ ) {
+		open( $F1IN, "zcat $args{file} |" );
+	} elsif ( $args{file} =~ /\.bz2$/ ) {
+		open( $F1IN, "bzcat $args{file} |" );
+	} else {
+		open( $F1IN, $args{file} );
+	}
+	return $F1IN;
+}
+
+sub get_blastp_db {
+	return "$marker_dir/blastrep";
+}
+
+sub get_bowtie2_db {
+	return "$marker_dir/rnadb";
+}
+
+=head2 index_marker_db
+
+Indexes the marker database for searches with rapsearch2, blastall, and bowtie2
+Input: marker list and self
+
+=cut
+
+sub index_marker_db {
+	my %args    = @_;
+	my @markers = @{ $args{markers} };
+
+	# use alignments to make an unaligned fasta database containing everything
+	# strip gaps from the alignments
+	my $bowtie2_db       = get_bowtie2_db();
+	my $bowtie2_db_fasta = "$bowtie2_db.fasta";
+	open( my $PDBOUT,   ">" . get_blastp_db() );
+	open( my $RNADBOUT, ">" . $bowtie2_db_fasta );
+	foreach my $marker (@markers) {
+		my $marker_rep = get_marker_rep_file( $args{self}, $marker );
+		my $DBOUT = $RNADBOUT;
+		$DBOUT = $PDBOUT if is_protein_marker( marker => $marker );
+		open( INALN, "$marker_dir/$marker_rep" );
+		while ( my $line = <INALN> ) {
+			if ( $line =~ /^>(.+)/ ) {
+				print $DBOUT "\n>$marker" . "__$1\n";
+			} else {
+				$line =~ s/[-\.\n\r]//g;
+				$line =~ tr/a-z/A-Z/;
+				print $DBOUT $line;
+			}
+		}
+	}
+	print $PDBOUT "\n";
+	print $RNADBOUT "\n";
+	close $PDBOUT;    # be sure to flush I/O
+	close $RNADBOUT;
+
+	# make a blast database
+	my $blastp_db = get_blastp_db();
+	`$Amphora2::Utilities::formatdb -i $blastp_db -o F -p T -t RepDB`;
+	`cd $marker_dir ; mv $blastp_db rep.faa`;
+
+	# make a rapsearch database
+	`cd $marker_dir ; $Amphora2::Utilities::preRapSearch -d rep.faa -n rep`;
+	unlink("$marker_dir/rep.faa");    # don't need this anymore!
+
+	# make a bowtie2 database
+	`cd $marker_dir ; $Amphora2::Utilities::bowtie2build $bowtie2_db_fasta $bowtie2_db`;
+}
+
+=head2 gather_markers
+
+=item *
+
+    ARGS : $markerFile - file to read the marker names from that will be used in the pipeline.
+    Reads markers from a file if specified by the user OR gathers all the markers from the markers directory
+    The Marker names are stored in an Array
+    If the filename is empty, use all the default markers.
+
+=back
+
+=cut
+
+sub gather_markers {
+	my %args       = @_;
+	my $self       = $args{self};
+	my $markerFile = $args{marker_file};
+	my @marks      = ();
+
+	#create a file with a list of markers called markers.list
+	if ( $markerFile ne "" ) {
+
+		#gather a custom list of makers, list convention is 1 marker per line
+		open( markersIN, $markerFile );
+		while (<markersIN>) {
+			chomp($_);
+			push( @marks, $_ );
+		}
+		close(markersIN);
+	} else {
+
+		# gather all markers
+		# this is for the original marker set
+		my @files = <$Amphora2::Utilities::marker_dir/*.faa>;
+		foreach my $file (@files) {
+			$file =~ m/\/(\w+).faa/;
+			push( @marks, $1 );
+		}
+
+		# now gather directory packaged markers (new style)
+		open( MLIST, "find $Amphora2::Utilities::marker_dir -maxdepth 1 -mindepth 1 -type d |" );
+		while ( my $line = <MLIST> ) {
+			chomp $line;
+			next if $line =~ /PMPROK/;
+			next if $line =~ /concat/;
+			next if $line =~ /representatives/;
+			$line = basename($line);
+			push( @marks, $line );
+		}
+	}
+	return @marks;
+}
+
 =head2 get_sequence_input_type
 
-Checks whether input is either short sequence reads, e.g. < 500nt or assembled fragments.
-Reads the whole file to find the longest fragment.
+Checks whether input is FastA, FastQ, which quality type (33 or 64), and DNA or AA
+Returns a hash reference with the values 'seqtype', 'format', and 'qtype' populated.
 
 =cut
 
 sub get_sequence_input_type {
 	my $file = shift;
-	open( FILE, $file );
-	my $counter  = 0;
-	my $maxfound = 0;
-	my $dnacount = 0;
-	my $seqtype  = "dna";
-	my $length   = "long";
-	my $format   = "unknown";
+
+	my %type;
+	my $FILE = open_sequence_file( file => $file );
+
+	my $counter    = 0;
+	my $maxfound   = 0;
+	my $dnacount   = 0;
+	my $line_count = 0;
+	$type{seqtype} = "dna";
+	$type{format}  = "unknown";
+	$type{qtype}   = "none";
 	my $allcount = 0;
-	while ( my $line = <FILE> ) {
+	my $sequence = 1;
+	my $minq     = 255;    # minimum fastq quality score (for detecting phred33/phred64)
+	while ( my $line = <$FILE> ) {
 
 		if ( $line =~ /^>/ ) {
 			$maxfound = $counter > $maxfound ? $counter : $maxfound;
-			$counter  = 0;
-			$format   = "fasta" if $format eq "unknown";
-		} elsif ( $line =~ /^@/ || $line =~ /^\+/ ) {
 			$counter = 0;
-			$format = "fastq" if $format eq "unknown";
-		} else {
+			$type{format} = "fasta" if $type{format} eq "unknown";
+		} elsif ( $line =~ /^@/ || $line =~ /^\+/ ) {
+			$counter  = 0;
+			$sequence = 1;
+			$type{format} = "fastq" if $type{format} eq "unknown";
+		} elsif ( $line =~ /^\+/ ) {
+			$sequence = 0;
+			$type{format} = "fastq" if $type{format} eq "unknown";
+		} elsif ( $type{format} eq "fastq" && !$sequence ) {
+
+			# check whether qualities are phred33 or phred64
+			for my $q ( split( //, $line ) ) {
+				$minq = ord($q) if ord($q) < $minq;
+			}
+		} elsif ($sequence) {
 			$counter  += length($line) - 1;
 			$dnacount += $line =~ tr/[ACGTNacgtn]//;
 			$allcount += length($line) - 1;
 		}
+		$line_count++;
+		last if ( $line_count > 1000 );
 	}
+	close($FILE);
+
 	$maxfound = $counter > $maxfound ? $counter : $maxfound;
-	$seqtype = "protein" if ( $dnacount < $allcount * 0.75 );
-	$seqtype = "dna" if ( $format eq "fastq" );    # nobody using protein fastq (yet)
-	my $aamult = $seqtype eq "protein" ? 3 : 1;
-	$length = "short" if $maxfound < ( 500 / $aamult );
-	return ( $seqtype, $length, $format );
+	$type{seqtype} = "protein" if ( $dnacount < $allcount * 0.75 );
+	$type{seqtype} = "dna"     if ( $type{format} eq "fastq" );       # nobody using protein fastq (yet)
+	$type{qtype}   = "phred64" if $minq < 255;
+	$type{qtype}   = "phred33" if $minq < 64;
+	$type{paired} = 0;                                                # TODO: detect interleaved read pairing
+	return \%type;
 }
 
 =head2 get_sequence_input_type_quickndirty
@@ -892,6 +1169,10 @@ sub print_citations {
 		RAPSearch2: a fast and memory-efficient protein similarity search tool for next generation sequencing data.
 		Yongan Zhao, Haixu Tang, and Yuzhen Ye
 		Bioinformatics (2011)
+		
+		Infernal 1.0: Inference of RNA alignments
+		E. P. Nawrocki, D. L. Kolbe, and S. R. Eddy
+		Bioinformatics 25:1335-1337 (2009)
 		
 		Gapped BLAST and PSI-BLAST: a new generation of protein database search programs.
 		S. F. Altschul, T. L. Madden, A. A. Schäffer, J. Zhang, Z. Zhang, W. Miller, and D. J. Lipman

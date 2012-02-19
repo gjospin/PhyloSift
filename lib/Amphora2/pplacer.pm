@@ -4,6 +4,7 @@ use Getopt::Long;
 use Bio::AlignIO;
 use Amphora2::Amphora2;
 use Amphora2::Utilities qw(debug);
+use Amphora2::Summarize;
 
 =head1 NAME
 
@@ -40,36 +41,47 @@ sub pplacer {
 	my $self    = shift;
 	my $markRef = shift;
 	directoryPrepAndClean($self);
+
+	# if we have a coverage map then weight the placements
+	my $covref;
+	if ( defined( $self->{"coverage"} ) ) {
+		$covref = Amphora2::Summarize::read_coverage( file => $self->{"coverage"} );
+	}
 	if ( $self->{"updated"} ) {
 		my $markerPackage = Amphora2::Utilities::getMarkerPackage( $self, "concat" );
-		my $pp = "$Amphora2::Utilities::pplacer -p -c $markerPackage -j " . $self->{"threads"} . " --groups 10 " . $self->{"alignDir"} . "/concat.trim.fasta";
+		my $pp = "$Amphora2::Utilities::pplacer -p -c $markerPackage -j " . $self->{"threads"} . " --groups 5 " . $self->{"alignDir"} . "/concat.trim.fasta";
 		print "Running $pp\n";
+
 		system($pp);
 		`mv $self->{"workingDir"}/concat.trim.jplace $self->{"treeDir"}` if ( -e $self->{"workingDir"} . "/concat.trim.jplace" );
+		return unless defined($covref);
+		weight_placements( self => $self, coverage => $covref, place_file => $self->{"treeDir"} . "/concat.trim.jplace" );
 		return;
 	}
 	foreach my $marker ( @{$markRef} ) {
 		my $readAlignmentFile    = $self->{"alignDir"} . "/" . Amphora2::Utilities::getAlignerOutputFastaAA($marker);
 		my $readAlignmentDNAFile = $self->{"alignDir"} . "/" . Amphora2::Utilities::getAlignerOutputFastaDNA($marker);
+		next unless -e $readAlignmentFile || -e $readAlignmentDNAFile;
 		my $markerPackage        = Amphora2::Utilities::getMarkerPackage( $self, $marker );
 		print STDERR "Running Placer on $marker ....\t";
 		my $placeFile    = Amphora2::Utilities::getReadPlacementFile($marker);
 		my $placeFileDNA = Amphora2::Utilities::getReadPlacementFileDNA($marker);
 		if ( $self->{"updated"} == 0 ) {
 			my $pp = "";
-			if(Amphora2::Utilities::marker_oldstyle($marker)){
+			if ( Amphora2::Utilities::marker_oldstyle($marker) ) {
+
 				# run pplacer the old way, using phyml trees which aren't supported by reference packages
 				my $trimfinalFastaFile = "$Amphora2::Utilities::marker_dir/" . Amphora2::Utilities::getTrimfinalFastaMarkerFile( $self, $marker );
 				my $trimfinalFile = "$Amphora2::Utilities::marker_dir/" . Amphora2::Utilities::getTrimfinalMarkerFile( $self, $marker );
 				my $treeFile = "$Amphora2::Utilities::marker_dir/" . Amphora2::Utilities::getTreeMarkerFile( $self, $marker );
 				my $treeStatsFile = "$Amphora2::Utilities::marker_dir/" . Amphora2::Utilities::getTreeStatsMarkerFile( $self, $marker );
-	
+
 				# Pplacer requires the alignment files to have a .fasta extension
 				if ( !-e "$trimfinalFastaFile" ) {
 					`cp $trimfinalFile $trimfinalFastaFile`;
 				}
 				$pp = "$Amphora2::Utilities::pplacer -p -j " . $self->{"threads"} . " -r $trimfinalFastaFile -t $treeFile -s $treeStatsFile $readAlignmentFile";
-			}else{
+			} else {
 				$pp = "$Amphora2::Utilities::pplacer -p -c $markerPackage -j " . $self->{"threads"} . " $readAlignmentFile";
 			}
 			debug "Running $pp\n";
@@ -95,7 +107,56 @@ sub pplacer {
 		# pplacer writes its output to the directory it is called from. Need to move the output to the trees directory
 		`mv $self->{"workingDir"}/$placeFile $self->{"treeDir"}`    if ( -e $self->{"workingDir"} . "/$placeFile" );
 		`mv $self->{"workingDir"}/$placeFileDNA $self->{"treeDir"}` if ( -e $self->{"workingDir"} . "/$placeFileDNA" );
+
+		next unless ( defined($covref) );
+		weight_placements( self => $self, coverage => $covref, place_file => $self->{"treeDir"} . "/$placeFile" );
 	}
+}
+
+=head2 weight_placements
+
+=cut
+
+sub weight_placements {
+	my %args       = @_;
+	my $coverage   = $args{coverage};
+	my $place_file = $args{place_file};
+	
+	# weight the placements
+	open( $INPLACE,  $place_file );
+	open( $OUTPLACE, ">$place_file.wt" );
+	my $placeline = 0;
+	while ( my $line = <$INPLACE> ) {
+		$placeline = 1 if ( $line =~ /"placements"/ );
+
+		# have we reached the end of a placement entry?
+		if ( $placeline == 1 && $line =~ /\"n\"\:\s+\[\"(.+?)\"\]/ ) {
+			my $qname = $1;
+			print STDERR "Found placeline for $qname\n";
+			my @qnames = split( /,/, $qname );
+			# if we have read coverage information, add it to an updated placement file
+			my $mass = 0;
+			foreach my $n ($qnames) {
+				$mass += $coverage->{$n} if defined( $coverage->{$n} );
+				print STDERR "Unable to find coverage for $qname\n" unless defined( $coverage->{$n} );
+			}
+			print $OUTPLACE ", \"m\": \"$mass\",\n";
+		}
+		if ( $placeline == 1 && $line =~ /\"nm\"\:\s+\[\[\"(.+?)\",/ ) {
+			my $qname = $1;
+			$qname =~ s/\\\/\d-\d+//g;
+			print STDERR "Found placeline for $qname\n";
+			# if we have read coverage information, add it to an updated placement file
+			my $mass = 0;
+			$mass += $coverage->{$qname} if defined( $coverage->{$qname} );
+			$line =~ s/\"nm\"\:\s+\[\[\"(.+?)\", \d+/"nm": [[\"$qname\", $mass/g;
+			print STDERR "Unable to find coverage for $qname\n" unless defined( $coverage->{$qname} );
+		}
+		print $OUTPLACE $line;
+	}
+	close($OUTPLACE);
+
+	`mv $place_file.wt $place_file`;
 }
 
 =head2 directoryPrepAndClean

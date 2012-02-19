@@ -3,7 +3,7 @@ use warnings;
 use strict;
 use Carp;
 use Bio::Phylo;
-use Amphora2::Summarize qw(:all);
+use Amphora2::Summarize;
 
 =head1 SUBROUTINES/METHODS
 

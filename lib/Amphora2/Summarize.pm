@@ -178,14 +178,15 @@ sub makeNcbiTree {
 	close TREEOUT;
 }
 
-=head2 readCoverage
+=head2 read_coverage
 Reads a coverage file
+Input: file - a file name
 =cut
 
-sub readCoverage {
-	my $coverageFile = shift;
+sub read_coverage {
+	my %args = @_;
 	my %coverage;
-	open( COVERAGE, $coverageFile ) || return %coverage;
+	open( COVERAGE, $args{file} ) || return %coverage;
 	while ( my $line = <COVERAGE> ) {
 		chomp $line;
 		my @data = split( /\t/, $line );
@@ -218,7 +219,7 @@ sub summarize {
 	# try to read a contig coverage file if it exists
 	my %coverage;
 	if ( defined $self->{"coverage"} ) {
-		my $covref = readCoverage( $self->{"coverage"} );
+		my $covref = read_coverage( file => $self->{"coverage"} );
 		%coverage = %$covref;
 	}
 
