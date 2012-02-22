@@ -43,13 +43,18 @@ Follow the install steps of downloading the tarball
 This method will redownload all the binaries and library in addition to new code.  This may not be as fast as the github update method.
 
 
+Index preparationg step
+==========================================
+
+$ perl amphora2 index <sequence_file>
+
 Usage
 ==========================================
-$ perl Amphora-2.pl <Mode> <options> <sequence_file>
+$ perl amphora2 <Mode> <options> <sequence_file>
 
    sequence_file needs to be in fasta format
 
-$ perl Amphora-2.pl <Mode> <options> -paired <sequence_file_1> <sequence_file_2>
+$ perl amphora2 <Mode> <options> -paired <sequence_file_1> <sequence_file_2>
 
    sequence_file_1 and _2 need to be in fastq format
 
