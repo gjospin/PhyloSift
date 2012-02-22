@@ -1171,6 +1171,11 @@ sub print_citations {
  		
  		Bowtie: Ultrafast and memory-efficient alignment of short DNA sequences to the human genome.
  		Langmead B, Trapnell C, Pop M, Salzberg SL. Genome Biol 10:R25.
+ 		
+ 		HMMER 3.0 (March 2010); http://hmmer.org/
+ 		Copyright (C) 2010 Howard Hughes Medical Institute.
+ 		Freely distributed under the GNU General Public License (GPLv3).
+ 		
 };
 }
 

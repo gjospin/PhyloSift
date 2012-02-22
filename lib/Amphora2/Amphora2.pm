@@ -157,7 +157,7 @@ sub run {
 	my @markers = Amphora2::Utilities::gather_markers( self=>$self, marker_file => $custom );
 	debug "@markers\n";
 	debug "MODE :: " . $self->{"mode"} . "\n";
-	if ( $self->{"mode"} eq 'blast' || $self->{"mode"} eq 'all' ) {
+	if ( $self->{"mode"} eq 'search' || $self->{"mode"} eq 'all' ) {
 		$self = $self->runSearch( $continue, $custom, \@markers );
 		debug "MODE :: " . $self->{"mode"} . "\n";
 	}

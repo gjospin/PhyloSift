@@ -1,4 +1,4 @@
-AMPHORA 2
+AMPHORA2
 
 AMPHORA is an Automated Phylogenomic Inference Pipeline for bacterial sequences. From a given a set of protein sequences, it automatically identifies various phylogenetic marker genes. It then generates high-quality multiple sequence alignments for these genes and make tree-based phylotype assignments.
 
@@ -55,7 +55,7 @@ $ perl Amphora-2.pl <Mode> <options> -paired <sequence_file_1> <sequence_file_2>
 
 Mode : Only execute a specific step in the pipeline
   all - execute all the following steps in that order.
-  blast - only execute the blast search + write candidate files
+  search - only execute the database searches + write candidate files
   align - hmmsearch + hmmalign + trims + coverage filters
   placer - run pplacer on the results from the align step
   summary - run the taxonomy assignment steps
