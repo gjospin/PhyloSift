@@ -47,6 +47,7 @@ Amphora2::Utilities - Implements miscellaneous accessory functions for Amphora2
 Version 0.01
 
 =cut
+
 our $VERSION = '0.01';
 
 =head1 SYNOPSIS
@@ -190,6 +191,7 @@ sub programChecks {
 Check for requisite Amphora-2 marker datasets
 
 =cut
+
 our $marker_dir = "";
 our $ncbi_dir   = "";
 
@@ -959,7 +961,9 @@ sub index_marker_db {
 	unlink("$marker_dir/rep.faa");    # don't need this anymore!
 
 	# make a bowtie2 database
-	`cd $marker_dir ; $Amphora2::Utilities::bowtie2build $bowtie2_db_fasta $bowtie2_db`;
+	if ( -e "$bowtie2_db_fasta" ) {
+		`cd $marker_dir ; $Amphora2::Utilities::bowtie2build $bowtie2_db_fasta $bowtie2_db`;
+	}
 }
 
 =head2 gather_markers
@@ -1185,6 +1189,7 @@ intput: alignment file , target directory
 Removes all gaps from an alignment file and writes the sequences in fasta format in the target directory
 
 =cut
+
 sub alignment_to_fasta {
 	my $aln_file   = shift;
 	my $target_dir = shift;
@@ -1424,4 +1429,5 @@ See http://dev.perl.org/licenses/ for more information.
 
 
 =cut
+
 1;    # End of Amphora2::Utilities
