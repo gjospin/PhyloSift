@@ -959,7 +959,9 @@ sub index_marker_db {
 	unlink("$marker_dir/rep.faa");    # don't need this anymore!
 
 	# make a bowtie2 database
-	`cd $marker_dir ; $Amphora2::Utilities::bowtie2build $bowtie2_db_fasta $bowtie2_db`;
+	if(-e "$bowtie2_db_fasta"){
+		`cd $marker_dir ; $Amphora2::Utilities::bowtie2build $bowtie2_db_fasta $bowtie2_db`;
+	}
 }
 
 =head2 gather_markers
