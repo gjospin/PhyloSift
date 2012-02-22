@@ -43,18 +43,19 @@ sub build_marker {
 	my ( $core, $path, $ext ) = fileparse( $aln_file, qr/\.[^.]*$/ );
 	
 	my $fasta_file = "$target_dir/$core.fasta";
-	Amphora2::Utilities::unalign_sequences($aln_file, $fasta_file);
+	my $seq_count = Amphora2::Utilities::unalign_sequences($aln_file, $fasta_file);
 	
 	my $masked_aln = "$target_dir/$core.mmasked";
 	mask(file=>$aln_file,output=>$masked_aln);
 	
-	my $hmm_file = generate_hmm( $masked_aln, $target_dir );
+	my $hmm_file = "$target_dir/$core.hmm";
+	generate_hmm( $masked_aln, $hmm_file );
 	
 	Amphora2::Utilities::fasta2stockholm($masked_aln, "$target_dir/$core.stk");
 	my $stk_aln =  "$target_dir/$core.stk";
 
 	#may need to create an unaligned file for the sequences before aligning them
-	my $new_alignment_file = hmmalign_to_model( $hmm_file, $fasta_file, $target_dir, $stk_aln);
+	my $new_alignment_file = hmmalign_to_model( $hmm_file, $fasta_file, $target_dir, $stk_aln, $seq_count);
 	my $clean_aln = "$target_dir/$core.clean";
 	my %id_map = mask_and_clean_alignment( $new_alignment_file , $clean_aln );
 	my ( $fasttree_file, $tree_log_file ) = generate_fasttree( $clean_aln, $target_dir );
@@ -90,10 +91,8 @@ generates a HMM profile from an alignment in FASTA format (arg) using hmmbuild. 
 
 sub generate_hmm {
 	my $file_name  = shift;
-	my $target_dir = shift;
-	my $hmm_name = "$target_dir/$core_name.hmm";
+	my $hmm_name = shift;
 	`$Amphora2::Utilities::hmmbuild --informat afa $hmm_name $file_name`;
-	return $hmm_name;
 }
 
 =head2 hmmalign_to_model
@@ -107,8 +106,19 @@ sub hmmalign_to_model {
 	my $sequence_file = shift;
 	my $target_dir    = shift;
 	my $ref_ali       = shift;
+	my $seq_count     = shift;
 	my ( $core_name, $path, $ext ) = fileparse( $sequence_file, qr/\.[^.]*$/ );
-	system("$Amphora2::Utilities::hmmalign --mapali $ref_ali --trim --outformat afa -o $target_dir/$core_name.aln $hmm_profile $sequence_file");
+	open(ALNOUT, ">$target_dir/$core_name.aln");
+	open(ALNIN, "$Amphora2::Utilities::hmmalign --mapali $ref_ali --trim --outformat afa $hmm_profile $sequence_file |");
+	my $s = 0;
+	while(my $line = <ALNIN>){
+		if($line=~/^>/){
+			$s++;
+			last if $s>$seq_count;
+		}
+		print ALNOUT $line;
+	}
+	close ALNOUT;
 	return "$target_dir/$core_name.aln";
 }
 
@@ -216,7 +226,7 @@ sub get_fasta_from_pda_representatives {
 	my %selected_taxa = ();
 	while (<REPSIN>) {
 		chomp($_);
-		if ( $_ =~ m/The optimal PD set has (\d+) taxa:/ ) {
+		if ( $_ =~ m/optimal PD set has (\d+) taxa:/ ) {
 			$taxa_number = $1;
 		} elsif ( $_ =~ m/Corresponding sub-tree:/ ) {
 			last;
@@ -225,7 +235,7 @@ sub get_fasta_from_pda_representatives {
 			$selected_taxa{$1} = 1;
 		}
 	}
-	close(REPSIN);
+	close(REPSIN);	
 
 	#reading the reference sequences and printing the selected representatives using BioPerl
 	my $reference_seqs        = Bio::SeqIO->new( -file => $reference_fasta,         -format => "FASTA" );

@@ -1197,14 +1197,17 @@ sub unalign_sequences {
 	my $output_path = shift;
 	my ( $core, $path, $ext ) = fileparse( $aln_file, qr/\.[^.]*$/ );
 	my $in = Bio::SeqIO->new( -file => $aln_file );
-	open( FILEOUT, ">$output_path" ) or carp("Couldn't open $output_path for writing\n");
+	my $seq_count = 0;
+	open( FILEOUT, ">$output_path" ) or carp("Couldn't open $output_path for writing\n");	
 	while ( my $seq_object = $in->next_seq() ) {
 		my $seq = $seq_object->seq;
 		my $id  = $seq_object->id;
 		$seq =~ s/[-\.]//g;    # shouldnt be any gaps
 		print FILEOUT ">" . $id . "\n" . $seq . "\n";
+		$seq_count++;
 	}
 	close(FILEOUT);
+	return $seq_count;
 }
 
 =head1 AUTHOR
