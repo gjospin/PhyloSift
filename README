@@ -47,6 +47,11 @@ Indexing step
 $ perl amphora2 index <sequence_file>
 
 
+Index preparationg step
+==========================================
+
+$ perl amphora2 index <sequence_file>
+
 Usage
 ==========================================
 $ perl amphora2 <Mode> <options> <sequence_file>

@@ -47,8 +47,7 @@ Mode : Only execute a specific step in the pipeline
 Options Available at this time :
    -h -help             Prints the usage section of the README
    --custom <file>       Reads a custom marker list from a file otherwise use all the markers from the markers directory
-   --threaded=<number>  Runs Blast and Hmmer using the number of processors sepcified
-                        Runs 1 Pplacer per processor specified
+   --threaded=<number>  Runs Blast and Hmmer using the number of processors specified
                         (DEFAULT : 1)
    --clean               Cleans the temporary files created by Amphora (NOT YET IMPLEMENTED)
    --paired              Looks for 2 input files (paired end sequencing) in FastQ format.
