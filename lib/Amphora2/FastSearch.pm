@@ -22,7 +22,6 @@ Currently uses either BLAST or RAPsearch.
 Version 0.01
 
 =cut
-
 our $VERSION = '0.01';
 
 =head1 SYNOPSIS
@@ -49,7 +48,6 @@ if you don't export anything, such as for a purely object-oriented module.
 =head2 RunBlast
 
 =cut
-
 my $clean                 = 0;      #option set up, but not used for later
 my $isolateMode           = 0;      # set to 1 if running on an isolate assembly instead of raw reads
 my $bestHitsBitScoreRange = 30;     # all hits with a bit score within this amount of the best will be used
@@ -82,7 +80,7 @@ sub RunSearch {
 
 	# check what kind of input was provided
 	my $type = Amphora2::Utilities::get_sequence_input_type( $self->{"readsFile"} );
-	$self->{"dna"} = $type->{seqtype} eq "protein" ? 0 : 1;    # Is the input protein sequences?
+	$self->{"dna"} = $type->{seqtype} eq "protein" ? 0 : 1;      # Is the input protein sequences?
 	$reverseTranslate = $type->{seqtype} eq "protein" ? 0 : 1;
 	debug "Input type is $type->{seqtype}, $type->{format}\n";
 
@@ -94,8 +92,8 @@ sub RunSearch {
 
 	# search reads/contigs against marker database
 	my $searchtype = "blast";
-	my $contigs = 0;
-	$contigs = 1 if ( defined($self->{"coverage"}) && $type->{seqtype} ne "protein" && ( !defined $self->{"isolate"} || $self->{"isolate"} != 1 ) );
+	my $contigs    = 0;
+	$contigs = 1 if ( defined( $self->{"coverage"} ) && $type->{seqtype} ne "protein" && ( !defined $self->{"isolate"} || $self->{"isolate"} != 1 ) );
 
 	# launch the searches
 	launch_searches( self => $self, readtype => $type, dir => $self->{"blastDir"}, contigs => $contigs );
@@ -129,33 +127,33 @@ sub launch_searches {
 	`mkfifo $bowtie2_r1_pipe`;
 	`mkfifo $bowtie2_r2_pipe` if $args{readtype}->{paired};
 	`mkfifo $blastp_pipe`;
-
 	my @children;
 	for ( my $count = 1 ; $count <= 3 ; $count++ ) {
 		my $pid = fork();
 		if ($pid) {
+
 			# parent process will write sequences below
 			push( @children, $pid );
 			debug "Launching search process $count\n";
 		} elsif ( $pid == 0 ) {
 			debug "Launching search process $count\n";
+
 			# child processes will search sequences
 			my $hitstream;
 			my $candidate_type = ".$count";
 			if ( $count == 1 ) {
-				$hitstream = blastXoof_table($self, $blastx_pipe);
+				$hitstream = blastXoof_table( $self, $blastx_pipe );
 				$candidate_type = ".blastx";
 			} elsif ( $count == 2 ) {
-				$hitstream = bowtie2( self=>$self, readtype=>$args{readtype}, reads1=>$bowtie2_r1_pipe, reads2=>$bowtie2_r2_pipe );
+				$hitstream = bowtie2( self => $self, readtype => $args{readtype}, reads1 => $bowtie2_r1_pipe, reads2 => $bowtie2_r2_pipe );
 				$candidate_type = ".rna";
 			} elsif ( $count == 3 ) {
-				$hitstream = executeBlast($self, $blastp_pipe);
+				$hitstream = executeBlast( $self, $blastp_pipe );
 				$candidate_type = ".blastp";
 			}
-
 			my $hitsref;
 			if ( $count == 2 ) {
-				$hitsref = get_hits_sam($self, $hitstream);
+				$hitsref = get_hits_sam( $self, $hitstream );
 			} elsif ( $args{contigs} ) {
 				$hitsref = get_hits_contigs( $self, $hitstream, "blast" );
 			} else {
@@ -165,15 +163,13 @@ sub launch_searches {
 			# write out sequence regions hitting marker genes to candidate files
 			debug "Writing candidates from process $count\n";
 			writeCandidates( $self, $hitsref, "$candidate_type" );
-
 			exit 0;
 		} else {
 			croak "couldn't fork: $!\n";
 		}
 	}
-
-	open( my $RAP_PIPE, ">$rap_pipe" );
-	open( my $BLASTX_PIPE, ">$blastx_pipe" );
+	open( my $RAP_PIPE,        ">$rap_pipe" );
+	open( my $BLASTX_PIPE,     ">$blastx_pipe" );
 	open( my $BOWTIE2_R1_PIPE, ">$bowtie2_r1_pipe" );
 	my $BOWTIE2_R2_PIPE;
 	open( $BOWTIE2_R2_PIPE, ">$bowtie2_r2_pipe" ) if $args{readtype}->{paired};
@@ -183,21 +179,21 @@ sub launch_searches {
 	# child processes run the search on incoming sequences
 	debug "Demuxing sequences\n";
 	demux_sequences(
-					 bowtie2_pipe1 => $BOWTIE2_R1_PIPE,
-					 bowtie2_pipe2 => $BOWTIE2_R2_PIPE,
-					 rapsearch_pipe      => $RAP_PIPE,
-					 blastx_pipe   => $BLASTX_PIPE,
-					 blastp_pipe   => $BLASTP_PIPE,
-					 dna           => $self->{"dna"},
-					 file1         => $self->{"readsFile"},
-					 file2         => $self->{"readsFile_2"},
+					 bowtie2_pipe1  => $BOWTIE2_R1_PIPE,
+					 bowtie2_pipe2  => $BOWTIE2_R2_PIPE,
+					 rapsearch_pipe => $RAP_PIPE,
+					 blastx_pipe    => $BLASTX_PIPE,
+					 blastp_pipe    => $BLASTP_PIPE,
+					 dna            => $self->{"dna"},
+					 file1          => $self->{"readsFile"},
+					 file2          => $self->{"readsFile_2"},
 	);
 
 	# rapsearch can't read from a pipe
 	debug "Running rapsearch\n";
-	my $rap_hits = executeRap($self,$rap_pipe);
+	my $rap_hits = executeRap( $self, $rap_pipe );
 	my $hitsref = get_hits( $self, $rap_hits, "rap" );
-	debug "Done reading rap results, got ".scalar(keys(%$hitsref))." hits\n";
+	debug "Done reading rap results, got " . scalar( keys(%$hitsref) ) . " hits\n";
 	writeCandidates( $self, $hitsref, ".rap" );
 
 	# join with children when the searches are done
@@ -223,15 +219,14 @@ sub demux_sequences {
 	my $RAPSEARCH_PIPE = $args{rapsearch_pipe};
 	my $BLASTX_PIPE    = $args{blastx_pipe};
 	my $BLASTP_PIPE    = $args{blastp_pipe};
-
-	my $F1IN = Amphora2::Utilities::open_sequence_file( file => $args{file1} );
+	my $F1IN           = Amphora2::Utilities::open_sequence_file( file => $args{file1} );
 	my $F2IN;
 	$F2IN = Amphora2::Utilities::open_sequence_file( file => $args{file2} ) if length( $args{file2} ) > 0;
-
 	my @lines1;
 	my @lines2;
 	$lines1[0] = <$F1IN>;
 	$lines2[0] = <$F2IN> if defined($F2IN);
+
 	while ( defined( $lines1[0] ) ) {
 		if ( $lines1[0] =~ /^@/ ) {
 			for ( my $i = 1 ; $i < 4 ; $i++ ) {
@@ -287,12 +282,10 @@ sub demux_sequences {
 				print $RAPSEARCH_PIPE $lines1[0] . $lines1[1];
 				print $RAPSEARCH_PIPE $lines2[0] . $lines2[1] if defined($F2IN);
 			}
-			
-			@lines1 = ($newline1, "");
-			@lines2 = ($newline2, "");
+			@lines1 = ( $newline1, "" );
+			@lines2 = ( $newline2, "" );
 		}
 	}
-
 	close($RAPSEARCH_PIPE);
 	close($BOWTIE2_PIPE1);
 	close($BOWTIE2_PIPE2) if $args{readtype}->{paired};
@@ -350,8 +343,7 @@ sub blastXoof_full {
 	debug "INSIDE full OOF blastx\n";
 	my $blastxoof_cmd =
 	    "$Amphora2::Utilities::blastall -p blastx -i $query_file -e 0.1 -w 20 -b 50 -v 50 -d "
-	  . Amphora2::Utilities::get_blastp_db()
-	  . " -a "
+	  . Amphora2::Utilities::get_blastp_db() . " -a "
 	  . $self->{"threads"}
 	  . " 2> /dev/null |";
 	debug "Running $blastxoof_cmd";
@@ -369,7 +361,8 @@ returns a stream file handle
 sub bowtie2 {
 	my %args = @_;
 	debug "INSIDE bowtie2\n";
-	my $bowtie2_cmd = "$Amphora2::Utilities::bowtie2align -x ".Amphora2::Utilities::get_bowtie2_db()." --sam-nohead --sam-nosq --maxins 1000 --local ";
+	my $bowtie2_cmd =
+	  "$Amphora2::Utilities::bowtie2align -x " . Amphora2::Utilities::get_bowtie2_db() . " --quiet --sam-nohead --sam-nosq --maxins 1000 --local ";
 	$bowtie2_cmd .= " -f " if $args{readtype}->{format} eq "fasta";
 	if ( $args{readtype}->{paired} ) {
 		$bowtie2_cmd .= " -1 $args{reads1} -2 $args{reads2} ";
@@ -420,10 +413,15 @@ Launches rapsearch2, returns a stream
 sub executeRap {
 	my $self       = shift;
 	my $query_file = shift;
-	my $dbDir = "$Amphora2::Utilities::marker_dir/representatives";
+	my $dbDir      = "$Amphora2::Utilities::marker_dir/representatives";
 	$dbDir = $self->{"blastDir"} if ( $custom ne "" );
-	my $out_file = $self->{"blastDir"} . "/$readsCore.rapSearch";
-	my $rapsearch_cmd = "cd ".$self->{"blastDir"}."; $Amphora2::Utilities::rapSearch -q $query_file -d $Amphora2::Utilities::marker_dir/rep -o $out_file -v 20 -b 20 -e -1 -z " . $self->{"threads"};
+	my $out_file      = $self->{"blastDir"} . "/$readsCore.rapSearch";
+	my $rapsearch_cmd = "cd "
+	  . $self->{"blastDir"}
+	  . "; $Amphora2::Utilities::rapSearch -q $query_file -d $Amphora2::Utilities::marker_dir/rep -o $out_file -v 20 -b 20 -e -1 -z "
+	  . $self->{"threads"} . " > "
+	  . $self->{"blastDir"}
+	  . "/log.txt";
 	debug "Running $rapsearch_cmd\n";
 	system($rapsearch_cmd);
 	open( my $RAP_HITS, "$out_file.m8" ) || croak "Unable to read from $out_file.m8";
@@ -442,11 +440,10 @@ sub executeBlast {
 	my $query_file = shift;
 	my $db         = Amphora2::Utilities::get_blastp_db();
 	debug "INSIDE BLAST\n";
-	my $blast_cmd = "$Amphora2::Utilities::blastall $blastp_params -i $query_file -d $db -a ".$self->{"threads"}." |";
-	open(my $BLAST_HITS, $blast_cmd);
+	my $blast_cmd = "$Amphora2::Utilities::blastall $blastp_params -i $query_file -d $db -a " . $self->{"threads"} . " |";
+	open( my $BLAST_HITS, $blast_cmd );
 	return $BLAST_HITS;
 }
-
 
 =head2 get_hits_contigs
 
@@ -465,7 +462,7 @@ sub get_hits_contigs {
 	my $max_hit_overlap = 10;
 
 	# return empty if there is no data
-	return \%contig_hits unless defined(fileno $HITSTREAM);
+	return \%contig_hits unless defined( fileno $HITSTREAM );
 	while (<$HITSTREAM>) {
 
 		# read a blast line
@@ -541,7 +538,7 @@ sub get_hits {
 	my %contig_hits;
 
 	# return empty if there is no data
-	return \%contig_hits unless defined(fileno $HITSTREAM);
+	return \%contig_hits unless defined( fileno $HITSTREAM );
 	while (<$HITSTREAM>) {
 		chomp($_);
 		next if ( $_ =~ /^#/ );
@@ -561,7 +558,6 @@ sub get_hits {
 			} elsif ( $markerTopScores{$markerName} <= $bitScore ) {
 				push( @{ $contig_hits{$query} }, @hitdata );
 			}
-
 		} else {
 
 			# running on short reads, just do one marker per read
@@ -575,49 +571,48 @@ sub get_hits {
 		}
 	}
 	close($HITSTREAM);
-
 	return \%contig_hits;
 }
 
 sub get_hits_sam {
 	my $self      = shift;
-	my $HITSTREAM = shift;	
+	my $HITSTREAM = shift;
 	my %markerTopScores;
 	my %topScore = ();
 	my %contig_hits;
 
 	# return empty if there is no data
 	return unless defined($HITSTREAM);
-	return \%contig_hits unless defined(fileno $HITSTREAM);
+	return \%contig_hits unless defined( fileno $HITSTREAM );
 	while (<$HITSTREAM>) {
 		next if ( $_ =~ /^\@/ );
 		my @fields = split( /\t/, $_ );
-		next if $fields[2] eq "*";	# no hit
+		next if $fields[2] eq "*";    # no hit
 		my $markerName = getMarkerName( $fields[2], "sam" );
 		my $query      = $fields[0];
 		my $score      = $fields[4];
 		my $cigar      = $fields[5];
-		my $qlen = length( $fields[9] );
+		my $qlen       = length( $fields[9] );
+
 		# subtract off soft masking from query length (unaligned portion)
 		my $query_lend = 0;
 		$query_lend += $1 if $cigar =~ /^(\d+)S/;
-		
 		$qlen -= $1 if $cigar =~ /^(\d+)S/;
 		$qlen -= $1 if $cigar =~ /(\d+)S$/;
-		my $hit_seq = substr($fields[9],$query_lend,$qlen);
+		my $hit_seq = substr( $fields[9], $query_lend, $qlen );
+
 		# flip our coordinates if we're in reverse complement
 		# and go back to the start
-		$query_lend = length( $fields[9] ) - $query_lend if($fields[1] & 0x10);
-		$query_lend = $query_lend - $qlen if($fields[1] & 0x10);
-		
-		next if $qlen < 30;	# don't trust anything shorter than 30nt
+		$query_lend = length( $fields[9] ) - $query_lend if ( $fields[1] & 0x10 );
+		$query_lend = $query_lend - $qlen if ( $fields[1] & 0x10 );
+		next if $qlen < 30;    # don't trust anything shorter than 30nt
 
 		# running on short reads, just do one marker per read
 		$topScore{$query} = 0 unless exists $topScore{$query};
 
 		#only keep the top hit
 		if ( $topScore{$query} <= $score ) {
-			$contig_hits{$query} = [ [ $markerName, $score, $query_lend, $query_lend+$qlen-1, $hit_seq ] ];
+			$contig_hits{$query} = [ [ $markerName, $score, $query_lend, $query_lend + $qlen - 1, $hit_seq ] ];
 			$topScore{$query} = $score;
 		}
 	}
@@ -717,19 +712,19 @@ sub writeCandidates {
 
 	#write the read+ref_seqs for each markers in the list
 	foreach my $marker ( keys %markerHits ) {
+
 		#writing the hits to the candidate file
 		open( fileOUT, ">" . $self->{"blastDir"} . "/$marker$type.candidate" )
 		  or die " Couldn't open " . $self->{"blastDir"} . "/$marker$type.candidate for writing\n";
 		print fileOUT $markerHits{$marker};
 		close(fileOUT);
-		if ( $self->{"dna"}  && $type !~ /\.rna/) {
+		if ( $self->{"dna"} && $type !~ /\.rna/ ) {
 			open( fileOUT, ">" . $self->{"blastDir"} . "/$marker$type.candidate.ffn" )
 			  or die " Couldn't open " . $self->{"blastDir"} . "/$marker$type.candidate.ffn for writing\n";
 			print fileOUT $markerNuc{$marker} if defined( $markerNuc{$marker} );
 			close(fileOUT);
 		}
 	}
-	close(nonHITS);
 }
 
 =head2 prepAndClean
@@ -752,7 +747,6 @@ sub prepAndClean {
 	#create a directory for the Reads file being processed.
 	`mkdir $self->{"fileDir"}`  unless ( -e $self->{"fileDir"} );
 	`mkdir $self->{"blastDir"}` unless ( -e $self->{"blastDir"} );
-
 	return $self;
 }
 
@@ -815,5 +809,4 @@ See http://dev.perl.org/licenses/ for more information.
 
 
 =cut
-
 1;    # End of Amphora2::blast.pm

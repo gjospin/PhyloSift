@@ -49,8 +49,7 @@ sub pplacer {
 	}
 	if ( $self->{"updated"} ) {
 		my $markerPackage = Amphora2::Utilities::getMarkerPackage( $self, "concat" );
-		my $pp = "$Amphora2::Utilities::pplacer -p -c $markerPackage -j " . $self->{"threads"} . " --groups 5 " . $self->{"alignDir"} . "/concat.trim.fasta";
-		print "Running $pp\n";
+		my $pp = "$Amphora2::Utilities::pplacer --verbosity 0 -p -c $markerPackage -j " . $self->{"threads"} . " --groups 5 " . $self->{"alignDir"} . "/concat.trim.fasta";
 
 		system($pp);
 		`mv $self->{"workingDir"}/concat.trim.jplace $self->{"treeDir"}` if ( -e $self->{"workingDir"} . "/concat.trim.jplace" );
@@ -63,7 +62,7 @@ sub pplacer {
 		my $readAlignmentDNAFile = $self->{"alignDir"} . "/" . Amphora2::Utilities::getAlignerOutputFastaDNA($marker);
 		next unless -e $readAlignmentFile || -e $readAlignmentDNAFile;
 		my $markerPackage        = Amphora2::Utilities::getMarkerPackage( $self, $marker );
-		print STDERR "Running Placer on $marker ....\t";
+		debug "Running Placer on $marker ....\t";
 		my $placeFile    = Amphora2::Utilities::getReadPlacementFile($marker);
 		my $placeFileDNA = Amphora2::Utilities::getReadPlacementFileDNA($marker);
 		if ( $self->{"updated"} == 0 ) {
@@ -80,16 +79,16 @@ sub pplacer {
 				if ( !-e "$trimfinalFastaFile" ) {
 					`cp $trimfinalFile $trimfinalFastaFile`;
 				}
-				$pp = "$Amphora2::Utilities::pplacer -p -j " . $self->{"threads"} . " -r $trimfinalFastaFile -t $treeFile -s $treeStatsFile $readAlignmentFile";
+				$pp = "$Amphora2::Utilities::pplacer --verbosity 0 -p -j " . $self->{"threads"} . " -r $trimfinalFastaFile -t $treeFile -s $treeStatsFile $readAlignmentFile";
 			} else {
-				$pp = "$Amphora2::Utilities::pplacer -p -c $markerPackage -j " . $self->{"threads"} . " $readAlignmentFile";
+				$pp = "$Amphora2::Utilities::pplacer --verbosity 0 -p -c $markerPackage -j " . $self->{"threads"} . " $readAlignmentFile";
 			}
 			debug "Running $pp\n";
 			system("$pp");
 		} else {
 
 			#run pplacer on amino acid data
-			my $pp = "$Amphora2::Utilities::pplacer -p -j " . $self->{"threads"} . " -c $markerPackage $readAlignmentFile";
+			my $pp = "$Amphora2::Utilities::pplacer --verbosity 0 -p -j " . $self->{"threads"} . " -c $markerPackage $readAlignmentFile";
 			print "Running $pp\n";
 			system($pp);
 
@@ -97,12 +96,11 @@ sub pplacer {
 			if ( -e $readAlignmentDNAFile ) {
 				my $codonmarkers = $markerPackage;
 				$codonmarkers =~ s/.updated/.codon.updated/g;
-				my $pp = "$Amphora2::Utilities::pplacer -j " . $self->{"threads"} . " -c $codonmarkers $readAlignmentDNAFile";
+				my $pp = "$Amphora2::Utilities::pplacer --verbosity 0 -j " . $self->{"threads"} . " -c $codonmarkers $readAlignmentDNAFile";
 				print "Running $pp\n";
 				system($pp);
 			}
 		}
-		print STDERR "Done !\n";
 
 		# pplacer writes its output to the directory it is called from. Need to move the output to the trees directory
 		`mv $self->{"workingDir"}/$placeFile $self->{"treeDir"}`    if ( -e $self->{"workingDir"} . "/$placeFile" );

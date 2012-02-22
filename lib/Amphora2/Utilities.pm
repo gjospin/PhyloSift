@@ -47,7 +47,6 @@ Amphora2::Utilities - Implements miscellaneous accessory functions for Amphora2
 Version 0.01
 
 =cut
-
 our $VERSION = '0.01';
 
 =head1 SYNOPSIS
@@ -142,11 +141,11 @@ sub programChecks {
 			carp("Warning : a different version of pplacer was found. Amphora-2 was tested with pplacer v1.1.alpha10\n");
 		}
 	}
-	$guppy           = get_program_path( "guppy",              $Amphora2::Settings::a2_path );
-	$taxit           = get_program_path( "taxit",              $Amphora2::Settings::a2_path );
-	$rppr            = get_program_path( "rppr",               $Amphora2::Settings::a2_path );
-	$cmalign         = get_program_path( "cmalign",            $Amphora2::Settings::a2_path );
-	$hmmalign        = get_program_path( "hmmalign",           $Amphora2::Settings::hmmer3_path );
+	$guppy    = get_program_path( "guppy",    $Amphora2::Settings::a2_path );
+	$taxit    = get_program_path( "taxit",    $Amphora2::Settings::a2_path );
+	$rppr     = get_program_path( "rppr",     $Amphora2::Settings::a2_path );
+	$cmalign  = get_program_path( "cmalign",  $Amphora2::Settings::a2_path );
+	$hmmalign = get_program_path( "hmmalign", $Amphora2::Settings::hmmer3_path );
 	if ( $hmmalign eq "" ) {
 
 		#program not found return;
@@ -188,7 +187,6 @@ sub programChecks {
 		return 1;
 	}
 	$bowtie2build = get_program_path( "bowtie2-build", $Amphora2::Settings::bowtie2_path );
-
 	return 0;
 }
 
@@ -197,7 +195,6 @@ sub programChecks {
 Check for requisite Amphora-2 marker datasets
 
 =cut
-
 our $marker_dir = "";
 our $ncbi_dir   = "";
 
@@ -360,18 +357,17 @@ See https://github.com/ihh/dart/ for the original source code
 =cut
 
 sub stockholm2fasta {
-	my %args = @_;
-	my $columns = $args{columns} || 80;	# number of columns in fasta
-	my $gapped  = $args{gapped} || 1;	# should gapped fasta (aligned) be written?
-	my $sorted = $args{sorted} || 1;		# should sequences be sorted?
+	my %args     = @_;
+	my $columns  = $args{columns} || 80;    # number of columns in fasta
+	my $gapped   = $args{gapped} || 1;      # should gapped fasta (aligned) be written?
+	my $sorted   = $args{sorted} || 1;      # should sequences be sorted?
 	my $STREAMIN = $args{in};
-
 	my %seq;
-	my $outbuffer="";
+	my $outbuffer = "";
 	while (<$STREAMIN>) {
 		next unless /\S/;
 		next if /^\s*\#/;
-		if (/^\s*\/\//) { $outbuffer .= printseq(columns=>$columns, sorted=>$sorted, seq=>\%seq); }
+		if (/^\s*\/\//) { $outbuffer .= printseq( columns => $columns, sorted => $sorted, seq => \%seq ); }
 		else {
 			chomp;
 			my ( $name, $seq ) = split;
@@ -379,22 +375,22 @@ sub stockholm2fasta {
 			$seq{$name} .= $seq;
 		}
 	}
-	$outbuffer .= printseq(columns=>$columns, sorted=>$sorted, seq=>\%seq, out=>$args{out});
+	$outbuffer .= printseq( columns => $columns, sorted => $sorted, seq => \%seq, out => $args{out} );
 	return $outbuffer;
 }
 
-sub printseq{
+sub printseq {
 	my %args = @_;
-	my $out = "";
-	if ($args{sorted}) {
-		foreach my $key ( sort keys %{$args{seq}} ) {
+	my $out  = "";
+	if ( $args{sorted} ) {
+		foreach my $key ( sort keys %{ $args{seq} } ) {
 			$out .= ">$key\n";
-			for ( my $i = 0 ; $i < length ($args{seq}->{$key}) ; $i += $args{columns} ) {
+			for ( my $i = 0 ; $i < length( $args{seq}->{$key} ) ; $i += $args{columns} ) {
 				$out .= substr( $args{seq}->{$key}, $i, $args{columns} ) . "\n";
 			}
 		}
 	} else {
-		while ( my ( $name, $seq ) = each %{$args{seq}} ) {
+		while ( my ( $name, $seq ) = each %{ $args{seq} } ) {
 			$out .= ">$name\n";
 			for ( my $i = 0 ; $i < length $seq ; $i += $args{columns} ) {
 				$out .= substr( $seq, $i, $args{columns} ) . "\n";
@@ -452,7 +448,6 @@ sub get_marker_length {
 			}
 		}
 	}
-
 	return $length;
 }
 
@@ -1034,10 +1029,8 @@ Returns a hash reference with the values 'seqtype', 'format', and 'qtype' popula
 
 sub get_sequence_input_type {
 	my $file = shift;
-
 	my %type;
-	my $FILE = open_sequence_file( file => $file );
-
+	my $FILE       = open_sequence_file( file => $file );
 	my $counter    = 0;
 	my $maxfound   = 0;
 	my $dnacount   = 0;
@@ -1048,8 +1041,8 @@ sub get_sequence_input_type {
 	my $allcount = 0;
 	my $sequence = 1;
 	my $minq     = 255;    # minimum fastq quality score (for detecting phred33/phred64)
-	while ( my $line = <$FILE> ) {
 
+	while ( my $line = <$FILE> ) {
 		if ( $line =~ /^>/ ) {
 			$maxfound = $counter > $maxfound ? $counter : $maxfound;
 			$counter = 0;
@@ -1076,7 +1069,6 @@ sub get_sequence_input_type {
 		last if ( $line_count > 1000 );
 	}
 	close($FILE);
-
 	$maxfound = $counter > $maxfound ? $counter : $maxfound;
 	$type{seqtype} = "protein" if ( $dnacount < $allcount * 0.75 );
 	$type{seqtype} = "dna"     if ( $type{format} eq "fastq" );       # nobody using protein fastq (yet)
@@ -1159,11 +1151,11 @@ prints out suggested citations for the analysis
 =cut
 
 sub print_citations {
-	print "amphora2 -- phylogenetic analysis of genomes and metagenomes\n";
+	print "PhyloSift -- Phylogenetic analysis of genomes and metagenomes\n";
 	print "(c) 2011, 2012 Aaron Darling and Guillaume Jospin\n";
 	print "\nCITATION:\n";
-	print "		amphora2. A. Darling, H. Bik, G. Jospin, J.A.Eisen. Manuscript in preparation\n";
-	print "\n\namphora2 incorporates several other software packages, please consider also citing the following papers:\n";
+	print "		PhyloSift. A. Darling, H. Bik, G. Jospin, J.A.Eisen. Manuscript in preparation\n";
+	print "\n\n\t\tPhyloSift incorporates several other software packages, please consider also citing the following papers:\n";
 	print qq{
 
 		pplacer: linear time maximum-likelihood and Bayesian phylogenetic placement of sequences onto a fixed reference tree.
@@ -1182,7 +1174,14 @@ sub print_citations {
 		S. F. Altschul, T. L. Madden, A. A. Schäffer, J. Zhang, Z. Zhang, W. Miller, and D. J. Lipman
  		Nucleic Acids Research, 1997, Vol. 25, No. 17 3389–3402
  		
-	};
+ 		Bowtie: Ultrafast and memory-efficient alignment of short DNA sequences to the human genome.
+ 		Langmead B, Trapnell C, Pop M, Salzberg SL. Genome Biol 10:R25.
+ 		
+ 		HMMER 3.0 (March 2010); http://hmmer.org/
+ 		Copyright (C) 2010 Howard Hughes Medical Institute.
+ 		Freely distributed under the GNU General Public License (GPLv3).
+ 		
+};
 }
 
 =head2 unalign_sequences
@@ -1267,5 +1266,4 @@ See http://dev.perl.org/licenses/ for more information.
 
 
 =cut
-
 1;    # End of Amphora2::Utilities

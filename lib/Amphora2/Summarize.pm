@@ -3,6 +3,7 @@ use warnings;
 use strict;
 use FindBin;
 use Amphora2::Amphora2;
+use Amphora2::Utilities qw(debug);
 use Carp;
 use Bio::Phylo;
 use Bio::Phylo::Forest::Tree;
@@ -229,7 +230,7 @@ sub summarize {
 	my %placements;
 	unshift( @{$markRef}, "concat" ) if $self->{"updated"};
 	foreach my $marker ( @{$markRef} ) {
-
+		next unless -e "$markerdir/$marker.ncbimap";
 		# don't bother with this one if there's no read placements
 		my $placeFile = $self->{"treeDir"} . "/" . Amphora2::Utilities::getReadPlacementFile($marker);
 		next unless ( -e $placeFile );
@@ -262,7 +263,7 @@ sub summarize {
 			}
 
 			# have we reached the end of a placement entry?
-			if ( $placeline == 1 && $line =~ /\"n\"\:\s+\[\"(.+?)\"\]/ ) {
+			if ( $placeline == 1 && $line =~ /\"nm\"\:\s+\[\[\"(.+?)\",\s+\d+\]\]/ ) {
 				my $qname = $1;
 
 				# tally up the probabilities on different NCBI groups
@@ -334,7 +335,7 @@ sub summarize {
 	foreach my $val ( values(%ncbireads) ) {
 		$totalreads += $val;
 	}
-	print STDERR "Total reads are $totalreads\n";
+	debug "Total reads are $totalreads\n";
 
 	# write the taxa with 90% highest posterior density, assuming each read is an independent observation
 	my $taxasum = 0;

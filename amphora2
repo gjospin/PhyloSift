@@ -39,7 +39,7 @@ Usage
 
 Mode : Only execute a specific step in the pipeline
   all - execute all the following steps in that order.
-  blast - only execute the blast search + write candidate files
+  search - only execute the database searches + write candidate files
   align - hmmsearch + hmmalign + trims + coverage filters
   placer - run pplacer on the results from the align step
   summary - run the taxonomy assignment steps
