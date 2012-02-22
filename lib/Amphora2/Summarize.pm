@@ -229,7 +229,7 @@ sub summarize {
 	my %placements;
 	unshift( @{$markRef}, "concat" ) if $self->{"updated"};
 	foreach my $marker ( @{$markRef} ) {
-
+		next unless -e "$markerdir/$marker.ncbimap";
 		# don't bother with this one if there's no read placements
 		my $placeFile = $self->{"treeDir"} . "/" . Amphora2::Utilities::getReadPlacementFile($marker);
 		next unless ( -e $placeFile );

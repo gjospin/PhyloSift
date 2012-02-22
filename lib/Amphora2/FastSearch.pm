@@ -729,7 +729,6 @@ sub writeCandidates {
 			close(fileOUT);
 		}
 	}
-	close(nonHITS);
 }
 
 =head2 prepAndClean
