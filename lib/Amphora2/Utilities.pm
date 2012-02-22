@@ -86,7 +86,7 @@ sub get_program_path {
 	if ( defined($progpath) && $progpath ne "" && -x $progpath . "/" . $progname ) {
 		$progcheck = $progpath . "/" . $progname;
 	} else {
-		$progcheck = `which $progname`;
+		$progcheck = `which $progname 2> /dev/null`;
 		chomp $progcheck;
 	}
 
@@ -119,6 +119,8 @@ our $readconciler    = "";
 our $bowtie2align    = "";
 our $bowtie2build    = "";
 our $cmalign         = "";
+our $pda             = "";
+our $fasttree        = "";
 
 sub programChecks {
 	eval 'require Bio::Seq;';
@@ -175,6 +177,8 @@ sub programChecks {
 		return 1;
 	}
 	$readconciler = get_program_path( "readconciler", $Amphora2::Settings::a2_path );
+	$pda          = get_program_path( "pda", $Amphora2::Settings::a2_path );
+	$fasttree     = get_program_path( "FastTree", $Amphora2::Settings::a2_path );
 
 	$bowtie2align = get_program_path( "bowtie2-align", $Amphora2::Settings::bowtie2_path );
 	if ( $bowtie2align eq "" ) {
@@ -1181,193 +1185,26 @@ sub print_citations {
 	};
 }
 
-=head2 alignment_to_fasta
+=head2 unalign_sequences
 
-intput: alignment file , target directory 
+intput: alignment file , output path
 Removes all gaps from an alignment file and writes the sequences in fasta format in the target directory
 
 =cut
 
-sub alignment_to_fasta {
-	my $aln_file   = shift;
-	my $target_dir = shift;
+sub unalign_sequences {
+	my $aln_file    = shift;
+	my $output_path = shift;
 	my ( $core, $path, $ext ) = fileparse( $aln_file, qr/\.[^.]*$/ );
 	my $in = Bio::SeqIO->new( -file => $aln_file );
-	open( FILEOUT, ">" . $target_dir . "/" . $core . ".fasta" ) or carp("Couldn't open $target_dir$core.fasta for writing\n");
+	open( FILEOUT, ">$output_path" ) or carp("Couldn't open $output_path for writing\n");
 	while ( my $seq_object = $in->next_seq() ) {
 		my $seq = $seq_object->seq;
 		my $id  = $seq_object->id;
-		$seq =~ s/-\.//g;    # shouldnt be any gaps
+		$seq =~ s/[-\.]//g;    # shouldnt be any gaps
 		print FILEOUT ">" . $id . "\n" . $seq . "\n";
 	}
 	close(FILEOUT);
-	return "$target_dir/$core.fasta";
-}
-
-=head2 generate_hmm
-
-input: alignment_file, target_directory
-generates a HMM profile from an alignement in FASTA format (arg) using hmmbuild.  The hmm is placed in the target_directory
-
-=cut
-
-sub generate_hmm {
-	my $file_name  = shift;
-	my $target_dir = shift;
-	my ( $core_name, $path, $ext ) = fileparse( $file_name, qr/\.[^.]*$/ );
-	if ( !-e "$target_dir/$core_name.hmm" ) {
-		`hmmbuild --informat afa $target_dir/$core_name.hmm $file_name`;
-	}
-	return "$target_dir/$core_name.hmm";
-}
-
-=head2 hmmalign_to_model
-
-input : hmm_profile,sequence_file,target_dir
-Aligns sequences to an HMM model and outputs an alignment
-=cut
-
-sub hmmalign_to_model {
-	my $hmm_profile   = shift;
-	my $sequence_file = shift;
-	my $target_dir    = shift;
-	my $ref_ali       = shift;
-	my ( $core_name, $path, $ext ) = fileparse( $sequence_file, qr/\.[^.]*$/ );
-	if ( !-e "$target_dir/$core_name.aln" ) {
-		`hmmalign --mapali $ref_ali --trim --outformat afa -o $target_dir/$core_name.aln $hmm_profile $sequence_file`;
-
-		#	    `hmmalign --outformat afa -o $target_dir/$core_name.aln $hmm_profile $sequence_file`;
-	}
-	return "$target_dir/$core_name.aln";
-}
-
-=head2 mask_alignment
-
-input : aln_file
-Masks the unaligned columns out of an alignemnt file. Removes ( and ) from the sequence names 
-Also removes duplicate IDs
-=cut
-
-sub mask_and_clean_alignment {
-	my $aln_file   = shift;
-	my $target_dir = shift;
-	my ( $core, $path, $ext ) = fileparse( $aln_file, qr/\.[^.]*$/ );
-
-	#    open(FILEIN,$aln_file) or carp("Couldn't open $aln_file for reading \n");
-	my $in = Bio::SeqIO->new( -file => $aln_file );
-	my %s = ();    #hash remembering the IDs already printed
-	open( FILEOUT, ">" . $target_dir . "/" . $core . ".masked" ) or carp("Couldn't open $target_dir/$core.masked for writing\n");
-	while ( my $seq_object = $in->next_seq() ) {
-		my $seq = $seq_object->seq;
-		my $id  = $seq_object->id;
-		$id  =~ s/\(\)//g;     #removes ( and ) from the header lines
-		$seq =~ s/[a-z]//g;    # lowercase chars didnt align to model
-		$seq =~ s/\.//g;       # shouldnt be any dots
-		if ( !exists $s{$id} ) {
-			print FILEOUT ">" . $id . "\n" . $seq . "\n";
-		}
-		$s{$id} = 1;
-	}
-
-	#    close(FILEIN);
-	close(FILEOUT);
-	return "$target_dir/$core.masked";
-}
-
-=head2 generate_fasttree
-
-input: alignment_file,target_directory
-generates a tree using fasttree and write the output along with the log/info files to the target directory.
-
-=cut
-
-sub generate_fasttree {
-	my $aln_file   = shift;
-	my $target_dir = shift;
-	my ( $core, $path, $ext ) = fileparse( $aln_file, qr/\.[^.]*$/ );
-	my ( $seqtype, $length, $format ) = get_sequence_input_type($aln_file);
-	return ( "$target_dir/$core.tree", "$target_dir/$core.log" ) if ( -e "$target_dir/$core.tree" );
-	if ( $seqtype eq "dna" ) {
-		`FastTree -nt -gtr -log $target_dir/$core.log $aln_file > $target_dir/$core.tree 2> /dev/null`;
-	} else {
-		`FastTree -gtr -log $target_dir/$core.log $aln_file > $target_dir/$core.tree 2> /dev/null`;
-	}
-	return ( "$target_dir/$core.tree", "$target_dir/$core.log" );
-}
-
-=head2 get_representatives_from_tree
-
-input : tree file in newik format, directory to write the output to, pruning threshold
-uses the PDA program to prune a tree to get representative sequences
-
-=cut
-
-sub get_representatives_from_tree {
-	my $tree_file  = shift;
-	my $target_dir = shift;
-	my $cutoff     = shift;
-	my ( $core, $path, $ext ) = fileparse( $tree_file, qr/\.[^.]*$/ );
-	return "$target_dir/$core.pda" if -e "$target_dir/$core.pda";
-
-	#get the number of taxa in the tree
-	my $taxa_count = 0;
-	my $input_tree = new Bio::TreeIO( -file => $tree_file, -format => "newick" );
-	while ( my $tree = $input_tree->next_tree ) {
-		for my $node ( $tree->get_nodes ) {
-			if ( $node->is_Leaf ) {
-				$taxa_count++;
-			}
-		}
-	}
-
-	#pda doesn't seem to want to run if $taxa_count is the number of leaves. Decrementing to let pda do the search.
-	$taxa_count--;
-	`cd $target_dir;pda -g -k $taxa_count -minlen $cutoff $tree_file $target_dir/$core.pda`;
-	return "$target_dir/$core.pda";
-}
-
-=head2 get_fasta_from_pda_representatives 
-
-input pda file and reference fasta file
-reads the selected representatives from the pda file and prints the sequences to a new fasta file
-
-=cut
-
-sub get_fasta_from_pda_representatives {
-	my $pda_file        = shift;
-	my $target_dir      = shift;
-	my $reference_fasta = shift;
-	my ( $core, $path, $ext ) = fileparse( $pda_file, qr/\.[^.]*$/ );
-
-	#return the file name if it already exists
-	return "$target_dir/$core.rep" if ( -e "$target_dir/$core.rep" );
-
-	#reading the pda file to get the representative IDs
-	open( REPSIN, $pda_file ) or carp("Could not open $pda_file\n");
-	my $taxa_number   = 0;
-	my %selected_taxa = ();
-	while (<REPSIN>) {
-		chomp($_);
-		if ( $_ =~ m/The optimal PD set has (\d+) taxa:/ ) {
-			$taxa_number = $1;
-		} elsif ( $_ =~ m/Corresponding sub-tree:/ ) {
-			last;
-		} elsif ( $taxa_number != 0 && scalar( keys(%selected_taxa) ) < $taxa_number ) {
-			$_ =~ m/^(\S+)$/;
-			$selected_taxa{$1} = 1;
-		}
-	}
-	close(REPSIN);
-
-	#reading the reference sequences and printing the selected representatives using BioPerl
-	my $reference_seqs        = Bio::SeqIO->new( -file => $reference_fasta,         -format => "FASTA" );
-	my $representatives_fasta = Bio::SeqIO->new( -file => ">$target_dir/$core.rep", -format => "FASTA" );
-	while ( my $ref_seq = $reference_seqs->next_seq ) {
-		if ( exists $selected_taxa{ $ref_seq->id } ) {
-			$representatives_fasta->write_seq($ref_seq);
-		}
-	}
-	return "$target_dir/$core.rep";
 }
 
 =head1 AUTHOR
