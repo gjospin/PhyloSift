@@ -22,6 +22,7 @@ Currently uses either BLAST or RAPsearch.
 Version 0.01
 
 =cut
+
 our $VERSION = '0.01';
 
 =head1 SYNOPSIS
@@ -48,6 +49,7 @@ if you don't export anything, such as for a purely object-oriented module.
 =head2 RunBlast
 
 =cut
+
 my $clean                 = 0;      #option set up, but not used for later
 my $isolateMode           = 0;      # set to 1 if running on an isolate assembly instead of raw reads
 my $bestHitsBitScoreRange = 30;     # all hits with a bit score within this amount of the best will be used
@@ -809,4 +811,5 @@ See http://dev.perl.org/licenses/ for more information.
 
 
 =cut
+
 1;    # End of Amphora2::blast.pm
