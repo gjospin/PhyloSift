@@ -17,6 +17,7 @@ use Amphora2::FastSearch;
 use Amphora2::Benchmark;
 use Amphora2::BeastInterface;
 use Amphora2::Comparison;
+use Amphora2::MarkerBuild;
 
 =head2 new
 
@@ -180,6 +181,9 @@ sub run {
 	}
 	if ( $self->{"mode"} eq 'index' ) {
 		Amphora2::Utilities::index_marker_db( self=>$self, markers=>\@markers );
+	}
+	if( $self->{"mode"} eq 'build_marker'){
+		Amphora2::MarkerBuild::build_marker(alignment=>$ARGV[1], name=>$ARGV[2], cutoff=>$ARGV[3]);
 	}
 	
 }
