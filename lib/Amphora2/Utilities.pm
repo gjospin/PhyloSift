@@ -574,6 +574,19 @@ sub get_marker_stockholm_file {
 	}
 }
 
+=head2 get_marker_taxon_map
+
+Returns the path to the lookup table between marker gene IDs and their taxa
+
+=cut
+
+sub get_marker_taxon_map {
+	my %args = @_;
+	my $self = $args{self};
+	return "$marker_dir/marker_taxon_map.updated.txt" if($self->{"updated"});	
+	return "$marker_dir/marker_taxon_map.txt";	
+}
+
 =head2 is_protein_marker
 
 Returns 1 if the marker named in 'marker' is protein sequence (0 if RNA or DNA)

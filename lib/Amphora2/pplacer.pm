@@ -5,6 +5,7 @@ use Bio::AlignIO;
 use Amphora2::Amphora2;
 use Amphora2::Utilities qw(debug);
 use Amphora2::Summarize;
+use Bio::Phylo::IO qw(parse unparse);
 
 =head1 NAME
 
@@ -49,10 +50,16 @@ sub pplacer {
 	}
 	if ( $self->{"updated"} ) {
 		my $markerPackage = Amphora2::Utilities::getMarkerPackage( $self, "concat" );
-		my $pp = "$Amphora2::Utilities::pplacer --verbosity 0 -p -c $markerPackage -j " . $self->{"threads"} . " --groups 5 " . $self->{"alignDir"} . "/concat.trim.fasta";
+		my $pp =
+		    "$Amphora2::Utilities::pplacer --verbosity 0 -p -c $markerPackage -j "
+		  . $self->{"threads"}
+		  . " --groups 5 "
+		  . $self->{"alignDir"}
+		  . "/concat.trim.fasta";
 
 		system($pp);
 		`mv $self->{"workingDir"}/concat.trim.jplace $self->{"treeDir"}` if ( -e $self->{"workingDir"} . "/concat.trim.jplace" );
+		name_taxa_in_jplace(self=>$self, input=>$self->{"treeDir"}."/concat.trim.jplace",output=>$self->{"treeDir"}."/concat.trim.jplace");
 		return unless defined($covref);
 		weight_placements( self => $self, coverage => $covref, place_file => $self->{"treeDir"} . "/concat.trim.jplace" );
 		return;
@@ -61,7 +68,7 @@ sub pplacer {
 		my $readAlignmentFile    = $self->{"alignDir"} . "/" . Amphora2::Utilities::getAlignerOutputFastaAA($marker);
 		my $readAlignmentDNAFile = $self->{"alignDir"} . "/" . Amphora2::Utilities::getAlignerOutputFastaDNA($marker);
 		next unless -e $readAlignmentFile || -e $readAlignmentDNAFile;
-		my $markerPackage        = Amphora2::Utilities::getMarkerPackage( $self, $marker );
+		my $markerPackage = Amphora2::Utilities::getMarkerPackage( $self, $marker );
 		debug "Running Placer on $marker ....\t";
 		my $placeFile    = Amphora2::Utilities::getReadPlacementFile($marker);
 		my $placeFileDNA = Amphora2::Utilities::getReadPlacementFileDNA($marker);
@@ -79,7 +86,10 @@ sub pplacer {
 				if ( !-e "$trimfinalFastaFile" ) {
 					`cp $trimfinalFile $trimfinalFastaFile`;
 				}
-				$pp = "$Amphora2::Utilities::pplacer --verbosity 0 -p -j " . $self->{"threads"} . " -r $trimfinalFastaFile -t $treeFile -s $treeStatsFile $readAlignmentFile";
+				$pp =
+				    "$Amphora2::Utilities::pplacer --verbosity 0 -p -j "
+				  . $self->{"threads"}
+				  . " -r $trimfinalFastaFile -t $treeFile -s $treeStatsFile $readAlignmentFile";
 			} else {
 				$pp = "$Amphora2::Utilities::pplacer --verbosity 0 -p -c $markerPackage -j " . $self->{"threads"} . " $readAlignmentFile";
 			}
@@ -105,7 +115,8 @@ sub pplacer {
 		# pplacer writes its output to the directory it is called from. Need to move the output to the trees directory
 		`mv $self->{"workingDir"}/$placeFile $self->{"treeDir"}`    if ( -e $self->{"workingDir"} . "/$placeFile" );
 		`mv $self->{"workingDir"}/$placeFileDNA $self->{"treeDir"}` if ( -e $self->{"workingDir"} . "/$placeFileDNA" );
-
+		name_taxa_in_jplace(self=>$self, input=>$self->{"treeDir"}."/$placeFile",output=>$self->{"treeDir"}."/$placeFile") if ( -e $self->{"treeDir"} . "/$placeFile" );
+		name_taxa_in_jplace(self=>$self, input=>$self->{"treeDir"}."/$placeFileDNA",output=>$self->{"treeDir"}."/$placeFileDNA")  if ( -e $self->{"treeDir"} . "/$placeFileDNA" );
 		next unless ( defined($covref) );
 		weight_placements( self => $self, coverage => $covref, place_file => $self->{"treeDir"} . "/$placeFile" );
 	}
@@ -119,7 +130,7 @@ sub weight_placements {
 	my %args       = @_;
 	my $coverage   = $args{coverage};
 	my $place_file = $args{place_file};
-	
+
 	# weight the placements
 	open( $INPLACE,  $place_file );
 	open( $OUTPLACE, ">$place_file.wt" );
@@ -132,6 +143,7 @@ sub weight_placements {
 			my $qname = $1;
 			print STDERR "Found placeline for $qname\n";
 			my @qnames = split( /,/, $qname );
+
 			# if we have read coverage information, add it to an updated placement file
 			my $mass = 0;
 			foreach my $n ($qnames) {
@@ -144,6 +156,7 @@ sub weight_placements {
 			my $qname = $1;
 			$qname =~ s/\\\/\d-\d+//g;
 			print STDERR "Found placeline for $qname\n";
+
 			# if we have read coverage information, add it to an updated placement file
 			my $mass = 0;
 			$mass += $coverage->{$qname} if defined( $coverage->{$qname} );
@@ -177,37 +190,51 @@ sub directoryPrepAndClean {
 
 =cut
 
-sub nameTaxa {
-	my $filename = shift;
+sub name_taxa_in_jplace {
+	my %args   = @_;
+	my $self   = $args{self};
+	my $input  = $args{input};
+	my $output = $args{output};
 
 	# read in the taxon name map
 	my %namemap;
-	open( NAMETABLE, "$Amphora2::Utilities::marker_dir/name.table" ) or die "Couldn't open $Amphora2::Utilities::marker_dir/name.table\n";
+	my $taxon_map_file = Amphora2::Utilities::get_marker_taxon_map(self=>$self);
+	open( NAMETABLE, $taxon_map_file ) or die "Couldn't open $taxon_map_file\n";
 	while ( my $line = <NAMETABLE> ) {
 		chomp $line;
 		my @pair = split( /\t/, $line );
 		$namemap{ $pair[0] } = $pair[1];
 	}
 
+	Amphora2::Summarize::readNcbiTaxonNameMap();
+
 	# parse the tree file to get leaf node names
 	# replace leaf node names with taxon labels
-	open( TREEFILE, $filename );
+	open( TREEFILE, $input );
 	my @treedata = <TREEFILE>;
 	close TREEFILE;
-	open( TREEFILE, ">$filename" );
-	foreach my $tree (@treedata) {
-		my @taxanames = split( /[\(\)\,]/, $tree );
-		foreach my $taxon (@taxanames) {
-			next if $taxon =~ /^\:/;    # internal node, no taxon label
-			my @taxondata = split( /\:/, $taxon );
-			next unless @taxondata > 0;
-			if ( defined( $namemap{ $taxondata[0] } ) ) {
-				my $commonName = $namemap{ $taxondata[0] } . "-" . $taxondata[0];
-				$tree =~ s/$taxondata[0]/$commonName/g;
-			}
-		}
-		print TREEFILE $tree;
+	my $tree_string = $treedata[1];
+	$tree_string =~ s/^\s+\"//g;
+	$tree_string =~ s/\{\d+?\}//g;
+	$tree_string =~ s/\"\,$//g;
+	my $tree = Bio::Phylo::IO->parse(
+									  '-string' => $tree_string,
+									  '-format' => 'newick',
+	)->first;
+	foreach my $node ( @{ $tree->get_entities } ) {
+		# skip this one if it is not a leaf
+#		next if ( scalar($node->get_children())>0 );
+		my $name = $node->get_name;
+		next unless defined $namemap{$name};
+		my @data = Amphora2::Summarize::getTaxonInfo( $namemap{$name} );
+		my $ncbi_name = Amphora2::Summarize::treeName($data[0]);
+		$node->set_name($ncbi_name);
 	}
+	my $new_string = "  \"".unparse('-phylo'=>$tree, '-format'=> 'newick')."\",\n";
+	@treedata[1] = $new_string;
+	open( TREEFILE, ">$output" );
+	print TREEFILE @treedata;
+	close TREEFILE;
 }
 
 =head1 AUTHOR
