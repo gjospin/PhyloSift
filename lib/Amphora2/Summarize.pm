@@ -45,6 +45,7 @@ my %idnamemap;
 # read the NCBI taxon names
 # stash them in hashes called nameidmap and idnamemap to go back & forth from tax ids to names
 sub readNcbiTaxonNameMap {
+	return if defined(%nameidmap);
 	my $ncbidir = $Amphora2::Utilities::ncbi_dir;
 	open( TAXIDS, "$ncbidir/names.dmp" );
 	while ( my $line = <TAXIDS> ) {
