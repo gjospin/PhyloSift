@@ -47,6 +47,7 @@ Amphora2::Utilities - Implements miscellaneous accessory functions for Amphora2
 Version 0.01
 
 =cut
+
 our $VERSION = '0.01';
 
 =head1 SYNOPSIS
@@ -195,6 +196,7 @@ sub programChecks {
 Check for requisite Amphora-2 marker datasets
 
 =cut
+
 our $marker_dir = "";
 our $ncbi_dir   = "";
 
@@ -985,7 +987,9 @@ sub index_marker_db {
 	unlink("$marker_dir/rep.faa");    # don't need this anymore!
 
 	# make a bowtie2 database
-	`cd $marker_dir ; $Amphora2::Utilities::bowtie2build $bowtie2_db_fasta $bowtie2_db`;
+	if ( -e "$bowtie2_db_fasta" ) {
+		`cd $marker_dir ; $Amphora2::Utilities::bowtie2build $bowtie2_db_fasta $bowtie2_db`;
+	}
 }
 
 =head2 gather_markers
@@ -1212,6 +1216,66 @@ Removes all gaps from an alignment file and writes the sequences in fasta format
 
 =cut
 
+sub alignment_to_fasta {
+	my $aln_file   = shift;
+	my $target_dir = shift;
+	my ( $core, $path, $ext ) = fileparse( $aln_file, qr/\.[^.]*$/ );
+	my $in = Bio::SeqIO->new( -file => $aln_file );
+	open( FILEOUT, ">" . $target_dir . "/" . $core . ".fasta" ) or carp("Couldn't open $target_dir$core.fasta for writing\n");
+	while ( my $seq_object = $in->next_seq() ) {
+		my $seq = $seq_object->seq;
+		my $id  = $seq_object->id;
+		$seq =~ s/-\.//g;    # shouldnt be any gaps
+		print FILEOUT ">" . $id . "\n" . $seq . "\n";
+	}
+	close(FILEOUT);
+	return "$target_dir/$core.fasta";
+}
+
+=head2 generate_hmm
+
+input: alignment_file, target_directory
+generates a HMM profile from an alignement in FASTA format (arg) using hmmbuild.  The hmm is placed in the target_directory
+
+=cut
+
+sub generate_hmm {
+	my $file_name  = shift;
+	my $target_dir = shift;
+	my ( $core_name, $path, $ext ) = fileparse( $file_name, qr/\.[^.]*$/ );
+	if ( !-e "$target_dir/$core_name.hmm" ) {
+		`hmmbuild --informat afa $target_dir/$core_name.hmm $file_name`;
+	}
+	return "$target_dir/$core_name.hmm";
+}
+
+=head2 hmmalign_to_model
+
+input : hmm_profile,sequence_file,target_dir
+Aligns sequences to an HMM model and outputs an alignment
+=cut
+
+sub hmmalign_to_model {
+	my $hmm_profile   = shift;
+	my $sequence_file = shift;
+	my $target_dir    = shift;
+	my $ref_ali       = shift;
+	my ( $core_name, $path, $ext ) = fileparse( $sequence_file, qr/\.[^.]*$/ );
+	if ( !-e "$target_dir/$core_name.aln" ) {
+		`hmmalign --mapali $ref_ali --trim --outformat afa -o $target_dir/$core_name.aln $hmm_profile $sequence_file`;
+
+		#	    `hmmalign --outformat afa -o $target_dir/$core_name.aln $hmm_profile $sequence_file`;
+	}
+	return "$target_dir/$core_name.aln";
+}
+
+=head2 mask_alignment
+
+input : aln_file
+Masks the unaligned columns out of an alignemnt file. Removes ( and ) from the sequence names 
+Also removes duplicate IDs
+=cut
+
 sub unalign_sequences {
 	my $aln_file    = shift;
 	my $output_path = shift;
@@ -1287,4 +1351,5 @@ See http://dev.perl.org/licenses/ for more information.
 
 
 =cut
+
 1;    # End of Amphora2::Utilities

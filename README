@@ -42,6 +42,10 @@ Amphora-2 is ready for use
 Follow the install steps of downloading the tarball
 This method will redownload all the binaries and library in addition to new code.  This may not be as fast as the github update method.
 
+Indexing step
+==========================================
+$ perl amphora2 index <sequence_file>
+
 
 Index preparationg step
 ==========================================
