@@ -148,7 +148,7 @@ sub run {
 	start_timer("START");
 	$self->readAmphora2Config();
 	$self->runProgCheck();
-	Amphora2::Utilities::dataChecks(self=>$self);
+	Amphora2::Utilities::data_checks(self=>$self);
 	$self->fileCheck();
 	$self->directoryPrep($force);
 	$self->{"readsFile"} = $self->prepIsolateFiles( $self->{"readsFile"} ) if $self->{"isolate"} == 1;

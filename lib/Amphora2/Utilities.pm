@@ -1012,7 +1012,7 @@ sub gather_markers {
 	my @marks      = ();
 
 	#create a file with a list of markers called markers.list
-	if ( $markerFile ne "" ) {
+	if ( exists $args{marker_file} && $markerFile ne "") {
 
 		#gather a custom list of makers, list convention is 1 marker per line
 		open( markersIN, $markerFile );
