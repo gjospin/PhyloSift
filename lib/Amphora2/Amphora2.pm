@@ -148,7 +148,7 @@ sub run {
 	start_timer("START");
 	$self->readAmphora2Config();
 	$self->runProgCheck();
-	Amphora2::Utilities::dataChecks($self);
+	Amphora2::Utilities::dataChecks(self=>$self);
 	$self->fileCheck();
 	$self->directoryPrep($force);
 	$self->{"readsFile"} = $self->prepIsolateFiles( $self->{"readsFile"} ) if $self->{"isolate"} == 1;
@@ -185,7 +185,6 @@ sub run {
 	if( $self->{"mode"} eq 'build_marker'){
 		Amphora2::MarkerBuild::build_marker(alignment=>$ARGV[1], name=>$ARGV[2], cutoff=>$ARGV[3]);
 	}
-	
 }
 
 =head2 function2

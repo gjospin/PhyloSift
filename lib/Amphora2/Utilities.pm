@@ -238,10 +238,13 @@ sub download_data {
 my $marker_update_url = "http://edhar.genomecenter.ucdavis.edu/~koadman/amphora2_markers/markers.tgz";
 my $ncbi_url          = "http://edhar.genomecenter.ucdavis.edu/~koadman/ncbi.tgz";
 
-sub dataChecks {
+sub data_checks {
+	my %args = @_;
+	my $self = $args{self};
 	$marker_dir = get_data_path( "markers", $Amphora2::Settings::marker_path );
 	my ( $content_type, $document_length, $modified_time, $expires, $server ) = head("$marker_update_url");
 	debug "MARKER_PATH : " . $marker_dir . "\n";
+	my $get_new_markers = 0;
 	if ( -x $marker_dir ) {
 		my $mtime = ( stat($marker_dir) )[9];
 		debug "TEST LOCAL :" . localtime($mtime) . "\n";
@@ -250,16 +253,20 @@ sub dataChecks {
 		} elsif ( $modified_time > $mtime ) {
 			debug "TEST REMOTE:" . localtime($modified_time) . "\n";
 			warn "Found newer version of the marker data\n";
-			warn "Downloading from $marker_update_url\n";
-			download_data( $marker_update_url, $marker_dir );
+			$get_new_markers = 1;
 		}
 	} else {
 		if ( !defined($modified_time) ) {
 			croak "Marker data not found and unable to connect to marker update server, please check your amphora2 configuration and internet connection!\n";
 		}
 		warn "Unable to find marker data!\n";
+		$get_new_markers = 1;
+	}
+	if($get_new_markers){
 		warn "Downloading from $marker_update_url\n";
 		download_data( $marker_update_url, $marker_dir );
+		my @markers = gather_markers(self=>$self);
+		index_marker_db(self=>$self, markers=>\@markers);
 	}
 	$ncbi_dir = get_data_path( "ncbi", $Amphora2::Settings::ncbi_path );
 	( $content_type, $document_length, $modified_time, $expires, $server ) = head("$ncbi_url");
@@ -939,6 +946,7 @@ Input: marker list and self
 
 sub index_marker_db {
 	my %args    = @_;
+	my $self    = $args{self};
 	my @markers = @{ $args{markers} };
 
 	# use alignments to make an unaligned fasta database containing everything
