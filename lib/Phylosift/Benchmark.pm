@@ -1,9 +1,9 @@
-package Amphora2::Benchmark;
+package Phylosift::Benchmark;
 use warnings;
 use strict;
 use Carp;
 use Bio::Phylo;
-use Amphora2::Summarize;
+use Phylosift::Summarize;
 
 =head1 SUBROUTINES/METHODS
 
@@ -25,8 +25,8 @@ my %refTaxa              = ();
 sub runBenchmark {
 	my $self        = shift;
 	my $output_path = shift;
-	( %nameidmap, %idnamemap ) = Amphora2::Summarize::readNcbiTaxonNameMap();
-	%parent  = Amphora2::Summarize::readNcbiTaxonomyStructure();
+	( %nameidmap, %idnamemap ) = Phylosift::Summarize::readNcbiTaxonNameMap();
+	%parent  = Phylosift::Summarize::readNcbiTaxonomyStructure();
 	%refTaxa = getInputTaxa( $self->{"readsFile"} );
 	print "Number of reads counted = " . scalar( keys(%readSource) ) . "\n";
 	readSeqSummary( $self, $output_path, \%readSource );
@@ -54,7 +54,7 @@ sub readSeqSummary {
 			my $read           = $1;
 			my $taxPlacement   = $4;
 			my $probability    = $5;
-			my @taxPlacementID = Amphora2::Summarize::getTaxonInfo($2);
+			my @taxPlacementID = Phylosift::Summarize::getTaxonInfo($2);
 
 			#	    print "TaxPlacement : $2\t $taxPlacementID[0]\t\n";
 			my @readAncestor = getAncestorArray( $taxPlacementID[2] );
@@ -82,12 +82,12 @@ sub readSeqSummary {
 		#look at each taxonomic level for each Read
 		my $trueTaxon    = $readSource{$readID};
 		my @ancArrayRead = getAncestorArray( $topReadScore{$readID}->[1] );
-		my @tt           = Amphora2::Summarize::getTaxonInfo($trueTaxon);
-		my @firstTaxon   = Amphora2::Summarize::getTaxonInfo( $ancArrayRead[0] );
+		my @tt           = Phylosift::Summarize::getTaxonInfo($trueTaxon);
+		my @firstTaxon   = Phylosift::Summarize::getTaxonInfo( $ancArrayRead[0] );
 		print "Read $readID assigned to $firstTaxon[0], true $tt[0]\n";
 		foreach my $id (@ancArrayRead) {
 			if ( exists $refTaxa{$trueTaxon}{$id} ) {
-				my @currTaxon = Amphora2::Summarize::getTaxonInfo($id);
+				my @currTaxon = Phylosift::Summarize::getTaxonInfo($id);
 				my $currRank  = $currTaxon[1];
 				$matchTop{$currRank} = 0 unless exists( $matchTop{$currRank} );
 				$matchTop{$currRank}++;
@@ -109,7 +109,7 @@ sub readSeqSummary {
 			pop(@ancArrayRead);
 			push( @ancArrayRead, $allPlacedScore{$readID}{$tax}->[1] );
 			foreach my $id (@ancArrayRead) {
-				my @currTaxon = Amphora2::Summarize::getTaxonInfo($id);
+				my @currTaxon = Phylosift::Summarize::getTaxonInfo($id);
 				my $currRank  = $currTaxon[1];
 				if ( exists $sourceIDs{$id} ) {
 					if ( exists $matchAll{$currRank} ) {
@@ -164,7 +164,7 @@ sub report_flot_json {
 	my %matchAll      = %$maref;
 	my %rankTotalProb = %$rtpref;
 
-	#	open(JSON, ">amphora2_accuracy.json");
+	#	open(JSON, ">phylosift_accuracy.json");
 }
 
 sub reportTiming {
@@ -178,7 +178,7 @@ sub reportTiming {
 		close TIMING;
 	}
 	open( TIMING, ">>$timing_file" );
-	print TIMING Amphora2::Utilities::get_date_YYYYMMDD;
+	print TIMING Phylosift::Utilities::get_date_YYYYMMDD;
 	foreach my $time ( keys(%$data) ) {
 		print TIMING "," . $data->{$time};
 	}
@@ -213,7 +213,7 @@ sub report_csv {
 		print TOPHITS "Date,Superkingdom,Phylum,Subphylum,Class,Order,Family,Genus,Species,Subspecies,No Rank\n";
 		close TOPHITS;
 	}
-	my $date = Amphora2::Utilities::get_date_YYYYMMDD();
+	my $date = Phylosift::Utilities::get_date_YYYYMMDD();
 
 	# append an entry to the tophits file
 	open( TOPHITS, ">>$tophitfile" );
@@ -355,7 +355,7 @@ sub getAncestorArray {
 
 You can find documentation for this module with the perldoc command.
 
-    perldoc Amphora2::Benchmark
+    perldoc Phylosift::Benchmark
 
 
 You can also look for information at:
@@ -364,19 +364,19 @@ You can also look for information at:
 
 =item * RT: CPAN's request tracker (report bugs here)
 
-L<http://rt.cpan.org/NoAuth/Bugs.html?Dist=Amphora2-Amphora2>
+L<http://rt.cpan.org/NoAuth/Bugs.html?Dist=Phylosift-Phylosift>
 
 =item * AnnoCPAN: Annotated CPAN documentation
 
-L<http://annocpan.org/dist/Amphora2-Amphora2>
+L<http://annocpan.org/dist/Phylosift-Phylosift>
 
 =item * CPAN Ratings
 
-L<http://cpanratings.perl.org/d/Amphora2-Amphora2>
+L<http://cpanratings.perl.org/d/Phylosift-Phylosift>
 
 =item * Search CPAN
 
-L<http://search.cpan.org/dist/Amphora2-Amphora2/>
+L<http://search.cpan.org/dist/Phylosift-Phylosift/>
 
 =back
 
@@ -395,4 +395,4 @@ See http://dev.perl.org/licenses/ for more information.
 
 
 =cut
-1;    # End of Amphora2::Benchmark.pm
+1;    # End of Phylosift::Benchmark.pm

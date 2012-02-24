@@ -1,4 +1,4 @@
-package Amphora2::FastSearch;
+package Phylosift::FastSearch;
 use warnings;
 use strict;
 use Cwd;
@@ -6,15 +6,15 @@ use Bio::SearchIO;
 use Bio::SeqIO;
 use Bio::SeqUtils;
 use Carp;
-use Amphora2::Amphora2;
-use Amphora2::Utilities qw(:all);
+use Phylosift::Phylosift;
+use Phylosift::Utilities qw(:all);
 use File::Basename;
 use POSIX qw(ceil floor);
 use constant FLANKING_LENGTH => 150;
 
 =head1 NAME
 
-Amphora2::FastSearch - Subroutines to perform fast sequence identity searches between reads and marker genes.
+Phylosift::FastSearch - Subroutines to perform fast sequence identity searches between reads and marker genes.
 Currently uses either BLAST or RAPsearch.
 
 =head1 VERSION
@@ -81,7 +81,7 @@ sub RunSearch {
 	$reverseTranslate = $self->{"reverseTranslate"};
 
 	# check what kind of input was provided
-	my $type = Amphora2::Utilities::get_sequence_input_type( $self->{"readsFile"} );
+	my $type = Phylosift::Utilities::get_sequence_input_type( $self->{"readsFile"} );
 	$self->{"dna"} = $type->{seqtype} eq "protein" ? 0 : 1;      # Is the input protein sequences?
 	$reverseTranslate = $type->{seqtype} eq "protein" ? 0 : 1;
 	debug "Input type is $type->{seqtype}, $type->{format}\n";
@@ -221,11 +221,12 @@ sub demux_sequences {
 	my $RAPSEARCH_PIPE = $args{rapsearch_pipe};
 	my $BLASTX_PIPE    = $args{blastx_pipe};
 	my $BLASTP_PIPE    = $args{blastp_pipe};
-	my $F1IN           = Amphora2::Utilities::open_sequence_file( file => $args{file1} );
+	my $F1IN           = Phylosift::Utilities::open_sequence_file( file => $args{file1} );
 	my $F2IN;
-	$F2IN = Amphora2::Utilities::open_sequence_file( file => $args{file2} ) if length( $args{file2} ) > 0;
+	$F2IN = Phylosift::Utilities::open_sequence_file( file => $args{file2} ) if length( $args{file2} ) > 0;
 	my @lines1;
 	my @lines2;
+	
 	$lines1[0] = <$F1IN>;
 	$lines2[0] = <$F2IN> if defined($F2IN);
 
@@ -309,7 +310,7 @@ sub cleanup {
 sub readMarkerLengths {
 	my $self = shift;
 	foreach my $marker (@markers) {
-		$markerLength{$marker} = Amphora2::Utilities::get_marker_length( $self, $marker );
+		$markerLength{$marker} = Phylosift::Utilities::get_marker_length( $self, $marker );
 	}
 }
 
@@ -325,8 +326,8 @@ sub blastXoof_table {
 	my $query_file = shift;
 	debug "INSIDE tabular OOF blastx\n";
 	my $blastxoof_cmd =
-	    "$Amphora2::Utilities::blastall -p blastx -i $query_file -e 0.1 -w 20 -b 50000 -v 50000 -d "
-	  . Amphora2::Utilities::get_blastp_db()
+	    "$Phylosift::Utilities::blastall -p blastx -i $query_file -e 0.1 -w 20 -b 50000 -v 50000 -d "
+	  . Phylosift::Utilities::get_blastp_db()
 	  . " -m 8 -a "
 	  . $self->{"threads"}
 	  . " 2> /dev/null |";
@@ -344,8 +345,8 @@ sub blastXoof_full {
 	my $query_file = shift;
 	debug "INSIDE full OOF blastx\n";
 	my $blastxoof_cmd =
-	    "$Amphora2::Utilities::blastall -p blastx -i $query_file -e 0.1 -w 20 -b 50 -v 50 -d "
-	  . Amphora2::Utilities::get_blastp_db() . " -a "
+	    "$Phylosift::Utilities::blastall -p blastx -i $query_file -e 0.1 -w 20 -b 50 -v 50 -d "
+	  . Phylosift::Utilities::get_blastp_db() . " -a "
 	  . $self->{"threads"}
 	  . " 2> /dev/null |";
 	debug "Running $blastxoof_cmd";
@@ -364,7 +365,7 @@ sub bowtie2 {
 	my %args = @_;
 	debug "INSIDE bowtie2\n";
 	my $bowtie2_cmd =
-	  "$Amphora2::Utilities::bowtie2align -x " . Amphora2::Utilities::get_bowtie2_db() . " --quiet --sam-nohead --sam-nosq --maxins 1000 --local ";
+	  "$Phylosift::Utilities::bowtie2align -x " . Phylosift::Utilities::get_bowtie2_db() . " --quiet --sam-nohead --sam-nosq --maxins 1000 --local ";
 	$bowtie2_cmd .= " -f " if $args{readtype}->{format} eq "fasta";
 	if ( $args{readtype}->{paired} ) {
 		$bowtie2_cmd .= " -1 $args{reads1} -2 $args{reads2} ";
@@ -395,7 +396,7 @@ sub translateFrame {
 	$newseq = $newseq->revcom() if ( $frame < 0 );
 
 	if ($reverseTranslate) {
-		$id = Amphora2::Summarize::treeName($id);
+		$id = Phylosift::Summarize::treeName($id);
 		if ( exists $markerNuc{$marker} ) {
 			$markerNuc{$marker} .= ">" . $id . "\n" . $newseq->seq . "\n";
 		} else {
@@ -415,12 +416,12 @@ Launches rapsearch2, returns a stream
 sub executeRap {
 	my $self       = shift;
 	my $query_file = shift;
-	my $dbDir      = "$Amphora2::Utilities::marker_dir/representatives";
+	my $dbDir      = "$Phylosift::Utilities::marker_dir/representatives";
 	$dbDir = $self->{"blastDir"} if ( $custom ne "" );
 	my $out_file      = $self->{"blastDir"} . "/$readsCore.rapSearch";
 	my $rapsearch_cmd = "cd "
 	  . $self->{"blastDir"}
-	  . "; $Amphora2::Utilities::rapSearch -q $query_file -d $Amphora2::Utilities::marker_dir/rep -o $out_file -v 20 -b 20 -e -1 -z "
+	  . "; $Phylosift::Utilities::rapSearch -q $query_file -d $Phylosift::Utilities::marker_dir/rep -o $out_file -v 20 -b 20 -e -1 -z "
 	  . $self->{"threads"} . " > "
 	  . $self->{"blastDir"}
 	  . "/log.txt";
@@ -440,9 +441,9 @@ Launches blastp, returns a stream
 sub executeBlast {
 	my $self       = shift;
 	my $query_file = shift;
-	my $db         = Amphora2::Utilities::get_blastp_db();
+	my $db         = Phylosift::Utilities::get_blastp_db();
 	debug "INSIDE BLAST\n";
-	my $blast_cmd = "$Amphora2::Utilities::blastall $blastp_params -i $query_file -d $db -a " . $self->{"threads"} . " |";
+	my $blast_cmd = "$Phylosift::Utilities::blastall $blastp_params -i $query_file -d $db -a " . $self->{"threads"} . " |";
 	open( my $BLAST_HITS, $blast_cmd );
 	return $BLAST_HITS;
 }
@@ -759,8 +760,8 @@ Guillaume Jospin, C<< <gjospin at ucdavis.edu> >>
 
 =head1 BUGS
 
-Please report any bugs or feature requests to C<bug-amphora2-amphora2 at rt.cpan.org>, or through
-the web interface at L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=Amphora2-Amphora2>.  I will be notified, and then you'll
+Please report any bugs or feature requests to C<bug-phylosift-phylosift at rt.cpan.org>, or through
+the web interface at L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=Phylosift-Phylosift>.  I will be notified, and then you'll
 automatically be notified of progress on your bug as I make changes.
 
 
@@ -770,7 +771,7 @@ automatically be notified of progress on your bug as I make changes.
 
 You can find documentation for this module with the perldoc command.
 
-    perldoc Amphora2::blast
+    perldoc Phylosift::blast
 
 
 You can also look for information at:
@@ -779,19 +780,19 @@ You can also look for information at:
 
 =item * RT: CPAN's request tracker (report bugs here)
 
-L<http://rt.cpan.org/NoAuth/Bugs.html?Dist=Amphora2-Amphora2>
+L<http://rt.cpan.org/NoAuth/Bugs.html?Dist=Phylosift-Phylosift>
 
 =item * AnnoCPAN: Annotated CPAN documentation
 
-L<http://annocpan.org/dist/Amphora2-Amphora2>
+L<http://annocpan.org/dist/Phylosift-Phylosift>
 
 =item * CPAN Ratings
 
-L<http://cpanratings.perl.org/d/Amphora2-Amphora2>
+L<http://cpanratings.perl.org/d/Phylosift-Phylosift>
 
 =item * Search CPAN
 
-L<http://search.cpan.org/dist/Amphora2-Amphora2/>
+L<http://search.cpan.org/dist/Phylosift-Phylosift/>
 
 =back
 
@@ -812,4 +813,4 @@ See http://dev.perl.org/licenses/ for more information.
 
 =cut
 
-1;    # End of Amphora2::blast.pm
+1;    # End of Phylosift::blast.pm

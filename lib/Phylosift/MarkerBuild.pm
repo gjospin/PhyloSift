@@ -1,12 +1,12 @@
-package Amphora2::MarkerBuild;
+package Phylosift::MarkerBuild;
 use Cwd;
 use Carp;
-use Amphora2::Utilities;
+use Phylosift::Utilities;
 use File::Basename;
 
 =head1 NAME
 
-Amphora2::MarkerBuild - build a seed marker package from an existing multiple sequence alignment
+Phylosift::MarkerBuild - build a seed marker package from an existing multiple sequence alignment
 
 =head1 VERSION
 
@@ -43,7 +43,7 @@ sub build_marker {
 	my ( $core, $path, $ext ) = fileparse( $aln_file, qr/\.[^.]*$/ );
 	
 	my $fasta_file = "$target_dir/$core.fasta";
-	my $seq_count = Amphora2::Utilities::unalign_sequences($aln_file, $fasta_file);
+	my $seq_count = Phylosift::Utilities::unalign_sequences($aln_file, $fasta_file);
 	
 	my $masked_aln = "$target_dir/$core.mmasked";
 	mask(file=>$aln_file,output=>$masked_aln);
@@ -51,7 +51,7 @@ sub build_marker {
 	my $hmm_file = "$target_dir/$core.hmm";
 	generate_hmm( $masked_aln, $hmm_file );
 	
-	Amphora2::Utilities::fasta2stockholm($masked_aln, "$target_dir/$core.stk");
+	Phylosift::Utilities::fastpsstockholm($masked_aln, "$target_dir/$core.stk");
 	my $stk_aln =  "$target_dir/$core.stk";
 
 	#may need to create an unaligned file for the sequences before aligning them
@@ -66,9 +66,9 @@ sub build_marker {
 	#need to read the representatives picked by PDA and generate a representative fasta file
 	my $rep_fasta = get_fasta_from_pda_representatives( $rep_file, $target_dir, $fasta_file, \%id_map );
 	
-	#use taxit to create a new reference package required for running Amphora-2
+	#use taxit to create a new reference package required for running PhyloSift
 	#needed are : 1 alignment file, 1 representatives fasta file, 1 hmm profile, 1 tree file, 1 log tree file.
-	`cd $target_dir;taxit create -c -d "Creating a reference package for Amphora-2 for the $core marker" -l $core -f $clean_aln -t $target_dir/$core.tree -s $target_dir/$core.log -Y FastTree -P $core`;
+	`cd $target_dir;taxit create -c -d "Creating a reference package for PhyloSift for the $core marker" -l $core -f $clean_aln -t $target_dir/$core.tree -s $target_dir/$core.log -Y FastTree -P $core`;
 	`rm $target_dir/$core.pda`;
 	`rm $target_dir/$core.tree`;
 	`rm $target_dir/$core.log`;
@@ -92,7 +92,7 @@ generates a HMM profile from an alignment in FASTA format (arg) using hmmbuild. 
 sub generate_hmm {
 	my $file_name  = shift;
 	my $hmm_name = shift;
-	`$Amphora2::Utilities::hmmbuild --informat afa $hmm_name $file_name`;
+	`$Phylosift::Utilities::hmmbuild --informat afa $hmm_name $file_name`;
 }
 
 =head2 hmmalign_to_model
@@ -109,7 +109,7 @@ sub hmmalign_to_model {
 	my $seq_count     = shift;
 	my ( $core_name, $path, $ext ) = fileparse( $sequence_file, qr/\.[^.]*$/ );
 	open(ALNOUT, ">$target_dir/$core_name.aln");
-	open(ALNIN, "$Amphora2::Utilities::hmmalign --mapali $ref_ali --trim --outformat afa $hmm_profile $sequence_file |");
+	open(ALNIN, "$Phylosift::Utilities::hmmalign --mapali $ref_ali --trim --outformat afa $hmm_profile $sequence_file |");
 	my $s = 0;
 	while(my $line = <ALNIN>){
 		if($line=~/^>/){
@@ -166,11 +166,11 @@ sub generate_fasttree {
 	my $aln_file   = shift;
 	my $target_dir = shift;
 	my ( $core, $path, $ext ) = fileparse( $aln_file, qr/\.[^.]*$/ );
-	my %type = Amphora2::Utilities::get_sequence_input_type($aln_file);
+	my %type = Phylosift::Utilities::get_sequence_input_type($aln_file);
 	if ( $type{seqtype} eq "dna" ) {
-		`$Amphora2::Utilities::fasttree -nt -gtr -log $target_dir/$core.log $aln_file > $target_dir/$core.tree 2> /dev/null`;
+		`$Phylosift::Utilities::fasttree -nt -gtr -log $target_dir/$core.log $aln_file > $target_dir/$core.tree 2> /dev/null`;
 	} else {
-		`$Amphora2::Utilities::fasttree -gtr -log $target_dir/$core.log $aln_file > $target_dir/$core.tree 2> /dev/null`;
+		`$Phylosift::Utilities::fasttree -gtr -log $target_dir/$core.log $aln_file > $target_dir/$core.tree 2> /dev/null`;
 	}
 	return ( "$target_dir/$core.tree", "$target_dir/$core.log" );
 }
@@ -201,7 +201,7 @@ sub get_representatives_from_tree {
 
 	#pda doesn't seem to want to run if $taxa_count is the number of leaves. Decrementing to let pda do the search.
 	$taxa_count--;
-	my $pda_cmd = "cd $target_dir;$Amphora2::Utilities::pda -g -k $taxa_count -minlen $cutoff $tree_file $target_dir/$core.pda";
+	my $pda_cmd = "cd $target_dir;$Phylosift::Utilities::pda -g -k $taxa_count -minlen $cutoff $tree_file $target_dir/$core.pda";
 	`$pda_cmd`;
 	return "$target_dir/$core.pda";
 }
@@ -451,8 +451,8 @@ sub CalculateScore {
 		}
 
 		for my $aa1 (@aa) {
-			for my $aa2 (@aa) {
-				$profile{$aa1} += $freq{$aa2} * $matrix{"gon250mt"}{"$aa1$aa2"} if exists $freq{$aa2};
+			for my $aps (@aa) {
+				$profile{$aa1} += $freq{$aps} * $matrix{"gon250mt"}{"$aa1$aps"} if exists $freq{$aps};
 			}
 
 			#			$profile{$aa1} /= $number;
@@ -634,8 +634,8 @@ Guillaume Jospin, C<< <gjospin at ucdavis.edu> >>
 
 =head1 BUGS
 
-Please report any bugs or feature requests to C<bug-amphora2-amphora2 at rt.cpan.org>, or through
-the web interface at L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=Amphora2-Amphora2>.  I will be notified, and then you'll
+Please report any bugs or feature requests to C<bug-phylosift-phylosift at rt.cpan.org>, or through
+the web interface at L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=Phylosift-Phylosift>.  I will be notified, and then you'll
 automatically be notified of progress on your bug as I make changes.
 
 
@@ -645,7 +645,7 @@ automatically be notified of progress on your bug as I make changes.
 
 You can find documentation for this module with the perldoc command.
 
-    perldoc Amphora2::MarkerBuild
+    perldoc Phylosift::MarkerBuild
 
 
 You can also look for information at:
@@ -654,19 +654,19 @@ You can also look for information at:
 
 =item * RT: CPAN's request tracker (report bugs here)
 
-L<http://rt.cpan.org/NoAuth/Bugs.html?Dist=Amphora2-Amphora2>
+L<http://rt.cpan.org/NoAuth/Bugs.html?Dist=Phylosift-Phylosift>
 
 =item * AnnoCPAN: Annotated CPAN documentation
 
-L<http://annocpan.org/dist/Amphora2-Amphora2>
+L<http://annocpan.org/dist/Phylosift-Phylosift>
 
 =item * CPAN Ratings
 
-L<http://cpanratings.perl.org/d/Amphora2-Amphora2>
+L<http://cpanratings.perl.org/d/Phylosift-Phylosift>
 
 =item * Search CPAN
 
-L<http://search.cpan.org/dist/Amphora2-Amphora2/>
+L<http://search.cpan.org/dist/Phylosift-Phylosift/>
 
 =back
 
@@ -687,4 +687,4 @@ See http://dev.perl.org/licenses/ for more information.
 
 =cut
 
-1;    # End of Amphora2::MarkerBuild.pm
+1;    # End of Phylosift::MarkerBuild.pm

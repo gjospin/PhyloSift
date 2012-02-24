@@ -1,4 +1,4 @@
-package Amphora2::Utilities;
+package Phylosift::Utilities;
 
 #use 5.006;
 use strict;
@@ -40,7 +40,7 @@ sub debug {
 
 =head1 NAME
 
-Amphora2::Utilities - Implements miscellaneous accessory functions for Amphora2
+Phylosift::Utilities - Implements miscellaneous accessory functions for Phylosift
 
 =head1 VERSION
 
@@ -56,9 +56,9 @@ Quick summary of what the module does.
 
 Perhaps a little code snippet.
 
-    use Amphora2::Amphora2;
+    use Phylosift::Phylosift;
 
-    my $foo = Amphora2::Amphora2->new();
+    my $foo = Phylosift::Phylosift->new();
     ...
 
 =head1 EXPORT
@@ -70,7 +70,7 @@ if you don't export anything, such as for a purely object-oriented module.
 
 =head2 programChecks
 
-checks the program requirements for Amphora-2
+checks the program requirements for PhyloSift
 writes to STDERR if a program is missing or the wrong version is installed
 returns 1 or 0 depending on success of failure.
 
@@ -102,7 +102,7 @@ sub get_program_path {
 	return $progcheck;
 }
 
-# external programs used by Amphora2
+# external programs used by Phylosift
 our $pplacer         = "";
 our $guppy           = "";
 our $rppr            = "";
@@ -128,7 +128,7 @@ sub programChecks {
 		carp "Bioperl was NOT found\n";
 		return 1;
 	}
-	$pplacer = get_program_path( "pplacer", $Amphora2::Settings::pplacer_path );
+	$pplacer = get_program_path( "pplacer", $Phylosift::Settings::pplacer_path );
 	if ( $pplacer eq "" ) {
 
 		#program not found return;
@@ -138,15 +138,15 @@ sub programChecks {
 		`$pplacer --version` =~ m/v1.1.alpha(\d+)/;
 		if ( $1 < 10 ) {
 
-			# pplacer was found but the version doesn't match the one tested with Amphora
-			carp("Warning : a different version of pplacer was found. Amphora-2 was tested with pplacer v1.1.alpha10\n");
+			# pplacer was found but the version doesn't match the one tested with Phylosift
+			carp("Warning : a different version of pplacer was found. PhyloSift was tested with pplacer v1.1.alpha10\n");
 		}
 	}
-	$guppy    = get_program_path( "guppy",    $Amphora2::Settings::a2_path );
-	$taxit    = get_program_path( "taxit",    $Amphora2::Settings::a2_path );
-	$rppr     = get_program_path( "rppr",     $Amphora2::Settings::a2_path );
-	$cmalign  = get_program_path( "cmalign",  $Amphora2::Settings::a2_path );
-	$hmmalign = get_program_path( "hmmalign", $Amphora2::Settings::hmmer3_path );
+	$guppy    = get_program_path( "guppy",    $Phylosift::Settings::ps_path );
+	$taxit    = get_program_path( "taxit",    $Phylosift::Settings::ps_path );
+	$rppr     = get_program_path( "rppr",     $Phylosift::Settings::ps_path );
+	$cmalign  = get_program_path( "cmalign",  $Phylosift::Settings::ps_path );
+	$hmmalign = get_program_path( "hmmalign", $Phylosift::Settings::hmmer3_path );
 	if ( $hmmalign eq "" ) {
 
 		#program not found return;
@@ -154,46 +154,46 @@ sub programChecks {
 		return 1;
 	} elsif ( `$hmmalign -h` !~ m/HMMER 3.0rc1/ ) {
 
-		# pplacer was found but the version doens't match the one tested with Amphora
-		carp "Warning : a different version of HMMER was found. Amphora-2 was tested with HMMER 3.0rc1\n";
+		# pplacer was found but the version doens't match the one tested with Phylosift
+		carp "Warning : a different version of HMMER was found. PhyloSift was tested with HMMER 3.0rc1\n";
 	}
-	$hmmsearch = get_program_path( "hmmsearch", $Amphora2::Settings::hmmer3_path );
-	$hmmbuild  = get_program_path( "hmmbuild",  $Amphora2::Settings::hmmer3_path );
-	$rapSearch = get_program_path( "rapsearch", $Amphora2::Settings::a2_path );
+	$hmmsearch = get_program_path( "hmmsearch", $Phylosift::Settings::hmmer3_path );
+	$hmmbuild  = get_program_path( "hmmbuild",  $Phylosift::Settings::hmmer3_path );
+	$rapSearch = get_program_path( "rapsearch", $Phylosift::Settings::ps_path );
 	if ( $rapSearch eq "" ) {
 		carp("rapsearch was not found\n");
 		return 1;
 	}
-	$preRapSearch = get_program_path( "prerapsearch", $Amphora2::Settings::a2_path );
-	$blastall     = get_program_path( "blastall",     $Amphora2::Settings::a2_path );
+	$preRapSearch = get_program_path( "prerapsearch", $Phylosift::Settings::ps_path );
+	$blastall     = get_program_path( "blastall",     $Phylosift::Settings::ps_path );
 	if ( $blastall eq "" ) {
 		carp("blastall was not found\n");
 		return 1;
 	}
-	$formatdb = get_program_path( "formatdb", $Amphora2::Settings::a2_path );
-	$raxml    = get_program_path( "raxmlHPC", $Amphora2::Settings::a2_path );
+	$formatdb = get_program_path( "formatdb", $Phylosift::Settings::ps_path );
+	$raxml    = get_program_path( "raxmlHPC", $Phylosift::Settings::ps_path );
 	if ( $raxml eq "" ) {
 		carp("raxmlHPC was not found\n");
 		return 1;
 	}
-	$readconciler = get_program_path( "readconciler", $Amphora2::Settings::a2_path );
-	$pda          = get_program_path( "pda", $Amphora2::Settings::a2_path );
-	$fasttree     = get_program_path( "FastTree", $Amphora2::Settings::a2_path );
+	$readconciler = get_program_path( "readconciler", $Phylosift::Settings::ps_path );
+	$pda          = get_program_path( "pda", $Phylosift::Settings::ps_path );
+	$fasttree     = get_program_path( "FastTree", $Phylosift::Settings::ps_path );
 
-	$bowtie2align = get_program_path( "bowtie2-align", $Amphora2::Settings::bowtie2_path );
+	$bowtie2align = get_program_path( "bowtie2-align", $Phylosift::Settings::bowtie2_path );
 	if ( $bowtie2align eq "" ) {
 
 		#program not found return;
 		carp("bowtie2 not found");
 		return 1;
 	}
-	$bowtie2build = get_program_path( "bowtie2-build", $Amphora2::Settings::bowtie2_path );
+	$bowtie2build = get_program_path( "bowtie2-build", $Phylosift::Settings::bowtie2_path );
 	return 0;
 }
 
 =head2 dataChecks
 
-Check for requisite Amphora-2 marker datasets
+Check for requisite PhyloSift marker datasets
 
 =cut
 
@@ -209,11 +209,11 @@ sub get_data_path {
 	} else {
 		my $scriptpath = dirname($0);
 		$scriptpath =~ s/bin\/?$//g;
-		$datacheck = $scriptpath . "/share/amphora2/" . $dataname;
+		$datacheck = $scriptpath . "/share/phylosift/" . $dataname;
 		return $datacheck if ( -x $datacheck );
 
 		# if the system data dir doesn't exist, default to the user's home
-		$datacheck = $ENV{"HOME"} . "/share/amphora2/" . $dataname;
+		$datacheck = $ENV{"HOME"} . "/share/phylosift/" . $dataname;
 	}
 	return $datacheck;
 }
@@ -237,13 +237,13 @@ sub download_data {
 	`cd $destination/../ ; tar xzf $archive.tgz ; touch $archive`;
 	`rm $destination/../$archive.tgz`;
 }
-my $marker_update_url = "http://edhar.genomecenter.ucdavis.edu/~koadman/amphora2_markers/markers.tgz";
+my $marker_update_url = "http://edhar.genomecenter.ucdavis.edu/~koadman/phylosift_markers/markers.tgz";
 my $ncbi_url          = "http://edhar.genomecenter.ucdavis.edu/~koadman/ncbi.tgz";
 
 sub data_checks {
 	my %args = @_;
 	my $self = $args{self};
-	$marker_dir = get_data_path( "markers", $Amphora2::Settings::marker_path );
+	$marker_dir = get_data_path( "markers", $Phylosift::Settings::marker_path );
 	my ( $content_type, $document_length, $modified_time, $expires, $server ) = head("$marker_update_url");
 	debug "MARKER_PATH : " . $marker_dir . "\n";
 	my $get_new_markers = 0;
@@ -259,7 +259,7 @@ sub data_checks {
 		}
 	} else {
 		if ( !defined($modified_time) ) {
-			croak "Marker data not found and unable to connect to marker update server, please check your amphora2 configuration and internet connection!\n";
+			croak "Marker data not found and unable to connect to marker update server, please check your phylosift configuration and internet connection!\n";
 		}
 		warn "Unable to find marker data!\n";
 		$get_new_markers = 1;
@@ -270,7 +270,7 @@ sub data_checks {
 		my @markers = gather_markers(self=>$self);
 		index_marker_db(self=>$self, markers=>\@markers);
 	}
-	$ncbi_dir = get_data_path( "ncbi", $Amphora2::Settings::ncbi_path );
+	$ncbi_dir = get_data_path( "ncbi", $Phylosift::Settings::ncbi_path );
 	( $content_type, $document_length, $modified_time, $expires, $server ) = head("$ncbi_url");
 	if ( -x $ncbi_dir ) {
 		my $ncbi_time = ( stat($ncbi_dir) )[9];
@@ -283,7 +283,7 @@ sub data_checks {
 		}
 	} else {
 		if ( !defined($modified_time) ) {
-			croak "NCBI taxonomy data not found and unable to connect to update server, please check your amphora2 configuration and internet connection!\n";
+			croak "NCBI taxonomy data not found and unable to connect to update server, please check your phylosift configuration and internet connection!\n";
 		}
 		warn "Unable to find NCBI taxonomy data!\n";
 		warn "Downloading from $ncbi_url\n";
@@ -291,15 +291,15 @@ sub data_checks {
 	}
 }
 
-=head2 fasta2stockholm
+=head2 fastpsstockholm
 
 Convert a bunch of fasta files to stockholm format
-This code is adapted from fasta2stockholm.pl, (c) Ian Holmes and licensed under the GPL
+This code is adapted from fastpsstockholm.pl, (c) Ian Holmes and licensed under the GPL
 See https://github.com/ihh/dart/ for the original source code
 
 =cut
 
-sub fasta2stockholm {
+sub fastpsstockholm {
 	my $fasta  = shift;
 	my $output = shift;
 	open( STOCKOUT, ">$output" );
@@ -979,16 +979,16 @@ sub index_marker_db {
 
 	# make a blast database
 	my $blastp_db = get_blastp_db();
-	`$Amphora2::Utilities::formatdb -i $blastp_db -o F -p T -t RepDB`;
+	`$Phylosift::Utilities::formatdb -i $blastp_db -o F -p T -t RepDB`;
 	`cd $marker_dir ; mv $blastp_db rep.faa`;
 
 	# make a rapsearch database
-	`cd $marker_dir ; $Amphora2::Utilities::preRapSearch -d rep.faa -n rep`;
+	`cd $marker_dir ; $Phylosift::Utilities::preRapSearch -d rep.faa -n rep`;
 	unlink("$marker_dir/rep.faa");    # don't need this anymore!
 
 	# make a bowtie2 database
 	if ( -e "$bowtie2_db_fasta" ) {
-		`cd $marker_dir ; $Amphora2::Utilities::bowtie2build $bowtie2_db_fasta $bowtie2_db`;
+		`cd $marker_dir ; $Phylosift::Utilities::bowtie2build $bowtie2_db_fasta $bowtie2_db`;
 	}
 }
 
@@ -1025,14 +1025,14 @@ sub gather_markers {
 
 		# gather all markers
 		# this is for the original marker set
-		my @files = <$Amphora2::Utilities::marker_dir/*.faa>;
+		my @files = <$Phylosift::Utilities::marker_dir/*.faa>;
 		foreach my $file (@files) {
 			$file =~ m/\/(\w+).faa/;
 			push( @marks, $1 );
 		}
 
 		# now gather directory packaged markers (new style)
-		open( MLIST, "find $Amphora2::Utilities::marker_dir -maxdepth 1 -mindepth 1 -type d |" );
+		open( MLIST, "find $Phylosift::Utilities::marker_dir -maxdepth 1 -mindepth 1 -type d |" );
 		while ( my $line = <MLIST> ) {
 			chomp $line;
 			next if $line =~ /PMPROK/;
@@ -1301,8 +1301,8 @@ Guillaume Jospin, C<< <gjospin at ucdavis.edu> >>
 
 =head1 BUGS
 
-Please report any bugs or feature requests to C<bug-amphora2-amphora2 at rt.cpan.org>, or through
-the web interface at L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=Amphora2-Amphora2>.  I will be notified, and then you'll
+Please report any bugs or feature requests to C<bug-phylosift-phylosift at rt.cpan.org>, or through
+the web interface at L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=Phylosift-Phylosift>.  I will be notified, and then you'll
 automatically be notified of progress on your bug as I make changes.
 
 
@@ -1312,7 +1312,7 @@ automatically be notified of progress on your bug as I make changes.
 
 You can find documentation for this module with the perldoc command.
 
-    perldoc Amphora2::Utilities
+    perldoc Phylosift::Utilities
 
 
 You can also look for information at:
@@ -1321,19 +1321,19 @@ You can also look for information at:
 
 =item * RT: CPAN's request tracker (report bugs here)
 
-L<http://rt.cpan.org/NoAuth/Bugs.html?Dist=Amphora2-Amphora2>
+L<http://rt.cpan.org/NoAuth/Bugs.html?Dist=Phylosift-Phylosift>
 
 =item * AnnoCPAN: Annotated CPAN documentation
 
-L<http://annocpan.org/dist/Amphora2-Amphora2>
+L<http://annocpan.org/dist/Phylosift-Phylosift>
 
 =item * CPAN Ratings
 
-L<http://cpanratings.perl.org/d/Amphora2-Amphora2>
+L<http://cpanratings.perl.org/d/Phylosift-Phylosift>
 
 =item * Search CPAN
 
-L<http://search.cpan.org/dist/Amphora2-Amphora2/>
+L<http://search.cpan.org/dist/Phylosift-Phylosift/>
 
 =back
 
@@ -1352,4 +1352,4 @@ See http://dev.perl.org/licenses/ for more information.
 
 =cut
 
-1;    # End of Amphora2::Utilities
+1;    # End of Phylosift::Utilities

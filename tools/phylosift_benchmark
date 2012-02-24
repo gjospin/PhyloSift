@@ -1,0 +1,49 @@
+#!/usr/bin/env perl
+use strict;
+use warnings;
+use File::Basename;
+use Cwd;
+
+my $phylosift = $ARGV[0];
+my $report_path = $ARGV[1];
+
+use lib "$ARGV[0]/lib";
+use FindBin qw($Bin); use lib "$Bin/lib";
+use Phylosift::Phylosift;
+use Carp;
+use Phylosift::Utilities qw(debug);
+use Phylosift::Benchmark;
+
+die "Usage: phylosift_benchmarks <path to phylosift> <path to report output>\n" if(@ARGV !=2);
+
+my $ps = new Phylosift::Phylosift();
+$ps->readPhylosiftConfig();
+Phylosift::Utilities::dataChecks($ps);
+
+my @benchmark_data = (
+["A simulated 454 dataset with 10 organisms","http://edhar.genomecenter.ucdavis.edu/~koadman/phylosift/accuracy/sim_454.fna"],
+["A simulated illumina dataset with 10 organisms","http://edhar.genomecenter.ucdavis.edu/~koadman/phylosift/accuracy/sim_illumina.fna"], 
+);
+
+my %times;
+for(my $bI=0; $bI<@benchmark_data; $bI++){
+	my $url = $benchmark_data[$bI][1];
+	my $ff = File::Fetch->new(uri=>$url);
+	my $seqname = $1 if $url =~ /.+\/(.+?)$/;
+	$ff->fetch(to=>".");
+	# run through the command-line just to test the interface as well
+	print STDOUT "Running $phylosift/phylosift all -f $seqname\n";
+	Phylosift::Utilities::start_timer($seqname);
+	system("$phylosift/phylosift all --config benchmarkrc -f $seqname");
+	my $seconds = Phylosift::Utilities::end_timer($seqname);
+
+	# now benchmark
+	$ps->{"readsFile"} = $seqname;
+	$ps->{"fileDir"} = cwd()."/Amph_temp/$seqname/";;
+	Phylosift::Benchmark::runBenchmark($ps, $report_path);
+	
+	$times{$seqname} = $seconds;
+}
+
+# create a seconds elapsed report
+Phylosift::Benchmark::reportTiming($ps, \%times, $report_path);

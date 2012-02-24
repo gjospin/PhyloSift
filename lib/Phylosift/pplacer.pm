@@ -1,15 +1,15 @@
-package Amphora2::pplacer;
+package Phylosift::pplacer;
 use Cwd;
 use Getopt::Long;
 use Bio::AlignIO;
-use Amphora2::Amphora2;
-use Amphora2::Utilities qw(debug);
-use Amphora2::Summarize;
+use Phylosift::Phylosift;
+use Phylosift::Utilities qw(debug);
+use Phylosift::Summarize;
 use Bio::Phylo::IO qw(parse unparse);
 
 =head1 NAME
 
-Amphora2::pplacer - place aligned reads onto a phylogenetic tree with pplacer
+Phylosift::pplacer - place aligned reads onto a phylogenetic tree with pplacer
 
 =head1 VERSION
 
@@ -25,7 +25,7 @@ Runs Pplacer for all the markers in the list passed as input.
 the script will look for the files of interest in
 $workingDir/markers/
 AND
-$workingDir/Amph_temp/alignments/
+$workingDir/PS_temp/alignDir/
 
 =head1 EXPORT
 
@@ -46,12 +46,12 @@ sub pplacer {
 	# if we have a coverage map then weight the placements
 	my $covref;
 	if ( defined( $self->{"coverage"} ) ) {
-		$covref = Amphora2::Summarize::read_coverage( file => $self->{"coverage"} );
+		$covref = Phylosift::Summarize::read_coverage( file => $self->{"coverage"} );
 	}
 	if ( $self->{"updated"} ) {
-		my $markerPackage = Amphora2::Utilities::getMarkerPackage( $self, "concat" );
+		my $markerPackage = Phylosift::Utilities::getMarkerPackage( $self, "concat" );
 		my $pp =
-		    "$Amphora2::Utilities::pplacer --verbosity 0 -p -c $markerPackage -j "
+		    "$Phylosift::Utilities::pplacer --verbosity 0 -p -c $markerPackage -j "
 		  . $self->{"threads"}
 		  . " --groups 5 "
 		  . $self->{"alignDir"}
@@ -65,40 +65,40 @@ sub pplacer {
 		return;
 	}
 	foreach my $marker ( @{$markRef} ) {
-		my $readAlignmentFile    = $self->{"alignDir"} . "/" . Amphora2::Utilities::getAlignerOutputFastaAA($marker);
-		my $readAlignmentDNAFile = $self->{"alignDir"} . "/" . Amphora2::Utilities::getAlignerOutputFastaDNA($marker);
+		my $readAlignmentFile    = $self->{"alignDir"} . "/" . Phylosift::Utilities::getAlignerOutputFastaAA($marker);
+		my $readAlignmentDNAFile = $self->{"alignDir"} . "/" . Phylosift::Utilities::getAlignerOutputFastaDNA($marker);
 		next unless -e $readAlignmentFile || -e $readAlignmentDNAFile;
-		my $markerPackage = Amphora2::Utilities::getMarkerPackage( $self, $marker );
+		my $markerPackage = Phylosift::Utilities::getMarkerPackage( $self, $marker );
 		debug "Running Placer on $marker ....\t";
-		my $placeFile    = Amphora2::Utilities::getReadPlacementFile($marker);
-		my $placeFileDNA = Amphora2::Utilities::getReadPlacementFileDNA($marker);
+		my $placeFile    = Phylosift::Utilities::getReadPlacementFile($marker);
+		my $placeFileDNA = Phylosift::Utilities::getReadPlacementFileDNA($marker);
 		if ( $self->{"updated"} == 0 ) {
 			my $pp = "";
-			if ( Amphora2::Utilities::marker_oldstyle($marker) ) {
+			if ( Phylosift::Utilities::marker_oldstyle($marker) ) {
 
 				# run pplacer the old way, using phyml trees which aren't supported by reference packages
-				my $trimfinalFastaFile = "$Amphora2::Utilities::marker_dir/" . Amphora2::Utilities::getTrimfinalFastaMarkerFile( $self, $marker );
-				my $trimfinalFile = "$Amphora2::Utilities::marker_dir/" . Amphora2::Utilities::getTrimfinalMarkerFile( $self, $marker );
-				my $treeFile = "$Amphora2::Utilities::marker_dir/" . Amphora2::Utilities::getTreeMarkerFile( $self, $marker );
-				my $treeStatsFile = "$Amphora2::Utilities::marker_dir/" . Amphora2::Utilities::getTreeStatsMarkerFile( $self, $marker );
+				my $trimfinalFastaFile = "$Phylosift::Utilities::marker_dir/" . Phylosift::Utilities::getTrimfinalFastaMarkerFile( $self, $marker );
+				my $trimfinalFile = "$Phylosift::Utilities::marker_dir/" . Phylosift::Utilities::getTrimfinalMarkerFile( $self, $marker );
+				my $treeFile = "$Phylosift::Utilities::marker_dir/" . Phylosift::Utilities::getTreeMarkerFile( $self, $marker );
+				my $treeStatsFile = "$Phylosift::Utilities::marker_dir/" . Phylosift::Utilities::getTreeStatsMarkerFile( $self, $marker );
 
 				# Pplacer requires the alignment files to have a .fasta extension
 				if ( !-e "$trimfinalFastaFile" ) {
 					`cp $trimfinalFile $trimfinalFastaFile`;
 				}
 				$pp =
-				    "$Amphora2::Utilities::pplacer --verbosity 0 -p -j "
+				    "$Phylosift::Utilities::pplacer --verbosity 0 -p -j "
 				  . $self->{"threads"}
 				  . " -r $trimfinalFastaFile -t $treeFile -s $treeStatsFile $readAlignmentFile";
 			} else {
-				$pp = "$Amphora2::Utilities::pplacer --verbosity 0 -p -c $markerPackage -j " . $self->{"threads"} . " $readAlignmentFile";
+				$pp = "$Phylosift::Utilities::pplacer --verbosity 0 -p -c $markerPackage -j " . $self->{"threads"} . " $readAlignmentFile";
 			}
 			debug "Running $pp\n";
 			system("$pp");
 		} else {
 
 			#run pplacer on amino acid data
-			my $pp = "$Amphora2::Utilities::pplacer --verbosity 0 -p -j " . $self->{"threads"} . " -c $markerPackage $readAlignmentFile";
+			my $pp = "$Phylosift::Utilities::pplacer --verbosity 0 -p -j " . $self->{"threads"} . " -c $markerPackage $readAlignmentFile";
 			print "Running $pp\n";
 			system($pp);
 
@@ -106,7 +106,7 @@ sub pplacer {
 			if ( -e $readAlignmentDNAFile ) {
 				my $codonmarkers = $markerPackage;
 				$codonmarkers =~ s/.updated/.codon.updated/g;
-				my $pp = "$Amphora2::Utilities::pplacer --verbosity 0 -j " . $self->{"threads"} . " -c $codonmarkers $readAlignmentDNAFile";
+				my $pp = "$Phylosift::Utilities::pplacer --verbosity 0 -j " . $self->{"threads"} . " -c $codonmarkers $readAlignmentDNAFile";
 				print "Running $pp\n";
 				system($pp);
 			}
@@ -198,7 +198,7 @@ sub name_taxa_in_jplace {
 
 	# read in the taxon name map
 	my %namemap;
-	my $taxon_map_file = Amphora2::Utilities::get_marker_taxon_map(self=>$self);
+	my $taxon_map_file = Phylosift::Utilities::get_marker_taxon_map(self=>$self);
 	open( NAMETABLE, $taxon_map_file ) or die "Couldn't open $taxon_map_file\n";
 	while ( my $line = <NAMETABLE> ) {
 		chomp $line;
@@ -206,7 +206,7 @@ sub name_taxa_in_jplace {
 		$namemap{ $pair[0] } = $pair[1];
 	}
 
-	Amphora2::Summarize::readNcbiTaxonNameMap();
+	Phylosift::Summarize::readNcbiTaxonNameMap();
 
 	# parse the tree file to get leaf node names
 	# replace leaf node names with taxon labels
@@ -226,8 +226,8 @@ sub name_taxa_in_jplace {
 #		next if ( scalar($node->get_children())>0 );
 		my $name = $node->get_name;
 		next unless defined $namemap{$name};
-		my @data = Amphora2::Summarize::getTaxonInfo( $namemap{$name} );
-		my $ncbi_name = Amphora2::Summarize::treeName($data[0]);
+		my @data = Phylosift::Summarize::getTaxonInfo( $namemap{$name} );
+		my $ncbi_name = Phylosift::Summarize::treeName($data[0]);
 		$node->set_name($ncbi_name);
 	}
 	my $new_string = "  \"".unparse('-phylo'=>$tree, '-format'=> 'newick')."\",\n";
@@ -244,8 +244,8 @@ Guillaume Jospin, C<< <gjospin at ucdavis.edu> >>
 
 =head1 BUGS
 
-Please report any bugs or feature requests to C<bug-amphora2-amphora2 at rt.cpan.org>, or through
-the web interface at L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=Amphora2-Amphora2>.  I will be notified, and then you'll
+Please report any bugs or feature requests to C<bug-phylosift-phylosift at rt.cpan.org>, or through
+the web interface at L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=Phylosift-Phylosift>.  I will be notified, and then you'll
 automatically be notified of progress on your bug as I make changes.
 
 
@@ -255,7 +255,7 @@ automatically be notified of progress on your bug as I make changes.
 
 You can find documentation for this module with the perldoc command.
 
-    perldoc Amphora2::pplacer
+    perldoc Phylosift::pplacer
 
 
 You can also look for information at:
@@ -264,19 +264,19 @@ You can also look for information at:
 
 =item * RT: CPAN's request tracker (report bugs here)
 
-L<http://rt.cpan.org/NoAuth/Bugs.html?Dist=Amphora2-Amphora2>
+L<http://rt.cpan.org/NoAuth/Bugs.html?Dist=Phylosift-Phylosift>
 
 =item * AnnoCPAN: Annotated CPAN documentation
 
-L<http://annocpan.org/dist/Amphora2-Amphora2>
+L<http://annocpan.org/dist/Phylosift-Phylosift>
 
 =item * CPAN Ratings
 
-L<http://cpanratings.perl.org/d/Amphora2-Amphora2>
+L<http://cpanratings.perl.org/d/Phylosift-Phylosift>
 
 =item * Search CPAN
 
-L<http://search.cpan.org/dist/Amphora2-Amphora2/>
+L<http://search.cpan.org/dist/Phylosift-Phylosift/>
 
 =back
 
@@ -297,4 +297,4 @@ See http://dev.perl.org/licenses/ for more information.
 
 =cut
 
-1;    # End of Amphora2::pplacer.pm
+1;    # End of Phylosift::pplacer.pm

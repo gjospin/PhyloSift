@@ -1,9 +1,9 @@
-package Amphora2::Summarize;
+package Phylosift::Summarize;
 use warnings;
 use strict;
 use FindBin;
-use Amphora2::Amphora2;
-use Amphora2::Utilities qw(debug);
+use Phylosift::Phylosift;
+use Phylosift::Utilities qw(debug);
 use Carp;
 use Bio::Phylo;
 use Bio::Phylo::Forest::Tree;
@@ -14,7 +14,7 @@ if ( $^O =~ /arwin/ ) {
 
 =head1 NAME
 
-Amphora2::Summarize - Summarize placed reads using the NCBI taxonomy
+Phylosift::Summarize - Summarize placed reads using the NCBI taxonomy
 
 =head1 VERSION
 
@@ -46,7 +46,7 @@ my %idnamemap;
 # stash them in hashes called nameidmap and idnamemap to go back & forth from tax ids to names
 sub readNcbiTaxonNameMap {
 	return if %nameidmap;
-	my $ncbidir = $Amphora2::Utilities::ncbi_dir;
+	my $ncbidir = $Phylosift::Utilities::ncbi_dir;
 	open( TAXIDS, "$ncbidir/names.dmp" );
 	while ( my $line = <TAXIDS> ) {
 		chomp $line;
@@ -64,7 +64,7 @@ sub readNcbiTaxonNameMap {
 my %parent;
 
 sub readNcbiTaxonomyStructure {
-	my $ncbidir = $Amphora2::Utilities::ncbi_dir;
+	my $ncbidir = $Phylosift::Utilities::ncbi_dir;
 	open( TAXSTRUCTURE, "$ncbidir/nodes.dmp" );
 	while ( my $line = <TAXSTRUCTURE> ) {
 		chomp $line;
@@ -134,8 +134,8 @@ sub makeNcbiTree {
 	# now read the list of organisms we have in our DB
 	# construct a phylo tree with the NCBI topology containing
 	# just the organisms in our database
-	my $markerdir = $Amphora2::Utilities::marker_dir;
-	my %namemap   = Amphora2::Utilities::readNameTable($markerdir);
+	my $markerdir = $Phylosift::Utilities::marker_dir;
+	my %namemap   = Phylosift::Utilities::readNameTable($markerdir);
 	my $phylotree = Bio::Phylo::Forest::Tree->new();
 	open( MARKERTAXONMAP, ">$markerdir/marker_taxon_map.txt" );
 	my %tidnodes;
@@ -209,8 +209,8 @@ sub summarize {
 	my $markRef = shift;    # list of the markers we're using
 	readNcbiTaxonNameMap();
 	readNcbiTaxonomyStructure();
-	my $markerdir = $Amphora2::Utilities::marker_dir;
-	my %namemap   = Amphora2::Utilities::readNameTable($markerdir);
+	my $markerdir = $Phylosift::Utilities::marker_dir;
+	my %namemap   = Phylosift::Utilities::readNameTable($markerdir);
 	foreach my $key ( keys(%namemap) ) {
 		$namemap{$key} = homogenizeNameAlaDongying( $namemap{$key} );
 	}
@@ -233,10 +233,10 @@ sub summarize {
 	foreach my $marker ( @{$markRef} ) {
 		next unless -e "$markerdir/$marker.ncbimap";
 		# don't bother with this one if there's no read placements
-		my $placeFile = $self->{"treeDir"} . "/" . Amphora2::Utilities::getReadPlacementFile($marker);
+		my $placeFile = $self->{"treeDir"} . "/" . Phylosift::Utilities::getReadPlacementFile($marker);
 		next unless ( -e $placeFile );
 		my $pp_covfile;
-		open( $pp_covfile, ">" . Amphora2::Utilities::getReadPlacementFile($marker) . ".cov" ) if ( defined $self->{"coverage"} );
+		open( $pp_covfile, ">" . Phylosift::Utilities::getReadPlacementFile($marker) . ".cov" ) if ( defined $self->{"coverage"} );
 
 		# first read the taxonomy mapping
 		my $markermapfile = "$markerdir/$marker.ncbimap";
@@ -494,8 +494,8 @@ Guillaume Jospin, C<< <gjospin at ucdavis.edu> >>
 
 =head1 BUGS
 
-Please report any bugs or feature requests to C<bug-amphora2-amphora2 at rt.cpan.org>, or through
-the web interface at L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=Amphora2-Amphora2>.  I will be notified, and then you'll
+Please report any bugs or feature requests to C<bug-phylosift-phylosift at rt.cpan.org>, or through
+the web interface at L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=Phylosift-Phylosift>.  I will be notified, and then you'll
 automatically be notified of progress on your bug as I make changes.
 
 
@@ -505,7 +505,7 @@ automatically be notified of progress on your bug as I make changes.
 
 You can find documentation for this module with the perldoc command.
 
-    perldoc Amphora2::Summarize
+    perldoc Phylosift::Summarize
 
 
 You can also look for information at:
@@ -514,19 +514,19 @@ You can also look for information at:
 
 =item * RT: CPAN's request tracker (report bugs here)
 
-L<http://rt.cpan.org/NoAuth/Bugs.html?Dist=Amphora2-Amphora2>
+L<http://rt.cpan.org/NoAuth/Bugs.html?Dist=Phylosift-Phylosift>
 
 =item * AnnoCPAN: Annotated CPAN documentation
 
-L<http://annocpan.org/dist/Amphora2-Amphora2>
+L<http://annocpan.org/dist/Phylosift-Phylosift>
 
 =item * CPAN Ratings
 
-L<http://cpanratings.perl.org/d/Amphora2-Amphora2>
+L<http://cpanratings.perl.org/d/Phylosift-Phylosift>
 
 =item * Search CPAN
 
-L<http://search.cpan.org/dist/Amphora2-Amphora2/>
+L<http://search.cpan.org/dist/Phylosift-Phylosift/>
 
 =back
 
@@ -547,4 +547,4 @@ See http://dev.perl.org/licenses/ for more information.
 
 =cut
 
-1;    # End of Amphora2::Summarize.pm
+1;    # End of Phylosift::Summarize.pm

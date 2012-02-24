@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-package Amphora2::Amphora2;
+package Phylosift::Phylosift;
 use 5.006;
 use strict;
 use warnings;
@@ -9,19 +9,19 @@ use Getopt::Long;
 use Cwd;
 use File::Basename;
 use Carp;
-use Amphora2::Utilities qw(:all);
-use Amphora2::MarkerAlign;
-use Amphora2::pplacer;
-use Amphora2::Summarize;
-use Amphora2::FastSearch;
-use Amphora2::Benchmark;
-use Amphora2::BeastInterface;
-use Amphora2::Comparison;
-use Amphora2::MarkerBuild;
+use Phylosift::Utilities qw(:all);
+use Phylosift::MarkerAlign;
+use Phylosift::pplacer;
+use Phylosift::Summarize;
+use Phylosift::FastSearch;
+use Phylosift::Benchmark;
+use Phylosift::BeastInterface;
+use Phylosift::Comparison;
+use Phylosift::MarkerBuild;
 
 =head2 new
 
-    Returns : Amphora2 project object
+    Returns : Phylosift project object
     Args : pair,readsFile(,readsFile_2);
 
 =cut
@@ -48,7 +48,7 @@ sub new {
 
 =head2 initialize
     
-    Initializes the variables for the Amphora2 object
+    Initializes the variables for the Phylosift object
     Using the standard pathnames and the filename
 
 =cut
@@ -69,7 +69,7 @@ sub initialize {
 	$self->{"mode"}        = $mode;
 	$self->{"readsFile"}   = $readsFile;
 	$self->{"readsFile_2"} = $readsFile_2;
-	$self->{"tempDir"}     = $self->{"workingDir"} . "/Amph_temp";
+	$self->{"tempDir"}     = $self->{"workingDir"} . "/PS_temp";
 	$self->{"fileDir"}     = $self->{"tempDir"} . "/" . $self->{"fileName"};
 	$self->{"blastDir"}    = $self->{"fileDir"} . "/blastDir";
 	$self->{"alignDir"}    = $self->{"fileDir"} . "/alignDir";
@@ -93,7 +93,7 @@ sub getReadsFile {
 
 =head1 NAME
 
-Amphora2::Amphora2 - Implements core functionality for Amphora2
+Phylosift::Phylosift - Implements core functionality for Phylosift
 
 =head1 VERSION
 
@@ -109,9 +109,9 @@ Quick summary of what the module does.
 
 Perhaps a little code snippet.
 
-    use Amphora2::Amphora2;
+    use Phylosift::Phylosift;
 
-    my $foo = Amphora2::Amphora2->new();
+    my $foo = Phylosift::Phylosift->new();
     ...
 
 =head1 EXPORT
@@ -128,7 +128,7 @@ if you don't export anything, such as for a purely object-oriented module.
            $continue - if the mode != all and continue = 1 then finish the pipeline otherwise only execute the step specified
            $isolateMode - allows sequences to hit multiple markers (used when running isolate genomes)
 
-    Runs the Amphora-2 pipeline according to the functions passed as arguments
+    Runs the PhyloSift pipeline according to the functions passed as arguments
 
 =cut
 
@@ -137,25 +137,25 @@ my ( $mode, $readsFile, $readsFile_2, $fileName, $tempDir, $fileDir, $blastDir, 
 my ( $sec,  $min,       $hour,        $mday,     $mon,     $year,    $wday,     $yday,     $isdst )   = 0;
 my $workingDir = getcwd;
 
-#where everything will be written when Amphora-2 is running
+#where everything will be written when PhyloSift is running
 sub run {
 	my $self     = shift;
 	my $force    = shift;
 	my $custom   = shift;
 	my $continue = shift;
 	debug "force : $force\n";
-	Amphora2::Utilities::print_citations();
+	Phylosift::Utilities::print_citations();
 	start_timer("START");
-	$self->readAmphora2Config();
+	$self->readPhylosiftConfig();
 	$self->runProgCheck();
-	Amphora2::Utilities::data_checks(self=>$self);
+	Phylosift::Utilities::data_checks(self=>$self);
 	$self->fileCheck();
 	$self->directoryPrep($force);
 	$self->{"readsFile"} = $self->prepIsolateFiles( $self->{"readsFile"} ) if $self->{"isolate"} == 1;
 
 	#create a file with a list of markers called markers.list
 	debug "CUSTOM = " . $custom . "\n";
-	my @markers = Amphora2::Utilities::gather_markers( self=>$self, marker_file => $custom );
+	my @markers = Phylosift::Utilities::gather_markers( self=>$self, marker_file => $custom );
 	debug "@markers\n";
 	debug "MODE :: " . $self->{"mode"} . "\n";
 	if ( $self->{"mode"} eq 'search' || $self->{"mode"} eq 'all' ) {
@@ -180,21 +180,21 @@ sub run {
 		$self = $self->compare();
 	}
 	if ( $self->{"mode"} eq 'index' ) {
-		Amphora2::Utilities::index_marker_db( self=>$self, markers=>\@markers );
+		Phylosift::Utilities::index_marker_db( self=>$self, markers=>\@markers );
 	}
 	if( $self->{"mode"} eq 'build_marker'){
-		Amphora2::MarkerBuild::build_marker(alignment=>$ARGV[1], name=>$ARGV[2], cutoff=>$ARGV[3]);
+		Phylosift::MarkerBuild::build_marker(alignment=>$ARGV[1], name=>$ARGV[2], cutoff=>$ARGV[3]);
 	}
 }
 
 =head2 function2
 
-    Reads the Amphora configuration file and assigns the file paths to the required directories
+    Reads the Phylosift configuration file and assigns the file paths to the required directories
 
 =cut
 
-# reads the Amphora2 configuration file
-sub readAmphora2Config {
+# reads the Phylosift configuration file
+sub readPhylosiftConfig {
 	my $self          = shift;
 	my $custom_config = $self->{"configuration"};
 
@@ -206,11 +206,11 @@ sub readAmphora2Config {
 	# let each one override its predecessor.
 	{
 
-		package Amphora2::Settings;
-		do "$scriptpath/amphora2rc";
-		do "$scriptpath/../amphora2rc";
-		do "$scriptpath/../etc/amphora2rc";
-		do "$ENV{HOME}/.amphora2rc";
+		package Phylosift::Settings;
+		do "$scriptpath/phylosiftrc";
+		do "$scriptpath/../phylosiftrc";
+		do "$scriptpath/../etc/phylosiftrc";
+		do "$ENV{HOME}/.phylosiftrc";
 		do $custom_config if defined $custom_config;
 	}
 	return $self;
@@ -218,7 +218,7 @@ sub readAmphora2Config {
 
 =head2 fileCheck
 
-    Checks if the files passed to the Amphora object exist and are not empty
+    Checks if the files passed to the Phylosift object exist and are not empty
 
 =cut
 
@@ -250,7 +250,7 @@ sub fileCheck {
 =head2 runProgCheck
 
     Runs a check on the programs that will be used through the pipeline to make sure they are
-    available to the user and are the versions Amphora was tested with.
+    available to the user and are the versions Phylosift was tested with.
 
 =cut
 
@@ -258,7 +258,7 @@ sub runProgCheck {
 	my $self = shift;
 
 	#check if the various programs used in this pipeline are installed on the machine
-	my $progCheck = Amphora2::Utilities::programChecks($self);
+	my $progCheck = Phylosift::Utilities::programChecks($self);
 	if ( $progCheck != 0 ) {
 		croak "A required program was not found during the checks aborting\n";
 	} elsif ( $progCheck == 0 ) {
@@ -301,7 +301,7 @@ sub prepIsolateFiles {
 
 =head2 directoryPrep
 
-    Prepares the temporary Amphora directory by deleting old runs and/or creating the correct directory structure
+    Prepares the temporary Phylosift directory by deleting old runs and/or creating the correct directory structure
     
 =cut
 
@@ -344,9 +344,9 @@ sub taxonomyAssignments {
 	my $self        = shift;
 	my $continue    = shift;
 	my $markListRef = shift;
-	Amphora2::Utilities::start_timer("taxonomy assignments");
-	Amphora2::Summarize::summarize( $self, $markListRef );
-	Amphora2::Utilities::end_timer("taxonomy assignments");
+	Phylosift::Utilities::start_timer("taxonomy assignments");
+	Phylosift::Summarize::summarize( $self, $markListRef );
+	Phylosift::Utilities::end_timer("taxonomy assignments");
 	return $self;
 }
 
@@ -357,7 +357,7 @@ sub taxonomyAssignments {
 sub benchmark {
 	my $self = shift;
 	debug "RUNNING Benchmark\n";
-	Amphora2::Benchmark::runBenchmark( $self, "./" );
+	Phylosift::Benchmark::runBenchmark( $self, "./" );
 }
 
 =head2 compare
@@ -367,7 +367,7 @@ sub benchmark {
 sub compare {
 	my $self = shift;
 	debug "RUNNING Compare\n";
-	Amphora2::Comparison::compare( $self, "./" );
+	Phylosift::Comparison::compare( $self, "./" );
 }
 
 =head2 runPplacer
@@ -383,9 +383,9 @@ sub runPplacer {
 	my $continue    = shift;
 	my $markListRef = shift;
 	debug "PPLACER MARKS @{$markListRef}\n";
-	Amphora2::Utilities::start_timer("runPPlacer");
-	Amphora2::pplacer::pplacer( $self, $markListRef );
-	Amphora2::Utilities::end_timer("runPPlacer");
+	Phylosift::Utilities::start_timer("runPPlacer");
+	Phylosift::pplacer::pplacer( $self, $markListRef );
+	Phylosift::Utilities::end_timer("runPPlacer");
 
 	if ( $continue != 0 ) {
 		$self->{"mode"} = 'summary';
@@ -404,7 +404,7 @@ sub runMarkerAlign {
 	my $self     = shift;
 	my $continue = shift;
 	my $markRef  = shift;
-	Amphora2::Utilities::start_timer("Alignments");
+	Phylosift::Utilities::start_timer("Alignments");
 
 	#clearing the alignment directory if needed
 	my $alignDir = $self->{"alignDir"};
@@ -412,10 +412,10 @@ sub runMarkerAlign {
 
 	#Align Markers
 	my $threadNum = 1;
-	Amphora2::MarkerAlign::MarkerAlign( $self, $markRef );
+	Phylosift::MarkerAlign::MarkerAlign( $self, $markRef );
 
-	#    Amphora2::BeastInterface::Export($self, $markRef, $self->{"fileDir"}."/beast.xml");
-	Amphora2::Utilities::end_timer("Alignments");
+	#    Phylosift::BeastInterface::Export($self, $markRef, $self->{"fileDir"}."/beast.xml");
+	Phylosift::Utilities::end_timer("Alignments");
 	if ( $continue != 0 ) {
 		$self->{"mode"} = 'placer';
 	}
@@ -438,15 +438,15 @@ sub runSearch {
 	my $custom        = shift;
 	my $type          = shift;
 	my $markerListRef = shift;
-	Amphora2::Utilities::start_timer("runBlast");
+	Phylosift::Utilities::start_timer("runBlast");
 
 	#clearing the blast directory
 	my $blastDir = $self->{"blastDir"};
 	`rm $self->{"blastDir"}/*` if (<$blastDir/*>);
 
 	#run Blast
-	Amphora2::FastSearch::RunSearch( $self, $custom, $type, $markerListRef );
-	Amphora2::Utilities::end_timer("runBlast");
+	Phylosift::FastSearch::RunSearch( $self, $custom, $type, $markerListRef );
+	Phylosift::Utilities::end_timer("runBlast");
 	if ( $continue != 0 ) {
 		$self->{"mode"} = 'align';
 	}
@@ -460,8 +460,8 @@ Guillaume Jospin, C<< <gjospin at ucdavis.edu> >>
 
 =head1 BUGS
 
-Please report any bugs or feature requests to C<bug-amphora2-amphora2 at rt.cpan.org>, or through
-the web interface at L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=Amphora2-Amphora2>.  I will be notified, and then you'll
+Please report any bugs or feature requests to C<bug-phylosift-phylosift at rt.cpan.org>, or through
+the web interface at L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=Phylosift-Phylosift>.  I will be notified, and then you'll
 automatically be notified of progress on your bug as I make changes.
 
 
@@ -471,7 +471,7 @@ automatically be notified of progress on your bug as I make changes.
 
 You can find documentation for this module with the perldoc command.
 
-    perldoc Amphora2::Amphora2
+    perldoc Phylosift::Phylosift
 
 
 You can also look for information at:
@@ -479,19 +479,19 @@ You can also look for information at:
 
 =item * RT: CPAN's request tracker (report bugs here)
 
-L<http://rt.cpan.org/NoAuth/Bugs.html?Dist=Amphora2-Amphora2>
+L<http://rt.cpan.org/NoAuth/Bugs.html?Dist=Phylosift-Phylosift>
 
 =item * AnnoCPAN: Annotated CPAN documentation
 
-L<http://annocpan.org/dist/Amphora2-Amphora2>
+L<http://annocpan.org/dist/Phylosift-Phylosift>
 
 =item * CPAN Ratings
 
-L<http://cpanratings.perl.org/d/Amphora2-Amphora2>
+L<http://cpanratings.perl.org/d/Phylosift-Phylosift>
 
 =item * Search CPAN
 
-L<http://search.cpan.org/dist/Amphora2-Amphora2/>
+L<http://search.cpan.org/dist/Phylosift-Phylosift/>
 
 =back
 
@@ -512,4 +512,4 @@ See http://dev.perl.org/licenses/ for more information.
 
 =cut
 
-1;    # End of Amphora2::Amphora2
+1;    # End of Phylosift::Phylosift

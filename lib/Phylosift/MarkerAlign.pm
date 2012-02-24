@@ -1,4 +1,4 @@
-package Amphora2::MarkerAlign;
+package Phylosift::MarkerAlign;
 use Cwd;
 use warnings;
 use strict;
@@ -7,12 +7,12 @@ use Bio::AlignIO;
 use Bio::SearchIO;
 use Bio::SeqIO;
 use List::Util qw(min);
-use Amphora2::Amphora2;
-use Amphora2::Utilities qw(:all);
+use Phylosift::Phylosift;
+use Phylosift::Utilities qw(:all);
 
 =head1 NAME
 
-Amphora2::MarkerAlign - Subroutines to align reads to marker HMMs
+Phylosift::MarkerAlign - Subroutines to align reads to marker HMMs
 
 =head1 VERSION
 
@@ -23,7 +23,7 @@ our $VERSION = '0.01';
 
 =head1 SYNOPSIS
 
-Run HMMalign for a list of families from .candidate files located in $workingDir/Amph_temp/Blast_run/
+Run HMMalign for a list of families from .candidate files located in $workingDir/PS_temp/Blast_run/
 
 
 input : Filename containing the marker list
@@ -36,9 +36,9 @@ Option : -threaded = #    Runs Hmmalign using multiple processors.
 
 Perhaps a little code snippet.
 
-    use Amphora2::Amphora2;
+    use Phylosift::Phylosift;
 
-    my $foo = Amphora2::Amphora2->new();
+    my $foo = Phylosift::Phylosift->new();
     ...
 
 =head1 EXPORT
@@ -71,14 +71,14 @@ sub MarkerAlign {
 
 	#    if($self->{"isolate"} && $self->{"besthit"}){
 	my @markeralignments = getPMPROKMarkerAlignmentFiles( $self, \@allmarkers );
-	my $outputFastaAA = $self->{"alignDir"} . "/" . Amphora2::Utilities::getAlignerOutputFastaAA("concat");
-	Amphora2::Utilities::concatenateAlignments( $self, $outputFastaAA, $self->{"alignDir"} . "/mrbayes.nex", 1, @markeralignments );
+	my $outputFastaAA = $self->{"alignDir"} . "/" . Phylosift::Utilities::getAlignerOutputFastaAA("concat");
+	Phylosift::Utilities::concatenateAlignments( $self, $outputFastaAA, $self->{"alignDir"} . "/mrbayes.nex", 1, @markeralignments );
 	if ( $self->{"dna"} ) {
 		for ( my $i = 0 ; $i < @markeralignments ; $i++ ) {
 			$markeralignments[$i] =~ s/trim.fasta/trim.fna.fasta/g;
 		}
-		my $outputFastaDNA = $self->{"alignDir"} . "/" . Amphora2::Utilities::getAlignerOutputFastaDNA("concat");
-		Amphora2::Utilities::concatenateAlignments( $self, $outputFastaDNA, $self->{"alignDir"} . "/mrbayes-dna.nex", 3, @markeralignments );
+		my $outputFastaDNA = $self->{"alignDir"} . "/" . Phylosift::Utilities::getAlignerOutputFastaDNA("concat");
+		Phylosift::Utilities::concatenateAlignments( $self, $outputFastaDNA, $self->{"alignDir"} . "/mrbayes-dna.nex", 3, @markeralignments );
 	}
 	debug "AFTER concatenateALI\n";
 	return $self;
@@ -121,25 +121,25 @@ sub markerPrepAndRun {
 	my $markRef = shift;
 	debug "ALIGNDIR : " . $self->{"alignDir"} . "\n";
 	foreach my $marker ( @{$markRef} ) {
-		next unless Amphora2::Utilities::is_protein_marker(marker=>$marker);
-		my $hmm_file = Amphora2::Utilities::get_marker_hmm_file( $self, $marker, 1 );
-		my $stockholm_file = Amphora2::Utilities::get_marker_stockholm_file( $self, $marker );
+		next unless Phylosift::Utilities::is_protein_marker(marker=>$marker);
+		my $hmm_file = Phylosift::Utilities::get_marker_hmm_file( $self, $marker, 1 );
+		my $stockholm_file = Phylosift::Utilities::get_marker_stockholm_file( $self, $marker );
 		unless ( -e $hmm_file && -e $stockholm_file ) {
-			my $trimfinalFile = Amphora2::Utilities::getTrimfinalMarkerFile( $self, $marker );
+			my $trimfinalFile = Phylosift::Utilities::getTrimfinalMarkerFile( $self, $marker );
 
 			#converting the marker's reference alignments from Fasta to Stockholm (required by Hmmer3)
-			Amphora2::Utilities::fasta2stockholm( "$Amphora2::Utilities::marker_dir/$trimfinalFile", $stockholm_file );
+			Phylosift::Utilities::fastpsstockholm( "$Phylosift::Utilities::marker_dir/$trimfinalFile", $stockholm_file );
 
 			#build the Hmm for the marker using Hmmer3
 			if ( !-e $hmm_file ) {
-				`$Amphora2::Utilities::hmmbuild $hmm_file $stockholm_file`;
+				`$Phylosift::Utilities::hmmbuild $hmm_file $stockholm_file`;
 			}
 		}
 		`rm -f $self->{"alignDir"}/$marker.hmmsearch.tblout`;
 		foreach my $type (@search_types) {
 			my $candidate = $self->{"blastDir"} . "/$marker$type.candidate";
 			next unless -e $candidate;
-`$Amphora2::Utilities::hmmsearch -E 10 --cpu $self->{"threads"} --max --tblout $self->{"alignDir"}/$marker.hmmsearch.tmp.tblout $hmm_file $candidate > $self->{"alignDir"}/$marker.hmmsearch.out`;
+`$Phylosift::Utilities::hmmsearch -E 10 --cpu $self->{"threads"} --max --tblout $self->{"alignDir"}/$marker.hmmsearch.tmp.tblout $hmm_file $candidate > $self->{"alignDir"}/$marker.hmmsearch.out`;
 			`cat $self->{"alignDir"}/$marker.hmmsearch.tmp.tblout >> $self->{"alignDir"}/$marker.hmmsearch.tblout`;
 			unlink( $self->{"alignDir"} . "/$marker.hmmsearch.tmp.tblout" );
 		}
@@ -156,7 +156,7 @@ sub hmmsearchParse {
 	my $markRef = shift;
 	for ( my $index = 0 ; $index < @{$markRef} ; $index++ ) {
 		my $marker = ${$markRef}[$index];
-		next if !Amphora2::Utilities::is_protein_marker( marker => $marker );
+		next if !Phylosift::Utilities::is_protein_marker( marker => $marker );
 		my %hmmHits   = ();
 		my %hmmScores = ();
 		open( TBLOUTIN, $self->{"alignDir"} . "/$marker.hmmsearch.tblout" ) || next;
@@ -220,7 +220,7 @@ sub writeAlignedSeq {
 	return if $aligned_count < $minAlignedResidues;
 
 	#substitute all the non letter or number characters into _ in the IDs to avoid parsing issues in tree viewing programs or others
-	$prev_name = Amphora2::Summarize::treeName($prev_name);
+	$prev_name = Phylosift::Summarize::treeName($prev_name);
 
 	#add a paralog ID if we're running in isolate mode and more than one good hit
 	$prev_name .= "_p$seq_count" if $seq_count > 0 && $self->{"isolate"};
@@ -300,12 +300,12 @@ sub alignAndMask {
 	for ( my $index = 0 ; $index < @{$markRef} ; $index++ ) {
 		my $marker   = ${$markRef}[$index];
 		my $refcount = 0;
-		my $stockholm_file = Amphora2::Utilities::get_marker_stockholm_file( $self, $marker );
+		my $stockholm_file = Phylosift::Utilities::get_marker_stockholm_file( $self, $marker );
 		my $hmmalign       = "";
 		my $cmalign        = "";
-		if ( Amphora2::Utilities::is_protein_marker( marker => $marker ) ) {
+		if ( Phylosift::Utilities::is_protein_marker( marker => $marker ) ) {
 			next unless -e $self->{"alignDir"} . "/$marker.newCandidate";
-			my $hmm_file = Amphora2::Utilities::get_marker_hmm_file( $self, $marker, 1 );
+			my $hmm_file = Phylosift::Utilities::get_marker_hmm_file( $self, $marker, 1 );
 			open( HMM, $hmm_file );
 			while ( my $line = <HMM> ) {
 				if ( $line =~ /NSEQ\s+(\d+)/ ) {
@@ -317,24 +317,24 @@ sub alignAndMask {
 			# Align the hits to the reference alignment using Hmmer3
 			# pipe in the aligned sequences, trim them further, and write them back out
 			$hmmalign =
-			    "$Amphora2::Utilities::hmmalign --outformat afa --mapali "
+			    "$Phylosift::Utilities::hmmalign --outformat afa --mapali "
 			  . $stockholm_file
 			  . " $hmm_file "
 			  . $self->{"alignDir"}
 			  . "/$marker.newCandidate" . " |";
 		} else {
 			next if ( !-e $self->{"blastDir"} . "/$marker.rna.candidate" );
-			$refcount = Amphora2::Utilities::get_count_from_reps( $self, $marker );
+			$refcount = Phylosift::Utilities::get_count_from_reps( $self, $marker );
 
 			#if the marker is rna, use infernal instead of hmmalign
 			$cmalign =
-			    "$Amphora2::Utilities::cmalign -q -l --dna "
-			  . Amphora2::Utilities::get_marker_cm_file( $self, $marker ) . " "
+			    "$Phylosift::Utilities::cmalign -q -l --dna "
+			  . Phylosift::Utilities::get_marker_cm_file( $self, $marker ) . " "
 			  . $self->{"blastDir"}
 			  . "/$marker.rna.candidate" . " | ";
 		}
-		my $outputFastaAA  = $self->{"alignDir"} . "/" . Amphora2::Utilities::getAlignerOutputFastaAA($marker);
-		my $outputFastaDNA = $self->{"alignDir"} . "/" . Amphora2::Utilities::getAlignerOutputFastaDNA($marker);
+		my $outputFastaAA  = $self->{"alignDir"} . "/" . Phylosift::Utilities::getAlignerOutputFastaAA($marker);
+		my $outputFastaDNA = $self->{"alignDir"} . "/" . Phylosift::Utilities::getAlignerOutputFastaDNA($marker);
 		open( my $aliout, ">" . $outputFastaAA ) or die "Couldn't open $outputFastaAA for writing\n";
 		open( my $updatedout, ">" . $self->{"alignDir"} . "/$marker.updated.hmm.fasta" );
 		my $prev_seq;
@@ -342,12 +342,12 @@ sub alignAndMask {
 		my $seqCount = 0;
 
 		my @lines;
-		if ( Amphora2::Utilities::is_protein_marker( marker => $marker ) ) {
+		if ( Phylosift::Utilities::is_protein_marker( marker => $marker ) ) {
 			open( HMMALIGN, $hmmalign );
 			@lines = <HMMALIGN>;
 		} else {
 			open( my $CMALIGN, $cmalign );
-			my $sto = Amphora2::Utilities::stockholm2fasta(in=>$CMALIGN);
+			my $sto = Phylosift::Utilities::stockholm2fasta(in=>$CMALIGN);
 			@lines = split(/\n/, $sto);
 		}
 		open( my $UNMASKEDOUT, ">" . $self->{"alignDir"} . "/$marker.unmasked" );
@@ -356,7 +356,7 @@ sub alignAndMask {
 			chomp $line;
 			if ( $line =~ /^>(.+)/ ) {
 				my $new_name = $1;
-				if ( Amphora2::Utilities::is_protein_marker( marker => $marker ) ) {
+				if ( Phylosift::Utilities::is_protein_marker( marker => $marker ) ) {
 					writeAlignedSeq( $self, $updatedout, $null, $prev_name, $prev_seq, $seqCount ) if $seqCount <= $refcount && $seqCount > 0;
 					writeAlignedSeq( $self, $aliout, $UNMASKEDOUT, $prev_name, $prev_seq, $seqCount ) if $seqCount > $refcount;
 				} else {
@@ -369,7 +369,7 @@ sub alignAndMask {
 				$prev_seq .= $line;
 			}
 		}
-		if ( Amphora2::Utilities::is_protein_marker( marker => $marker ) ) {
+		if ( Phylosift::Utilities::is_protein_marker( marker => $marker ) ) {
 			writeAlignedSeq( $self, $updatedout, $null,        $prev_name, $prev_seq, $seqCount ) if $seqCount <= $refcount;
 			writeAlignedSeq( $self, $aliout,     $UNMASKEDOUT, $prev_name, $prev_seq, $seqCount ) if $seqCount > $refcount;
 		} else {
@@ -427,7 +427,7 @@ sub getPMPROKMarkerAlignmentFiles {
 	my @markeralignments = ();
 	foreach my $marker(@{$markRef}){
 		next unless $marker =~ /PMPROK/;
-		push( @markeralignments, $self->{"alignDir"} . "/" . Amphora2::Utilities::getAlignerOutputFastaAA($marker) );
+		push( @markeralignments, $self->{"alignDir"} . "/" . Phylosift::Utilities::getAlignerOutputFastaAA($marker) );
 	}
 	return @markeralignments;
 }
@@ -439,8 +439,8 @@ Guillaume Jospin, C<< <gjospin at ucdavis.edu> >>
 
 =head1 BUGS
 
-Please report any bugs or feature requests to C<bug-amphora2-amphora2 at rt.cpan.org>, or through
-the web interface at L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=Amphora2-Amphora2>.  I will be notified, and then you'll
+Please report any bugs or feature requests to C<bug-phylosift-phylosift at rt.cpan.org>, or through
+the web interface at L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=Phylosift-Phylosift>.  I will be notified, and then you'll
 automatically be notified of progress on your bug as I make changes.
 
 
@@ -450,7 +450,7 @@ automatically be notified of progress on your bug as I make changes.
 
 You can find documentation for this module with the perldoc command.
 
-    perldoc Amphora2::Amphora2
+    perldoc Phylosift::Phylosift
 
 
 You can also look for information at:
@@ -459,19 +459,19 @@ You can also look for information at:
 
 =item * RT: CPAN's request tracker (report bugs here)
 
-L<http://rt.cpan.org/NoAuth/Bugs.html?Dist=Amphora2-Amphora2>
+L<http://rt.cpan.org/NoAuth/Bugs.html?Dist=Phylosift-Phylosift>
 
 =item * AnnoCPAN: Annotated CPAN documentation
 
-L<http://annocpan.org/dist/Amphora2-Amphora2>
+L<http://annocpan.org/dist/Phylosift-Phylosift>
 
 =item * CPAN Ratings
 
-L<http://cpanratings.perl.org/d/Amphora2-Amphora2>
+L<http://cpanratings.perl.org/d/Phylosift-Phylosift>
 
 =item * Search CPAN
 
-L<http://search.cpan.org/dist/Amphora2-Amphora2/>
+L<http://search.cpan.org/dist/Phylosift-Phylosift/>
 
 =back
 
@@ -491,4 +491,4 @@ See http://dev.perl.org/licenses/ for more information.
 
 
 =cut
-1;    # End of Amphora2::MarkerAlign.pm
+1;    # End of Phylosift::MarkerAlign.pm

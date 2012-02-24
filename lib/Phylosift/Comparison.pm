@@ -1,14 +1,14 @@
-package Amphora2::Comparison;
+package Phylosift::Comparison;
 use Cwd;
 use Getopt::Long;
 use Bio::AlignIO;
-use Amphora2::Amphora2;
-use Amphora2::Utilities;
+use Phylosift::Phylosift;
+use Phylosift::Utilities;
 use Bio::Phylo::IO qw(parse unparse);
 
 =head1 NAME
 
-Amphora2::Comparison - compares phylogenetic structure across many samples
+Phylosift::Comparison - compares phylogenetic structure across many samples
 
 =head1 VERSION
 
@@ -53,25 +53,25 @@ sub compare {
 		chomp $file;
 		push( @files, $file );
 	}
-	my $squash_cl = "$Amphora2::Utilities::guppy squash --prefix squash " . join( " ", @files );
+	my $squash_cl = "$Phylosift::Utilities::guppy squash --prefix squash " . join( " ", @files );
 	print STDERR "Squashing with: $squash_cl ";
 	system($squash_cl);
 #	output goes to cluster.tre
 
-	my $pca_cl = "$Amphora2::Utilities::guppy pca --prefix pca " . join( " ", @files );
+	my $pca_cl = "$Phylosift::Utilities::guppy pca --prefix pca " . join( " ", @files );
 	print STDERR "pca with: $pca_cl ";
 	system($pca_cl);
 
-	my $merge_cl = "$Amphora2::Utilities::guppy merge -o $parent_directory/merged.jplace " . join( " ", @files);
+	my $merge_cl = "$Phylosift::Utilities::guppy merge -o $parent_directory/merged.jplace " . join( " ", @files);
 	system($merge_cl);
 	
 	my @processfiles = @files;
 	unshift(@files, "$parent_directory/merged.jplace");
 
 	foreach my $file(@files){
-		my $rarefact_cl = "$Amphora2::Utilities::guppy rarefact -o $file.rarefaction $file";
+		my $rarefact_cl = "$Phylosift::Utilities::guppy rarefact -o $file.rarefaction $file";
 		system($rarefact_cl);
-		my $compress_cl = "$Amphora2::Utilities::guppy compress -o $file.compression --cutoff 0.4 $file";
+		my $compress_cl = "$Phylosift::Utilities::guppy compress -o $file.compression --cutoff 0.4 $file";
 		system($compress_cl);
 	}
 
@@ -98,8 +98,8 @@ Guillaume Jospin, C<< <gjospin at ucdavis.edu> >>
 
 =head1 BUGS
 
-Please report any bugs or feature requests to C<bug-amphora2-amphora2 at rt.cpan.org>, or through
-the web interface at L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=Amphora2-Amphora2>.  I will be notified, and then you'll
+Please report any bugs or feature requests to C<bug-phylosift-phylosift at rt.cpan.org>, or through
+the web interface at L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=Phylosift-Phylosift>.  I will be notified, and then you'll
 automatically be notified of progress on your bug as I make changes.
 
 
@@ -109,7 +109,7 @@ automatically be notified of progress on your bug as I make changes.
 
 You can find documentation for this module with the perldoc command.
 
-    perldoc Amphora2::Comparison
+    perldoc Phylosift::Comparison
 
 
 You can also look for information at:
@@ -118,19 +118,19 @@ You can also look for information at:
 
 =item * RT: CPAN's request tracker (report bugs here)
 
-L<http://rt.cpan.org/NoAuth/Bugs.html?Dist=Amphora2-Amphora2>
+L<http://rt.cpan.org/NoAuth/Bugs.html?Dist=Phylosift-Phylosift>
 
 =item * AnnoCPAN: Annotated CPAN documentation
 
-L<http://annocpan.org/dist/Amphora2-Amphora2>
+L<http://annocpan.org/dist/Phylosift-Phylosift>
 
 =item * CPAN Ratings
 
-L<http://cpanratings.perl.org/d/Amphora2-Amphora2>
+L<http://cpanratings.perl.org/d/Phylosift-Phylosift>
 
 =item * Search CPAN
 
-L<http://search.cpan.org/dist/Amphora2-Amphora2/>
+L<http://search.cpan.org/dist/Phylosift-Phylosift/>
 
 =back
 
@@ -150,4 +150,4 @@ See http://dev.perl.org/licenses/ for more information.
 
 
 =cut
-1;    # End of Amphora2::Comparison.pm
+1;    # End of Phylosift::Comparison.pm

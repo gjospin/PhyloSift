@@ -1,4 +1,4 @@
-AMPHORA2
+PhyloSift
 
 AMPHORA is an Automated Phylogenomic Inference Pipeline for bacterial sequences. From a given a set of protein sequences, it automatically identifies various phylogenetic marker genes. It then generates high-quality multiple sequence alignments for these genes and make tree-based phylotype assignments.
 
@@ -6,7 +6,7 @@ AMPHORA is an Automated Phylogenomic Inference Pipeline for bacterial sequences.
 
 NEW VERSION
 =============================================================
-AMPHORA 2 has several new features over AMPHORA
+PhyloSift has several new features over AMPHORA
 -The number of markers is being expanded from the original 31 Bacteria only markers to many more from Archaea and Bacteria (and possibly Eukaryotes and viruses)
 -HMMER 3 replaces the older, slower, HMMER 2
 -Use of Pplacer from Erick Matsen to place the reads on the reference trees
@@ -19,23 +19,23 @@ Install
 
 ==== The easy way ====
 
-Download the tarball archive from http://edhar.genomecenter.ucdavis.edu/~koadman/amphora2/amphora2_latest.tar.bz2
+Download the tarball archive from http://edhar.genomecenter.ucdavis.edu/~koadman/phylosift/phylosift_latest.tar.bz2
 
 Navigate to the directory where you want to install A2.
 
-   >tar -xvf amphora2_latest.tar.bz2
+   >tar -xvf phylosift_latest.tar.bz2
 
-Amphora-2 is ready for use, refer to the Usage section.
+PhyloSift is ready for use, refer to the Usage section.
 
 ==== Update the fast way ====
 
 Download and install Git from http://github.com/   OR  run the following unix command : >apt-get install git
 
-To update Amphora-2, navigate to the Amphora-2 directory and run the following command.
-   >cd Amphora-2
+To update PhyloSift, navigate to the PhyloSift directory and run the following command.
+   >cd PhyloSift
    >git pull
 
-Amphora-2 is ready for use
+PhyloSift is ready for use
 
 ==== Update ====
 
@@ -44,21 +44,21 @@ This method will redownload all the binaries and library in addition to new code
 
 Indexing step
 ==========================================
-$ perl amphora2 index <sequence_file>
+$ phylosift index <sequence_file>
 
 
 Index preparationg step
 ==========================================
 
-$ perl amphora2 index <sequence_file>
+$ phylosift index <sequence_file>
 
 Usage
 ==========================================
-$ perl amphora2 <Mode> <options> <sequence_file>
+$ perl phylosift <Mode> <options> <sequence_file>
 
    sequence_file needs to be in fasta format
 
-$ perl amphora2 <Mode> <options> -paired <sequence_file_1> <sequence_file_2>
+$ perl phylosift <Mode> <options> -paired <sequence_file_1> <sequence_file_2>
 
    sequence_file_1 and _2 need to be in fastq format
 
@@ -75,7 +75,7 @@ Options Available at this time :
    --threaded=<Number>  Runs Blast and Hmmer using the number of processors sepcified
                         Runs 1 Pplacer per processor specified
 		        (DEFAULT : 1)
-   -clean               Cleans the temporary files created by Amphora (NOT YET IMPLEMENTED)
+   -clean               Cleans the temporary files created by Phylosift (NOT YET IMPLEMENTED)
    -paired              Looks for 2 input files (paired end sequencing) in FastQ format.  
    			Reversing the sequences for the second file listed 
 			and appending to the corresponding pair from the first file listed.
@@ -87,10 +87,10 @@ Options Available at this time :
 Requirements
 ==========================================
 
-A 64bit operating system is required as the binaries packaged with the Amphora-2 scripts were compiled using such OS.
-Amphora-2 will NOT work on a 32bit operating system.
+A 64bit operating system is required as the binaries packaged with the PhyloSift scripts were compiled using such OS.
+PhyloSift will NOT work on a 32bit operating system.
 
-Default Markers used by Amphora-2
+Default Markers used by PhyloSift
 =========================================
 PMPROK00003  PMPROK00025  PMPROK00048  PMPROK00064  PMPROK00081  PMPROK00106
 PMPROK00014  PMPROK00028  PMPROK00050  PMPROK00067  PMPROK00086  PMPROK00123
@@ -105,7 +105,7 @@ This data has not yet been pusblished.
 Results
 ==========================================
 
-All results are generated within the Amphora-2 directory in the the Amph_temp/<filename>/ directory.
+All results are generated within the PhyloSift directory in the the Amph_temp/<filename>/ directory.
     blastDir : All files related to the Blast / Rapsearch step.
                *.candidate           Fasta format of the candidate sequences in Protein space for each marker
                *.candidate.ffn       Fasta format of the candidate sequences in DNA space for each marker (option activated)
@@ -154,21 +154,21 @@ SUPPORT AND DOCUMENTATION
 After installing, you can find documentation for this module with the
 perldoc command.
 
-    perldoc Amphora2::Amphora2
+    perldoc Phylosift::Phylosift
 
 You can also look for information at:
 
     RT, CPAN's request tracker (report bugs here)
-        http://rt.cpan.org/NoAuth/Bugs.html?Dist=Amphora2-Amphora2
+        http://rt.cpan.org/NoAuth/Bugs.html?Dist=Phylosift-Phylosift
 
     AnnoCPAN, Annotated CPAN documentation
-        http://annocpan.org/dist/Amphora2-Amphora2
+        http://annocpan.org/dist/Phylosift-Phylosift
 
     CPAN Ratings
-        http://cpanratings.perl.org/d/Amphora2-Amphora2
+        http://cpanratings.perl.org/d/Phylosift-Phylosift
 
     Search CPAN
-        http://search.cpan.org/dist/Amphora2-Amphora2/
+        http://search.cpan.org/dist/Phylosift-Phylosift/
 
 
 LICENSE AND COPYRIGHT

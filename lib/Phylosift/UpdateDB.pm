@@ -1,14 +1,14 @@
-package Amphora2::UpdateDB;
+package Phylosift::UpdateDB;
 use warnings;
 use strict;
 use File::Basename;
 use Bio::SeqIO;
 use Carp;
-use Amphora2::Summarize;
+use Phylosift::Summarize;
 
 =head1 NAME
 
-Amphora2::UpdateDB - Functionality to download new genomes and update the marker database
+Phylosift::UpdateDB - Functionality to download new genomes and update the marker database
 
 =head1 VERSION
 
@@ -227,7 +227,7 @@ sub qsub_updates($$) {
 	`mkdir -p $results_dir`;
 	foreach my $file ( @{$files} ) {
 		chdir($results_dir);
-		my $job = `qsub -q all.q -q eisen.q /home/koadman/bin/a2sge.sh $file`;
+		my $job = `qsub -q all.q -q eisen.q /home/koadman/bin/pssge.sh $file`;
 		$job =~ /Your job (\d+) /;
 		push( @jobids, $1 );
 	}
@@ -407,7 +407,7 @@ sub build_marker_trees_fasttree($$) {
 	my $aa_tre      = get_fasttree_tre_filename( marker => '\\$1', dna => 0, updated => 1, pruned => $pruned );
 	my $codon_log   = get_fasttree_log_filename( marker => '\\$1', dna => 1, updated => 1, pruned => $pruned );
 	my $aa_log      = get_fasttree_log_filename( marker => '\\$1', dna => 0, updated => 1, pruned => $pruned );
-	open( TREESCRIPT, ">/tmp/a2_tree.sh" );
+	open( TREESCRIPT, ">/tmp/ps_tree.sh" );
 	print TREESCRIPT qq{#!/bin/sh
 #\$ -cwd
 #\$ -V
@@ -415,7 +415,7 @@ sub build_marker_trees_fasttree($$) {
 /home/koadman/bin/FastTree -nt -gtr -log $codon_log  $codon_fasta > $codon_tre
 /home/koadman/bin/FastTree -log $aa_log $aa_fasta > $aa_tre
 };
-	`chmod 755 /tmp/a2_tree.sh`;
+	`chmod 755 /tmp/ps_tree.sh`;
 	chdir($marker_dir);
 	my @markerlist = get_marker_list($marker_dir);
 	unshift( @markerlist, "concat" );
@@ -425,18 +425,18 @@ sub build_marker_trees_fasttree($$) {
 		next unless ( -e $aa_fasta );
 
 		# run fasttree on them
-		my $qsub_cmd = "qsub -q all.q -q eisen.q /tmp/a2_tree.sh $marker";
+		my $qsub_cmd = "qsub -q all.q -q eisen.q /tmp/ps_tree.sh $marker";
 		my $job      = `$qsub_cmd`;
 		$job =~ /Your job (\d+) /;
 		push( @jobids, $1 );
 	}
 	wait_for_jobs(@jobids);
-	`rm a2_tree.sh.*`;
+	`rm ps_tree.sh.*`;
 }
 
 sub build_marker_trees_raxml($) {
 	my $marker_dir = shift;
-	open( TREESCRIPT, ">/tmp/a2_tree.sh" );
+	open( TREESCRIPT, ">/tmp/ps_tree.sh" );
 	print TREESCRIPT qq{#!/bin/sh
 #\$ -cwd
 #\$ -V
@@ -452,7 +452,7 @@ mv RAxML_info.\$1.codon.updated \$1.codon.updated.RAxML_info
 mv RAxML_info.\$1.updated \$1.updated.RAxML_info
 rm RAxML*.\$1*
 };
-	`chmod 755 /tmp/a2_tree.sh`;
+	`chmod 755 /tmp/ps_tree.sh`;
 	chdir($marker_dir);
 	my @markerlist = get_marker_list($marker_dir);
 	unshift( @markerlist, "concat" );
@@ -477,13 +477,13 @@ rm RAxML*.\$1*
 		}
 
 		# run raxml on them
-		my $qsub_cmd = "qsub -q all.q -q eisen.q /tmp/a2_tree.sh $marker";
+		my $qsub_cmd = "qsub -q all.q -q eisen.q /tmp/ps_tree.sh $marker";
 		my $job      = `$qsub_cmd`;
 		$job =~ /Your job (\d+) /;
 		push( @jobids, $1 );
 	}
 	wait_for_jobs(@jobids);
-	`rm a2_tree.sh.*`;
+	`rm ps_tree.sh.*`;
 }
 
 sub fix_names_in_alignment($) {
@@ -575,7 +575,7 @@ sub reconcile_with_ncbi($$$$) {
 	my $marker_dir  = shift;
 	my $pruned      = shift;
 	print STDERR "Updating NCBI tree and taxon map...";
-	Amphora2::Summarize::makeNcbiTreeFromUpdate( $self, $results_dir, $marker_dir );
+	Phylosift::Summarize::makeNcbiTreeFromUpdate( $self, $results_dir, $marker_dir );
 	print STDERR "done\n";
 	my $codon_fasta = get_fasta_filename( marker => '\\$1', dna => 1, updated => 1, pruned => $pruned );
 	my $aa_fasta    = get_fasta_filename( marker => '\\$1', dna => 0, updated => 1, pruned => $pruned );
@@ -583,7 +583,7 @@ sub reconcile_with_ncbi($$$$) {
 	my $aa_tre    = get_fasttree_tre_filename( marker => '\\$1', dna => 0, updated => 1, pruned => $pruned );
 	my $codon_log = get_fasttree_log_filename( marker => '\\$1', dna => 1, updated => 1, pruned => $pruned );
 	my $aa_log    = get_fasttree_log_filename( marker => '\\$1', dna => 0, updated => 1, pruned => $pruned );
-	open( RECONCILESCRIPT, ">/tmp/a2_reconcile.sh" );
+	open( RECONCILESCRIPT, ">/tmp/ps_reconcile.sh" );
 	print RECONCILESCRIPT <<EOF;
 #!/bin/sh
 #\$ -cwd
@@ -605,7 +605,7 @@ mangler.pl < \$1.codon.updated.tmpread.jplace > \$1.codon.updated.tmpread.jplace
 readconciler ncbi_tree.updated.tre \$1.codon.updated.tmpread.jplace.mangled marker_taxon_map.updated.txt \$1.codon.updated.taxonmap
 rm \$1.codon.updated.tmpread.jplace \$1.codon.updated.tmpread.jplace.mangled \$1.codon.updated.tmpread.fasta \$1.codon.updated.fasttree.log
 EOF
-	`chmod 755 /tmp/a2_reconcile.sh`;
+	`chmod 755 /tmp/ps_reconcile.sh`;
 	my @markerlist = get_marker_list($marker_dir);
 	unshift( @markerlist, "concat" );
 	my @jobids;
@@ -617,21 +617,21 @@ EOF
 		createTempReadFasta("$marker.codon.updated");
 
 		# run reconciliation on them
-		my $qsub_cmd = "qsub -q all.q -q eisen.q /tmp/a2_reconcile.sh $marker";
+		my $qsub_cmd = "qsub -q all.q -q eisen.q /tmp/ps_reconcile.sh $marker";
 		my $job      = `$qsub_cmd`;
 		$job =~ /Your job (\d+) /;
 		push( @jobids, $1 );
 	}
 	wait_for_jobs(@jobids);
-	`rm a2_reconcile.sh.o*`;
-	`rm a2_reconcile.sh.e*`;
+	`rm ps_reconcile.sh.o*`;
+	`rm ps_reconcile.sh.e*`;
 }
 
 sub package_markers($) {
 	my $marker_dir = shift;
 	chdir( $marker_dir . "/../" );
 	my @timerval = localtime();
-	my $datestr  = Amphora2::Utilities::get_date_YYYYMMDD;
+	my $datestr  = Phylosift::Utilities::get_date_YYYYMMDD;
 	`tar czf markers_$datestr.tgz markers`;
 	`rm -f markers.tgz`;
 	`ln -s markers_$datestr.tgz markers.tgz`;

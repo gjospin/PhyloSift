@@ -1,0 +1,27 @@
+#
+# configuration file for Phylosift
+# Global config lives in $PREFIX/etc/phylosiftrc, e.g. /usr/local/etc/phylosiftrc
+# User config lives in $HOME/.phylosiftrc, e.g. /home/koadman/.phylosiftrc
+#
+
+#
+# paths to directories containing various required programs
+# leave these blank to use whatever is found in $PATH
+#
+# $hmmer3_path="";
+# $blast_path="";
+# $R_path="";
+# $pplacer_path="";
+# $ps_path="";
+$fast_tree_path="/home/gjospin/projects/PhyloSift/bin";
+#
+# paths to required datasets
+# leave these blank to use whatever is in $prefix/share/phylosift
+#
+# $marker_path="";
+# $ncbi_path="";
+
+# default settings for Phylosift behavior
+#
+$ps_threads="";
+

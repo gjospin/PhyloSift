@@ -1,4 +1,4 @@
-package Amphora2::BeastInterface;
+package Phylosift::BeastInterface;
 use warnings;
 use strict;
 use Cwd;
@@ -7,7 +7,7 @@ use Bio::AlignIO;
 
 =head1 NAME
 
-Amphora2::BeastInterface - functions to interface with the BEAST de novo metagenome phylogeny module
+Phylosift::BeastInterface - functions to interface with the BEAST de novo metagenome phylogeny module
 
 =head1 VERSION
 
@@ -22,9 +22,9 @@ Quick summary of what the module does.
 
 Perhaps a little code snippet.
 
-    use Amphora2::Amphora2;
+    use Phylosift::Phylosift;
 
-    my $foo = Amphora2::Amphora2->new();
+    my $foo = Phylosift::Phylosift->new();
     ...
 
 =head1 EXPORT
@@ -45,11 +45,11 @@ sub Export($$$) {
 	my $markRef    = shift;
 	my $outputFile = shift;
 	foreach my $marker ( @{$markRef} ) {
-		my $trimfinalFastaFile = "$Amphora2::Utilities::marker_dir/" . Amphora2::Utilities::getTrimfinalFastaMarkerFile( $self, $marker );
-		my $trimfinalFile = "$Amphora2::Utilities::marker_dir/" . Amphora2::Utilities::getTrimfinalMarkerFile( $self, $marker );
-		my $treeFile = "$Amphora2::Utilities::marker_dir/" . Amphora2::Utilities::getTreeMarkerFile( $self, $marker );
-		my $treeStatsFile = "$Amphora2::Utilities::marker_dir/" . Amphora2::Utilities::getTreeStatsMarkerFile( $self, $marker );
-		my $readAlignmentFile = $self->{"alignDir"} . "/" . Amphora2::Utilities::getAlignerOutputFastaAA($marker);
+		my $trimfinalFastaFile = "$Phylosift::Utilities::marker_dir/" . Phylosift::Utilities::getTrimfinalFastaMarkerFile( $self, $marker );
+		my $trimfinalFile = "$Phylosift::Utilities::marker_dir/" . Phylosift::Utilities::getTrimfinalMarkerFile( $self, $marker );
+		my $treeFile = "$Phylosift::Utilities::marker_dir/" . Phylosift::Utilities::getTreeMarkerFile( $self, $marker );
+		my $treeStatsFile = "$Phylosift::Utilities::marker_dir/" . Phylosift::Utilities::getTreeStatsMarkerFile( $self, $marker );
+		my $readAlignmentFile = $self->{"alignDir"} . "/" . Phylosift::Utilities::getAlignerOutputFastaAA($marker);
 
 		# Pplacer requires the alignment files to have a .fasta extension
 		if ( !-e "$trimfinalFastaFile" ) {
@@ -65,8 +65,8 @@ sub Export($$$) {
 	my %refseqs;
 	my @metareadseqs;
 	foreach my $marker ( @{$markRef} ) {
-		my $trimfinalFastaFile = "$Amphora2::Utilities::marker_dir/$marker.ali";
-		my $readAlignmentFile  = $self->{"alignDir"} . "/" . Amphora2::Utilities::getAlignerOutputFastaAA($marker);
+		my $trimfinalFastaFile = "$Phylosift::Utilities::marker_dir/$marker.ali";
+		my $readAlignmentFile  = $self->{"alignDir"} . "/" . Phylosift::Utilities::getAlignerOutputFastaAA($marker);
 
 		# read the alignment of reads
 		my $in = Bio::AlignIO->new( -file => $readAlignmentFile, '-format' => 'fasta' );
@@ -79,8 +79,8 @@ sub Export($$$) {
 		}
 
 		# read the reference sequence alignment
-		my $inamphora = Bio::AlignIO->new( -file => $trimfinalFastaFile, '-format' => 'fasta' );
-		while ( my $aln = $inamphora->next_aln() ) {
+		my $inphylosift = Bio::AlignIO->new( -file => $trimfinalFastaFile, '-format' => 'fasta' );
+		while ( my $aln = $inphylosift->next_aln() ) {
 			$aln->sort_alphabetically();
 			push( @alignio, $aln );
 			foreach my $seq ( $aln->each_seq() ) {

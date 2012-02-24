@@ -4,9 +4,9 @@ use strict;
 use FindBin qw($Bin);
 use lib "$Bin/lib";
 use Getopt::Long;
-use Amphora2::Amphora2;
+use Phylosift::Phylosift;
 use Carp;
-use Amphora2::Utilities qw(debug);
+use Phylosift::Utilities qw(debug);
 use POSIX;
 my $pair             = 0;
 my $threadNum        = 1;
@@ -29,11 +29,11 @@ $0 Usage
 
 Usage
 ==========================================
-> perl amphora2 <Mode> <options> <sequence_file>
+> perl phylosift <Mode> <options> <sequence_file>
 
    sequence_file needs to be in fasta format
 
-> perl amphora2 <Mode> <options> -paired <sequence_file_1> <sequence_file_2>
+> perl phylosift <Mode> <options> -paired <sequence_file_1> <sequence_file_2>
 
    sequence_file_1 and _2 need to be in fastq format
 
@@ -49,7 +49,7 @@ Options Available at this time :
    --custom <file>       Reads a custom marker list from a file otherwise use all the markers from the markers directory
    --threaded=<number>  Runs Blast and Hmmer using the number of processors specified
                         (DEFAULT : 1)
-   --clean               Cleans the temporary files created by Amphora (NOT YET IMPLEMENTED)
+   --clean               Cleans the temporary files created by Phylosift (NOT YET IMPLEMENTED)
    --paired              Looks for 2 input files (paired end sequencing) in FastQ format.
                         Reversing the sequences for the second file listed
                         and appending to the corresponding pair from the first file listed.
@@ -63,12 +63,12 @@ GetOptions(
 	"paired"     => \$pair,        # used for paired fastQ input split in 2 different files
 	"custom=s"   => \$custom,      #need a file containing the marker names to use without extensions ** marker names shouldn't contain '_'
 	"f"          => \$force,       #overrides a previous run otherwise stop
-	"continue"   => \$continue,    #when a mode different than all is used, continue the rest of Amphora after the section specified by the mode is finished
+	"continue"   => \$continue,    #when a mode different than all is used, continue the rest of Phylosift after the section specified by the mode is finished
 	"isolate"    => \$isolate,     #use when processing one or more isolate genomes
 	"reverse"         => \$reverseTranslate,    #use to output the reverse translation of the AA alignments
 	"besthit"         => \$besthit,             #should we keep only the best hit when there are multiple?
 	"coverage=s"      => \$coverage,            #provides a contig/scaffold coverage file
-	"updated_markers" => \$updated,             #Indicates if Amphora2 uses the updated versions of the Markers.
+	"updated_markers" => \$updated,             #Indicates if Phylosift uses the updated versions of the Markers.
 	"config=s"        => \$configuration,       #custom config file
 	"h"               => \$help,                #prints the usage part of the README file
 	"help"            => \$help,                #same as -h
@@ -79,7 +79,7 @@ if ( $help != 0 ) {
 	die "End of Help message\n";
 }
 
-$Amphora2::Utilities::debuglevel = $my_debug;
+$Phylosift::Utilities::debuglevel = $my_debug;
 debug("@ARGV\n");
 if ( $pair == 0 ) {
 	croak $usage unless ( $ARGV[0] && $ARGV[1] );
@@ -90,9 +90,9 @@ if ( $pair == 0 ) {
 }
 unless ( (POSIX::uname)[4] =~ /64/ || $^O =~ /arwin/ ) {
 	print STDERR (POSIX::uname)[4] . "\n";
-	die "Sorry, Amphora 2 requires a 64-bit OS to run.\n";
+	die "Sorry, PhyloSift requires a 64-bit OS to run.\n";
 }
-my $newObject = new Amphora2::Amphora2();
+my $newObject = new Phylosift::Phylosift();
 debug "PAIR : $pair\n";
 if ( $pair == 0 ) {
 	debug "notpaired @ARGV\n";
