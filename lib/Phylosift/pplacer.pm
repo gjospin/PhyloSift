@@ -231,7 +231,7 @@ sub name_taxa_in_jplace {
 		$node->set_name($ncbi_name);
 	}
 	my $new_string = "  \"".unparse('-phylo'=>$tree, '-format'=> 'newick')."\",\n";
-	@treedata[1] = $new_string;
+	$treedata[1] = $new_string;
 	open( TREEFILE, ">$output" );
 	print TREEFILE @treedata;
 	close TREEFILE;
