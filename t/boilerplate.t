@@ -49,7 +49,7 @@ TODO: {
     "placeholder date/time"       => qr(Date/time)
   );
 
-  module_boilerplate_ok('lib/Amphora2/Amphora2.pm');
+  module_boilerplate_ok('lib/Phylosift/Phylosift.pm');
 
 
 }
