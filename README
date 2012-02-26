@@ -146,21 +146,6 @@ perldoc command.
 
     perldoc Phylosift::Phylosift
 
-You can also look for information at:
-
-    RT, CPAN's request tracker (report bugs here)
-        http://rt.cpan.org/NoAuth/Bugs.html?Dist=Phylosift-Phylosift
-
-    AnnoCPAN, Annotated CPAN documentation
-        http://annocpan.org/dist/Phylosift-Phylosift
-
-    CPAN Ratings
-        http://cpanratings.perl.org/d/Phylosift-Phylosift
-
-    Search CPAN
-        http://search.cpan.org/dist/Phylosift-Phylosift/
-
-
 LICENSE AND COPYRIGHT
 ===========================================
 
@@ -168,9 +153,7 @@ Copyright (C) 2011 Aaron Darling and Guillaume Jospin
 
 This program is free software; you can redistribute it and/or modify it
 under the terms of either: the GNU General Public License as published
-by the Free Software Foundation; or the Artistic License.
-
-See http://dev.perl.org/licenses/ for more information.
+by the Free Software Foundation.
 
 Contact information
 ===========================================
