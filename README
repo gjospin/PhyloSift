@@ -1,8 +1,7 @@
 PhyloSift
 
 PhyloSift is a suite of software tools to conduct phylogenetic analysis of genomes and metagenomes. 
-Using a refernce database of protein sequences, PhyloSift can scan new sequences against that database for homologs and identify the phylogenetic relationship of the new sequence to the database sequences.
-During this procedure, high quality alignments of codon and amino acid sequence are generated.
+Using a refernce database of protein sequences, PhyloSift can scan new sequences against that database for homologs and identify the phylogenetic relationship of the new sequence to the database sequences. During this procedure, high quality alignments of codon and amino acid sequence are generated.
 
 
 
@@ -22,9 +21,9 @@ Install
 
 Download the tarball archive from http://edhar.genomecenter.ucdavis.edu/~koadman/phylosift/phylosift_latest.tar.bz2
 
-Navigate to the directory where you want to install the software.
+Navigate to the directory where you downloaded the software and run:
 
-   >tar -xvf phylosift_latest.tar.bz2
+`tar -xvf phylosift_latest.tar.bz2`
 
 PhyloSift is ready for use, refer to the Usage section.
 
@@ -37,11 +36,9 @@ To download PhyloSift, run the following command:
 
 It may also be necessary to install several support packages, including BioPerl, Bio::Phylo, and others.
 
-==== Update ====
+==== Updating PhyloSift ====
 
 Follow the install steps of downloading the tarball
-This method will redownload all the binaries and library in addition to new code.  
-This may not be as fast as the github update method.
 
 Usage
 ==========================================
@@ -66,14 +63,14 @@ Options Available at this time :
    --threaded=<Number>  Runs Blast and Hmmer using the number of processors sepcified
                         Runs 1 Pplacer per processor specified
 		        (DEFAULT : 1)
-   -clean               Cleans the temporary files created by Phylosift (NOT YET IMPLEMENTED)
-   -paired              Looks for 2 input files (paired end sequencing) in FastQ format.  
+   --clean               Cleans the temporary files created by Phylosift (NOT YET IMPLEMENTED)
+   --paired              Looks for 2 input files (paired end sequencing) in FastQ format.  
    			Reversing the sequences for the second file listed 
 			and appending to the corresponding pair from the first file listed.
-   -continue            Enables the pipeline to continue to subsequent steps when not using the 'all' mode
-   -reverse		If the submitted sequences were Nucleotides, the program prints out an alignment for all the markers in DNA space in addition to the one in Protein space.
-   -isolate             Use this mode if you are running data from an Isolate genome
-   -updated_markers     Use the set of updated markers with newly sequenced genomes instead of the stock markers
+   --continue            Enables the pipeline to continue to subsequent steps when not using the 'all' mode
+   --reverse		If the submitted sequences were Nucleotides, the program prints out an alignment for all the markers in DNA space in addition to the one in Protein space.
+   --isolate             Use this mode if you are running data from an Isolate genome
+   --updated     Use the set of updated markers with newly sequenced genomes instead of the stock markers
 
 Requirements
 ==========================================
@@ -137,7 +134,6 @@ All results are generated within the PhyloSift directory in the the Amph_temp/<f
 
 
 
-
 SUPPORT AND DOCUMENTATION
 ==========================================
 
@@ -145,6 +141,9 @@ After installing, you can find documentation for this module with the
 perldoc command.
 
     perldoc Phylosift::Phylosift
+
+Bugs and other apparent problems with the software can be reported as issues in our github issue tracker:
+https://github.com/gjospin/PhyloSift/issues
 
 LICENSE AND COPYRIGHT
 ===========================================
@@ -155,5 +154,8 @@ This program is free software; you can redistribute it and/or modify it
 under the terms of either: the GNU General Public License as published
 by the Free Software Foundation.
 
-Contact information
+CONTACT INFORMATION
 ===========================================
+
+Please direct correspondence to aarondarling (at) uc davis (dot) edu
+Or on twitter to @PhyloSift
