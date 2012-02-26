@@ -2,7 +2,6 @@ package Phylosift::Summarize;
 use warnings;
 use strict;
 use FindBin;
-use Phylosift::Phylosift;
 use Phylosift::Utilities qw(debug);
 use Carp;
 use Bio::Phylo;
