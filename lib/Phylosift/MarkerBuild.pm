@@ -13,7 +13,6 @@ Phylosift::MarkerBuild - build a seed marker package from an existing multiple s
 Version 0.01
 
 =cut
-
 our $VERSION = '0.01';
 
 =head1 SYNOPSIS
@@ -33,42 +32,37 @@ if you don't export anything, such as for a purely object-oriented module.
 =cut
 
 sub build_marker {
-	my %args = @_;
+	my %args         = @_;
 	my $aln_file     = $args{alignment};
 	my $package_name = $args{name};
 	my $cutoff       = $args{cutoff};
-	
 	my $target_dir   = getcwd() . "/$package_name";
 	`mkdir $target_dir` unless -e $target_dir;
 	my ( $core, $path, $ext ) = fileparse( $aln_file, qr/\.[^.]*$/ );
-	
 	my $fasta_file = "$target_dir/$core.fasta";
-	my $seq_count = Phylosift::Utilities::unalign_sequences($aln_file, $fasta_file);
-	
+	my $seq_count  = Phylosift::Utilities::unalign_sequences( $aln_file, $fasta_file );
 	my $masked_aln = "$target_dir/$core.masked";
-	mask(file=>$aln_file,output=>$masked_aln);
-	
+	mask( file => $aln_file, output => $masked_aln );
 	my $hmm_file = "$target_dir/$core.hmm";
 	generate_hmm( $masked_aln, $hmm_file );
-	
-	Phylosift::Utilities::fastpsstockholm($masked_aln, "$target_dir/$core.stk");
-	my $stk_aln =  "$target_dir/$core.stk";
+	Phylosift::Utilities::fastpsstockholm( $masked_aln, "$target_dir/$core.stk" );
+	my $stk_aln = "$target_dir/$core.stk";
 
 	#may need to create an unaligned file for the sequences before aligning them
-	my $new_alignment_file = hmmalign_to_model( $hmm_file, $fasta_file, $target_dir, $stk_aln, $seq_count);
-	my $clean_aln = "$target_dir/$core.clean";
-	my %id_map = mask_and_clean_alignment( $new_alignment_file , $clean_aln );
+	my $new_alignment_file = hmmalign_to_model( $hmm_file, $fasta_file, $target_dir, $stk_aln, $seq_count );
+	my $clean_aln          = "$target_dir/$core.clean";
+	my %id_map             = mask_and_clean_alignment( $new_alignment_file, $clean_aln );
 	my ( $fasttree_file, $tree_log_file ) = generate_fasttree( $clean_aln, $target_dir );
-	
+
 	#need to generate representatives using PDA
 	my $rep_file = get_representatives_from_tree( $fasttree_file, $target_dir, $cutoff );
-	
+
 	#need to read the representatives picked by PDA and generate a representative fasta file
 	my $rep_fasta = get_fasta_from_pda_representatives( $rep_file, $target_dir, $fasta_file, \%id_map );
-	
+
 	#use taxit to create a new reference package required for running PhyloSift
 	#needed are : 1 alignment file, 1 representatives fasta file, 1 hmm profile, 1 tree file, 1 log tree file.
-	`cd $target_dir;taxit create -c -d "Creating a reference package for PhyloSift for the $core marker" -l $core -f $clean_aln -t $target_dir/$core.tree -s $target_dir/$core.log -Y FastTree -P $core`;
+`cd $target_dir;taxit create -c -d "Creating a reference package for PhyloSift for the $core marker" -l $core -f $clean_aln -t $target_dir/$core.tree -s $target_dir/$core.log -Y FastTree -P $core`;
 	`rm $target_dir/$core.pda`;
 	`rm $target_dir/$core.tree`;
 	`rm $target_dir/$core.log`;
@@ -78,9 +72,7 @@ sub build_marker {
 	`rm $masked_aln`;
 	`mv $target_dir/$core/* $target_dir`;
 	`rm -rf $target_dir/$core`;
-
 }
-
 
 =head2 generate_hmm
 
@@ -90,8 +82,8 @@ generates a HMM profile from an alignment in FASTA format (arg) using hmmbuild. 
 =cut
 
 sub generate_hmm {
-	my $file_name  = shift;
-	my $hmm_name = shift;
+	my $file_name = shift;
+	my $hmm_name  = shift;
 	`$Phylosift::Utilities::hmmbuild --informat afa $hmm_name $file_name`;
 }
 
@@ -108,13 +100,14 @@ sub hmmalign_to_model {
 	my $ref_ali       = shift;
 	my $seq_count     = shift;
 	my ( $core_name, $path, $ext ) = fileparse( $sequence_file, qr/\.[^.]*$/ );
-	open(ALNOUT, ">$target_dir/$core_name.aln");
-	open(ALNIN, "$Phylosift::Utilities::hmmalign --mapali $ref_ali --trim --outformat afa $hmm_profile $sequence_file |");
+	open( ALNOUT, ">$target_dir/$core_name.aln" );
+	open( ALNIN,  "$Phylosift::Utilities::hmmalign --mapali $ref_ali --trim --outformat afa $hmm_profile $sequence_file |" );
 	my $s = 0;
-	while(my $line = <ALNIN>){
-		if($line=~/^>/){
+
+	while ( my $line = <ALNIN> ) {
+		if ( $line =~ /^>/ ) {
 			$s++;
-			last if $s>$seq_count;
+			last if $s > $seq_count;
 		}
 		print ALNOUT $line;
 	}
@@ -130,20 +123,20 @@ Also removes duplicate IDs
 =cut
 
 sub mask_and_clean_alignment {
-	my $aln_file   = shift;
+	my $aln_file    = shift;
 	my $output_file = shift;
-	my %id_map;	# will store a map of unique IDs to sequence names
+	my %id_map;    # will store a map of unique IDs to sequence names
 
 	#    open(FILEIN,$aln_file) or carp("Couldn't open $aln_file for reading \n");
-	my $in = Bio::SeqIO->new( -file => $aln_file );
+	my $in = Phylosift::Utilities::open_SeqIO_object( file => $aln_file );
 	my %s = ();    #hash remembering the IDs already printed
 	open( FILEOUT, ">$output_file" ) or carp("Couldn't open $output_file for writing\n");
 	my $seq_counter = 0;
 	while ( my $seq_object = $in->next_seq() ) {
-		my $seq = $seq_object->seq;
-		my $id  = $seq_object->id;
-		my $unique_id = sprintf("%09d", $seq_counter++);
-		$id_map{$id}=$unique_id;
+		my $seq       = $seq_object->seq;
+		my $id        = $seq_object->id;
+		my $unique_id = sprintf( "%09d", $seq_counter++ );
+		$id_map{$id} = $unique_id;
 		$id  =~ s/\(\)//g;     #removes ( and ) from the header lines
 		$seq =~ s/[a-z]//g;    # lowercase chars didnt align to model
 		$seq =~ s/\.//g;       # shouldnt be any dots
@@ -217,7 +210,7 @@ sub get_fasta_from_pda_representatives {
 	my $pda_file        = shift;
 	my $target_dir      = shift;
 	my $reference_fasta = shift;
-	my $id_map     = shift;
+	my $id_map          = shift;
 	my ( $core, $path, $ext ) = fileparse( $pda_file, qr/\.[^.]*$/ );
 
 	#reading the pda file to get the representative IDs
@@ -235,19 +228,18 @@ sub get_fasta_from_pda_representatives {
 			$selected_taxa{$1} = 1;
 		}
 	}
-	close(REPSIN);	
+	close(REPSIN);
 
 	#reading the reference sequences and printing the selected representatives using BioPerl
-	my $reference_seqs        = Bio::SeqIO->new( -file => $reference_fasta,         -format => "FASTA" );
-	my $representatives_fasta = Bio::SeqIO->new( -file => ">$target_dir/$core.rep", -format => "FASTA" );
+	my $reference_seqs        = Phylosift::Utilities::open_SeqIO_object( file => $aln_file, format => "FASTA" );
+	my $representatives_fasta = Phylosift::Utilities::open_SeqIO_object( file => $aln_file, format => "FASTA" );
 	while ( my $ref_seq = $reference_seqs->next_seq ) {
-		if ( exists $selected_taxa{ $id_map->{$ref_seq->id} } ) {
+		if ( exists $selected_taxa{ $id_map->{ $ref_seq->id } } ) {
 			$representatives_fasta->write_seq($ref_seq);
 		}
 	}
 	return "$target_dir/$core.rep";
 }
-
 
 =head2 mask
 
@@ -256,20 +248,17 @@ Remove columns from a sequence alignment that contain too many gaps or that are 
 =cut
 
 sub mask {
-	my %args = @_;
-	my $infile = $args{file};
-	my $outfile = $args{output};
-	
+	my %args       = @_;
+	my $infile     = $args{file};
+	my $outfile    = $args{output};
 	my $gap_cutoff = 10;
-	my $cutoff = 10;
-	
-	my $maskcont = martin_mask( $args{file}, $cutoff, $gap_cutoff );
-
+	my $cutoff     = 10;
+	my $maskcont   = martin_mask( $args{file}, $cutoff, $gap_cutoff );
 	my %maskseq;
-
 	my @ori_order;
 	$maskcont =~ s/^>//;
 	my @tempmask = split( />/, $maskcont );
+
 	foreach my $tempmask (@tempmask) {
 		my @templine = split( /\n/, $tempmask );
 		my $this_ID  = shift(@templine);
@@ -280,10 +269,8 @@ sub mask {
 		$maskseq{$this_ID} = \@this_seq;
 	}
 	my %trimseq;
-
 	while ( @{ $maskseq{_mask} } ) {
 		my $switch = shift( @{ $maskseq{_mask} } );
-
 		foreach my $key ( keys %maskseq ) {
 			if ( $key ne '_mask' ) {
 				my $aa = shift( @{ $maskseq{$key} } );
@@ -303,15 +290,11 @@ sub mask {
 		}
 	}
 	close TRIMOUT;
-
 }
 
 sub martin_mask {
-
 	my ( $input_file, $cutoff, $opt_g ) = @_;
-
 	if ( !( length($opt_g) > 1 ) ) { $opt_g = 101; }
-
 	my $self = {};
 	$self->{inputfile}  = $input_file;
 	$self->{cutoff}     = $cutoff;
@@ -321,20 +304,17 @@ sub martin_mask {
 	$self               = &CalculateScore($self);
 	$self               = &Mask($self);
 	my $return_mask = &Output($self);
-
 	return $return_mask;
 }
 
 sub ReadMatrix {
 	my $self = shift;
-
 	my @aa;
 	my %matrix;
 	my ( $matrix_name, $i, $j );
 	my %min        = ();
 	my $ori_matrix = &ori_matrix();
 	my @mx         = split( /\n/, $ori_matrix );
-
 	while (@mx) {
 		$_ = shift(@mx);
 		if (/amino_acid_order = "(.+)"/) {
@@ -352,7 +332,6 @@ sub ReadMatrix {
 			$j++;
 		}
 	}
-
 	for my $key ( keys %matrix ) {
 		for my $pair ( keys %{ $matrix{$key} } ) {
 			if ( !$min{$key} ) {
@@ -362,7 +341,6 @@ sub ReadMatrix {
 			}
 		}
 	}
-
 	foreach my $key ( keys %min ) {
 		if ( $min{$key} < 0 ) {
 			foreach my $pair ( keys %{ $matrix{$key} } ) {
@@ -370,20 +348,15 @@ sub ReadMatrix {
 			}
 		}
 	}
-
 	$self->{matrix} = \%matrix;
 	$self->{aa}     = \@aa;
 	return $self;
-
 }
 
 sub ReadAlignment {
-
 	my $self = shift;
 	my %seq;
-
 	my @order;
-
 	my $id;
 	my $input_file = $self->{inputfile};
 	open( MASKIN, $input_file ) || die "can't open $input_file\n";
@@ -397,21 +370,18 @@ sub ReadAlignment {
 			push( @order, $id );
 		} else {
 			$_ =~ s/\s+//g;
-			$_ =~ s/\./-/g;	#AED: treat . and ? as gaps
+			$_ =~ s/\./-/g;    #AED: treat . and ? as gaps
 			$_ =~ s/\?/-/g;
 			$seq{$id} .= uc($_);
 		}
 	}
 	close(MASKIN);
-
 	$self->{seq}   = \%seq;
 	$self->{order} = \@order;
 	return $self;
-
 }
 
 sub CalculateScore {
-
 	my $self = shift;
 	my %seq  = %{ $self->{seq} };
 	my $seqlength;
@@ -428,9 +398,7 @@ sub CalculateScore {
 	if ( $seqlength <= 20 ) {
 		carp "Alignment is too short\n";
 	}
-
 	my $numseq = scalar keys %seq;
-
 	for my $i ( 0 .. $seqlength - 1 ) {
 		my ( %freq, %profile, %dist, %seqVector ) = ();
 		my $dist_mean = 0;
@@ -438,10 +406,8 @@ sub CalculateScore {
 		my $dist_median;
 		my $col;
 		my $number_gap;
-
 		foreach my $sequence ( keys %seqArray ) {
 			$col .= $seqArray{$sequence}[$i];
-
 			if ( $seqArray{$sequence}[$i] ne "-" ) {
 				$freq{ $seqArray{$sequence}[$i] }++;
 				$number++;
@@ -449,7 +415,6 @@ sub CalculateScore {
 				$number_gap++;
 			}
 		}
-
 		for my $aa1 (@aa) {
 			for my $aps (@aa) {
 				$profile{$aa1} += $freq{$aps} * $matrix{"gon250mt"}{"$aa1$aps"} if exists $freq{$aps};
@@ -458,35 +423,28 @@ sub CalculateScore {
 			#			$profile{$aa1} /= $number;
 			$profile{$aa1} /= $numseq;
 		}
-
 		for my $sequence ( keys %seqArray ) {
 			my $c = $seqArray{$sequence}[$i];
 			if ( $c ne '-' ) {
 				for (@aa) {
 					$seqVector{$_} = $matrix{"gon250mt"}{"$c$_"};
 				}
-
 				for (@aa) {
-
 					my $diff = $profile{$_} - $seqVector{$_};
 					$diff /= 1000;
-
 					$dist{$sequence} += $diff * $diff;
 				}
-
 				$dist{$sequence} = sqrt( $dist{$sequence} );
 				$dist_mean += $dist{$sequence};
 
 				#			$number ++;
 			}
 		}
-
 		if ($number) {
 			$dist_mean /= $number;
 		} else {
 			$dist_mean = 0;
 		}
-
 		my @sort = sort { $a <=> $b } ( values %dist );
 		my $t = $number % 2;
 		if ( $t == 0 ) {
@@ -496,7 +454,6 @@ sub CalculateScore {
 		}
 
 		#		$column_score2{$i} = exp (-$dist_mean/4) * 100 *$number/$numseq;
-
 		#		$column_score{$i} = exp (-$dist_median/1.82) * 100 * ($number/$numseq);   # 1.82 make total random alignment score 1.0
 		$column_score{$i} = exp( -$dist_median / 3 ) * 100 * ( $number / $numseq );
 		my $gap_percent = $number_gap / $numseq * 100;
@@ -504,32 +461,26 @@ sub CalculateScore {
 		if ( ( $gap_cutoff > 0.00001 ) && ( $gap_percent > $gap_cutoff ) ) {
 			$self->{rid_gap}->{$i} = 1;
 		}
-
 	}
-
 	$self->{column_score} = \%column_score;
 	$self->{local_score}  = \%local_score;
 ##$self->{column_score2}=\%column_score2;
 	$self->{seqlength} = $seqlength;
 	$self->{seqArray}  = \%seqArray;
 	return $self;
-
 }
 
 sub Mask {
-	my $self = shift;
-
+	my $self         = shift;
 	my %matrix       = %{ $self->{matrix} };
 	my %seq          = %{ $self->{seq} };
 	my %seqArray     = %{ $self->{seqArray} };
 	my %column_score = %{ $self->{column_score} };
 	my %local_score  = %{ $self->{local_score} };
 	my $mask;
-
 	my $seqlength = $self->{seqlength};
 
 	for my $i ( 0 .. $seqlength - 1 ) {
-
 		if ( $i <= 2 or $i >= $seqlength - 3 ) {
 			$local_score{$i} = $column_score{$i};
 		} else {
@@ -542,7 +493,6 @@ sub Mask {
 				2 * $column_score{ $i + 2 } +
 				1 * $column_score{ $i + 3 } ) / 16;
 		}
-
 		if ( $column_score{$i} == 0 ) { $local_score{$i} = 0; }
 		elsif ( $local_score{$i} / $column_score{$i} > 3 ) {
 			my $score_l = $column_score{ $i - 3 } + $column_score{ $i - 2 } + $column_score{ $i - 1 };
@@ -552,7 +502,6 @@ sub Mask {
 			}
 		}
 ###########################################cutoff #######################################
-
 		if ( ( $local_score{$i} >= $cutoff ) && ( !( $self->{rid_gap}->{$i} ) ) ) {
 			$mask .= "1";
 		} else {
@@ -562,39 +511,28 @@ sub Mask {
 		#		print $i+1,"\t";
 		#		printf "%0.1f\t%0.1f\n", $column_score{$i},$local_score{$i};
 	}
-
 	$self->{mask} = $mask;
-
 	return $self;
-
 }
 
 sub Output {
-	my $self = shift;
-
-	my %seq = %{ $self->{seq} };
-
-	my $mask = $self->{mask};
-
-	my @order = @{ $self->{order} };
-
+	my $self        = shift;
+	my %seq         = %{ $self->{seq} };
+	my $mask        = $self->{mask};
+	my @order       = @{ $self->{order} };
 	my $return_mask = '';
-
 	$seq{"_mask"} = $mask;
 	push( @order, '_mask' );
-
 	foreach my $key (@order) {
 		$return_mask .= ">$key\n";
 		for ( my $i = 0 ; $i < length( $seq{$key} ) ; $i += 60 ) {
 			$return_mask .= substr( $seq{$key}, $i, 60 ) . "\n";
 		}
 	}
-
 	return $return_mask;
 }
 
 sub ori_matrix {
-
 	my $matrix = "amino_acid_order = \"ABCDEFGHIKLMNPQRSTVWXYZ\";
 
 MATRIX gon250mt[]={
@@ -622,7 +560,6 @@ MATRIX gon250mt[]={
 20,35,31,16,17,84,8,49,30,21,35,33,25,14,23,23,22,22,27,78,35,102,
 35,50,35,50,50,35,35,35,35,35,35,35,50,35,50,35,35,35,35,35,35,35,50,";
 	return $matrix;
-
 }
 
 =head1 AUTHOR
@@ -686,5 +623,4 @@ See http://dev.perl.org/licenses/ for more information.
 
 
 =cut
-
 1;    # End of Phylosift::MarkerBuild.pm
