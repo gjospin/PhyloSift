@@ -1,17 +1,17 @@
 PhyloSift
 
-AMPHORA is an Automated Phylogenomic Inference Pipeline for bacterial sequences. From a given a set of protein sequences, it automatically identifies various phylogenetic marker genes. It then generates high-quality multiple sequence alignments for these genes and make tree-based phylotype assignments.
+PhyloSift is a suite of software tools to conduct phylogenetic analysis of genomes and metagenomes. 
+Using a refernce database of protein sequences, PhyloSift can scan new sequences against that database for homologs and identify the phylogenetic relationship of the new sequence to the database sequences. During this procedure, high quality alignments of codon and amino acid sequence are generated.
 
 
 
 NEW VERSION
 =============================================================
-PhyloSift has several new features over AMPHORA
--The number of markers is being expanded from the original 31 Bacteria only markers to many more from Archaea and Bacteria (and possibly Eukaryotes and viruses)
--HMMER 3 replaces the older, slower, HMMER 2
--Use of Pplacer from Erick Matsen to place the reads on the reference trees
--Use of BioPerl 1.6.1
--Use of Rapsearch for short read input.
+PhyloSift has several new features
+-The marker gene database has been expanded to encompass Bacteria, Archaea, Eukarya, and virii.
+-Support for processing of next-gen sequence data including Illumina, 454, and others
+-Integration with metAMOS for pre-assembling next-generation datasets
+-Codon based alignment of marker genes
 -...more to come
 
 Install
@@ -21,46 +21,34 @@ Install
 
 Download the tarball archive from http://edhar.genomecenter.ucdavis.edu/~koadman/phylosift/phylosift_latest.tar.bz2
 
-Navigate to the directory where you want to install A2.
+Navigate to the directory where you downloaded the software and run:
 
-   >tar -xvf phylosift_latest.tar.bz2
+`tar -xvf phylosift_latest.tar.bz2`
 
 PhyloSift is ready for use, refer to the Usage section.
 
-==== Update the fast way ====
+==== The hard way: installing from the development repository ====
 
-Download and install Git from http://github.com/   OR  run the following unix command : >apt-get install git
+Download and install Git from http://github.com/   OR if on debian/ubuntu run the following unix command : `sudo apt-get install git`
 
-To update PhyloSift, navigate to the PhyloSift directory and run the following command.
-   >cd PhyloSift
-   >git pull
+To download PhyloSift, run the following command:
+`git clone git://github.com/gjospin/PhyloSift.git`
 
-PhyloSift is ready for use
+It may also be necessary to install several support packages, including BioPerl, Bio::Phylo, and others.
 
-==== Update ====
+==== Updating PhyloSift ====
 
 Follow the install steps of downloading the tarball
-This method will redownload all the binaries and library in addition to new code.  This may not be as fast as the github update method.
-
-Indexing step
-==========================================
-$ phylosift index <sequence_file>
-
-
-Index preparationg step
-==========================================
-
-$ phylosift index <sequence_file>
 
 Usage
 ==========================================
-$ perl phylosift <Mode> <options> <sequence_file>
+$ phylosift <Mode> <options> <sequence_file>
 
    sequence_file needs to be in fasta format
 
-$ perl phylosift <Mode> <options> -paired <sequence_file_1> <sequence_file_2>
+$ phylosift <Mode> <options> -paired <sequence_file_1> <sequence_file_2>
 
-   sequence_file_1 and _2 need to be in fastq format
+   sequence_file_1 and _2 must contain paired sequences
 
 Mode : Only execute a specific step in the pipeline
   all - execute all the following steps in that order.
@@ -75,20 +63,22 @@ Options Available at this time :
    --threaded=<Number>  Runs Blast and Hmmer using the number of processors sepcified
                         Runs 1 Pplacer per processor specified
 		        (DEFAULT : 1)
-   -clean               Cleans the temporary files created by Phylosift (NOT YET IMPLEMENTED)
-   -paired              Looks for 2 input files (paired end sequencing) in FastQ format.  
+   --clean               Cleans the temporary files created by Phylosift (NOT YET IMPLEMENTED)
+   --paired              Looks for 2 input files (paired end sequencing) in FastQ format.  
    			Reversing the sequences for the second file listed 
 			and appending to the corresponding pair from the first file listed.
-   -continue            Enables the pipeline to continue to subsequent steps when not using the 'all' mode
-   -reverse		If the submitted sequences were Nucleotides, the program prints out an alignment for all the markers in DNA space in addition to the one in Protein space.
-   -isolate             Use this mode if you are running data from an Isolate genome
-   -updated_markers     Use the set of updated markers with newly sequenced genomes instead of the stock markers
+   --continue            Enables the pipeline to continue to subsequent steps when not using the 'all' mode
+   --reverse		If the submitted sequences were Nucleotides, the program prints out an alignment for all the markers in DNA space in addition to the one in Protein space.
+   --isolate             Use this mode if you are running data from an Isolate genome
+   --updated     Use the set of updated markers with newly sequenced genomes instead of the stock markers
 
 Requirements
 ==========================================
 
 A 64bit operating system is required as the binaries packaged with the PhyloSift scripts were compiled using such OS.
 PhyloSift will NOT work on a 32bit operating system.
+PhyloSift depends on a great many other open source software packages.
+The precompiled version linked above bundles most of the dependencies into a single downloadable package.
 
 Default Markers used by PhyloSift
 =========================================
@@ -100,18 +90,15 @@ PMPROK00020  PMPROK00034  PMPROK00053  PMPROK00071  PMPROK00093
 PMPROK00022  PMPROK00041  PMPROK00054  PMPROK00074  PMPROK00094
 PMPROK00024  PMPROK00047  PMPROK00060  PMPROK00075  PMPROK00097
 
-This data has not yet been pusblished.
+This data has not yet been published.
 
 Results
 ==========================================
 
 All results are generated within the PhyloSift directory in the the Amph_temp/<filename>/ directory.
-    blastDir : All files related to the Blast / Rapsearch step.
+    blastDir : All files related to the search step.
                *.candidate           Fasta format of the candidate sequences in Protein space for each marker
                *.candidate.ffn       Fasta format of the candidate sequences in DNA space for each marker (option activated)
-               blastrep.faa          Fasta format of the Reference sequences used in the Blast search
-               blastrep.faa.*        Blast database used by Blast
-               isolated.tabblastx    File used by the isolate mode when running isolate genomes through A2
 
     alignDir : All files related to the alignment and masking steps.
     	       *.aln_hmmer3.fasta    hmmer3 generated alignment for the candidate sequences in fasta format
@@ -123,7 +110,7 @@ All results are generated within the PhyloSift directory in the the Amph_temp/<f
 	       *.stock.hmm	     HMM profile
 
     treeDir : All files related to the tree placements of the candidate sequences by Pplacer.
-    	      *.place 		     Placement file for the newCandidate sequences
+    	      *.jplace 		     Placement file for the newCandidate sequences
 
     taxasummary.txt 		     Probability mass over taxa present in the sample, tab-delimited text
 		Column 1 -- NCBI Taxon ID
@@ -147,7 +134,6 @@ All results are generated within the PhyloSift directory in the the Amph_temp/<f
 
 
 
-
 SUPPORT AND DOCUMENTATION
 ==========================================
 
@@ -156,31 +142,20 @@ perldoc command.
 
     perldoc Phylosift::Phylosift
 
-You can also look for information at:
-
-    RT, CPAN's request tracker (report bugs here)
-        http://rt.cpan.org/NoAuth/Bugs.html?Dist=Phylosift-Phylosift
-
-    AnnoCPAN, Annotated CPAN documentation
-        http://annocpan.org/dist/Phylosift-Phylosift
-
-    CPAN Ratings
-        http://cpanratings.perl.org/d/Phylosift-Phylosift
-
-    Search CPAN
-        http://search.cpan.org/dist/Phylosift-Phylosift/
-
+Bugs and other apparent problems with the software can be reported as issues in our github issue tracker:
+https://github.com/gjospin/PhyloSift/issues
 
 LICENSE AND COPYRIGHT
 ===========================================
 
-Copyright (C) 2011 Aaron Darling
+Copyright (C) 2011 Aaron Darling and Guillaume Jospin
 
 This program is free software; you can redistribute it and/or modify it
 under the terms of either: the GNU General Public License as published
-by the Free Software Foundation; or the Artistic License.
+by the Free Software Foundation.
 
-See http://dev.perl.org/licenses/ for more information.
-
-Contact information
+CONTACT INFORMATION
 ===========================================
+
+Please direct correspondence to aarondarling (at) uc davis (dot) edu
+Or on twitter to @PhyloSift

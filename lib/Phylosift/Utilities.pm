@@ -4,7 +4,7 @@ package Phylosift::Utilities;
 use strict;
 use warnings;
 use FindBin qw($Bin);
-BEGIN { unshift( @INC, "$FindBin::Bin/legacy/" ) if $] < 5.01; }
+BEGIN { unshift( @INC, "$FindBin::Bin/../legacy/" ) if $] < 5.01; }
 use File::Basename;
 use Bio::SeqIO;
 use Bio::AlignIO;
@@ -19,7 +19,7 @@ use Cwd;
 require File::Fetch;
 
 if ( $^O =~ /arwin/ ) {
-	use lib "$FindBin::Bin/osx/darwin-thread-multi-2level/";
+	use lib "$FindBin::Bin/../osx/darwin-thread-multi-2level/";
 }
 use Exporter;
 use vars qw[ @EXPORT @EXPORT_OK %EXPORT_TAGS @ISA ];
@@ -1345,7 +1345,7 @@ Copyright 2011 Aaron Darling and Guillaume Jospin.
 
 This program is free software; you can redistribute it and/or modify it
 under the terms of either: the GNU General Public License as published
-by the Free Software Foundation; or the Artistic License.
+by the Free Software Foundation.
 
 See http://dev.perl.org/licenses/ for more information.
 
