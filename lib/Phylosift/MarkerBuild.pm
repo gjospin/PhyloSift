@@ -45,7 +45,7 @@ sub build_marker {
 	my $fasta_file = "$target_dir/$core.fasta";
 	my $seq_count = Phylosift::Utilities::unalign_sequences($aln_file, $fasta_file);
 	
-	my $masked_aln = "$target_dir/$core.mmasked";
+	my $masked_aln = "$target_dir/$core.masked";
 	mask(file=>$aln_file,output=>$masked_aln);
 	
 	my $hmm_file = "$target_dir/$core.hmm";
