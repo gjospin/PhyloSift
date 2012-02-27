@@ -47,6 +47,7 @@ Phylosift::Utilities - Implements miscellaneous accessory functions for Phylosif
 Version 0.01
 
 =cut
+
 our $VERSION = '0.01';
 
 =head1 SYNOPSIS
@@ -194,6 +195,7 @@ sub programChecks {
 Check for requisite PhyloSift marker datasets
 
 =cut
+
 our $marker_dir = "";
 our $ncbi_dir   = "";
 
@@ -952,9 +954,48 @@ sub open_sequence_file {
 	return $F1IN;
 }
 
+=head2 read_interleaved_fastq
+
+Reads 1 fastq file with interleaved paired ends reads
+Writes to the provided pipe in fasta format.
+
+=cut
+
+sub read_interleaved_fastq {
+	my %args       = @_;
+	my $pipe       = $args{PIPEOUT};
+	my $suffix_1   = $args{suffix_1};
+	my $suffix_2   = $args{suffix_2};
+	my $PIPE_IN    = open_sequence_file( file => $args{file} );
+	my $read_id_1  = <$PIPE_IN>;
+	my $read_seq_1 = <$PIPE_IN>;
+	my $read_id_2  = <$PIPE_IN>;
+	my $read_seq_2 = <$PIPE_IN>;
+	$read_id_1 =~ m/^\@(\S+)$suffix_1$/;
+	my $core_1 = $1;
+	$read_id_2 =~ m/^\@(\S+)$suffix_2$/;
+	my $core_2 = $1;
+
+	while (<$PIPE_IN>) {
+	}
+}
+
+
+=head2 get_blastp_db
+
+Returns the name and path of the blast DB
+
+=cut
+
 sub get_blastp_db {
 	return "$marker_dir/blastrep";
 }
+
+=head2 get_bowtie2_db
+
+returns the name and path of the bowtie2 DB
+
+=cut
 
 sub get_bowtie2_db {
 	return "$marker_dir/rnadb";
@@ -1372,4 +1413,5 @@ See http://dev.perl.org/licenses/ for more information.
 
 
 =cut
+
 1;    # End of Phylosift::Utilities

@@ -54,13 +54,16 @@ $ phylosift index <sequence_file>
 
 Usage
 ==========================================
-$ perl phylosift <Mode> <options> <sequence_file>
+$ phylosift <Mode> <options> <sequence_file>
 
    sequence_file needs to be in fasta format
 
-$ perl phylosift <Mode> <options> -paired <sequence_file_1> <sequence_file_2>
+$ phylosift <Mode> <options> -paired <sequence_file_1> <sequence_file_2>
 
    sequence_file_1 and _2 need to be in fastq format
+
+$ phylosift build_marker <alignment_file> <PD pruning threshold>
+Example :  $ phylosift mrker_build test.aln test 0.01
 
 Mode : Only execute a specific step in the pipeline
   all - execute all the following steps in that order.
@@ -68,6 +71,8 @@ Mode : Only execute a specific step in the pipeline
   align - hmmsearch + hmmalign + trims + coverage filters
   placer - run pplacer on the results from the align step
   summary - run the taxonomy assignment steps
+  index - indexes the various databases needed for Rapsearch, Bowtie and Blast
+  marker_build - creates a reference package for a marker from a multiple alignment
 
 Options Available at this time : 
    -h -help             Prints the usage section of the README

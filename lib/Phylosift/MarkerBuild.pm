@@ -35,17 +35,16 @@ if you don't export anything, such as for a purely object-oriented module.
 sub build_marker {
 	my %args = @_;
 	my $aln_file     = $args{alignment};
-	my $package_name = $args{name};
 	my $cutoff       = $args{cutoff};
-	
-	my $target_dir   = getcwd() . "/$package_name";
-	`mkdir $target_dir` unless -e $target_dir;
 	my ( $core, $path, $ext ) = fileparse( $aln_file, qr/\.[^.]*$/ );
+	
+	my $target_dir   = getcwd() . "/$core";
+	`mkdir $target_dir` unless -e $target_dir;
 	
 	my $fasta_file = "$target_dir/$core.fasta";
 	my $seq_count = Phylosift::Utilities::unalign_sequences($aln_file, $fasta_file);
 	
-	my $masked_aln = "$target_dir/$core.mmasked";
+	my $masked_aln = "$target_dir/$core.masked";
 	mask(file=>$aln_file,output=>$masked_aln);
 	
 	my $hmm_file = "$target_dir/$core.hmm";

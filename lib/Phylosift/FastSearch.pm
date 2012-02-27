@@ -67,7 +67,7 @@ my $blastp_params    = "-p blastp -e 0.1 -b 50000 -v 50000 -m 8";
 my $s16db_name       = "16srep.faa";
 my $blastn_params    = "-p blastn -e 0.1 -b 50000 -v 50000 -m 8";
 my %markerLength;
-
+my (%search_hits_rap,%search_hits_blast,%search_hits_bwt)=();
 sub RunSearch {
 	my $self       = shift;
 	my $custom     = shift;
@@ -82,6 +82,7 @@ sub RunSearch {
 
 	# check what kind of input was provided
 	my $type = Phylosift::Utilities::get_sequence_input_type( $self->{"readsFile"} );
+	$type->{paired} = 1 if exists $self->{"readsFile_2"};
 	$self->{"dna"} = $type->{seqtype} eq "protein" ? 0 : 1;      # Is the input protein sequences?
 	$reverseTranslate = $type->{seqtype} eq "protein" ? 0 : 1;
 	debug "Input type is $type->{seqtype}, $type->{format}\n";
@@ -122,6 +123,9 @@ sub launch_searches {
 	my $bowtie2_r1_pipe = $args{dir} . "/bowtie2_r1.pipe";
 	my $bowtie2_r2_pipe;
 	$bowtie2_r2_pipe = $args{dir} . "/bowtie2_r2.pipe" if $args{readtype}->{paired};
+	my $bwt_out_pipe   = $args{dir} . "/bwt_out.pipe";
+	my $rap_out_pipe   = $args{dir} . "/rap_out.pipe";
+	my $blast_out_pipe = $args{dir} . "/blast_out.pipe";
 
 	#	`mkfifo $rap_pipe`;	# rap doesn't support fifos
 	debug "Making fifos\n";
@@ -129,7 +133,11 @@ sub launch_searches {
 	`mkfifo $bowtie2_r1_pipe`;
 	`mkfifo $bowtie2_r2_pipe` if $args{readtype}->{paired};
 	`mkfifo $blastp_pipe`;
+	`mkfifo $blast_out_pipe`;
+	`mkfifo $bwt_out_pipe`;
+	`mkfifo $rap_out_pipe`;
 	my @children;
+
 	for ( my $count = 1 ; $count <= 3 ; $count++ ) {
 		my $pid = fork();
 		if ($pid) {
@@ -155,16 +163,20 @@ sub launch_searches {
 			}
 			my $hitsref;
 			if ( $count == 2 ) {
-				$hitsref = get_hits_sam( $self, $hitstream );
+				$hitsref = get_hits_sam( $self, $hitstream , pipe_name=>$bwt_out_pipe);
 			} elsif ( $args{contigs} ) {
-				$hitsref = get_hits_contigs( $self, $hitstream, "blast" );
+				$hitsref = get_hits_contigs( $self, $hitstream, "blast" , pipe_name=>$blast_out_pipe);
 			} else {
-				$hitsref = get_hits( $self, $hitstream, "blast" );
+				$hitsref = get_hits( $self, $hitstream, "blast" , pipe_name=>$blast_out_pipe);
 			}
 
 			# write out sequence regions hitting marker genes to candidate files
 			debug "Writing candidates from process $count\n";
-			writeCandidates( $self, $hitsref, "$candidate_type" );
+			if ( $count == 2 ) {
+				#writeCandidates( self => $self, contig_hits_refs => $hitsref, type => "$candidate_type", PIPE_IN => $bwt_out_pipe );
+			} else {
+				#writeCandidates( self => $self, contig_hits_refs => $hitsref, type => "$candidate_type", PIPE_IN => $blast_out_pipe );
+			}
 			exit 0;
 		} else {
 			croak "couldn't fork: $!\n";
@@ -175,7 +187,10 @@ sub launch_searches {
 	open( my $BOWTIE2_R1_PIPE, ">$bowtie2_r1_pipe" );
 	my $BOWTIE2_R2_PIPE;
 	open( $BOWTIE2_R2_PIPE, ">$bowtie2_r2_pipe" ) if $args{readtype}->{paired};
-	open( my $BLASTP_PIPE, ">$blastp_pipe" );
+	open( my $BLASTP_PIPE,  ">$blastp_pipe" );
+	open( my $BWT_OUT_PIPE, ">$bwt_out_pipe" );
+	open( my $RAP_OUT_PIPE, ">$rap_out_pipe" );
+	open( my $BLAST_OUT_PIPE, ">$blast_out_pipe" );
 
 	# parent process streams out sequences to fifos
 	# child processes run the search on incoming sequences
@@ -189,14 +204,17 @@ sub launch_searches {
 					 dna            => $self->{"dna"},
 					 file1          => $self->{"readsFile"},
 					 file2          => $self->{"readsFile_2"},
+					 bwt_out_pipe   => $BWT_OUT_PIPE,
+					 rap_out_pipe   => $RAP_OUT_PIPE,
+					 blast_out_pipe => $BLAST_OUT_PIPE,
 	);
-
+	
 	# rapsearch can't read from a pipe
 	debug "Running rapsearch\n";
 	my $rap_hits = executeRap( $self, $rap_pipe );
-	my $hitsref = get_hits( $self, $rap_hits, "rap" );
+	my $hitsref = get_hits( $self, $rap_hits, "rap" , pipe_in=>$rap_out_pipe);
 	debug "Done reading rap results, got " . scalar( keys(%$hitsref) ) . " hits\n";
-	writeCandidates( $self, $hitsref, ".rap" );
+	#writeCandidates( self => $self, contig_hits_refs => $hitsref, type => ".rap", PIPE_IN => $rap_out_pipe );
 
 	# join with children when the searches are done
 	foreach (@children) {
@@ -204,7 +222,7 @@ sub launch_searches {
 	}
 
 	# clean up
-	`rm -f $blastx_pipe $blastp_pipe $rap_pipe $bowtie2_r1_pipe`;
+	`rm -f $blastx_pipe $blastp_pipe $rap_pipe $bowtie2_r1_pipe $bwt_out_pipe $rap_out_pipe $blast_out_pipe`;
 	`rm -f $bowtie2_r2_pipe` if defined($bowtie2_r2_pipe);
 }
 
@@ -221,15 +239,17 @@ sub demux_sequences {
 	my $RAPSEARCH_PIPE = $args{rapsearch_pipe};
 	my $BLASTX_PIPE    = $args{blastx_pipe};
 	my $BLASTP_PIPE    = $args{blastp_pipe};
+	my $BWT_OUT_PIPE   = $args{bwt_out_pipe};
+	my $RAP_OUT_PIPE   = $args{rap_out_pipe};
+	my $BLAST_OUT_PIPE = $args{blast_out_pipe};
 	my $F1IN           = Phylosift::Utilities::open_sequence_file( file => $args{file1} );
 	my $F2IN;
 	$F2IN = Phylosift::Utilities::open_sequence_file( file => $args{file2} ) if length( $args{file2} ) > 0;
 	my @lines1;
 	my @lines2;
-	
 	$lines1[0] = <$F1IN>;
 	$lines2[0] = <$F2IN> if defined($F2IN);
-
+	
 	while ( defined( $lines1[0] ) ) {
 		if ( $lines1[0] =~ /^@/ ) {
 			for ( my $i = 1 ; $i < 4 ; $i++ ) {
@@ -247,6 +267,12 @@ sub demux_sequences {
 			$lines2[0] =~ s/^@/>/g if defined($F2IN);
 			print $RAPSEARCH_PIPE $lines1[0] . $lines1[1];
 			print $RAPSEARCH_PIPE $lines2[0] . $lines2[1] if defined($F2IN);
+			
+			print $RAP_OUT_PIPE $lines1[0] . $lines1[1];
+			print $RAP_OUT_PIPE $lines2[0] . $lines2[1] if defined($F2IN);
+			
+			print $BWT_OUT_PIPE $lines1[0] . $lines1[1];
+			print $BWT_OUT_PIPE $lines2[0] . $lines2[1] if defined($F2IN);
 
 			#
 			# prepare for next loop iter
@@ -285,6 +311,12 @@ sub demux_sequences {
 				print $RAPSEARCH_PIPE $lines1[0] . $lines1[1];
 				print $RAPSEARCH_PIPE $lines2[0] . $lines2[1] if defined($F2IN);
 			}
+			print $BLAST_OUT_PIPE $lines1[0] . $lines1[1];
+			print $BLAST_OUT_PIPE $lines2[0] . $lines2[1] if defined($F2IN);
+			
+			print $RAP_OUT_PIPE $lines1[0] . $lines1[1];
+			print $RAP_OUT_PIPE $lines2[0] . $lines2[1] if defined($F2IN);
+			
 			@lines1 = ( $newline1, "" );
 			@lines2 = ( $newline2, "" );
 		}
@@ -295,6 +327,10 @@ sub demux_sequences {
 	close($BLASTX_PIPE);
 	close($BLASTP_PIPE);
 	close($RAPSEARCH_PIPE);
+	close($BWT_OUT_PIPE);
+	close($BLAST_OUT_PIPE);
+	close($RAP_OUT_PIPE);
+	debug("Finished DEMUX\n");
 }
 
 sub cleanup {
@@ -533,9 +569,11 @@ parse the blast file, return a hash containing hits to reads
 =cut
 
 sub get_hits {
-	my $self       = shift;
-	my $HITSTREAM  = shift;
-	my $searchtype = shift;
+	my %args = @_;
+	my $self       = $args{self};
+	my $HITSTREAM  = $args{HISTSTREAM};
+	my $searchtype = $args{searchtype};
+	my $reads_pipe = $args{pipe_name};
 	my %markerTopScores;
 	my %topScore = ();
 	my %contig_hits;
@@ -572,14 +610,17 @@ sub get_hits {
 				$topScore{$query} = $bitScore;
 			}    #else do nothing
 		}
+		writeCandidates( self => $self, contig_hits_refs => \%contig_hits, type => $searchtype, PIPE_IN => $reads_pipe );
 	}
 	close($HITSTREAM);
 	return \%contig_hits;
 }
 
 sub get_hits_sam {
-	my $self      = shift;
-	my $HITSTREAM = shift;
+	my %args = @_;
+	my $self      = $args{self};
+	my $HITSTREAM = $args{HITSTREAM};
+	my $reads_pipe = $args{pipe_name};
 	my %markerTopScores;
 	my %topScore = ();
 	my %contig_hits;
@@ -588,6 +629,7 @@ sub get_hits_sam {
 	return unless defined($HITSTREAM);
 	return \%contig_hits unless defined( fileno $HITSTREAM );
 	while (<$HITSTREAM>) {
+		my %hits=();
 		next if ( $_ =~ /^\@/ );
 		my @fields = split( /\t/, $_ );
 		next if $fields[2] eq "*";    # no hit
@@ -652,14 +694,29 @@ write out results
 =cut
 
 sub writeCandidates {
-	my $self          = shift;
-	my $contigHitsRef = shift;
-	my $type          = shift || "";       # search type -- candidate filenames will have this name embedded, enables parallel output from different programs
-	my %contig_hits   = %$contigHitsRef;
+	my %args          = @_;
+	my $self          = $args{self};
+	my $contigHitsRef = $args{contig_hits_refs};
+	my $type        = $args{type} || "";    # search type -- candidate filenames will have this name embedded, enables parallel output from different programs
+	my $pipe_name     = $args{PIPE_IN};
+	my %contig_hits = %$contigHitsRef;
 	debug "ReadsFile:  $self->{\"readsFile\"}" . "\n";
-	my $seqin =  Phylosift::Utilities::open_SeqIO_object(file=>$self->{"readsFile"});
-#	my $seqin = new Bio::SeqIO( '-file' => $self->{"readsFile"} );
-	while ( my $seq = $seqin->next_seq ) {
+
+	#	open(my $READS_PIPE,$PIPE_IN);
+	#my $seqin =  Phylosift::Utilities::open_SeqIO_object(file=>$PIPE_IN);
+	#	my $seqin = new Bio::SeqIO( '-file' => $self->{"readsFile"} );
+	open( my $CAND_PIPE, $pipe_name );
+
+	#	while ( my $seq = $seqin->next_seq ) {
+	while (<$CAND_PIPE>) {
+		my $ID       = $_;
+		my $sequence = <$CAND_PIPE>;
+		$ID =~ m/^>(\S+)/;
+		my $id = 1;
+		my $seq;
+		$seq->id  = $id;
+		$seq->seq = $sequence;
+		print "SEQS : " . $seq->id . "\t" . $seq->seq . "\n";
 
 		# skip this one if there are no hits
 		next unless ( exists $contig_hits{ $seq->id } );
