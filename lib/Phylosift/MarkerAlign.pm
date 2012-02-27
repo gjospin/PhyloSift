@@ -186,7 +186,7 @@ sub hmmsearchParse {
 		foreach my $type (@search_types) {
 			my $candidate = $self->{"blastDir"} . "/$marker$type.candidate";
 			next unless -e $candidate;
-			my $seqin = new Bio::SeqIO( '-file' => $candidate );
+			my $seqin = Phylosift::Utilities::open_SeqIO_object(file=>$candidate);
 			while ( my $sequence = $seqin->next_seq ) {
 				my $baseid = $sequence->id;
 				if ( exists $hmmHits{$baseid} && $hmmHits{$baseid} eq $sequence->id ) {

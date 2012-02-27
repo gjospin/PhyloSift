@@ -135,7 +135,7 @@ sub mask_and_clean_alignment {
 	my %id_map;	# will store a map of unique IDs to sequence names
 
 	#    open(FILEIN,$aln_file) or carp("Couldn't open $aln_file for reading \n");
-	my $in = Bio::SeqIO->new( -file => $aln_file );
+	my $in = Phylosift::Utilities::open_SeqIO_object(file=>$aln_file);
 	my %s = ();    #hash remembering the IDs already printed
 	open( FILEOUT, ">$output_file" ) or carp("Couldn't open $output_file for writing\n");
 	my $seq_counter = 0;
@@ -238,8 +238,8 @@ sub get_fasta_from_pda_representatives {
 	close(REPSIN);	
 
 	#reading the reference sequences and printing the selected representatives using BioPerl
-	my $reference_seqs        = Bio::SeqIO->new( -file => $reference_fasta,         -format => "FASTA" );
-	my $representatives_fasta = Bio::SeqIO->new( -file => ">$target_dir/$core.rep", -format => "FASTA" );
+	my $reference_seqs = Phylosift::Utilities::open_SeqIO_object(file=>$reference_fasta, format =>"FASTA");
+	my $representatives_fasta = Phylosift::Utilities::open_SeqIO_object(file=>">$target_dir/$core.rep", format =>"FASTA");
 	while ( my $ref_seq = $reference_seqs->next_seq ) {
 		if ( exists $selected_taxa{ $id_map->{$ref_seq->id} } ) {
 			$representatives_fasta->write_seq($ref_seq);

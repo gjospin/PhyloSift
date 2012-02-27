@@ -15,6 +15,7 @@ Phylosift::UpdateDB - Functionality to download new genomes and update the marke
 Version 0.01
 
 =cut
+
 our $VERSION = '0.01';
 
 =head1 SYNOPSIS
@@ -81,9 +82,8 @@ sub get_ebi_from_list() {
 		close WGETTER;
 
 		#		eval{
-		my $seq_in = Bio::SeqIO->new( -file => "$outfile.embl" );
-		my $seq_out = Bio::SeqIO->new( '-file'   => ">$outfile.fasta",
-									   '-format' => "fasta" );
+		my $seq_in = Phylosift::Utilities::open_SeqIO_object( file => "$outfile.embl" );
+		my $seq_out = Phylosift::Utilities::open_SeqIO_object( file => ">$outfile.fasta", format => "fasta" );
 		while ( my $inseq = $seq_in->next_seq ) {
 			$seq_out->write_seq($inseq);
 		}

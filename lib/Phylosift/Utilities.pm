@@ -47,7 +47,6 @@ Phylosift::Utilities - Implements miscellaneous accessory functions for Phylosif
 Version 0.01
 
 =cut
-
 our $VERSION = '0.01';
 
 =head1 SYNOPSIS
@@ -103,24 +102,24 @@ sub get_program_path {
 }
 
 # external programs used by Phylosift
-our $pplacer         = "";
-our $guppy           = "";
-our $rppr            = "";
-our $taxit           = "";
-our $hmmalign        = "";
-our $hmmsearch       = "";
-our $hmmbuild        = "";
-our $blastall        = "";
-our $formatdb        = "";
-our $rapSearch       = "";
-our $preRapSearch    = "";
-our $raxml           = "";
-our $readconciler    = "";
-our $bowtie2align    = "";
-our $bowtie2build    = "";
-our $cmalign         = "";
-our $pda             = "";
-our $fasttree        = "";
+our $pplacer      = "";
+our $guppy        = "";
+our $rppr         = "";
+our $taxit        = "";
+our $hmmalign     = "";
+our $hmmsearch    = "";
+our $hmmbuild     = "";
+our $blastall     = "";
+our $formatdb     = "";
+our $rapSearch    = "";
+our $preRapSearch = "";
+our $raxml        = "";
+our $readconciler = "";
+our $bowtie2align = "";
+our $bowtie2build = "";
+our $cmalign      = "";
+our $pda          = "";
+our $fasttree     = "";
 
 sub programChecks {
 	eval 'require Bio::Seq;';
@@ -176,10 +175,9 @@ sub programChecks {
 		carp("raxmlHPC was not found\n");
 		return 1;
 	}
-	$readconciler = get_program_path( "readconciler", $Phylosift::Settings::ps_path );
-	$pda          = get_program_path( "pda", $Phylosift::Settings::ps_path );
-	$fasttree     = get_program_path( "FastTree", $Phylosift::Settings::ps_path );
-
+	$readconciler = get_program_path( "readconciler",  $Phylosift::Settings::ps_path );
+	$pda          = get_program_path( "pda",           $Phylosift::Settings::ps_path );
+	$fasttree     = get_program_path( "FastTree",      $Phylosift::Settings::ps_path );
 	$bowtie2align = get_program_path( "bowtie2-align", $Phylosift::Settings::bowtie2_path );
 	if ( $bowtie2align eq "" ) {
 
@@ -196,7 +194,6 @@ sub programChecks {
 Check for requisite PhyloSift marker datasets
 
 =cut
-
 our $marker_dir = "";
 our $ncbi_dir   = "";
 
@@ -264,11 +261,11 @@ sub data_checks {
 		warn "Unable to find marker data!\n";
 		$get_new_markers = 1;
 	}
-	if($get_new_markers){
+	if ($get_new_markers) {
 		warn "Downloading from $marker_update_url\n";
 		download_data( $marker_update_url, $marker_dir );
-		my @markers = gather_markers(self=>$self);
-		index_marker_db(self=>$self, markers=>\@markers);
+		my @markers = gather_markers( self => $self );
+		index_marker_db( self => $self, markers => \@markers );
 	}
 	$ncbi_dir = get_data_path( "ncbi", $Phylosift::Settings::ncbi_path );
 	( $content_type, $document_length, $modified_time, $expires, $server ) = head("$ncbi_url");
@@ -592,8 +589,8 @@ Returns the path to the lookup table between marker gene IDs and their taxa
 sub get_marker_taxon_map {
 	my %args = @_;
 	my $self = $args{self};
-	return "$marker_dir/marker_taxon_map.updated.txt" if($self->{"updated"});	
-	return "$marker_dir/marker_taxon_map.txt";	
+	return "$marker_dir/marker_taxon_map.updated.txt" if ( $self->{"updated"} );
+	return "$marker_dir/marker_taxon_map.txt";
 }
 
 =head2 is_protein_marker
@@ -911,6 +908,30 @@ sub marker_oldstyle {
 	return 0;
 }
 
+=head2 open_SeqIO_object
+
+Opens a sequence file and returns a SeqIO object.  Allows for gzip and bzip compression
+returns a SeqIO object
+
+=cut
+
+sub open_SeqIO_object {
+	my %args = @_;
+	my $io_object;
+	my $format = "FASTA";    #default
+	if ( exists $args{format} ) {
+		$format = $args{format};
+	}
+	if ( $args{file} =~ /\.gz$/ ) {
+		$io_object = Bio::SeqIO->new( -file => "zcat $args{file} |", -format => $format );
+	} elsif ( $args{file} =~ /\.bz2$/ ) {
+		$io_object = Bio::SeqIO->new( -file => "bzcat $args{file} |", -format => $format );
+	} else {
+		$io_object = Bio::SeqIO->new( -file => $args{file}, -format => $format );
+	}
+	return $io_object;
+}
+
 =head2 open_sequence_file
 
 Opens a sequence file, either directly or by decompressing it with gzip or bzip2
@@ -1012,7 +1033,7 @@ sub gather_markers {
 	my @marks      = ();
 
 	#create a file with a list of markers called markers.list
-	if ( exists $args{marker_file} && $markerFile ne "") {
+	if ( exists $args{marker_file} && $markerFile ne "" ) {
 
 		#gather a custom list of makers, list convention is 1 marker per line
 		open( markersIN, $markerFile );
@@ -1282,7 +1303,7 @@ sub unalign_sequences {
 	my ( $core, $path, $ext ) = fileparse( $aln_file, qr/\.[^.]*$/ );
 	my $in = Bio::SeqIO->new( -file => $aln_file );
 	my $seq_count = 0;
-	open( FILEOUT, ">$output_path" ) or carp("Couldn't open $output_path for writing\n");	
+	open( FILEOUT, ">$output_path" ) or carp("Couldn't open $output_path for writing\n");
 	while ( my $seq_object = $in->next_seq() ) {
 		my $seq = $seq_object->seq;
 		my $id  = $seq_object->id;
@@ -1351,5 +1372,4 @@ See http://dev.perl.org/licenses/ for more information.
 
 
 =cut
-
 1;    # End of Phylosift::Utilities

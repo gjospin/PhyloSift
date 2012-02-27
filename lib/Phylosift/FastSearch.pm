@@ -657,7 +657,8 @@ sub writeCandidates {
 	my $type          = shift || "";       # search type -- candidate filenames will have this name embedded, enables parallel output from different programs
 	my %contig_hits   = %$contigHitsRef;
 	debug "ReadsFile:  $self->{\"readsFile\"}" . "\n";
-	my $seqin = new Bio::SeqIO( '-file' => $self->{"readsFile"} );
+	my $seqin =  Phylosift::Utilities::open_SeqIO_object(file=>$self->{"readsFile"});
+#	my $seqin = new Bio::SeqIO( '-file' => $self->{"readsFile"} );
 	while ( my $seq = $seqin->next_seq ) {
 
 		# skip this one if there are no hits
