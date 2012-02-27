@@ -90,7 +90,7 @@ sub RunSearch {
 	# ensure databases and sequences are prepared for search
 	debug "before rapPrepandclean\n";
 	prepAndClean($self);
-	readMarkerLengths($self);
+	read_marker_lengths($self);
 
 	# search reads/contigs against marker database
 	my $searchtype = "blast";
@@ -307,7 +307,7 @@ sub cleanup {
 	`rm -f $self->{"blastDir"}/$blastdb_name`;
 }
 
-sub readMarkerLengths {
+sub read_marker_lengths {
 	my $self = shift;
 	foreach my $marker (@markers) {
 		$markerLength{$marker} = Phylosift::Utilities::get_marker_length( $self, $marker );
@@ -327,7 +327,7 @@ sub blastXoof_table {
 	debug "INSIDE tabular OOF blastx\n";
 	my $blastxoof_cmd =
 	    "$Phylosift::Utilities::blastall -p blastx -i $query_file -e 0.1 -w 20 -b 50000 -v 50000 -d "
-	  . Phylosift::Utilities::get_blastp_db()
+	  . Phylosift::Utilities::get_blastp_db(self=>$self)
 	  . " -m 8 -a "
 	  . $self->{"threads"}
 	  . " 2> /dev/null |";
@@ -346,7 +346,7 @@ sub blastXoof_full {
 	debug "INSIDE full OOF blastx\n";
 	my $blastxoof_cmd =
 	    "$Phylosift::Utilities::blastall -p blastx -i $query_file -e 0.1 -w 20 -b 50 -v 50 -d "
-	  . Phylosift::Utilities::get_blastp_db() . " -a "
+	  . Phylosift::Utilities::get_blastp_db(self=>$self) . " -a "
 	  . $self->{"threads"}
 	  . " 2> /dev/null |";
 	debug "Running $blastxoof_cmd";
@@ -363,9 +363,11 @@ returns a stream file handle
 
 sub bowtie2 {
 	my %args = @_;
+	my $self = $args{self};
+	my $readtype = $args{readtype};
 	debug "INSIDE bowtie2\n";
 	my $bowtie2_cmd =
-	  "$Phylosift::Utilities::bowtie2align -x " . Phylosift::Utilities::get_bowtie2_db() . " --quiet --sam-nohead --sam-nosq --maxins 1000 --local ";
+	  "$Phylosift::Utilities::bowtie2align -x " . Phylosift::Utilities::get_bowtie2_db(self=>$self) . " --quiet --sam-nohead --sam-nosq --maxins 1000 --local ";
 	$bowtie2_cmd .= " -f " if $args{readtype}->{format} eq "fasta";
 	if ( $args{readtype}->{paired} ) {
 		$bowtie2_cmd .= " -1 $args{reads1} -2 $args{reads2} ";
@@ -421,7 +423,7 @@ sub executeRap {
 	my $out_file      = $self->{"blastDir"} . "/$readsCore.rapSearch";
 	my $rapsearch_cmd = "cd "
 	  . $self->{"blastDir"}
-	  . "; $Phylosift::Utilities::rapSearch -q $query_file -d $Phylosift::Utilities::marker_dir/rep -o $out_file -v 20 -b 20 -e -1 -z "
+	  . "; $Phylosift::Utilities::rapSearch -q $query_file -d ".Phylosift::Utilities::get_rapsearch_db(self=>$self)." -o $out_file -v 20 -b 20 -e -1 -z "
 	  . $self->{"threads"} . " > "
 	  . $self->{"blastDir"}
 	  . "/log.txt";
@@ -717,13 +719,15 @@ sub writeCandidates {
 	foreach my $marker ( keys %markerHits ) {
 
 		#writing the hits to the candidate file
-		open( fileOUT, ">" . $self->{"blastDir"} . "/$marker$type.candidate" )
-		  or die " Couldn't open " . $self->{"blastDir"} . "/$marker$type.candidate for writing\n";
+		my $candidate_file = Phylosift::Utilities::get_candidate_file(self=>$self, marker=>$marker, type=>$type);
+		open( fileOUT, ">$candidate_file"  )
+		  or croak " Couldn't open $candidate_file for writing\n";
 		print fileOUT $markerHits{$marker};
 		close(fileOUT);
 		if ( $self->{"dna"} && $type !~ /\.rna/ ) {
-			open( fileOUT, ">" . $self->{"blastDir"} . "/$marker$type.candidate.ffn" )
-			  or die " Couldn't open " . $self->{"blastDir"} . "/$marker$type.candidate.ffn for writing\n";
+			$candidate_file = Phylosift::Utilities::get_candidate_file(self=>$self, marker=>$marker, type=>$type, dna=>1);
+			open( fileOUT, ">$candidate_file" )
+			  or croak " Couldn't open $candidate_file for writing\n";
 			print fileOUT $markerNuc{$marker} if defined( $markerNuc{$marker} );
 			close(fileOUT);
 		}

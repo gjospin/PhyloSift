@@ -77,10 +77,10 @@ sub pplacer {
 			if ( Phylosift::Utilities::marker_oldstyle($marker) ) {
 
 				# run pplacer the old way, using phyml trees which aren't supported by reference packages
-				my $trimfinalFastaFile = "$Phylosift::Utilities::marker_dir/" . Phylosift::Utilities::getTrimfinalFastaMarkerFile( $self, $marker );
-				my $trimfinalFile = "$Phylosift::Utilities::marker_dir/" . Phylosift::Utilities::getTrimfinalMarkerFile( $self, $marker );
-				my $treeFile = "$Phylosift::Utilities::marker_dir/" . Phylosift::Utilities::getTreeMarkerFile( $self, $marker );
-				my $treeStatsFile = "$Phylosift::Utilities::marker_dir/" . Phylosift::Utilities::getTreeStatsMarkerFile( $self, $marker );
+				my $trimfinalFastaFile = Phylosift::Utilities::getTrimfinalFastaMarkerFile( $self, $marker );
+				my $trimfinalFile = Phylosift::Utilities::getTrimfinalMarkerFile( $self, $marker );
+				my $treeFile = Phylosift::Utilities::getTreeMarkerFile( $self, $marker );
+				my $treeStatsFile = Phylosift::Utilities::getTreeStatsMarkerFile( $self, $marker );
 
 				# Pplacer requires the alignment files to have a .fasta extension
 				if ( !-e "$trimfinalFastaFile" ) {
