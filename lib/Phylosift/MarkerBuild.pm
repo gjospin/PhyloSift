@@ -50,7 +50,7 @@ sub build_marker {
 	my $hmm_file = "$target_dir/$core.hmm";
 	generate_hmm( $masked_aln, $hmm_file );
 	
-	Phylosift::Utilities::fastpsstockholm($masked_aln, "$target_dir/$core.stk");
+	Phylosift::Utilities::fasta2stockholm($masked_aln, "$target_dir/$core.stk");
 	my $stk_aln =  "$target_dir/$core.stk";
 
 	#may need to create an unaligned file for the sequences before aligning them

@@ -298,7 +298,7 @@ See https://github.com/ihh/dart/ for the original source code
 
 =cut
 
-sub fastpsstockholm {
+sub fasta2stockholm {
 	my $fasta  = shift;
 	my $output = shift;
 	open( STOCKOUT, ">$output" );

@@ -128,7 +128,7 @@ sub markerPrepAndRun {
 			my $trimfinalFile = Phylosift::Utilities::getTrimfinalMarkerFile( $self, $marker );
 
 			#converting the marker's reference alignments from Fasta to Stockholm (required by Hmmer3)
-			Phylosift::Utilities::fastpsstockholm( "$Phylosift::Utilities::marker_dir/$trimfinalFile", $stockholm_file );
+			Phylosift::Utilities::fasta2stockholm( "$Phylosift::Utilities::marker_dir/$trimfinalFile", $stockholm_file );
 
 			#build the Hmm for the marker using Hmmer3
 			if ( !-e $hmm_file ) {
