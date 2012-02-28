@@ -15,7 +15,6 @@ Phylosift::UpdateDB - Functionality to download new genomes and update the marke
 Version 0.01
 
 =cut
-
 our $VERSION = '0.01';
 
 =head1 SYNOPSIS
@@ -147,7 +146,7 @@ sub get_ncbi_finished_genomes($) {
 				}
 				$seq_out = Phylosift::Utilities::open_SeqIO_object( file => ">$fasta_name", format => "FASTA" );
 			}
-			$seq_in = Phylosift::Utilities::open_SeqIO_object( file => "$gbk" );
+			my $seq_in = Phylosift::Utilities::open_SeqIO_object( file => "$gbk" );
 			while ( my $inseq = $seq_in->next_seq ) {
 				$seq_out->write_seq($inseq);
 			}

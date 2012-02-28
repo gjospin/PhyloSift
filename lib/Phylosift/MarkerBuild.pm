@@ -13,6 +13,7 @@ Phylosift::MarkerBuild - build a seed marker package from an existing multiple s
 Version 0.01
 
 =cut
+
 our $VERSION = '0.01';
 
 =head1 SYNOPSIS
@@ -36,9 +37,9 @@ sub build_marker {
 	my $aln_file     = $args{alignment};
 	my $package_name = $args{name};
 	my $cutoff       = $args{cutoff};
-	my $target_dir   = getcwd() . "/$package_name";
-	`mkdir $target_dir` unless -e $target_dir;
 	my ( $core, $path, $ext ) = fileparse( $aln_file, qr/\.[^.]*$/ );
+	my $target_dir = getcwd() . "/$core";
+	`mkdir $target_dir` unless -e $target_dir;
 	my $fasta_file = "$target_dir/$core.fasta";
 	my $seq_count  = Phylosift::Utilities::unalign_sequences( $aln_file, $fasta_file );
 	my $masked_aln = "$target_dir/$core.masked";
@@ -231,8 +232,8 @@ sub get_fasta_from_pda_representatives {
 	close(REPSIN);
 
 	#reading the reference sequences and printing the selected representatives using BioPerl
-	my $reference_seqs        = Phylosift::Utilities::open_SeqIO_object( file => $aln_file, format => "FASTA" );
-	my $representatives_fasta = Phylosift::Utilities::open_SeqIO_object( file => $aln_file, format => "FASTA" );
+	my $reference_seqs        = Phylosift::Utilities::open_SeqIO_object( file => $reference_fasta,         format => "FASTA" );
+	my $representatives_fasta = Phylosift::Utilities::open_SeqIO_object( file => ">$target_dir/$core.rep", format => "FASTA" );
 	while ( my $ref_seq = $reference_seqs->next_seq ) {
 		if ( exists $selected_taxa{ $id_map->{ $ref_seq->id } } ) {
 			$representatives_fasta->write_seq($ref_seq);
@@ -623,4 +624,5 @@ See http://dev.perl.org/licenses/ for more information.
 
 
 =cut
+
 1;    # End of Phylosift::MarkerBuild.pm
