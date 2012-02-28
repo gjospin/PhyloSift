@@ -47,7 +47,6 @@ Phylosift::Utilities - Implements miscellaneous accessory functions for Phylosif
 Version 0.01
 
 =cut
-
 our $VERSION = '0.01';
 
 =head1 SYNOPSIS
@@ -195,7 +194,6 @@ sub programChecks {
 Check for requisite PhyloSift marker datasets
 
 =cut
-
 our $marker_dir = "";
 our $ncbi_dir   = "";
 
@@ -1374,5 +1372,4 @@ See http://dev.perl.org/licenses/ for more information.
 
 
 =cut
-
 1;    # End of Phylosift::Utilities
