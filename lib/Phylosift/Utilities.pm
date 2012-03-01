@@ -945,11 +945,11 @@ sub open_sequence_file {
 	my %args = @_;
 	my $F1IN;
 	if ( $args{file} =~ /\.gz$/ ) {
-		open( $F1IN, "zcat $args{file} |" );
+		open( $F1IN, "zcat $args{file} |" ) or croak "Can't open $args{file}\n";
 	} elsif ( $args{file} =~ /\.bz2$/ ) {
 		open( $F1IN, "bzcat $args{file} |" );
 	} else {
-		open( $F1IN, $args{file} );
+		open( $F1IN, $args{file} ) ;
 	}
 	return $F1IN;
 }

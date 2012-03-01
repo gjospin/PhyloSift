@@ -126,13 +126,14 @@ sub launch_searches {
 	my $reads_file      = $args{dir} . "/reads.fasta";
 	my $bowtie2_r2_pipe;
 	$bowtie2_r2_pipe = $args{dir} . "/bowtie2_r2.pipe" if $args{readtype}->{paired};
-
 	#	`mkfifo $rap_pipe`;	# rap doesn't support fifos
 	debug "Making fifos\n";
 	`mkfifo $blastx_pipe`;
 	`mkfifo $bowtie2_r1_pipe`;
 	`mkfifo $bowtie2_r2_pipe` if $args{readtype}->{paired};
 	`mkfifo $blastp_pipe`;
+
+
 	my @children;
 	for ( my $count = 1 ; $count <= 3 ; $count++ ) {
 		my $pid = fork();
@@ -178,6 +179,7 @@ sub launch_searches {
 	open( my $BLASTX_PIPE,     ">$blastx_pipe" );
 	open( my $BOWTIE2_R1_PIPE, ">$bowtie2_r1_pipe" );
 	my $BOWTIE2_R2_PIPE;
+	debug "TESTING".$args{readtype}->{paired};
 	open( $BOWTIE2_R2_PIPE, ">$bowtie2_r2_pipe" ) if $args{readtype}->{paired};
 	open( my $BLASTP_PIPE,  ">$blastp_pipe" );
 	open( my $READS_PIPE,   "+>$reads_file" );
@@ -228,11 +230,13 @@ sub demux_sequences {
 	my $BLASTX_PIPE    = $args{blastx_pipe};
 	my $BLASTP_PIPE    = $args{blastp_pipe};
 	my $READS_PIPE     = $args{reads_pipe};
+
 	my $F1IN           = Phylosift::Utilities::open_sequence_file( file => $args{file1} );
 	my $F2IN;
 	$F2IN = Phylosift::Utilities::open_sequence_file( file => $args{file2} ) if length( $args{file2} ) > 0;
 	my @lines1;
 	my @lines2;
+
 	$lines1[0] = <$F1IN>;
 	$lines2[0] = <$F2IN> if defined($F2IN);
 
@@ -244,10 +248,8 @@ sub demux_sequences {
 			}
 
 			# send the reads to bowtie
-			#print $BOWTIE2_PIPE1 @lines1;
-			#print $BOWTIE2_PIPE2 @lines2 if defined($F2IN);
-			print $BOWTIE2_PIPE1 $lines1[0] . $lines1[1];
-			print $BOWTIE2_PIPE1 $lines2[0] . $lines2[1] if defined($F2IN);
+			print $BOWTIE2_PIPE1 @lines1;
+			print $BOWTIE2_PIPE2 @lines2 if defined($F2IN);
 			#
 			# send the reads to RAPsearch2 (convert to fasta)
 			$lines1[0] =~ s/^@/>/g;
@@ -292,10 +294,10 @@ sub demux_sequences {
 					print $BLASTP_PIPE @lines2 if defined($F2IN);
 				}
 			} else {
-
-				# otherwise send to rap
-				print $RAPSEARCH_PIPE $lines1[0] . $lines1[1];
-				print $RAPSEARCH_PIPE $lines2[0] . $lines2[1] if defined($F2IN);
+			    
+			    # otherwise send to rap
+			    print $RAPSEARCH_PIPE $lines1[0] . $lines1[1];
+			    print $RAPSEARCH_PIPE $lines2[0] . $lines2[1] if defined($F2IN);
 			}
 			#
 			# send the reads to the reads file to write candidates later
@@ -305,9 +307,10 @@ sub demux_sequences {
 			@lines2 = ( $newline2, "" );
 		}
 	}
+
 	close($RAPSEARCH_PIPE);
 	close($BOWTIE2_PIPE1);
-	close($BOWTIE2_PIPE2) if $args{readtype}->{paired};
+	close($BOWTIE2_PIPE2) if defined($F2IN);
 	close($BLASTX_PIPE);
 	close($BLASTP_PIPE);
 	close($RAPSEARCH_PIPE);
@@ -382,15 +385,14 @@ sub bowtie2 {
 	my %args = @_;
 	debug "INSIDE bowtie2\n";
 	my $bowtie2_cmd =
-	  "$Phylosift::Utilities::bowtie2align -x " . Phylosift::Utilities::get_bowtie2_db() . " --quiet --sam-nohead --sam-nosq --maxins 1000 --local";
+	    "$Phylosift::Utilities::bowtie2align -x " . Phylosift::Utilities::get_bowtie2_db() . " --quiet --sam-nohead --sam-nosq --maxins 1000 --local --mm --threads ". $args{self}->{"threads"};;
 	$bowtie2_cmd .= " -f " if $args{readtype}->{format} eq "fasta";
 	if ( $args{readtype}->{paired} ) {
 		$bowtie2_cmd .= " -1 $args{reads1} -2 $args{reads2} ";
-		#$bowtie2_cmd .= " -q $args{reads1},$args{reads2} ";
 	} else {
 		$bowtie2_cmd .= " -U $args{reads1} ";
 	}
-	$bowtie2_cmd .= "--mm --threads " . $args{self}->{"threads"} . "  |";
+	$bowtie2_cmd .= " |";
 	debug "Running $bowtie2_cmd";
 	open( my $hitstream, $bowtie2_cmd );
 	return $hitstream;
@@ -607,7 +609,9 @@ sub get_hits_sam {
 	# return empty if there is no data
 	return unless defined($HITSTREAM);
 	return \%contig_hits unless defined( fileno $HITSTREAM );
+	debug "GETHITSAM\n";
 	while (<$HITSTREAM>) {
+#		debug "$_";
 		next if ( $_ =~ /^\@/ );
 		my @fields = split( /\t/, $_ );
 		next if $fields[2] eq "*";    # no hit
@@ -735,7 +739,7 @@ sub writeCandidates {
 					$newSeq = translateFrame( $seq->id, $seq->seq, $start, $end, $frame, $markerHit, $self->{"dna"} );
 					$newSeq =~ s/\*/X/g;    # bioperl uses * for stop codons but we want to give X to hmmer later
 				} else {
-					warn "Error, alignment length not multiple of 3!  FIXME: need to pull frameshift from full blastx\n";
+					warn "Search type : $type, alignment length not multiple of 3!  FIXME: need to pull frameshift from full blastx\n";
 				}
 			}
 			$markerHits{$markerHit} = "" unless defined( $markerHits{$markerHit} );
