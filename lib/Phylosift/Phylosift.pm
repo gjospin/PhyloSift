@@ -183,7 +183,7 @@ sub run {
 		Phylosift::Utilities::index_marker_db( self=>$self, markers=>\@markers );
 	}
 	if( $self->{"mode"} eq 'build_marker'){
-		Phylosift::MarkerBuild::build_marker(alignment=>$ARGV[1], cutoff=>$ARGV[3]);
+	    Phylosift::MarkerBuild::build_marker(alignment=>$ARGV[1], cutoff=>$ARGV[2]);
 	}
 }
 
@@ -505,7 +505,7 @@ Copyright 2011 Aaron Darling and Guillaume Jospin.
 
 This program is free software; you can redistribute it and/or modify it
 under the terms of either: the GNU General Public License as published
-by the Free Software Foundation; or the Artistic License.
+by the Free Software Foundation.
 
 See http://dev.perl.org/licenses/ for more information.
 

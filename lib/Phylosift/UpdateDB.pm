@@ -145,9 +145,9 @@ sub get_ncbi_finished_genomes($) {
 					print STDERR "Already have $fasta_name\n";
 					last;
 				}
-				$seq_out = Bio::SeqIO->new( '-file' => ">$fasta_name", '-format' => "fasta" );
+				$seq_out = Phylosift::Utilities::open_SeqIO_object( file => ">$fasta_name", format => "FASTA" );
 			}
-			my $seq_in = Bio::SeqIO->new( -file => "$gbk" );
+			my $seq_in = Phylosift::Utilities::open_SeqIO_object( file => "$gbk" );
 			while ( my $inseq = $seq_in->next_seq ) {
 				$seq_out->write_seq($inseq);
 			}

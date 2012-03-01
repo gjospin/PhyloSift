@@ -236,7 +236,6 @@ sub demux_sequences {
 	$F2IN = Phylosift::Utilities::open_sequence_file( file => $args{file2} ) if length( $args{file2} ) > 0;
 	my @lines1;
 	my @lines2;
-
 	$lines1[0] = <$F1IN>;
 	$lines2[0] = <$F2IN> if defined($F2IN);
 
@@ -702,7 +701,7 @@ sub writeCandidates {
 			my $markerHit = $curhit[0];
 			my $start     = $curhit[2];
 			my $end       = $curhit[3];
-			( $start, $end ) = ( $end, $start ) if ( $start > $end );    # swap if start bigger than end
+			( $start, $end ) = ( $end, $start ) if ( $start > $end );                       # swap if start bigger than end
 
 			# check to ensure hit covers enough of the marker
 			# TODO: make this smarter about boundaries, e.g. allow a smaller fraction to hit

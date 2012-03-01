@@ -4,7 +4,7 @@ package Phylosift::Utilities;
 use strict;
 use warnings;
 use FindBin qw($Bin);
-BEGIN { unshift( @INC, "$FindBin::Bin/legacy/" ) if $] < 5.01; }
+BEGIN { unshift( @INC, "$FindBin::Bin/../legacy/" ) if $] < 5.01; }
 use File::Basename;
 use Bio::SeqIO;
 use Bio::AlignIO;
@@ -19,7 +19,7 @@ use Cwd;
 require File::Fetch;
 
 if ( $^O =~ /arwin/ ) {
-	use lib "$FindBin::Bin/osx/darwin-thread-multi-2level/";
+	use lib "$FindBin::Bin/../osx/darwin-thread-multi-2level/";
 }
 use Exporter;
 use vars qw[ @EXPORT @EXPORT_OK %EXPORT_TAGS @ISA ];
@@ -47,7 +47,6 @@ Phylosift::Utilities - Implements miscellaneous accessory functions for Phylosif
 Version 0.01
 
 =cut
-
 our $VERSION = '0.01';
 
 =head1 SYNOPSIS
@@ -195,7 +194,6 @@ sub programChecks {
 Check for requisite PhyloSift marker datasets
 
 =cut
-
 our $marker_dir = "";
 our $ncbi_dir   = "";
 
@@ -1282,7 +1280,7 @@ sub alignment_to_fasta {
 	my $aln_file   = shift;
 	my $target_dir = shift;
 	my ( $core, $path, $ext ) = fileparse( $aln_file, qr/\.[^.]*$/ );
-	my $in = Bio::SeqIO->new( -file => $aln_file );
+	my $in = open_SeqIO_object( file => $aln_file );
 	open( FILEOUT, ">" . $target_dir . "/" . $core . ".fasta" ) or carp("Couldn't open $target_dir$core.fasta for writing\n");
 	while ( my $seq_object = $in->next_seq() ) {
 		my $seq = $seq_object->seq;
@@ -1342,7 +1340,7 @@ sub unalign_sequences {
 	my $aln_file    = shift;
 	my $output_path = shift;
 	my ( $core, $path, $ext ) = fileparse( $aln_file, qr/\.[^.]*$/ );
-	my $in = Bio::SeqIO->new( -file => $aln_file );
+	my $in = open_SeqIO_object( file => $aln_file );
 	my $seq_count = 0;
 	open( FILEOUT, ">$output_path" ) or carp("Couldn't open $output_path for writing\n");
 	while ( my $seq_object = $in->next_seq() ) {
@@ -1407,11 +1405,10 @@ Copyright 2011 Aaron Darling and Guillaume Jospin.
 
 This program is free software; you can redistribute it and/or modify it
 under the terms of either: the GNU General Public License as published
-by the Free Software Foundation; or the Artistic License.
+by the Free Software Foundation.
 
 See http://dev.perl.org/licenses/ for more information.
 
 
 =cut
-
 1;    # End of Phylosift::Utilities
