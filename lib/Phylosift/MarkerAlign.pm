@@ -214,7 +214,7 @@ sub writeAlignedSeq {
 	$prev_seq =~ s/[a-z]//g;    # lowercase chars didnt align to model
 	$prev_seq =~ s/\.//g;       # shouldnt be any dots
 	                            #skip paralogs if we don't want them
-	return if $seq_count > 0 && $self->{"besthit"};
+	return if $seq_count > 1 && $self->{"besthit"};
 	my $aligned_count = 0;
 	$aligned_count++ while $prev_seq =~ m/[A-Z]/g;
 	return if $aligned_count < $minAlignedResidues;
@@ -356,8 +356,8 @@ sub alignAndMask {
 			if ( $line =~ /^>(.+)/ ) {
 				my $new_name = $1;
 				if ( Phylosift::Utilities::is_protein_marker( marker => $marker ) ) {
-					writeAlignedSeq( $self, $updatedout, $null, $prev_name, $prev_seq, $seqCount ) if $seqCount <= $refcount && $seqCount > 0;
-					writeAlignedSeq( $self, $aliout, $UNMASKEDOUT, $prev_name, $prev_seq, $seqCount ) if $seqCount > $refcount;
+					writeAlignedSeq( $self, $updatedout, $null, $prev_name, $prev_seq, 0 ) if $seqCount <= $refcount && $seqCount > 0;
+					writeAlignedSeq( $self, $aliout, $UNMASKEDOUT, $prev_name, $prev_seq, $seqCount - $refcount ) if $seqCount > $refcount;
 				} else {
 					writeAlignedSeq( $self, $aliout, $UNMASKEDOUT, $prev_name, $prev_seq, $seqCount ) if $seqCount > 0;
 				}
@@ -369,8 +369,8 @@ sub alignAndMask {
 			}
 		}
 		if ( Phylosift::Utilities::is_protein_marker( marker => $marker ) ) {
-			writeAlignedSeq( $self, $updatedout, $null,        $prev_name, $prev_seq, $seqCount ) if $seqCount <= $refcount;
-			writeAlignedSeq( $self, $aliout,     $UNMASKEDOUT, $prev_name, $prev_seq, $seqCount ) if $seqCount > $refcount;
+			writeAlignedSeq( $self, $updatedout, $null,        $prev_name, $prev_seq, 0 ) if $seqCount <= $refcount;
+			writeAlignedSeq( $self, $aliout,     $UNMASKEDOUT, $prev_name, $prev_seq, $seqCount - $refcount ) if $seqCount > $refcount;
 		} else {
 			writeAlignedSeq( $self, $aliout, $UNMASKEDOUT, $prev_name, $prev_seq, $seqCount );
 		}
