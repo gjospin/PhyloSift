@@ -61,10 +61,8 @@ my $readsCore;
 my $custom           = "";
 my %marker_lookup    = ();
 my %frames           = ();
-my $reverseTranslate = 0;
 my $blastdb_name     = "blastrep.faa";
 my $blastp_params    = "-p blastp -e 0.1 -b 50000 -v 50000 -m 8";
-my $s16db_name       = "16srep.faa";
 my $blastn_params    = "-p blastn -e 0.1 -b 50000 -v 50000 -m 8";
 my %markerLength;
 
@@ -78,12 +76,10 @@ sub RunSearch {
 	$self->{"readsFile"} =~ m/(\w+)\.?(\w*)$/;
 	$readsCore        = $1;
 	$isolateMode      = $self->{"isolate"};
-	$reverseTranslate = $self->{"reverseTranslate"};
 
 	# check what kind of input was provided
 	my $type = Phylosift::Utilities::get_sequence_input_type( $self->{"readsFile"} );
 	$self->{"dna"} = $type->{seqtype} eq "protein" ? 0 : 1;      # Is the input protein sequences?
-	$reverseTranslate = $type->{seqtype} eq "protein" ? 0 : 1;
 	debug "Input type is $type->{seqtype}, $type->{format}\n";
 
 	#making sure $type->{paired} is set so we create the appropriate variables
@@ -285,7 +281,7 @@ sub demux_sequences {
 			print $BOWTIE2_PIPE2 @lines2 if defined($F2IN);
 
 			# if either read is long, send both to blast
-			if ( length( $lines1[1] ) > 500 || ( defined($F2IN) && length( $lines2[1] ) > 500 ) ) {
+			if ( length( $lines1[1] ) > 2000 || ( defined($F2IN) && length( $lines2[1] ) > 2000 ) ) {
 				if ( $args{dna} ) {
 					print $BLASTX_PIPE @lines1;
 					print $BLASTX_PIPE @lines2 if defined($F2IN);
@@ -464,6 +460,7 @@ sub executeRap {
 	  . $self->{"threads"} . " < $query_file | ";
 	debug "Running $rapsearch_cmd\n";
 	open(my $HITSTREAM, $rapsearch_cmd);
+	unlink($self->{"blastDir"}."/rapjunk.aln");
 	return $HITSTREAM;
 }
 
@@ -516,12 +513,12 @@ sub get_hits_contigs {
 			$bitScore = $dat[0];
 			$subject = $dat[1];
 			$query = $dat[6];
-			$query_start = $dat[7];
+			$query_start = $dat[7]+1;
 			$query_end = $query_start + $dat[8] - 1;
 			if($dat[9] eq "-"){
 				# reverse strand match
-				$query_end = $dat[10]-$dat[7];
-				$query_start = $query_end - $dat[8] + 1;
+				$query_start = $dat[10]-$dat[7];
+				$query_end = $query_start - $dat[8] + 1;
 			}
 		}
 
