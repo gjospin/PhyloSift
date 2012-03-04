@@ -50,12 +50,18 @@ $ phylosift <Mode> <options> -paired <sequence_file_1> <sequence_file_2>
 
    sequence_file_1 and _2 must contain paired sequences
 
+
+$ phylosift build_marker <alignment_file> <PD pruning threshold>
+Example :  $ phylosift mrker_build test.aln test 0.01
+
 Mode : Only execute a specific step in the pipeline
   all - execute all the following steps in that order.
   search - only execute the database searches + write candidate files
   align - hmmsearch + hmmalign + trims + coverage filters
   placer - run pplacer on the results from the align step
   summary - run the taxonomy assignment steps
+  index - indexes the various databases needed for Rapsearch, Bowtie and Blast
+  build_maker - creates a reference package from a multiple alignment file
 
 Options Available at this time : 
    -h -help             Prints the usage section of the README

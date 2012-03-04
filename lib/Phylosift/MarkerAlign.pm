@@ -20,6 +20,7 @@ Phylosift::MarkerAlign - Subroutines to align reads to marker HMMs
 Version 0.01
 
 =cut
+
 our $VERSION = '0.01';
 
 =head1 SYNOPSIS
@@ -52,6 +53,7 @@ if you don't export anything, such as for a purely object-oriented module.
 =head2 MarkerAlign
 
 =cut
+
 my $minAlignedResidues = 20;
 my $reverseTranslate;
 
@@ -109,8 +111,7 @@ sub directoryPrepAndClean {
 	}
 	return $self;
 }
-
-my @search_types = ("",".1",".3",".rap",".blast");
+my @search_types = ( "", ".1", ".3", ".rap", ".blast" );
 
 =cut
 
@@ -123,7 +124,7 @@ sub markerPrepAndRun {
 	my $markRef = shift;
 	debug "ALIGNDIR : " . $self->{"alignDir"} . "\n";
 	foreach my $marker ( @{$markRef} ) {
-		next unless Phylosift::Utilities::is_protein_marker(marker=>$marker);
+		next unless Phylosift::Utilities::is_protein_marker( marker => $marker );
 		my $hmm_file = Phylosift::Utilities::get_marker_hmm_file( $self, $marker, 1 );
 		my $stockholm_file = Phylosift::Utilities::get_marker_stockholm_file( $self, $marker );
 		unless ( -e $hmm_file && -e $stockholm_file ) {
@@ -188,7 +189,7 @@ sub hmmsearch_parse {
 	$new_candidate = ">".$new_candidate; # otherwise make a new one
 	open( NEWCANDIDATE, $new_candidate ) || croak "Unable to write $new_candidate\n";
 	my $candidate = Phylosift::Utilities::get_candidate_file(self=>$self,marker=>$marker,type=>$type);
-	my $seqin = new Bio::SeqIO( '-file' => $candidate );
+	my $seqin = Phylosift::Utilities::open_SeqIO_object(file=>$candidate);
 	while ( my $sequence = $seqin->next_seq ) {
 		my $baseid = $sequence->id;
 		if ( exists $hmmHits{$baseid} && $hmmHits{$baseid} eq $sequence->id ) {
@@ -297,8 +298,8 @@ sub alignAndMask {
 	my $reverseTranslate = shift;
 	my $markRef          = shift;
 	for ( my $index = 0 ; $index < @{$markRef} ; $index++ ) {
-		my $marker   = ${$markRef}[$index];
-		my $refcount = 0;
+		my $marker         = ${$markRef}[$index];
+		my $refcount       = 0;
 		my $stockholm_file = Phylosift::Utilities::get_marker_stockholm_file( $self, $marker );
 		my $hmmalign       = "";
 		my $cmalign        = "";
@@ -338,19 +339,19 @@ sub alignAndMask {
 		my $prev_seq;
 		my $prev_name;
 		my $seqCount = 0;
-
 		my @lines;
+
 		if ( Phylosift::Utilities::is_protein_marker( marker => $marker ) ) {
 			open( HMMALIGN, $hmmalign );
 			@lines = <HMMALIGN>;
 		} else {
 			open( my $CMALIGN, $cmalign );
-			my $sto = Phylosift::Utilities::stockholm2fasta(in=>$CMALIGN);
-			@lines = split(/\n/, $sto);
+			my $sto = Phylosift::Utilities::stockholm2fasta( in => $CMALIGN );
+			@lines = split( /\n/, $sto );
 		}
 		open( my $UNMASKEDOUT, ">" . $self->{"alignDir"} . "/$mbname.unmasked" );
 		my $null;
-		foreach my $line ( @lines ) {
+		foreach my $line (@lines) {
 			chomp $line;
 			if ( $line =~ /^>(.+)/ ) {
 				my $new_name = $1;
@@ -424,7 +425,7 @@ sub getPMPROKMarkerAlignmentFiles {
 	my $self             = shift;
 	my $markRef          = shift;
 	my @markeralignments = ();
-	foreach my $marker(@{$markRef}){
+	foreach my $marker ( @{$markRef} ) {
 		next unless $marker =~ /PMPROK/;
 		push( @markeralignments, $self->{"alignDir"} . "/" . Phylosift::Utilities::getAlignerOutputFastaAA($marker) );
 	}
@@ -490,4 +491,5 @@ See http://dev.perl.org/licenses/ for more information.
 
 
 =cut
+
 1;    # End of Phylosift::MarkerAlign.pm

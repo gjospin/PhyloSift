@@ -47,7 +47,6 @@ Phylosift::Utilities - Implements miscellaneous accessory functions for Phylosif
 Version 0.01
 
 =cut
-
 our $VERSION = '0.01';
 
 =head1 SYNOPSIS
@@ -103,24 +102,24 @@ sub get_program_path {
 }
 
 # external programs used by Phylosift
-our $pplacer         = "";
-our $guppy           = "";
-our $rppr            = "";
-our $taxit           = "";
-our $hmmalign        = "";
-our $hmmsearch       = "";
-our $hmmbuild        = "";
-our $blastall        = "";
-our $formatdb        = "";
-our $rapSearch       = "";
-our $preRapSearch    = "";
-our $raxml           = "";
-our $readconciler    = "";
-our $bowtie2align    = "";
-our $bowtie2build    = "";
-our $cmalign         = "";
-our $pda             = "";
-our $fasttree        = "";
+our $pplacer      = "";
+our $guppy        = "";
+our $rppr         = "";
+our $taxit        = "";
+our $hmmalign     = "";
+our $hmmsearch    = "";
+our $hmmbuild     = "";
+our $blastall     = "";
+our $formatdb     = "";
+our $rapSearch    = "";
+our $preRapSearch = "";
+our $raxml        = "";
+our $readconciler = "";
+our $bowtie2align = "";
+our $bowtie2build = "";
+our $cmalign      = "";
+our $pda          = "";
+our $fasttree     = "";
 
 sub programChecks {
 	eval 'require Bio::Seq;';
@@ -176,10 +175,9 @@ sub programChecks {
 		carp("raxmlHPC was not found\n");
 		return 1;
 	}
-	$readconciler = get_program_path( "readconciler", $Phylosift::Settings::ps_path );
-	$pda          = get_program_path( "pda", $Phylosift::Settings::ps_path );
-	$fasttree     = get_program_path( "FastTree", $Phylosift::Settings::ps_path );
-
+	$readconciler = get_program_path( "readconciler",  $Phylosift::Settings::ps_path );
+	$pda          = get_program_path( "pda",           $Phylosift::Settings::ps_path );
+	$fasttree     = get_program_path( "FastTree",      $Phylosift::Settings::ps_path );
 	$bowtie2align = get_program_path( "bowtie2-align", $Phylosift::Settings::bowtie2_path );
 	if ( $bowtie2align eq "" ) {
 
@@ -196,7 +194,6 @@ sub programChecks {
 Check for requisite PhyloSift marker datasets
 
 =cut
-
 our $marker_dir = "";
 our $markers_extended_dir = "";
 our $ncbi_dir   = "";
@@ -657,8 +654,8 @@ Returns the path to the lookup table between marker gene IDs and their taxa
 sub get_marker_taxon_map {
 	my %args = @_;
 	my $self = $args{self};
-	return "$marker_dir/marker_taxon_map.updated.txt" if($self->{"updated"});	
-	return "$marker_dir/marker_taxon_map.txt";	
+	return "$marker_dir/marker_taxon_map.updated.txt" if ( $self->{"updated"} );
+	return "$marker_dir/marker_taxon_map.txt";
 }
 
 =head2 is_protein_marker
@@ -995,6 +992,30 @@ sub marker_oldstyle {
 	return 0;
 }
 
+=head2 open_SeqIO_object
+
+Opens a sequence file and returns a SeqIO object.  Allows for gzip and bzip compression
+returns a SeqIO object
+
+=cut
+
+sub open_SeqIO_object {
+	my %args = @_;
+	my $io_object;
+	my $format = "FASTA";    #default
+	if ( exists $args{format} ) {
+		$format = $args{format};
+	}
+	if ( $args{file} =~ /\.gz$/ ) {
+		$io_object = Bio::SeqIO->new( -file => "zcat $args{file} |", -format => $format );
+	} elsif ( $args{file} =~ /\.bz2$/ ) {
+		$io_object = Bio::SeqIO->new( -file => "bzcat $args{file} |", -format => $format );
+	} else {
+		$io_object = Bio::SeqIO->new( -file => $args{file}, -format => $format );
+	}
+	return $io_object;
+}
+
 =head2 open_sequence_file
 
 Opens a sequence file, either directly or by decompressing it with gzip or bzip2
@@ -1006,11 +1027,11 @@ sub open_sequence_file {
 	my %args = @_;
 	my $F1IN;
 	if ( $args{file} =~ /\.gz$/ ) {
-		open( $F1IN, "zcat $args{file} |" );
+		open( $F1IN, "zcat $args{file} |" ) or croak "Can't open $args{file}\n";
 	} elsif ( $args{file} =~ /\.bz2$/ ) {
 		open( $F1IN, "bzcat $args{file} |" );
 	} else {
-		open( $F1IN, $args{file} );
+		open( $F1IN, $args{file} ) ;
 	}
 	return $F1IN;
 }
@@ -1026,6 +1047,40 @@ sub get_db {
 	}
 	return "$path/$db_name";
 }
+
+=head2 read_interleaved_fastq
+
+Reads 1 fastq file with interleaved paired ends reads
+Writes to the provided pipe in fasta format.
+
+=cut
+
+sub read_interleaved_fastq {
+	my %args       = @_;
+	my $pipe       = $args{PIPEOUT};
+	my $suffix_1   = $args{suffix_1};
+	my $suffix_2   = $args{suffix_2};
+	my $PIPE_IN    = open_sequence_file( file => $args{file} );
+	my $read_id_1  = <$PIPE_IN>;
+	my $read_seq_1 = <$PIPE_IN>;
+	my $read_id_2  = <$PIPE_IN>;
+	my $read_seq_2 = <$PIPE_IN>;
+	$read_id_1 =~ m/^\@(\S+)$suffix_1$/;
+	my $core_1 = $1;
+	$read_id_2 =~ m/^\@(\S+)$suffix_2$/;
+	my $core_2 = $1;
+
+	while (<$PIPE_IN>) {
+	}
+}
+
+
+=head2 get_blastp_db
+
+Returns the name and path of the blast DB
+
+=cut
+
 sub get_blastp_db {
 	my %args=@_;
 	$args{db_name}="blastrep";
@@ -1037,6 +1092,12 @@ sub get_rapsearch_db {
 	$args{db_name}="rep";
 	return get_db(%args);
 }
+
+=head2 get_bowtie2_db
+
+returns the name and path of the bowtie2 DB
+
+=cut
 
 sub get_bowtie2_db {
 	my %args=@_;
@@ -1349,7 +1410,7 @@ sub alignment_to_fasta {
 	my $aln_file   = shift;
 	my $target_dir = shift;
 	my ( $core, $path, $ext ) = fileparse( $aln_file, qr/\.[^.]*$/ );
-	my $in = Bio::SeqIO->new( -file => $aln_file );
+	my $in = open_SeqIO_object( file => $aln_file );
 	open( FILEOUT, ">" . $target_dir . "/" . $core . ".fasta" ) or carp("Couldn't open $target_dir$core.fasta for writing\n");
 	while ( my $seq_object = $in->next_seq() ) {
 		my $seq = $seq_object->seq;
@@ -1409,9 +1470,9 @@ sub unalign_sequences {
 	my $aln_file    = shift;
 	my $output_path = shift;
 	my ( $core, $path, $ext ) = fileparse( $aln_file, qr/\.[^.]*$/ );
-	my $in = Bio::SeqIO->new( -file => $aln_file );
+	my $in = open_SeqIO_object( file => $aln_file );
 	my $seq_count = 0;
-	open( FILEOUT, ">$output_path" ) or carp("Couldn't open $output_path for writing\n");	
+	open( FILEOUT, ">$output_path" ) or carp("Couldn't open $output_path for writing\n");
 	while ( my $seq_object = $in->next_seq() ) {
 		my $seq = $seq_object->seq;
 		my $id  = $seq_object->id;
@@ -1480,5 +1541,4 @@ See http://dev.perl.org/licenses/ for more information.
 
 
 =cut
-
 1;    # End of Phylosift::Utilities

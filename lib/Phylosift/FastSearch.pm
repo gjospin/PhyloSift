@@ -86,6 +86,9 @@ sub RunSearch {
 	$reverseTranslate = $type->{seqtype} eq "protein" ? 0 : 1;
 	debug "Input type is $type->{seqtype}, $type->{format}\n";
 
+	#making sure $type->{paired} is set so we create the appropriate variables
+	$type->{paired} = 1 if ( exists $self->{"readsFile_2"} && length( $self->{"readsFile_2"} ) > 0 );
+
 	# need to use BLAST for isolate mode, since RAP only handles very short reads
 	# ensure databases and sequences are prepared for search
 	debug "before rapPrepandclean\n";
@@ -120,15 +123,17 @@ sub launch_searches {
 	my $blastx_pipe     = $args{dir} . "/blastx.pipe";
 	my $blastp_pipe     = $args{dir} . "/blastp.pipe";
 	my $bowtie2_r1_pipe = $args{dir} . "/bowtie2_r1.pipe";
+	my $reads_file      = $args{dir} . "/reads.fasta";
 	my $bowtie2_r2_pipe;
 	$bowtie2_r2_pipe = $args{dir} . "/bowtie2_r2.pipe" if $args{readtype}->{paired};
-
 	#	`mkfifo $rap_pipe`;	# rap doesn't support fifos
 	debug "Making fifos\n";
 	`mkfifo $blastx_pipe`;
 	`mkfifo $bowtie2_r1_pipe`;
 	`mkfifo $bowtie2_r2_pipe` if $args{readtype}->{paired};
 	`mkfifo $blastp_pipe`;
+
+
 	my @children;
 	for ( my $count = 1 ; $count <= 3 ; $count++ ) {
 		my $pid = fork();
@@ -155,16 +160,16 @@ sub launch_searches {
 			}
 			my $hitsref;
 			if ( $count == 2 ) {
-				$hitsref = get_hits_sam( $self, $hitstream );
+				$hitsref = get_hits_sam( self => $self, HITSTREAM => $hitstream );
 			} elsif ( $args{contigs} ) {
-				$hitsref = get_hits_contigs( $self, $hitstream, "blast" );
+				$hitsref = get_hits_contigs( self => $self, HITSTREAM => $hitstream );
 			} else {
-				$hitsref = get_hits( $self, $hitstream, "blast" );
+				$hitsref = get_hits( self => $self, HITSTREAM => $hitstream, searchtype => "blast" );
 			}
 
 			# write out sequence regions hitting marker genes to candidate files
 			debug "Writing candidates from process $count\n";
-			writeCandidates( $self, $hitsref, "$candidate_type" );
+			writeCandidates( self => $self, hitsref => $hitsref, searchtype => "$candidate_type", reads => $reads_file );
 			exit 0;
 		} else {
 			croak "couldn't fork: $!\n";
@@ -174,8 +179,10 @@ sub launch_searches {
 	open( my $BLASTX_PIPE,     ">$blastx_pipe" );
 	open( my $BOWTIE2_R1_PIPE, ">$bowtie2_r1_pipe" );
 	my $BOWTIE2_R2_PIPE;
+	debug "TESTING".$args{readtype}->{paired};
 	open( $BOWTIE2_R2_PIPE, ">$bowtie2_r2_pipe" ) if $args{readtype}->{paired};
-	open( my $BLASTP_PIPE, ">$blastp_pipe" );
+	open( my $BLASTP_PIPE,  ">$blastp_pipe" );
+	open( my $READS_PIPE,   "+>$reads_file" );
 
 	# parent process streams out sequences to fifos
 	# child processes run the search on incoming sequences
@@ -189,14 +196,15 @@ sub launch_searches {
 					 dna            => $self->{"dna"},
 					 file1          => $self->{"readsFile"},
 					 file2          => $self->{"readsFile_2"},
+					 reads_pipe     => $READS_PIPE,
 	);
 
 	# rapsearch can't read from a pipe
 	debug "Running rapsearch\n";
 	my $rap_hits = executeRap( $self, $rap_pipe );
-	my $hitsref = get_hits( $self, $rap_hits, "rap" );
+	my $hitsref = get_hits( self => $self, HITSTREAM => $rap_hits, searchtype => "rap" );
 	debug "Done reading rap results, got " . scalar( keys(%$hitsref) ) . " hits\n";
-	writeCandidates( $self, $hitsref, ".rap" );
+	writeCandidates( self => $self, hitsref => $hitsref, searchtype => ".rap", reads => $reads_file );
 
 	# join with children when the searches are done
 	foreach (@children) {
@@ -204,7 +212,7 @@ sub launch_searches {
 	}
 
 	# clean up
-	`rm -f $blastx_pipe $blastp_pipe $rap_pipe $bowtie2_r1_pipe`;
+	`rm -f $blastx_pipe $blastp_pipe $rap_pipe $bowtie2_r1_pipe $reads_file`;
 	`rm -f $bowtie2_r2_pipe` if defined($bowtie2_r2_pipe);
 }
 
@@ -221,12 +229,13 @@ sub demux_sequences {
 	my $RAPSEARCH_PIPE = $args{rapsearch_pipe};
 	my $BLASTX_PIPE    = $args{blastx_pipe};
 	my $BLASTP_PIPE    = $args{blastp_pipe};
+	my $READS_PIPE     = $args{reads_pipe};
+
 	my $F1IN           = Phylosift::Utilities::open_sequence_file( file => $args{file1} );
 	my $F2IN;
 	$F2IN = Phylosift::Utilities::open_sequence_file( file => $args{file2} ) if length( $args{file2} ) > 0;
 	my @lines1;
 	my @lines2;
-	
 	$lines1[0] = <$F1IN>;
 	$lines2[0] = <$F2IN> if defined($F2IN);
 
@@ -240,13 +249,17 @@ sub demux_sequences {
 			# send the reads to bowtie
 			print $BOWTIE2_PIPE1 @lines1;
 			print $BOWTIE2_PIPE2 @lines2 if defined($F2IN);
-
 			#
 			# send the reads to RAPsearch2 (convert to fasta)
 			$lines1[0] =~ s/^@/>/g;
 			$lines2[0] =~ s/^@/>/g if defined($F2IN);
 			print $RAPSEARCH_PIPE $lines1[0] . $lines1[1];
 			print $RAPSEARCH_PIPE $lines2[0] . $lines2[1] if defined($F2IN);
+			
+			#
+			# send the reads to the reads file in fasta format to write candidates later
+			print $READS_PIPE $lines1[0] . $lines1[1];
+			print $READS_PIPE $lines2[0] . $lines2[1] if defined($F2IN);
 
 			#
 			# prepare for next loop iter
@@ -280,21 +293,27 @@ sub demux_sequences {
 					print $BLASTP_PIPE @lines2 if defined($F2IN);
 				}
 			} else {
-
-				# otherwise send to rap
-				print $RAPSEARCH_PIPE $lines1[0] . $lines1[1];
-				print $RAPSEARCH_PIPE $lines2[0] . $lines2[1] if defined($F2IN);
+			    
+			    # otherwise send to rap
+			    print $RAPSEARCH_PIPE $lines1[0] . $lines1[1];
+			    print $RAPSEARCH_PIPE $lines2[0] . $lines2[1] if defined($F2IN);
 			}
+			#
+			# send the reads to the reads file to write candidates later
+			print $READS_PIPE $lines1[0] . $lines1[1];
+			print $READS_PIPE $lines2[0] . $lines2[1] if defined($F2IN);
 			@lines1 = ( $newline1, "" );
 			@lines2 = ( $newline2, "" );
 		}
 	}
+
 	close($RAPSEARCH_PIPE);
 	close($BOWTIE2_PIPE1);
-	close($BOWTIE2_PIPE2) if $args{readtype}->{paired};
+	close($BOWTIE2_PIPE2) if defined($F2IN);
 	close($BLASTX_PIPE);
 	close($BLASTP_PIPE);
 	close($RAPSEARCH_PIPE);
+	close($READS_PIPE);
 }
 
 sub cleanup {
@@ -367,14 +386,14 @@ sub bowtie2 {
 	my $readtype = $args{readtype};
 	debug "INSIDE bowtie2\n";
 	my $bowtie2_cmd =
-	  "$Phylosift::Utilities::bowtie2align -x " . Phylosift::Utilities::get_bowtie2_db(self=>$self) . " --quiet --sam-nohead --sam-nosq --maxins 1000 --local ";
+		"$Phylosift::Utilities::bowtie2align -x " . Phylosift::Utilities::get_bowtie2_db(self=>$self) . " --quiet --sam-nohead --sam-nosq --maxins 1000 --local ";
 	$bowtie2_cmd .= " -f " if $args{readtype}->{format} eq "fasta";
 	if ( $args{readtype}->{paired} ) {
 		$bowtie2_cmd .= " -1 $args{reads1} -2 $args{reads2} ";
 	} else {
 		$bowtie2_cmd .= " -U $args{reads1} ";
 	}
-	$bowtie2_cmd .= "--mm --threads " . $args{self}->{"threads"} . "  |";
+	$bowtie2_cmd .= " |";
 	debug "Running $bowtie2_cmd";
 	open( my $hitstream, $bowtie2_cmd );
 	return $hitstream;
@@ -457,8 +476,9 @@ parse the blast file
 =cut
 
 sub get_hits_contigs {
-	my $self      = shift;
-	my $HITSTREAM = shift;
+	my %args      = @_;
+	my $self      = $args{self};
+	my $HITSTREAM = $args{HITSTREAM};
 
 	# key is a contig name
 	# value is an array of arrays, each one has [marker,bit_score,left-end,right-end]
@@ -535,9 +555,10 @@ parse the blast file, return a hash containing hits to reads
 =cut
 
 sub get_hits {
-	my $self       = shift;
-	my $HITSTREAM  = shift;
-	my $searchtype = shift;
+	my %args       = @_;
+	my $self       = $args{self};
+	my $HITSTREAM  = $args{HITSTREAM};
+	my $searchtype = $args{searchtype};
 	my %markerTopScores;
 	my %topScore = ();
 	my %contig_hits;
@@ -580,16 +601,18 @@ sub get_hits {
 }
 
 sub get_hits_sam {
-	my $self      = shift;
-	my $HITSTREAM = shift;
+	my %args      = @_;
+	my $self      = $args{self};
+	my $HITSTREAM = $args{HITSTREAM};
 	my %markerTopScores;
 	my %topScore = ();
 	my %contig_hits;
-
 	# return empty if there is no data
 	return unless defined($HITSTREAM);
 	return \%contig_hits unless defined( fileno $HITSTREAM );
+	debug "GETHITSAM\n";
 	while (<$HITSTREAM>) {
+#		debug "$_";
 		next if ( $_ =~ /^\@/ );
 		my @fields = split( /\t/, $_ );
 		next if $fields[2] eq "*";    # no hit
@@ -605,7 +628,14 @@ sub get_hits_sam {
 		$qlen -= $1 if $cigar =~ /^(\d+)S/;
 		$qlen -= $1 if $cigar =~ /(\d+)S$/;
 		my $hit_seq = substr( $fields[9], $query_lend, $qlen );
-
+		#add the suffixes back onto the query names if reads are paired
+		if ( $fields[1] > 128 ){
+			#greater than 128 the read is the second mate
+			$query .= "/2";
+		}elsif($fields[1] < 128 && $fields[1] > 68){
+			#greater than 64 the read is the first mate
+			$query .= "/1";
+		}
 		# flip our coordinates if we're in reverse complement
 		# and go back to the start
 		$query_lend = length( $fields[9] ) - $query_lend if ( $fields[1] & 0x10 );
@@ -654,12 +684,15 @@ write out results
 =cut
 
 sub writeCandidates {
-	my $self          = shift;
-	my $contigHitsRef = shift;
-	my $type          = shift || "";       # search type -- candidate filenames will have this name embedded, enables parallel output from different programs
-	my %contig_hits   = %$contigHitsRef;
+	my %args          = @_;
+	my $self          = $args{self};
+	my $contigHitsRef = $args{hitsref};
+	my $type       = $args{searchtype} || ""; # search type -- candidate filenames will have this name embedded, enables parallel output from different programs
+	my $reads_file = $args{reads};
+	my %contig_hits = %$contigHitsRef;
 	debug "ReadsFile:  $self->{\"readsFile\"}" . "\n";
-	my $seqin = new Bio::SeqIO( '-file' => $self->{"readsFile"} );
+	my $seqin = Phylosift::Utilities::open_SeqIO_object( file => $reads_file );
+
 	while ( my $seq = $seqin->next_seq ) {
 
 		# skip this one if there are no hits
@@ -670,7 +703,7 @@ sub writeCandidates {
 			my $markerHit = $curhit[0];
 			my $start     = $curhit[2];
 			my $end       = $curhit[3];
-			( $start, $end ) = ( $end, $start ) if ( $start > $end );    # swap if start bigger than end
+			( $start, $end ) = ( $end, $start ) if ( $start > $end );                       # swap if start bigger than end
 
 			# check to ensure hit covers enough of the marker
 			# TODO: make this smarter about boundaries, e.g. allow a smaller fraction to hit
@@ -707,7 +740,7 @@ sub writeCandidates {
 					$newSeq = translateFrame( $seq->id, $seq->seq, $start, $end, $frame, $markerHit, $self->{"dna"} );
 					$newSeq =~ s/\*/X/g;    # bioperl uses * for stop codons but we want to give X to hmmer later
 				} else {
-					warn "Error, alignment length not multiple of 3!  FIXME: need to pull frameshift from full blastx\n";
+					warn "Search type : $type, alignment length not multiple of 3!  FIXME: need to pull frameshift from full blastx\n";
 				}
 			}
 			$markerHits{$markerHit} = "" unless defined( $markerHits{$markerHit} );
