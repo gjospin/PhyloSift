@@ -111,7 +111,7 @@ sub directoryPrepAndClean {
 	}
 	return $self;
 }
-my @search_types = ( "", ".1", ".3", ".rap", ".blast" );
+my @search_types = ( "", ".blastx", ".blastp", ".rap", ".blast" );
 
 =cut
 
