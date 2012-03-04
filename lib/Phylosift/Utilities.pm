@@ -120,6 +120,8 @@ our $bowtie2build = "";
 our $cmalign      = "";
 our $pda          = "";
 our $fasttree     = "";
+our $lastdb       = "";
+our $lastal       = "";
 
 sub programChecks {
 	eval 'require Bio::Seq;';
@@ -178,6 +180,8 @@ sub programChecks {
 	$readconciler = get_program_path( "readconciler",  $Phylosift::Settings::ps_path );
 	$pda          = get_program_path( "pda",           $Phylosift::Settings::ps_path );
 	$fasttree     = get_program_path( "FastTree",      $Phylosift::Settings::ps_path );
+	$lastdb       = get_program_path( "lastdb",        $Phylosift::Settings::ps_path );
+	$lastal       = get_program_path( "lastal",        $Phylosift::Settings::ps_path );
 	$bowtie2align = get_program_path( "bowtie2-align", $Phylosift::Settings::bowtie2_path );
 	if ( $bowtie2align eq "" ) {
 
@@ -1145,6 +1149,10 @@ sub index_marker_db {
 		my $marker_rep = get_marker_rep_file( $args{self}, $marker );
 		my $DBOUT = $RNADBOUT;
 		$DBOUT = $PDBOUT if is_protein_marker( marker => $marker );
+		unless(-f $marker_rep){
+			warn "Warning: marker $marker appears to be missing data\n";
+			next;
+		}
 		open( INALN, $marker_rep );
 		while ( my $line = <INALN> ) {
 			if ( $line =~ /^>(.+)/ ) {
@@ -1168,6 +1176,9 @@ sub index_marker_db {
 
 	# make a rapsearch database
 	`cd $path ; $Phylosift::Utilities::preRapSearch -d rep.faa -n rep`;
+	
+	# make a last database
+	`cd $path ; $Phylosift::Utilities::lastdb -p -c replast rep.faa`;
 	unlink("$path/rep.faa");    # don't need this anymore!
 
 	# make a bowtie2 database
