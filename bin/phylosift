@@ -17,7 +17,6 @@ my $my_debug         = 0;
 my $coverage;
 my $configuration;
 my $help=0;
-my $s16=0;
 my $usage = qq~
 
 $0
