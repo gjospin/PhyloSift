@@ -51,8 +51,32 @@ $ phylosift <Mode> <options> -paired <sequence_file_1> <sequence_file_2>
    sequence_file_1 and _2 must contain paired sequences
 
 
+Creating a PhyloSift Marker (Does not allow for taxonomic summaries, only searching, aligning and placement steps)
+===========================================
+
 $ phylosift build_marker <alignment_file> <PD pruning threshold>
-Example :  $ phylosift mrker_build test.aln test 0.01
+Example 1:  $ phylosift build_marker test.aln 0.01
+Example 2:  $ phylosift build_marker -f test.aln 0.01
+
+WARNING : This step does not automatically add the new marker to the search indices. You will need to rerun the indexing step.
+
+The marker directory will be added directly to the directory in which PhyloSift looks for markers when running.
+If a marker with the same name exists, the marker building process will be halted unless the -f option is used. 
+
+The marker name will be the same as the alignment given minus the trailing suffix.
+If the user wants to build a marker from the file <test.aln>, the marker name will be <test>
+
+
+Index the search databases
+============================================
+
+This step is run automatically when markers are downloaded but if you add new markers, you will need to run this step manually.
+
+$ phylosift index
+
+
+Modes 
+============================================
 
 Mode : Only execute a specific step in the pipeline
   all - execute all the following steps in that order.
@@ -62,6 +86,9 @@ Mode : Only execute a specific step in the pipeline
   summary - run the taxonomy assignment steps
   index - indexes the various databases needed for Rapsearch, Bowtie and Blast
   build_maker - creates a reference package from a multiple alignment file
+
+Options
+=============================================
 
 Options Available at this time : 
    -h -help             Prints the usage section of the README

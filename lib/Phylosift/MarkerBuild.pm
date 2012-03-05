@@ -33,24 +33,28 @@ if you don't export anything, such as for a purely object-oriented module.
 =cut
 
 sub build_marker {
-	my %args         = @_;
-	my $aln_file     = $args{alignment};
-	my $cutoff       = $args{cutoff};
+	my %args     = @_;
+	my $self     = $args{self};
+	my $aln_file = $args{alignment};
+	my $cutoff   = $args{cutoff};
+	my $force    = $args{force};
 	my ( $core, $path, $ext ) = fileparse( $aln_file, qr/\.[^.]*$/ );
-	
-	my $target_dir   = getcwd() . "/$core";
-	`mkdir $target_dir` unless -e $target_dir;
-	
+	my $marker_dir = $Phylosift::Utilities::marker_dir;
+	my $target_dir = $marker_dir . "/$core";
+	if ( -e $target_dir && !$force ) {
+		croak
+"Marker already exists in $marker_dir. Delete Marker and restart the marker build.\nUse -f to force an override of the previous marker.\nUsage:\n>phylosift build_marker -f aln_file cutoff\n";
+	} else {
+		`rm -rf $target_dir` if $force;
+		`mkdir $target_dir`;
+	}
 	my $fasta_file = "$target_dir/$core.fasta";
-	my $seq_count = Phylosift::Utilities::unalign_sequences($aln_file, $fasta_file);
-	
+	my $seq_count  = Phylosift::Utilities::unalign_sequences( $aln_file, $fasta_file );
 	my $masked_aln = "$target_dir/$core.masked";
-	mask(file=>$aln_file,output=>$masked_aln);
-	
+	mask( file => $aln_file, output => $masked_aln );
 	my $hmm_file = "$target_dir/$core.hmm";
 	generate_hmm( $masked_aln, $hmm_file );
-	
-	Phylosift::Utilities::fastpsstockholm( $masked_aln, "$target_dir/$core.stk" );
+	Phylosift::Utilities::fasta2stockholm( $masked_aln, "$target_dir/$core.stk" );
 	my $stk_aln = "$target_dir/$core.stk";
 
 	#may need to create an unaligned file for the sequences before aligning them
@@ -60,7 +64,7 @@ sub build_marker {
 	my ( $fasttree_file, $tree_log_file ) = generate_fasttree( $clean_aln, $target_dir );
 
 	#need to generate representatives using PDA
-	my $rep_file = get_representatives_from_tree( $fasttree_file, $target_dir, $cutoff );
+	my $rep_file = get_representatives_from_tree( tree => $fasttree_file, target_directory => $target_dir, cutoff => $cutoff );
 
 	#need to read the representatives picked by PDA and generate a representative fasta file
 	my $rep_fasta = get_fasta_from_pda_representatives( $rep_file, $target_dir, $fasta_file, \%id_map );
@@ -77,6 +81,7 @@ sub build_marker {
 	`rm $masked_aln`;
 	`mv $target_dir/$core/* $target_dir`;
 	`rm -rf $target_dir/$core`;
+	`rm -rf $self->{"fileDir"}`;
 }
 
 =head2 generate_hmm
@@ -181,9 +186,10 @@ uses the PDA program to prune a tree to get representative sequences
 =cut
 
 sub get_representatives_from_tree {
-	my $tree_file  = shift;
-	my $target_dir = shift;
-	my $cutoff     = shift;
+	my %args       = @_;
+	my $tree_file  = $args{tree};
+	my $target_dir = $args{target_directory};
+	my $cutoff     = $args{cutoff};
 	my ( $core, $path, $ext ) = fileparse( $tree_file, qr/\.[^.]*$/ );
 
 	#get the number of taxa in the tree

@@ -101,7 +101,6 @@ Phylosift::Phylosift - Implements core functionality for Phylosift
 Version 0.01
 
 =cut
-
 our $VERSION = '0.01';
 
 =head1 SYNOPSIS
@@ -132,7 +131,6 @@ if you don't export anything, such as for a purely object-oriented module.
     Runs the PhyloSift pipeline according to the functions passed as arguments
 
 =cut
-
 my $continue = 0;
 my ( $mode, $readsFile, $readsFile_2, $fileName, $tempDir, $fileDir, $blastDir, $alignDir, $treeDir ) = "";
 my ( $sec,  $min,       $hour,        $mday,     $mon,     $year,    $wday,     $yday,     $isdst )   = 0;
@@ -149,16 +147,16 @@ sub run {
 	start_timer("START");
 	$self->readPhylosiftConfig();
 	$self->runProgCheck();
-	Phylosift::Utilities::data_checks(self=>$self);
-	$self->fileCheck();
-	$self->directoryPrep($force);
+	Phylosift::Utilities::data_checks( self => $self );
+	$self->fileCheck() unless $self->{"mode"} eq 'index';
+	$self->directoryPrep($force) unless $self->{"mode"} eq 'index';
 	$self->{"readsFile"} = $self->prepIsolateFiles( $self->{"readsFile"} ) if $self->{"isolate"} == 1;
 
 	#create a file with a list of markers called markers.list
 	debug "CUSTOM = " . $custom . "\n";
-	my @markers = Phylosift::Utilities::gather_markers( self=>$self, marker_file => $custom );
-	if($self->{"extended"}){
-		@markers = Phylosift::Utilities::gather_markers( self=>$self, path => $Phylosift::Utilities::markers_extended_dir );
+	my @markers = Phylosift::Utilities::gather_markers( self => $self, marker_file => $custom );
+	if ( $self->{"extended"} ) {
+		@markers = Phylosift::Utilities::gather_markers( self => $self, path => $Phylosift::Utilities::markers_extended_dir );
 	}
 	debug "@markers\n";
 	debug "MODE :: " . $self->{"mode"} . "\n";
@@ -184,12 +182,14 @@ sub run {
 		$self = $self->compare();
 	}
 	if ( $self->{"mode"} eq 'index' ) {
-		Phylosift::Utilities::index_marker_db( self=>$self, markers=>\@markers, path=>$Phylosift::Utilities::marker_dir );
-		my @extended_markers = Phylosift::Utilities::gather_markers( self=>$self, path => $Phylosift::Utilities::markers_extended_dir );
-		Phylosift::Utilities::index_marker_db( self=>$self, markers=>\@extended_markers, path=>$Phylosift::Utilities::markers_extended_dir );
+		Phylosift::Utilities::index_marker_db( self => $self, markers => \@markers, path => $Phylosift::Utilities::marker_dir );
+		my @extended_markers = Phylosift::Utilities::gather_markers( self => $self, path => $Phylosift::Utilities::markers_extended_dir )
+		  unless !-e $Phylosift::Utilities::markers_extended_dir;
+		Phylosift::Utilities::index_marker_db( self => $self, markers => \@extended_markers, path => $Phylosift::Utilities::markers_extended_dir )
+		  unless !-e $Phylosift::Utilities::markers_extended_dir;
 	}
-	if( $self->{"mode"} eq 'build_marker'){
-	    Phylosift::MarkerBuild::build_marker(self->$self, alignment=>$ARGV[1], cutoff=>$ARGV[2]);
+	if ( $self->{"mode"} eq 'build_marker' ) {
+		Phylosift::MarkerBuild::build_marker( self => $self, alignment => $ARGV[1], cutoff => $ARGV[2], force => $force );
 	}
 }
 
@@ -304,7 +304,6 @@ sub prepIsolateFiles {
 	return $self->{"fileDir"} . "/isolates.fasta";
 }
 
-
 =head2 directoryPrep
 
     Prepares the temporary Phylosift directory by deleting old runs and/or creating the correct directory structure
@@ -392,7 +391,6 @@ sub runPplacer {
 	Phylosift::Utilities::start_timer("runPPlacer");
 	Phylosift::pplacer::pplacer( $self, $markListRef );
 	Phylosift::Utilities::end_timer("runPPlacer");
-
 	if ( $continue != 0 ) {
 		$self->{"mode"} = 'summary';
 	}
@@ -517,5 +515,4 @@ See http://dev.perl.org/licenses/ for more information.
 
 
 =cut
-
 1;    # End of Phylosift::Phylosift
