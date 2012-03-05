@@ -1005,8 +1005,8 @@ returns a SeqIO object
 
 sub open_SeqIO_object {
 	my %args = @_;
+	my $format = $args{format} || "FASTA";    #default
 	my $io_object;
-	my $format = "FASTA";    #default
 	if ( exists $args{format} ) {
 		$format = $args{format};
 	}
@@ -1381,7 +1381,7 @@ sub print_citations {
 	print "(c) 2011, 2012 Aaron Darling and Guillaume Jospin\n";
 	print "\nCITATION:\n";
 	print "		PhyloSift. A. Darling, H. Bik, G. Jospin, J. A. Eisen. Manuscript in preparation\n";
-	print "\n\n\t\tPhyloSift incorporates several other software packages, please consider also citing the following papers:\n";
+	print "\n\nPhyloSift incorporates several other software packages, please consider also citing the following papers:\n";
 	print qq{
 
 		pplacer: linear time maximum-likelihood and Bayesian phylogenetic placement of sequences onto a fixed reference tree.
@@ -1392,13 +1392,13 @@ sub print_citations {
 		Yongan Zhao, Haixu Tang, and Yuzhen Ye
 		Bioinformatics (2011)
 		
+		Adaptive seeds tame genomic sequence comparison.
+		SM Kielbasa, R Wan, K Sato, P Horton, MC Frith
+		Genome Research 2011.
+		
 		Infernal 1.0: Inference of RNA alignments
 		E. P. Nawrocki, D. L. Kolbe, and S. R. Eddy
 		Bioinformatics 25:1335-1337 (2009)
-		
-		Gapped BLAST and PSI-BLAST: a new generation of protein database search programs.
-		S. F. Altschul, T. L. Madden, A. A. Schäffer, J. Zhang, Z. Zhang, W. Miller, and D. J. Lipman
- 		Nucleic Acids Research, 1997, Vol. 25, No. 17 3389–3402
  		
  		Bowtie: Ultrafast and memory-efficient alignment of short DNA sequences to the human genome.
  		Langmead B, Trapnell C, Pop M, Salzberg SL. Genome Biol 10:R25.
@@ -1407,6 +1407,9 @@ sub print_citations {
  		Copyright (C) 2010 Howard Hughes Medical Institute.
  		Freely distributed under the GNU General Public License (GPLv3).
  		
+ 		Phylogenetic Diversity within Seconds.
+		Bui Quang Minh, Steffen Klaere and Arndt von Haeseler
+		Syst Biol (2006) 55 (5): 769-773.
 };
 }
 
