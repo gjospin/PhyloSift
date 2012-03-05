@@ -30,7 +30,13 @@ Usage
 > phylosift <Mode> <options> --paired <sequence_file_1> <sequence_file_2>
 
    sequence_file_1 and _2 need to be in fastq format
- 
+
+Creating a PhyloSift Marker (Does not allow for taxonomic summaries, only searching, aligning and placement steps)
+===========================================
+
+$ phylosift build_marker <alignment_file> <PD pruning threshold>
+Example 1:  $ phylosift build_marker test.aln 0.01
+Example 2:  $ phylosift build_marker -f test.aln 0.01
    
 Index the search databases
 ============================================
