@@ -45,13 +45,12 @@ sub Export($$$) {
 	my $markRef    = shift;
 	my $outputFile = shift;
 	foreach my $marker ( @{$markRef} ) {
-		my $trimfinalFastaFile = "$Phylosift::Utilities::marker_dir/" . Phylosift::Utilities::getTrimfinalFastaMarkerFile( $self, $marker );
-		my $trimfinalFile = "$Phylosift::Utilities::marker_dir/" . Phylosift::Utilities::getTrimfinalMarkerFile( $self, $marker );
-		my $treeFile = "$Phylosift::Utilities::marker_dir/" . Phylosift::Utilities::getTreeMarkerFile( $self, $marker );
-		my $treeStatsFile = "$Phylosift::Utilities::marker_dir/" . Phylosift::Utilities::getTreeStatsMarkerFile( $self, $marker );
+		my $trimfinalFastaFile = Phylosift::Utilities::getTrimfinalFastaMarkerFile( $self, $marker );
+		my $trimfinalFile = Phylosift::Utilities::getTrimfinalMarkerFile( $self, $marker );
+		my $treeFile = Phylosift::Utilities::getTreeMarkerFile( $self, $marker );
+		my $treeStatsFile = Phylosift::Utilities::getTreeStatsMarkerFile( $self, $marker );
 		my $readAlignmentFile = $self->{"alignDir"} . "/" . Phylosift::Utilities::getAlignerOutputFastaAA($marker);
 
-		# Pplacer requires the alignment files to have a .fasta extension
 		if ( !-e "$trimfinalFastaFile" ) {
 			`cp $trimfinalFile $trimfinalFastaFile`;
 		}
@@ -65,7 +64,7 @@ sub Export($$$) {
 	my %refseqs;
 	my @metareadseqs;
 	foreach my $marker ( @{$markRef} ) {
-		my $trimfinalFastaFile = "$Phylosift::Utilities::marker_dir/$marker.ali";
+		my $trimfinalFastaFile = Phylosift::Utilities::getTrimfinalFastaMarkerFile( $self, $marker );
 		my $readAlignmentFile  = $self->{"alignDir"} . "/" . Phylosift::Utilities::getAlignerOutputFastaAA($marker);
 
 		# read the alignment of reads

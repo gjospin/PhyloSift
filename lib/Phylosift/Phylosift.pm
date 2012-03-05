@@ -39,9 +39,10 @@ sub new {
 	$self->{"alignDir"}    = undef;
 	$self->{"treeDir"}     = undef;
 	$self->{"dna"}         = undef;
-	$self->{"updated"}     = undef;
+	$self->{"updated"}     = 0;
 	$self->{"coverage"}    = undef;
-	$self->{"16s"}         = undef;
+	$self->{"isolate"}     = 0;
+	$self->{"threads"}     = 1;
 	bless($self);
 	return $self;
 }
@@ -156,6 +157,9 @@ sub run {
 	#create a file with a list of markers called markers.list
 	debug "CUSTOM = " . $custom . "\n";
 	my @markers = Phylosift::Utilities::gather_markers( self=>$self, marker_file => $custom );
+	if($self->{"extended"}){
+		@markers = Phylosift::Utilities::gather_markers( self=>$self, path => $Phylosift::Utilities::markers_extended_dir );
+	}
 	debug "@markers\n";
 	debug "MODE :: " . $self->{"mode"} . "\n";
 	if ( $self->{"mode"} eq 'search' || $self->{"mode"} eq 'all' ) {
@@ -180,7 +184,9 @@ sub run {
 		$self = $self->compare();
 	}
 	if ( $self->{"mode"} eq 'index' ) {
-		Phylosift::Utilities::index_marker_db( self=>$self, markers=>\@markers );
+		Phylosift::Utilities::index_marker_db( self=>$self, markers=>\@markers, path=>$Phylosift::Utilities::marker_dir );
+		my @extended_markers = Phylosift::Utilities::gather_markers( self=>$self, path => $Phylosift::Utilities::markers_extended_dir );
+		Phylosift::Utilities::index_marker_db( self=>$self, markers=>\@extended_markers, path=>$Phylosift::Utilities::markers_extended_dir );
 	}
 	if( $self->{"mode"} eq 'build_marker'){
 	    Phylosift::MarkerBuild::build_marker(self->$self, alignment=>$ARGV[1], cutoff=>$ARGV[2]);
