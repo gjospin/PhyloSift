@@ -55,20 +55,18 @@ if you don't export anything, such as for a purely object-oriented module.
 =cut
 
 my $minAlignedResidues = 20;
-my $reverseTranslate;
 
 sub MarkerAlign {
 	my $self       = shift;
 	my $markersRef = shift;
 	my @allmarkers = @{$markersRef};
-	$reverseTranslate = $self->{"reverseTranslate"};
 	debug "beforeDirprepClean @{$markersRef}\n";
 	directoryPrepAndClean( $self, $markersRef );
 	debug "AFTERdirprepclean @{$markersRef}\n";
 	my $index = -1;
 	markerPrepAndRun( $self, $markersRef );
 	debug "after HMMSEARCH PARSE\n";
-	alignAndMask( $self, $reverseTranslate, $markersRef );
+	alignAndMask( $self, $markersRef );
 	debug "AFTER ALIGN and MASK\n";
 
 	# produce a concatenate alignment for the base marker package
@@ -76,13 +74,13 @@ sub MarkerAlign {
 		my @markeralignments = getPMPROKMarkerAlignmentFiles( $self, \@allmarkers );
 		my $outputFastaAA = $self->{"alignDir"} . "/" . Phylosift::Utilities::getAlignerOutputFastaAA("concat");
 		Phylosift::Utilities::concatenateAlignments( $self, $outputFastaAA, $self->{"alignDir"} . "/mrbayes.nex", 1, @markeralignments );
-		if ( $self->{"dna"} ) {
-			for ( my $i = 0 ; $i < @markeralignments ; $i++ ) {
-				$markeralignments[$i] =~ s/trim.fasta/trim.fna.fasta/g;
-			}
-			my $outputFastaDNA = $self->{"alignDir"} . "/" . Phylosift::Utilities::getAlignerOutputFastaDNA("concat");
-			Phylosift::Utilities::concatenateAlignments( $self, $outputFastaDNA, $self->{"alignDir"} . "/mrbayes-dna.nex", 3, @markeralignments );
+		# now concatenate any DNA alignments
+		for ( my $i = 0 ; $i < @markeralignments ; $i++ ) {
+			$markeralignments[$i] =~ s/trim.fasta/trim.fna.fasta/g;
+			splice @markeralignments, $i--, 1 unless( -f $markeralignments[$i]);
 		}
+		my $outputFastaDNA = $self->{"alignDir"} . "/" . Phylosift::Utilities::getAlignerOutputFastaDNA("concat");
+		Phylosift::Utilities::concatenateAlignments( $self, $outputFastaDNA, $self->{"alignDir"} . "/mrbayes-dna.nex", 3, @markeralignments );
 		debug "AFTER concatenateALI\n";
 	}
 	return $self;
@@ -214,7 +212,7 @@ sub writeAlignedSeq {
 	$prev_seq =~ s/[a-z]//g;    # lowercase chars didnt align to model
 	$prev_seq =~ s/\.//g;       # shouldnt be any dots
 	                            #skip paralogs if we don't want them
-	return if $seq_count > 1 && $self->{"besthit"};
+	return if $seq_count > 0 && $self->{"besthit"};
 	my $aligned_count = 0;
 	$aligned_count++ while $prev_seq =~ m/[A-Z]/g;
 	return if $aligned_count < $minAlignedResidues;
@@ -268,7 +266,7 @@ sub aa_to_dna_aln {
 			} else {
 				if ( $char eq uc($char) ) {
 					$nt_seqstr .= uc( substr( $dnaseq, $j, CODONSIZE ) );
-				} else {
+				} elsif( length $dnaseq >= $j + CODONSIZE ) {
 					$nt_seqstr .= lc( substr( $dnaseq, $j, CODONSIZE ) );
 				}
 				$j += CODONSIZE;
@@ -295,7 +293,6 @@ sub aa_to_dna_aln {
 
 sub alignAndMask {
 	my $self             = shift;
-	my $reverseTranslate = shift;
 	my $markRef          = shift;
 	for ( my $index = 0 ; $index < @{$markRef} ; $index++ ) {
 		my $marker         = ${$markRef}[$index];
@@ -357,7 +354,7 @@ sub alignAndMask {
 				my $new_name = $1;
 				if ( Phylosift::Utilities::is_protein_marker( marker => $marker ) ) {
 					writeAlignedSeq( $self, $updatedout, $null, $prev_name, $prev_seq, 0 ) if $seqCount <= $refcount && $seqCount > 0;
-					writeAlignedSeq( $self, $aliout, $UNMASKEDOUT, $prev_name, $prev_seq, $seqCount - $refcount ) if $seqCount > $refcount;
+					writeAlignedSeq( $self, $aliout, $UNMASKEDOUT, $prev_name, $prev_seq, $seqCount - $refcount - 1) if $seqCount > $refcount;
 				} else {
 					writeAlignedSeq( $self, $aliout, $UNMASKEDOUT, $prev_name, $prev_seq, $seqCount ) if $seqCount > 0;
 				}
@@ -370,7 +367,7 @@ sub alignAndMask {
 		}
 		if ( Phylosift::Utilities::is_protein_marker( marker => $marker ) ) {
 			writeAlignedSeq( $self, $updatedout, $null,        $prev_name, $prev_seq, 0 ) if $seqCount <= $refcount;
-			writeAlignedSeq( $self, $aliout,     $UNMASKEDOUT, $prev_name, $prev_seq, $seqCount - $refcount ) if $seqCount > $refcount;
+			writeAlignedSeq( $self, $aliout,     $UNMASKEDOUT, $prev_name, $prev_seq, $seqCount - $refcount - 1) if $seqCount > $refcount;
 		} else {
 			writeAlignedSeq( $self, $aliout, $UNMASKEDOUT, $prev_name, $prev_seq, $seqCount );
 		}
@@ -379,36 +376,38 @@ sub alignAndMask {
 
 		# do we need to output a nucleotide alignment in addition to the AA alignment?
 		
-		if ( -e $self->{"blastDir"} . "/$marker.candidate.ffn" && -e $outputFastaAA ) {
-
-			#if it exists read the reference nucleotide sequences for the candidates
-			my %referenceNuc = ();
-			open( REFSEQSIN, $self->{"blastDir"} . "/$marker.candidate.ffn" )
-			  or die "Couldn't open " . $self->{"alignDir"} . "/$marker.candidate.ffn for reading\n";
-			my $currID  = "";
-			my $currSeq = "";
-			while ( my $line = <REFSEQSIN> ) {
-				chomp($line);
-				if ( $line =~ m/^>(.*)/ ) {
-					$currID = $1;
-				} else {
-					my $tempseq = Bio::PrimarySeq->new( -seq => $line, -id => $currID, -nowarnonempty => 1 );
-					$referenceNuc{$currID} = $tempseq;
+		foreach my $type (@search_types) {
+			if ( -e $self->{"blastDir"} . "/$marker$type.candidate.ffn" && -e $outputFastaAA ) {
+	
+				#if it exists read the reference nucleotide sequences for the candidates
+				my %referenceNuc = ();
+				open( REFSEQSIN, $self->{"blastDir"} . "/$marker$type.candidate.ffn" )
+				  or die "Couldn't open " . $self->{"alignDir"} . "/$marker$type.candidate.ffn for reading\n";
+				my $currID  = "";
+				my $currSeq = "";
+				while ( my $line = <REFSEQSIN> ) {
+					chomp($line);
+					if ( $line =~ m/^>(.*)/ ) {
+						$currID = $1;
+					} else {
+						my $tempseq = Bio::PrimarySeq->new( -seq => $line, -id => $currID, -nowarnonempty => 1 );
+						$referenceNuc{$currID} = $tempseq;
+					}
 				}
-			}
-			close(REFSEQSIN);
-			open( ALITRANSOUT, ">" . $outputFastaDNA ) or die "Couldn't open " . $outputFastaDNA / " for writing\n";
-			my $aa_ali = new Bio::AlignIO( -file => $self->{"alignDir"} . "/$marker.unmasked", -format => 'fasta' );
-			if ( my $aln = $aa_ali->next_aln() ) {
-				my $dna_ali = &aa_to_dna_aln( $aln, \%referenceNuc );
-				foreach my $seq ( $dna_ali->each_seq() ) {
-					my $cleanseq = $seq->seq;
-					$cleanseq =~ s/\.//g;
-					$cleanseq =~ s/[a-z]//g;
-					print ALITRANSOUT ">" . $seq->id . "\n" . $cleanseq . "\n";
+				close(REFSEQSIN);
+				open( ALITRANSOUT, ">" . $outputFastaDNA ) or die "Couldn't open " . $outputFastaDNA / " for writing\n";
+				my $aa_ali = new Bio::AlignIO( -file => $self->{"alignDir"} . "/$marker.unmasked", -format => 'fasta' );
+				if ( my $aln = $aa_ali->next_aln() ) {
+					my $dna_ali = &aa_to_dna_aln( $aln, \%referenceNuc );
+					foreach my $seq ( $dna_ali->each_seq() ) {
+						my $cleanseq = $seq->seq;
+						$cleanseq =~ s/\.//g;
+						$cleanseq =~ s/[a-z]//g;
+						print ALITRANSOUT ">" . $seq->id . "\n" . $cleanseq . "\n";
+					}
 				}
+				close(ALITRANSOUT);
 			}
-			close(ALITRANSOUT);
 		}
 
 		#checking if sequences were written to the marker alignment file
