@@ -183,7 +183,7 @@ sub run {
 		Phylosift::Utilities::index_marker_db( self=>$self, markers=>\@markers );
 	}
 	if( $self->{"mode"} eq 'build_marker'){
-	    Phylosift::MarkerBuild::build_marker(alignment=>$ARGV[1], cutoff=>$ARGV[2]);
+	    Phylosift::MarkerBuild::build_marker(self->$self, alignment=>$ARGV[1], cutoff=>$ARGV[2]);
 	}
 }
 
