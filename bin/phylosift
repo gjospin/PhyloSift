@@ -31,12 +31,25 @@ Usage
 
    sequence_file_1 and _2 need to be in fastq format
 
+Creating a PhyloSift Marker (Does not allow for taxonomic summaries, only searching, aligning and placement steps)
+===========================================
+
+> phylosift build_marker <alignment_file> <PD pruning threshold>
+Example 1:  > phylosift build_marker test.aln 0.01
+Example 2:  > phylosift build_marker -f test.aln 0.01
+   
+Index the search databases
+============================================
+> phylosift index
+
 Mode : Only execute a specific step in the pipeline
   all - execute all the following steps in that order.
   search - only execute the database searches + write candidate files
   align - hmmsearch + hmmalign + trims + coverage filters
   placer - run pplacer on the results from the align step
   summary - run the taxonomy assignment steps
+  index - indexes the various databases needed for Rapsearch, Bowtie and Blast
+  build_maker - creates a reference package from a multiple alignment file
 
 Options Available at this time :
    -h --help             Prints the usage section of the README
@@ -80,9 +93,14 @@ if ( $help != 0 ) {
 
 $Phylosift::Utilities::debuglevel = $my_debug;
 debug("@ARGV\n");
-if ( $pair == 0 ) {
-	croak $usage unless ( $ARGV[0] && $ARGV[1] );
-} elsif ( scalar(@ARGV) == 3 ) {
+if ( scalar(@ARGV) < 1 ) {
+	croak $usage ;
+}elsif ( scalar(@ARGV) == 1 ) {
+	croak $usage unless ( $ARGV[0] eq 'index' );
+}elsif ( scalar(@ARGV) == 2 ) {
+	croak $usage if ($ARGV[0] eq 'index');
+	croak $usage unless ( $ARGV[0] && $ARGV[1] && $pair == 0 );
+}elsif ( scalar(@ARGV) == 3 ) {
 	croak $usage unless ( $ARGV[0] && $ARGV[1] && $ARGV[2] );
 } else {
 	croak $usage. "\nOR\n" . $usage . "\n";

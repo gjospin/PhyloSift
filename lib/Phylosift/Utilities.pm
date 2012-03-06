@@ -47,6 +47,7 @@ Phylosift::Utilities - Implements miscellaneous accessory functions for Phylosif
 Version 0.01
 
 =cut
+
 our $VERSION = '0.01';
 
 =head1 SYNOPSIS
@@ -198,9 +199,10 @@ sub programChecks {
 Check for requisite PhyloSift marker datasets
 
 =cut
-our $marker_dir = "";
+
+our $marker_dir           = "";
 our $markers_extended_dir = "";
-our $ncbi_dir   = "";
+our $ncbi_dir             = "";
 
 sub get_data_path {
 	my $dataname  = shift;
@@ -239,16 +241,15 @@ sub download_data {
 	`cd $destination/../ ; tar xzf $archive.tgz ; touch $archive`;
 	`rm $destination/../$archive.tgz`;
 }
-my $marker_update_url = "http://edhar.genomecenter.ucdavis.edu/~koadman/phylosift_markers/markers.tgz";
+my $marker_update_url           = "http://edhar.genomecenter.ucdavis.edu/~koadman/phylosift_markers/markers.tgz";
 my $markers_extended_update_url = "http://edhar.genomecenter.ucdavis.edu/~koadman/phylosift_markers/markers_extended.tgz";
-my $ncbi_url          = "http://edhar.genomecenter.ucdavis.edu/~koadman/ncbi.tgz";
+my $ncbi_url                    = "http://edhar.genomecenter.ucdavis.edu/~koadman/ncbi.tgz";
 
 sub marker_update_check {
-	my %args = @_;
-	my $self = $args{self};
-	my $url = $args{url};
+	my %args        = @_;
+	my $self        = $args{self};
+	my $url         = $args{url};
 	my $marker_path = $args{dir};
-	
 	my ( $content_type, $document_length, $modified_time, $expires, $server ) = head($url);
 	debug "MARKER_PATH : " . $marker_path . "\n";
 	my $get_new_markers = 0;
@@ -269,27 +270,30 @@ sub marker_update_check {
 		warn "Unable to find marker data!\n";
 		$get_new_markers = 1;
 	}
-	if($get_new_markers){
+	if ($get_new_markers) {
 		warn "Downloading from $url\n";
 		download_data( $url, $marker_path );
-		my @markers = gather_markers(self=>$self, path=>$marker_path);
-		index_marker_db(self=>$self, markers=>\@markers, path=>$marker_path);
+		my @markers = gather_markers( self => $self, path => $marker_path );
+		index_marker_db( self => $self, markers => \@markers, path => $marker_path );
 	}
 }
 
 sub data_checks {
 	my %args = @_;
 	my $self = $args{self};
+
 	#
 	# first check for the standard marker directory
 	$marker_dir = get_data_path( "markers", $Phylosift::Settings::marker_path );
-	marker_update_check(self=>$self, dir=> $marker_dir, url=>$marker_update_url);
+	marker_update_check( self => $self, dir => $marker_dir, url => $marker_update_url );
+
 	#
 	# now look for the extended marker directory
 	$markers_extended_dir = get_data_path( "markers_extended", $Phylosift::Settings::marker_path );
-	if($self->{"extended"}){
-		marker_update_check(self=>$self, dir=> $markers_extended_dir, url=>$markers_extended_update_url);
+	if ( $self->{"extended"} ) {
+		marker_update_check( self => $self, dir => $markers_extended_dir, url => $markers_extended_update_url );
 	}
+
 	#
 	# now check for the NCBI taxonomy data
 	$ncbi_dir = get_data_path( "ncbi", $Phylosift::Settings::ncbi_path );
@@ -503,15 +507,19 @@ Determines the filesystem path to a marker. Searches for the marker in the base 
 =cut
 
 sub get_marker_path {
-	my %args = @_;
-	my $self = $args{self};
+	my %args   = @_;
+	my $self   = $args{self};
 	my $marker = $args{marker};
+
 	# check for old-style marker first
-	return "$marker_dir" if(-e "$marker_dir/$marker.faa");
+	return "$marker_dir" if ( -e "$marker_dir/$marker.faa" );
+
 	# check for new-style in standard directory
-	return "$marker_dir" if(-d "$marker_dir/$marker");
+	return "$marker_dir" if ( -d "$marker_dir/$marker" );
+
 	# check for new-style in extended directory
-	return "$markers_extended_dir" if(-d "$markers_extended_dir/$marker");
+	return "$markers_extended_dir" if ( -d "$markers_extended_dir/$marker" );
+
 	# TODO: check any local marker repositories
 	warn "Could not find repository for marker $marker\n";
 }
@@ -523,7 +531,7 @@ Returns the base name of the marker -- the marker name without any directories p
 =cut
 
 sub get_marker_basename {
-	my %args = @_;
+	my %args   = @_;
 	my $marker = $args{marker};
 	$marker =~ s/^.+\///g;
 	return $marker;
@@ -537,10 +545,10 @@ If the user chooses the updated markers, the updated filename is returned
 =cut
 
 sub getAlignmentMarkerFile {
-	my $self   = shift;
-	my $marker = shift;
-	my $marker_path = get_marker_path(self=>$self, marker=>$marker);
-	my $bname = get_marker_basename(marker=>$marker);
+	my $self        = shift;
+	my $marker      = shift;
+	my $marker_path = get_marker_path( self => $self, marker => $marker );
+	my $bname       = get_marker_basename( marker => $marker );
 	if ( $self->{"updated"} == 0 ) {
 		return "$marker_path/$bname.ali";
 	} else {
@@ -555,10 +563,10 @@ Returns the aligned fasta file for the marker
 =cut
 
 sub get_marker_aln_file {
-	my $self   = shift;
-	my $marker = shift;
-	my $marker_path = get_marker_path(self=>$self, marker=>$marker);
-	my $bname = get_marker_basename(marker=>$marker);
+	my $self        = shift;
+	my $marker      = shift;
+	my $marker_path = get_marker_path( self => $self, marker => $marker );
+	my $bname       = get_marker_basename( marker => $marker );
 	if ( $self->{"updated"} == 0 ) {
 		return "$marker_path/$bname.ali" if ( -e "$marker_path/$bname.ali" );
 
@@ -576,10 +584,10 @@ Returns the fasta file of unaligned full length representative sequences for the
 =cut
 
 sub get_marker_rep_file {
-	my $self   = shift;
-	my $marker = shift;
-	my $marker_path = get_marker_path(self=>$self, marker=>$marker);
-	my $bname = get_marker_basename(marker=>$marker);
+	my $self        = shift;
+	my $marker      = shift;
+	my $marker_path = get_marker_path( self => $self, marker => $marker );
+	my $bname       = get_marker_basename( marker => $marker );
 	if ( $self->{"updated"} == 0 ) {
 		return "$marker_path/$bname.faa" if ( -e "$marker_path/$bname.faa" );
 
@@ -597,11 +605,11 @@ Returns the HMM file for the marker
 =cut
 
 sub get_marker_hmm_file {
-	my $self   = shift;
-	my $marker = shift;
-	my $local  = shift || 0;
-	my $marker_path = get_marker_path(self=>$self, marker=>$marker);
-	my $bname = get_marker_basename(marker=>$marker);
+	my $self        = shift;
+	my $marker      = shift;
+	my $local       = shift || 0;
+	my $marker_path = get_marker_path( self => $self, marker => $marker );
+	my $bname       = get_marker_basename( marker => $marker );
 	if ( $self->{"updated"} == 0 ) {
 		return "$marker_path/$bname.hmm" if ( -e "$marker_path/$bname.hmm" );
 
@@ -619,11 +627,11 @@ Returns the CM (infernal covarion model) file for the marker
 =cut
 
 sub get_marker_cm_file {
-	my $self    = shift;
-	my $marker  = shift;
-	my $marker_path = get_marker_path(self=>$self, marker=>$marker);
-	my $bname = get_marker_basename(marker=>$marker);
-	my $updated = $self->{"updated"} ? ".updated" : "";
+	my $self        = shift;
+	my $marker      = shift;
+	my $marker_path = get_marker_path( self => $self, marker => $marker );
+	my $bname       = get_marker_basename( marker => $marker );
+	my $updated     = $self->{"updated"} ? ".updated" : "";
 	return "$marker_path/$marker$updated/$bname.cm";
 }
 
@@ -634,10 +642,10 @@ Returns the stockholm file for the marker
 =cut
 
 sub get_marker_stockholm_file {
-	my $self   = shift;
-	my $marker = shift;
-	my $marker_path = get_marker_path(self=>$self, marker=>$marker);
-	my $bname = get_marker_basename(marker=>$marker);
+	my $self        = shift;
+	my $marker      = shift;
+	my $marker_path = get_marker_path( self => $self, marker => $marker );
+	my $bname       = get_marker_basename( marker => $marker );
 	if ( $self->{"updated"} == 0 ) {
 		return "$marker_path/$bname.stk" if ( -e "$marker_path/$bname.ali" );
 
@@ -668,11 +676,11 @@ Returns 1 if the marker named in 'marker' is protein sequence (0 if RNA or DNA)
 =cut
 
 sub is_protein_marker {
-	my %args   = @_;
-	my $marker = $args{marker};
+	my %args        = @_;
+	my $marker      = $args{marker};
+	my $marker_path = get_marker_path( marker => $marker );
+	my $bname       = get_marker_basename( marker => $marker );
 
-	my $marker_path = get_marker_path(marker=>$marker);
-	my $bname = get_marker_basename(marker=>$marker);
 	# only protein markers have HMMs
 	return 1 if ( -e "$marker_path/$marker/$bname.hmm" );
 	return 1 if ( -e "$marker_path/$bname.hmm" );
@@ -688,10 +696,10 @@ If the user chooses the updated markers, the updated filename is returned
 =cut
 
 sub getFastaMarkerFile {
-	my $self   = shift;
-	my $marker = shift;
-	my $marker_path = get_marker_path(self=>$self,marker=>$marker);
-	my $bname = get_marker_basename(marker=>$marker);
+	my $self        = shift;
+	my $marker      = shift;
+	my $marker_path = get_marker_path( self => $self, marker => $marker );
+	my $bname       = get_marker_basename( marker => $marker );
 	if ( $self->{"updated"} == 0 ) {
 		return "$marker_path/$bname.faa";
 	} else {
@@ -706,9 +714,9 @@ Returns the path to the marker package
 =cut
 
 sub getMarkerPackage {
-	my $self   = shift;
-	my $marker = shift;
-	my $marker_path = get_marker_path(self=>$self,marker=>$marker);
+	my $self        = shift;
+	my $marker      = shift;
+	my $marker_path = get_marker_path( self => $self, marker => $marker );
 	if ( $self->{"updated"} == 0 ) {
 		return "$marker_path/$marker";
 	} else {
@@ -723,7 +731,7 @@ given by markerName
 
 sub getAlignerOutputFastaAA {
 	my $marker = shift;
-	my $bname = get_marker_basename(marker=>$marker);
+	my $bname = get_marker_basename( marker => $marker );
 	return "$bname.trim.fasta";
 }
 
@@ -734,7 +742,7 @@ given by markerName
 
 sub getAlignerOutputFastaDNA {
 	my $marker = shift;
-	my $bname = get_marker_basename(marker=>$marker);
+	my $bname = get_marker_basename( marker => $marker );
 	return "$bname.trim.fna.fasta";
 }
 
@@ -745,13 +753,13 @@ given by markerName
 
 sub getReadPlacementFile {
 	my $marker = shift;
-	my $bname = get_marker_basename(marker=>$marker);
+	my $bname = get_marker_basename( marker => $marker );
 	return "$bname.trim.jplace";
 }
 
 sub getReadPlacementFileDNA {
 	my $marker = shift;
-	my $bname = get_marker_basename(marker=>$marker);
+	my $bname = get_marker_basename( marker => $marker );
 	return "$bname.trim.fna.jplace";
 }
 
@@ -763,10 +771,10 @@ If the user chooses the updated markers, the updated filename is returned
 =cut
 
 sub getTrimfinalMarkerFile {
-	my $self   = shift;
-	my $marker = shift;
-	my $marker_path = get_marker_path(self=>$self,marker=>$marker);
-	my $bname = get_marker_basename(marker=>$marker);
+	my $self        = shift;
+	my $marker      = shift;
+	my $marker_path = get_marker_path( self => $self, marker => $marker );
+	my $bname       = get_marker_basename( marker => $marker );
 	if ( $self->{"updated"} == 0 ) {
 		return "$marker_path/$bname.trimfinal" if -e "$marker_path/$bname.trimfinal";
 		return "$marker_path/$marker/$bname.aln";
@@ -783,10 +791,10 @@ If the use chooses the updated markers, the updated file is returned instead
 =cut
 
 sub getTrimfinalFastaMarkerFile {
-	my $self   = shift;
-	my $marker = shift;
-	my $marker_path = get_marker_path(self=>$self,marker=>$marker);
-	my $bname = get_marker_basename(marker=>$marker);
+	my $self        = shift;
+	my $marker      = shift;
+	my $marker_path = get_marker_path( self => $self, marker => $marker );
+	my $bname       = get_marker_basename( marker => $marker );
 	if ( $self->{"updated"} == 0 ) {
 		return "$marker_path/$bname.trimfinal.fasta" if -e "$marker_path/$bname.trimfinal.fasta";
 		return "$marker_path/$marker/$bname.aln";
@@ -803,10 +811,10 @@ The user chooses the updated or stock version
 =cut
 
 sub getTreeMarkerFile {
-	my $self   = shift;
-	my $marker = shift;
-	my $marker_path = get_marker_path(self=>$self,marker=>$marker);
-	my $bname = get_marker_basename(marker=>$marker);
+	my $self        = shift;
+	my $marker      = shift;
+	my $marker_path = get_marker_path( self => $self, marker => $marker );
+	my $bname       = get_marker_basename( marker => $marker );
 	if ( $self->{"updated"} == 0 ) {
 		return "$marker_path/$bname.final.tre" if -e "$marker_path/$bname.final.tre";
 		return "$marker_path/$marker/$bname.tre";
@@ -822,10 +830,10 @@ Return the updated or stock version of the Tree stats file
 =cut
 
 sub getTreeStatsMarkerFile {
-	my $self   = shift;
-	my $marker = shift;
-	my $marker_path = get_marker_path(self=>$self,marker=>$marker);
-	my $bname = get_marker_basename(marker=>$marker);
+	my $self        = shift;
+	my $marker      = shift;
+	my $marker_path = get_marker_path( self => $self, marker => $marker );
+	my $bname       = get_marker_basename( marker => $marker );
 	if ( $self->{"updated"} == 0 ) {
 		return "$marker_path/$bname.in_phyml_stats.txt";
 	} else {
@@ -840,10 +848,10 @@ Returns the updated of stock version of the NCBI map file
 =cut
 
 sub getNcbiMapFile {
-	my $self   = shift;
-	my $marker = shift;
-	my $marker_path = get_marker_path(self=>$self,marker=>$marker);
-	my $bname = get_marker_basename(marker=>$marker);
+	my $self        = shift;
+	my $marker      = shift;
+	my $marker_path = get_marker_path( self => $self, marker => $marker );
+	my $bname       = get_marker_basename( marker => $marker );
 	if ( $self->{"updated"} == 0 ) {
 		return "$marker_path/$bname.ncbimap";
 	} else {
@@ -1037,19 +1045,19 @@ sub open_sequence_file {
 	} elsif ( $args{file} =~ /\.bz2$/ ) {
 		open( $F1IN, "bzcat $args{file} |" );
 	} else {
-		open( $F1IN, $args{file} ) ;
+		open( $F1IN, $args{file} );
 	}
 	return $F1IN;
 }
 
 sub get_db {
-	my %args=@_;
-	my $path = $args{path} || $marker_dir;
-	my $self = $args{self}; # optional argument;
+	my %args    = @_;
+	my $path    = $args{path} || $marker_dir;
+	my $self    = $args{self};                  # optional argument;
 	my $db_name = $args{db_name};
-	if(defined($self) &&!defined($args{path})){
-		return $markers_extended_dir."/$db_name" if defined($self->{"extended"} && $self->{"extended"});
-		return $marker_dir."/$db_name";
+	if ( defined($self) && !defined( $args{path} ) ) {
+		return $markers_extended_dir . "/$db_name" if defined( $self->{"extended"} && $self->{"extended"} );
+		return $marker_dir . "/$db_name";
 	}
 	return "$path/$db_name";
 }
@@ -1080,7 +1088,6 @@ sub read_interleaved_fastq {
 	}
 }
 
-
 =head2 get_blastp_db
 
 Returns the name and path of the blast DB
@@ -1088,14 +1095,14 @@ Returns the name and path of the blast DB
 =cut
 
 sub get_blastp_db {
-	my %args=@_;
-	$args{db_name}="blastrep";
+	my %args = @_;
+	$args{db_name} = "blastrep";
 	return get_db(%args);
 }
 
 sub get_rapsearch_db {
-	my %args=@_;
-	$args{db_name}="rep";
+	my %args = @_;
+	$args{db_name} = "rep";
 	return get_db(%args);
 }
 
@@ -1106,25 +1113,25 @@ returns the name and path of the bowtie2 DB
 =cut
 
 sub get_bowtie2_db {
-	my %args=@_;
-	$args{db_name}="rnadb";
+	my %args = @_;
+	$args{db_name} = "rnadb";
 	return get_db(%args);
 }
 
 sub get_candidate_file {
-	my %args=@_;
-	my $self=$args{self};
-	my $marker=$args{marker};
-	my $type= $args{type};
-	my $dna = $args{dna};
-	my $new = $args{new};
-	my $ffn = "";
-	$ffn = ".ffn" if(defined($args{dna}) && $dna);
+	my %args   = @_;
+	my $self   = $args{self};
+	my $marker = $args{marker};
+	my $type   = $args{type};
+	my $dna    = $args{dna};
+	my $new    = $args{new};
+	my $ffn    = "";
+	$ffn = ".ffn" if ( defined( $args{dna} ) && $dna );
 	my $candidate = ".candidate";
-	$candidate = ".newCandidate" if defined($args{new})&&$new;
+	$candidate = ".newCandidate" if defined( $args{new} ) && $new;
 	my $dir = $self->{"blastDir"};
-	$dir = $self->{"alignDir"} if defined($args{new})&&$new;
-	$marker =~ s/.+\///g;	# strip off any prepended directories
+	$dir = $self->{"alignDir"} if defined( $args{new} ) && $new;
+	$marker =~ s/.+\///g;    # strip off any prepended directories
 	return "$dir/$marker$type$candidate$ffn";
 }
 
@@ -1143,9 +1150,9 @@ sub index_marker_db {
 
 	# use alignments to make an unaligned fasta database containing everything
 	# strip gaps from the alignments
-	my $bowtie2_db       = get_bowtie2_db(path=>$path);
+	my $bowtie2_db = get_bowtie2_db( path => $path );
 	my $bowtie2_db_fasta = "$bowtie2_db.fasta";
-	open( my $PDBOUT,   ">" . get_blastp_db(path=>$path) );
+	open( my $PDBOUT, ">" . get_blastp_db( path => $path ) );
 	open( my $RNADBOUT, ">" . $bowtie2_db_fasta );
 	foreach my $marker (@markers) {
 		my $marker_rep = get_marker_rep_file( $args{self}, $marker );
@@ -1153,7 +1160,7 @@ sub index_marker_db {
 		debug "marker rep file $marker_rep\n";
 		my $DBOUT = $RNADBOUT;
 		$DBOUT = $PDBOUT if is_protein_marker( marker => $marker );
-		unless(-f $marker_rep){
+		unless ( -f $marker_rep ) {
 			warn "Warning: marker $marker appears to be missing data\n";
 			next;
 		}
@@ -1174,13 +1181,13 @@ sub index_marker_db {
 	close $RNADBOUT;
 
 	# make a blast database
-	my $blastp_db = get_blastp_db(path=>$path);
+	my $blastp_db = get_blastp_db( path => $path );
 	system("$Phylosift::Utilities::formatdb -i $blastp_db -o F -p T -t RepDB");
 	`mv $blastp_db $path/rep.dbfasta`;
 
 	# make a rapsearch database
 	`cd $path ; $Phylosift::Utilities::preRapSearch -d rep.dbfasta -n rep`;
-	
+
 	# make a last database
 	`cd $path ; $Phylosift::Utilities::lastdb -p -c replast rep.dbfasta`;
 #	unlink("$path/rep.dbfasta");    # don't need this anymore!
@@ -1215,14 +1222,14 @@ sub index_marker_db {
 =cut
 
 sub gather_markers {
-	my %args       = @_;
-	my $self       = $args{self};
+	my %args        = @_;
+	my $self        = $args{self};
 	my $marker_file = $args{marker_file};
-	my $path       = $args{path} || $marker_dir;
-	my @marks      = ();
+	my $path        = $args{path} || $marker_dir;
+	my @marks       = ();
 
 	#create a file with a list of markers called markers.list
-	if ( defined($marker_file) && -f $marker_file && $marker_file ne "") {
+	if ( defined($marker_file) && -f $marker_file && $marker_file ne "" ) {
 
 		#gather a custom list of makers, list convention is 1 marker per line
 		open( markersIN, $marker_file );
@@ -1249,11 +1256,12 @@ sub gather_markers {
 			next if $line =~ /PMPROK/;
 			next if $line =~ /concat/;
 			next if $line =~ /representatives/;
-			$line = substr($line, length($path)+1);
+			$line = substr( $line, length($path) + 1 );
+
 			# all markers need to have an hmm or a cm else they are not usable
 			my $baseline = $line;
 			$baseline =~ s/.+\///g;
-			next unless (-e "$path/$line/$line.cm" || -e "$path/$line/$baseline.hmm" );
+			next unless ( -e "$path/$line/$line.cm" || -e "$path/$line/$baseline.hmm" );
 			push( @marks, $line );
 		}
 	}
@@ -1569,4 +1577,5 @@ See http://dev.perl.org/licenses/ for more information.
 
 
 =cut
+
 1;    # End of Phylosift::Utilities

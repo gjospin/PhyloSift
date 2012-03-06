@@ -1,1 +1,1 @@
-bin/phylosift
+bin/phylosift $1 $2 $3
