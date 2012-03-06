@@ -125,17 +125,6 @@ sub markerPrepAndRun {
 		next unless Phylosift::Utilities::is_protein_marker( marker => $marker );
 		my $hmm_file = Phylosift::Utilities::get_marker_hmm_file( $self, $marker, 1 );
 		my $stockholm_file = Phylosift::Utilities::get_marker_stockholm_file( $self, $marker );
-		unless ( -e $hmm_file && -e $stockholm_file ) {
-			my $trimfinalFile = Phylosift::Utilities::getTrimfinalMarkerFile( $self, $marker );
-
-			#converting the marker's reference alignments from Fasta to Stockholm (required by Hmmer3)
-			Phylosift::Utilities::fasta2stockholm( "$trimfinalFile", $stockholm_file );
-
-			#build the Hmm for the marker using Hmmer3
-			if ( !-e $hmm_file ) {
-				`$Phylosift::Utilities::hmmbuild $hmm_file $stockholm_file`;
-			}
-		}
 		my $new_candidate = Phylosift::Utilities::get_candidate_file(self=>$self,marker=>$marker,type=>"",new=>1);
 		unlink($new_candidate);
 		foreach my $type (@search_types) {
@@ -339,6 +328,7 @@ sub alignAndMask {
 		my @lines;
 
 		if ( Phylosift::Utilities::is_protein_marker( marker => $marker ) ) {
+			debug "Running $hmmalign\n";
 			open( HMMALIGN, $hmmalign );
 			@lines = <HMMALIGN>;
 		} else {
