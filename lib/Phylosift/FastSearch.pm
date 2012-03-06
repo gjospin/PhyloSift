@@ -163,6 +163,7 @@ sub launch_searches {
 				$hitsref = get_hits_sam( self => $self, HITSTREAM => $hitstream );
 			} elsif ( $count == 4 ) {
 				$hitsref = get_hits( self => $self, HITSTREAM => $hitstream, searchtype => "rap" );
+				unlink( $self->{"blastDir"} . "/rapjunk.aln" );	# rap leaves some trash lying about
 			} elsif ( $args{contigs} ) {
 				$hitsref = get_hits_contigs( self => $self, HITSTREAM => $hitstream, searchtype => "lastal" );
 			} else {
@@ -461,7 +462,6 @@ sub executeRap {
 	  . " < $query_file | ";
 	debug "Running $rapsearch_cmd\n";
 	open( my $HITSTREAM, $rapsearch_cmd );
-	unlink( $self->{"blastDir"} . "/rapjunk.aln" );
 	return $HITSTREAM;
 }
 
