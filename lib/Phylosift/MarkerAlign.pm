@@ -213,7 +213,7 @@ sub writeAlignedSeq {
 	$prev_name .= "_p$seq_count" if $seq_count > 0 && $self->{"isolate"};
 
 	#print the new trimmed alignment
-	print $OUTPUT ">$prev_name\n$prev_seq\n";
+	print $OUTPUT ">$prev_name\n$prev_seq\n" if defined($OUTPUT);
 	print $UNMASKEDOUT ">$prev_name\n$orig_seq\n" if defined($UNMASKEDOUT);
 }
 use constant CODONSIZE => 3;
@@ -321,7 +321,7 @@ sub alignAndMask {
 		my $outputFastaDNA = $self->{"alignDir"} . "/" . Phylosift::Utilities::getAlignerOutputFastaDNA($marker);
 		my $mbname = Phylosift::Utilities::get_marker_basename(marker=>$marker);
 		open( my $aliout, ">" . $outputFastaAA ) or die "Couldn't open $outputFastaAA for writing\n";
-		open( my $updatedout, ">" . $self->{"alignDir"} . "/$mbname.updated.hmm.fasta" );
+		my $updatedout;
 		my $prev_seq;
 		my $prev_name;
 		my $seqCount = 0;
