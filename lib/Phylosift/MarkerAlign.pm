@@ -253,10 +253,12 @@ sub aa_to_dna_aln {
 			} elsif ( $char eq "." ) {
 				$nt_seqstr .= "...";
 			} else {
-				if ( $char eq uc($char) ) {
-					$nt_seqstr .= uc( substr( $dnaseq, $j, CODONSIZE ) );
-				} elsif( length $dnaseq >= $j + CODONSIZE ) {
-					$nt_seqstr .= lc( substr( $dnaseq, $j, CODONSIZE ) );
+				if(length $dnaseq >= $j + CODONSIZE){
+					if ( $char eq uc($char) ) {
+						$nt_seqstr .= uc( substr( $dnaseq, $j, CODONSIZE ) );
+					} else {
+						$nt_seqstr .= lc( substr( $dnaseq, $j, CODONSIZE ) );
+					}
 				}
 				$j += CODONSIZE;
 			}
@@ -308,13 +310,15 @@ sub alignAndMask {
 			  . $stockholm_file
 			  . " $hmm_file $new_candidate |";
 		} else {
+			debug "Setting up cmalign for marker $marker\n";
 			my $candidate = Phylosift::Utilities::get_candidate_file(self=>$self,marker=>$marker,type=>".rna");
 			next unless ( -e $candidate );
-			$refcount = Phylosift::Utilities::get_count_from_reps( $self, $marker );
-
+			# FIXME: short sequences need -l for local alignment, long seqs do not
 			#if the marker is rna, use infernal instead of hmmalign
+#			$cmalign =
+#			    "$Phylosift::Utilities::cmalign -q -l --dna "  # use -l for short sequences
 			$cmalign =
-			    "$Phylosift::Utilities::cmalign -q -l --dna "
+			    "$Phylosift::Utilities::cmalign -q --dna "
 			  . Phylosift::Utilities::get_marker_cm_file( $self, $marker ) . " $candidate | ";
 		}
 		my $outputFastaAA  = $self->{"alignDir"} . "/" . Phylosift::Utilities::getAlignerOutputFastaAA($marker);
@@ -328,13 +332,14 @@ sub alignAndMask {
 		my @lines;
 
 		if ( Phylosift::Utilities::is_protein_marker( marker => $marker ) ) {
-			debug "Running $hmmalign\n";
 			open( HMMALIGN, $hmmalign );
 			@lines = <HMMALIGN>;
 		} else {
+			debug "Running $cmalign\n";
 			open( my $CMALIGN, $cmalign );
 			my $sto = Phylosift::Utilities::stockholm2fasta( in => $CMALIGN );
 			@lines = split( /\n/, $sto );
+			$refcount = 0;
 		}
 		open( my $UNMASKEDOUT, ">" . $self->{"alignDir"} . "/$mbname.unmasked" );
 		my $null;
@@ -346,7 +351,7 @@ sub alignAndMask {
 					writeAlignedSeq( $self, $updatedout, $null, $prev_name, $prev_seq, 0 ) if $seqCount <= $refcount && $seqCount > 0;
 					writeAlignedSeq( $self, $aliout, $UNMASKEDOUT, $prev_name, $prev_seq, $seqCount - $refcount - 1) if $seqCount > $refcount;
 				} else {
-					writeAlignedSeq( $self, $aliout, $UNMASKEDOUT, $prev_name, $prev_seq, $seqCount ) if $seqCount > 0;
+					writeAlignedSeq( $self, $aliout, $UNMASKEDOUT, $prev_name, $prev_seq, $seqCount - 1 ) if $seqCount > 0;
 				}
 				$seqCount++;
 				$prev_name = $new_name;
@@ -359,7 +364,7 @@ sub alignAndMask {
 			writeAlignedSeq( $self, $updatedout, $null,        $prev_name, $prev_seq, 0 ) if $seqCount <= $refcount;
 			writeAlignedSeq( $self, $aliout,     $UNMASKEDOUT, $prev_name, $prev_seq, $seqCount - $refcount - 1) if $seqCount > $refcount;
 		} else {
-			writeAlignedSeq( $self, $aliout, $UNMASKEDOUT, $prev_name, $prev_seq, $seqCount );
+			writeAlignedSeq( $self, $aliout, $UNMASKEDOUT, $prev_name, $prev_seq, $seqCount - 1 );
 		}
 		$seqCount -= $refcount;
 		close $UNMASKEDOUT;
