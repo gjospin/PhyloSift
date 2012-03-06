@@ -122,7 +122,7 @@ sub launch_searches {
 	my $reads_file      = $args{dir} . "/reads.fasta";
 	my $bowtie2_r2_pipe;
 	$bowtie2_r2_pipe = $args{dir} . "/bowtie2_r2.pipe" if $args{readtype}->{paired};
-	#	`mkfifo $rap_pipe`;	# rap doesn't support fifos
+
 	debug "Making fifos\n";
 	`mkfifo $blastx_pipe`;
 	`mkfifo $bowtie2_r1_pipe`;
@@ -137,7 +137,6 @@ sub launch_searches {
 
 			# parent process will write sequences below
 			push( @children, $pid );
-			debug "Launching search process $count\n";
 		} elsif ( $pid == 0 ) {
 			debug "Launching search process $count\n";
 
@@ -400,7 +399,7 @@ sub bowtie2 {
 	my $readtype = $args{readtype};
 	debug "INSIDE bowtie2\n";
 	my $bowtie2_cmd =
-		"$Phylosift::Utilities::bowtie2align -x " . Phylosift::Utilities::get_bowtie2_db(self=>$self) . " --quiet --sam-nohead --sam-nosq --maxins 1000 --local ";
+		"$Phylosift::Utilities::bowtie2align -x " . Phylosift::Utilities::get_bowtie2_db(self=>$self) . " --quiet --sam-nohead --sam-nosq --maxins 1000 --mm --local ";
 	$bowtie2_cmd .= " -f " if $args{readtype}->{format} eq "fasta";
 	if ( $args{readtype}->{paired} ) {
 		$bowtie2_cmd .= " -1 $args{reads1} -2 $args{reads2} ";
@@ -451,9 +450,6 @@ Launches rapsearch2, returns a stream
 sub executeRap {
 	my $self       = shift;
 	my $query_file = shift;
-	my $dbDir      = "$Phylosift::Utilities::marker_dir/representatives";
-	$dbDir = $self->{"blastDir"} if ( $custom ne "" );
-	my $out_file      = $self->{"blastDir"} . "/$readsCore.rapSearch";
 	my $rapsearch_cmd = "cd "
 	  . $self->{"blastDir"}
 	  . "; $Phylosift::Utilities::rapSearch -d ".Phylosift::Utilities::get_rapsearch_db(self=>$self)." -o rapjunk -v 20 -b 20 -e -1 -z "
@@ -602,7 +598,7 @@ sub get_hits {
 		}
 		my $markerName = getMarkerName( $subject, $searchtype );		
 
-		#parse once to get the top score for each marker (if isolate is ON, parse again to check the bitscore ranges)
+		#parse once to get the top score for each marker (if isolate is ON, assume best hit comes first)
 		if ( $isolateMode == 1 ) {
 
 			# running on a genome assembly, allow only 1 hit per marker (TOP hit)
