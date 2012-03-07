@@ -398,37 +398,53 @@ sub assign_seqids($) {
 	my @markerlist = Phylosift::Utilities::gather_markers();
 	my $aa_counter    = 0;
 	my $codon_counter = 0;
-	open( my $aa_idtable,    ">gene_ids.aa.txt" );
-	open( my $codon_idtable, ">gene_ids.codon.txt" );
+	open( my $AA_IDTABLE,    ">gene_ids.aa.txt" );
+	open( my $CODON_IDTABLE, ">gene_ids.codon.txt" );
 	push( @markerlist, "concat" );
 	foreach my $marker (@markerlist) {
-		$aa_counter    = assign_seqids_for_marker( $marker, "$marker.updated.fasta",       $aa_idtable,    $aa_counter );
-		$codon_counter = assign_seqids_for_marker( $marker, "$marker.codon.updated.fasta", $codon_idtable, $codon_counter );
+		my %id_mapping = ();
+		my %id_mapping_codon = ();
+		$aa_counter    = assign_seqids_for_marker( $marker, "$marker.updated.fasta",       $AA_IDTABLE,    $aa_counter,   \%id_mapping );
+		$codon_counter = assign_seqids_for_marker( $marker, "$marker.codon.updated.fasta", $CODON_IDTABLE, $codon_counter,\%id_mapping_codon );
+		
+		# now put the IDs in the reps file
+		my $no_counter = 0;
+		my $NO_TABLE;
+		my $clean_reps = get_reps_filename(marker=>$marker,updated=>1,clean=>1);		
+		$no_counter    = assign_seqids_for_marker( $marker, $clean_reps,       $NO_TABLE,      $no_counter,   \%id_mapping );
 	}
 }
 
 sub assign_seqids_for_marker($$$) {
 	my $marker    = shift;
 	my $alignment = shift;
-	my $idtable   = shift;
+	my $IDTABLE   = shift;
 	my $counter   = shift;
+	my $existing_ids = shift;
 	open( INALN,  $alignment );
 	open( OUTALN, ">$alignment.seqids" );
-	my %seen_ids;
+	my %mapped_ids;
 	my $printing = 0;
 
 	while ( my $line = <INALN> ) {
 		chomp $line;
 		if ( $line =~ /^>(.+)/ ) {
 			my $header = $1;
-			if ( defined( $seen_ids{$header} ) ) {
+			if ( defined( $mapped_ids{$header} ) ) {
+				# this one was already included
 				$printing = 0;
 				next;
 			}
-			$seen_ids{$header} = 1;
 			$printing = 1;
 			my $countstring = sprintf( "%010u", $counter );
-			print $idtable "$marker\t$header\t$countstring\n";
+			if( defined( $existing_ids->{$header} )) {
+				# this one uses an ID created previously
+				$countstring = $existing_ids->{$header};
+			}else{
+				# record the new ID in the table
+				print $IDTABLE "$marker\t$header\t$countstring\n";
+			}
+			$mapped_ids{$header} = $countstring;
 			$line = ">$countstring";
 			$counter++;
 		}
@@ -437,6 +453,11 @@ sub assign_seqids_for_marker($$$) {
 	close INALN;
 	close OUTALN;
 	`mv $alignment.seqids $alignment`;
+	
+	foreach my $key(keys %mapped_ids){
+		$existing_ids->{$key} = $mapped_ids{$key};
+	}
+	
 	return $counter;
 }
 
@@ -633,7 +654,7 @@ sub fix_names_in_alignment($) {
 	while ( my $line = <INALN> ) {
 		if ( $line =~ /^>(.+)/ ) {
 			my $header = $1;
-			if ( $header =~ /_(\d+)_fasta/ ) {
+			if ( $header =~ /\.(\d+?)\.fasta/ ) {
 				$line           = ">$1\n";
 				$printing       = defined( $markertaxa{$1} ) ? 0 : 1;
 				$markertaxa{$1} = 1;
