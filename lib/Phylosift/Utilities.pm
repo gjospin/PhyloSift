@@ -1225,7 +1225,6 @@ sub index_marker_db {
 
 sub gather_markers {
 	my %args        = @_;
-	my $self        = $args{self};
 	my $marker_file = $args{marker_file};
 	my $path        = $args{path} || $marker_dir;
 	my @marks       = ();
