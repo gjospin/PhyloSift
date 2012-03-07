@@ -397,39 +397,38 @@ sub stockholm2fasta {
 	my $gapped   = $args{gapped} || 1;      # should gapped fasta (aligned) be written?
 	my $sorted   = $args{sorted} || 1;      # should sequences be sorted?
 	my $STREAMIN = $args{in};
-	my %seq;
+	my @seq;
+	my @names;
 	my $outbuffer = "";
-	while (<$STREAMIN>) {
-		next unless /\S/;
-		next if /^\s*\#/;
-		if (/^\s*\/\//) { $outbuffer .= printseq( columns => $columns, sorted => $sorted, seq => \%seq ); }
+	my $seq_line = 0;	# counter for which line we're on in each block.
+	while (my $line = <$STREAMIN>) {
+		if( $line  !~ /\S/ || $line =~ /^\s*#/ || length($line)<2){
+			$seq_line = 0;
+			next;
+		}
+		if ($line =~ /^\s*\/\//) { $outbuffer .= printseq( columns => $columns, sorted => $sorted, seq => \@seq, names => \@names, out => $args{out} ); }
 		else {
-			chomp;
-			my ( $name, $seq ) = split;
+			chomp $line;
+			my ( $name, $seq ) = split /\s+/, $line;
 			$seq =~ s/[\.\-]//g unless $gapped;
-			$seq{$name} .= $seq;
+			$seq[$seq_line] .= $seq;
+			$names[$seq_line] = $name;
+			$seq_line++;
 		}
 	}
-	$outbuffer .= printseq( columns => $columns, sorted => $sorted, seq => \%seq, out => $args{out} );
+	$outbuffer .= printseq( columns => $columns, sorted => $sorted, seq => \@seq, names => \@names, out => $args{out} );
 	return $outbuffer;
 }
 
 sub printseq {
 	my %args = @_;
+	my @seq = @{$args{seq}};
+	my @names = @{$args{names}};
 	my $out  = "";
-	if ( $args{sorted} ) {
-		foreach my $key ( sort keys %{ $args{seq} } ) {
-			$out .= ">$key\n";
-			for ( my $i = 0 ; $i < length( $args{seq}->{$key} ) ; $i += $args{columns} ) {
-				$out .= substr( $args{seq}->{$key}, $i, $args{columns} ) . "\n";
-			}
-		}
-	} else {
-		while ( my ( $name, $seq ) = each %{ $args{seq} } ) {
-			$out .= ">$name\n";
-			for ( my $i = 0 ; $i < length $seq ; $i += $args{columns} ) {
-				$out .= substr( $seq, $i, $args{columns} ) . "\n";
-			}
+	for(my $j=0; $j<@names; $j++){
+		$out .= ">$names[$j]\n";
+		for ( my $i = 0 ; $i < length( $seq[$j] ) ; $i += $args{columns} ) {
+			$out .= substr( $seq[$j], $i, $args{columns} ) . "\n";
 		}
 	}
 	return $out;
@@ -1190,10 +1189,11 @@ sub index_marker_db {
 
 	# make a last database
 	`cd $path ; $Phylosift::Utilities::lastdb -p -c replast rep.dbfasta`;
-#	unlink("$path/rep.dbfasta");    # don't need this anymore!
+	unlink("$path/rep.dbfasta");    # don't need this anymore!
 
 	# make a bowtie2 database
 	if ( -e "$bowtie2_db_fasta" ) {
+		`cd $path ; $Phylosift::Utilities::lastdb -c $bowtie2_db $bowtie2_db_fasta`;
 		`cd $path ; $Phylosift::Utilities::bowtie2build $bowtie2_db_fasta $bowtie2_db`;
 	}
 	
@@ -1201,7 +1201,9 @@ sub index_marker_db {
 	# this is the case in the extended marker set, since the hmms are too big for transit
 	foreach my $marker (@markers) {
 		my $hmm_file = get_marker_hmm_file($args{self}, $marker);
+		my $cm_file = get_marker_cm_file($args{self}, $marker);
 		next if -e $hmm_file;
+		next if -e $cm_file;
 		next if is_protein_marker( marker => $marker );
 		my $stk_file = get_marker_stockholm_file($args{self}, $marker);
 		`$hmmbuild $hmm_file $stk_file`;
