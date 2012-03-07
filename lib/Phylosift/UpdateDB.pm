@@ -82,7 +82,7 @@ sub get_ebi_from_list() {
 		close WGETTER;
 
 		#		eval{
-		my $seq_in = Phylosift::Utilities::open_SeqIO_object( file => "$outfile.embl" );
+		my $seq_in = Phylosift::Utilities::open_SeqIO_object( file => "$outfile.embl", format => "embl" );
 		my $seq_out = Phylosift::Utilities::open_SeqIO_object( file => ">$outfile.fasta", format => "fasta" );
 		while ( my $inseq = $seq_in->next_seq ) {
 			$seq_out->write_seq($inseq);
@@ -210,26 +210,75 @@ sub find_new_genomes($$$) {
 		chomp $genome;
 		next unless $genome =~ /\.fasta/;
 		my $gbase = basename $genome;
-		if ( -e "$results_dir/$gbase/alignDir/concat.fasta" ) {
-			my $ctime = ( stat("$results_dir/$gbase/alignDir/concat.fasta") )[9];
+		if ( -e "$results_dir/$gbase/alignDir/concat.trim.fasta" ) {
+			my $ctime = ( stat("$results_dir/$gbase/alignDir/concat.trim.fasta") )[9];
 			my $mtime = ( stat($genome) )[9];
 			push( @{$files}, $genome ) if ( $ctime < $mtime );
+#			push( @{$files}, $genome );
 		} else {
 			push( @{$files}, $genome );
 		}
 	}
 }
 
+# limit on the number of jobs that can be queued to SGE at once
+use constant MAX_SGE_JOBS => 5000;
+
 sub qsub_updates($$) {
 	my $results_dir = shift;
 	my $files       = shift;
 	my @jobids;
 	`mkdir -p $results_dir`;
+
+	open( PHYLOSIFTSCRIPT, ">/tmp/pssge.sh" );
+	print PHYLOSIFTSCRIPT qq{#!/bin/sh
+#\$ -cwd
+#\$ -V
+#\$ -S /bin/bash
+#\$ -q eisen.q -q all.q
+export PATH=\$PATH:/home/koadman/development/PhyloSift/bin/
+export PERL5LIB=\$HOME/lib/perl5:/home/koadman/development/PhyloSift/lib
+WORKDIR=/state/partition1/koadman/phylosift/\$JOB_ID
+mkdir -p \$WORKDIR
+CURDIR=`pwd`
+cd \$WORKDIR
+phylosift search -isolate -besthit \$1
+phylosift align -isolate -besthit \$1
+rm -rf PS_temp/*/treeDir
+rm -rf PS_temp/*/blastDir
+rm -rf PS_temp/*/isolates.fasta
+rm -rf PS_temp/*/alignDir/PMP*.stk
+rm -rf PS_temp/*/alignDir/PMP*.hmm
+rm -rf PS_temp/*/alignDir/PMP*hmm.fasta
+rm -rf PS_temp/*/alignDir/PMP*.newCandidate
+
+# ensure orderly copying back to shared storage
+LOCKFILE=\$CURDIR/copylock
+while [ ! `mktemp -q \$LOCKFILE` ]; do
+        sleep 10s
+done
+
+cp -R PS_temp/* \$CURDIR/
+
+rm \$LOCKFILE   # remove the lock now that copying is done
+rm -rf \$WORKDIR
+};
+
+	my $job_count = 0;
+	
 	foreach my $file ( @{$files} ) {
+		$job_count++;
 		chdir($results_dir);
-		my $job = `qsub -q all.q -q eisen.q /home/koadman/bin/pssge.sh $file`;
+		my $job = `qsub /tmp/pssge.sh $file`;
 		$job =~ /Your job (\d+) /;
 		push( @jobids, $1 );
+		
+		# check whether we've hit the limit for queued jobs, and rest if needed
+		if($job_count == MAX_SGE_JOBS){
+			wait_for_jobs(@jobids);
+			@jobids = ();
+			$job_count = 0;
+		}
 	}
 	wait_for_jobs(@jobids);
 }
@@ -252,7 +301,7 @@ sub collate_markers($$) {
 
 	# get list of markers
 	chdir($marker_dir);
-	my @markerlist = get_marker_list($marker_dir);
+	my @markerlist = Phylosift::Utilities::gather_markers();
 	print STDERR "Markers are " . join( " ", @markerlist ) . "\n";
 
 	# get a list of genomes available in the results directory
@@ -260,7 +309,7 @@ sub collate_markers($$) {
 	# NFS is slooooow...
 	print STDERR "Working with " . scalar(@markerlist) . " markers\n";
 	print STDERR "Listing all files in results dir\n";
-	my @alldata = `find $results_dir -name "*.aln_hmmer3.trim"`;
+	my @alldata = `find $results_dir -name "*.trim.fasta"`;
 	print STDERR "Found " . scalar(@alldata) . " files\n";
 	foreach my $marker (@markerlist) {
 		my $cat_ch = ">";
@@ -268,7 +317,7 @@ sub collate_markers($$) {
 		# find all alignments with this marker
 		my @catfiles = ();
 		foreach my $file (@alldata) {
-			next unless $file =~ /(.+\.fasta)\/alignDir\/$marker.aln_hmmer3.trim/;
+			next unless $file =~ /(.+\.fasta)\/alignDir\/$marker.trim.fasta/;
 			my $genome = $1;
 			chomp($file);
 			push( @catfiles, $file );
@@ -280,8 +329,10 @@ sub collate_markers($$) {
 				my $catline = join( " ", @catfiles );
 				print STDERR "Found 200 files for marker $marker\n";
 				`cat $catline $cat_ch $marker_dir/$marker.updated.fasta`;
-				$catline =~ s/\.aln_hmmer3\.trim/\.aln_hmmer3\.trim\.ffn/g;
+				$catline =~ s/\.trim\.fasta/\.trim\.fna\.fasta/g;
 				`cat $catline $cat_ch $marker_dir/$marker.codon.updated.fasta`;
+				$catline =~ s/\.trim\.fna\.fasta/\.reps/g;
+				`cat $catline $cat_ch $marker_dir/$marker.updated.reps`;
 				@catfiles = ();
 				$cat_ch   = ">>";
 			}
@@ -290,28 +341,62 @@ sub collate_markers($$) {
 			my $catline = join( " ", @catfiles );
 			print STDERR "Last cat for marker $marker\n";
 			`cat $catline $cat_ch $marker_dir/$marker.updated.fasta`;
-			$catline =~ s/\.aln_hmmer3\.trim/\.aln_hmmer3\.trim\.ffn/g;
+			$catline =~ s/\.trim\.fasta/\.trim\.fna\.fasta/g;
 			`cat $catline $cat_ch $marker_dir/$marker.codon.updated.fasta`;
+			$catline =~ s/\.trim\.fna\.fasta/\.reps/g;
+			`cat $catline $cat_ch $marker_dir/$marker.updated.reps`;
 		}
 		fix_names_in_alignment("$marker_dir/$marker.updated.fasta");
 		fix_names_in_alignment("$marker_dir/$marker.codon.updated.fasta");
+		fix_names_in_alignment("$marker_dir/$marker.updated.reps");
+		my $reps = get_reps_filename(marker=>$marker,updated=>1);
+		my $clean_reps = get_reps_filename(marker=>$marker,updated=>1,clean=>1);
+		clean_representatives(infile=>$reps,outfile=>$clean_reps);
 	}
 	`rm -f $marker_dir/concat.updated.fasta`;
 	`rm -f $marker_dir/concat.codon.updated.fasta`;
-	`cat $results_dir/*/alignDir/concat.fasta >> $marker_dir/concat.updated.fasta`;
-	`cat $results_dir/*/alignDir/concat-dna.fasta >> $marker_dir/concat.codon.updated.fasta`;
+	`cat $results_dir/*/alignDir/concat.trim.fasta >> $marker_dir/concat.updated.fasta`;
+	`cat $results_dir/*/alignDir/concat.trim.fna.fasta >> $marker_dir/concat.codon.updated.fasta`;
 	fix_names_in_alignment("$marker_dir/concat.updated.fasta");
 	fix_names_in_alignment("$marker_dir/concat.codon.updated.fasta");
 }
 
-# assign 10 digit unique identifiers to each gene
-# todo: will need to move into alphabetical space here
+sub clean_representatives {
+	my %args = @_;
+	my $file = $args{infile};
+	my $outfile = $args{outfile};
+	open( INALN,  $file );
+	open( OUTALN, ">$outfile" );
+	while ( my $line = <INALN> ) {
+		unless( $line =~ /^>/ ){
+			my $first_lower;
+			my $last_upper;
+			# strip all chars outside the first and last uppercase character -- these are the boundaries of the homologous region
+			if($line =~ /[A-Z]/){
+				$line = substr($line, $-[0]);
+			}
+			$line = reverse($line);
+			if($line =~ /[A-Z]/){
+				$line = substr($line, $-[0]);
+			}
+			$line = reverse($line);
+			$line =~ s/-//g;
+		}
+		print OUTALN $line;
+	}
+}
+
+=head2 assign_seqids
+ assign 10 digit unique identifiers to each gene
+ todo: will need to move into alphabetical space here
+=cut
+
 sub assign_seqids($) {
 	my $marker_dir = shift;
 
 	# get list of markers
 	chdir($marker_dir);
-	my @markerlist    = get_marker_list($marker_dir);
+	my @markerlist = Phylosift::Utilities::gather_markers();
 	my $aa_counter    = 0;
 	my $codon_counter = 0;
 	open( my $aa_idtable,    ">gene_ids.aa.txt" );
@@ -356,17 +441,53 @@ sub assign_seqids_for_marker($$$) {
 	return $counter;
 }
 
-sub get_marker_list {
-	my $marker_dir = shift;
-	my @markerlist = `find $marker_dir -name \"*.hmm\"`;
-	for ( my $i = 0 ; $i < @markerlist ; $i++ ) {
-		chomp $markerlist[$i];
-		$markerlist[$i] =~ s/\.hmm//g;
-		$markerlist[$i] = substr( $markerlist[$i], length($marker_dir) );
-		$markerlist[$i] =~ s/^\///g;
+sub make_ncbi_tree_from_update {
+	my %args        = $_;
+	my $self        = $args{self};
+	my $results_dir = $args{results_dir};
+	my $markerdir   = $args{marker_dir};
+	my ( %nameidmap, %idnamemap ) = readNcbiTaxonNameMap();
+	my %parent = readNcbiTaxonomyStructure();
+	open( AAIDS,          "$markerdir/gene_ids.aa.txt" );
+	open( MARKERTAXONMAP, ">$markerdir/marker_taxon_map.updated.txt" );
+	my @taxonids;
+
+	while ( my $line = <AAIDS> ) {
+		chomp $line;
+		my ( $marker, $taxon, $uniqueid ) = split( /\t/, $line );
+		push( @taxonids, $taxon ) if $taxon =~ /^\d+$/;
+		print MARKERTAXONMAP "$uniqueid\t$taxon\n";
 	}
-	return @markerlist;
+	close MARKERTAXONMAP;
+	my %tidnodes;
+	my $phylotree = Bio::Phylo::Forest::Tree->new();
+	foreach my $tid (@taxonids) {
+		next if ( $tid eq "" );
+		my $child;
+		while ( $tid != 1 ) {
+
+			# check if we've already seen this one
+			last if ( defined( $tidnodes{$tid} ) );
+
+			# create a new node & add to tree
+			my $parentid = $parent{$tid}->[0];
+			my $newnode;
+			$newnode = Bio::Phylo::Forest::Node->new( -parent => $tidnodes{$parentid}, -name => $tid ) if defined( $tidnodes{$parentid} );
+			$newnode = Bio::Phylo::Forest::Node->new( -name => $tid ) if !defined( $tidnodes{$parentid} );
+			$tidnodes{$tid} = $newnode;
+			$newnode->set_child($child) if ( defined($child) );
+			$phylotree->insert($newnode);
+
+			# continue traversal toward root
+			$tid   = $parentid;
+			$child = $newnode;
+		}
+	}
+	open( TREEOUT, ">ncbi_tree.updated.tre" );
+	print TREEOUT $phylotree->to_newick( "-nodelabels" => 1 );
+	close TREEOUT;
 }
+
 
 sub get_marker_name_base {
 	my %args = @_;
@@ -381,6 +502,22 @@ sub get_fasta_filename {
 	my %args = @_;
 	my $name = get_marker_name_base(%args);
 	$name .= ".fasta";
+	return $name;
+}
+
+sub get_taxonmap_filename {
+	my %args = @_;
+	my $name = get_marker_name_base(%args);
+	$name .= ".taxonmap";
+	return $name;
+}
+
+sub get_reps_filename {
+	my %args = @_;
+	my $clean = $args{clean} || 0;
+	my $name = get_marker_name_base(%args);
+	$name .= ".reps";
+	$name .= ".clean" if $clean;
 	return $name;
 }
 
@@ -417,7 +554,7 @@ sub build_marker_trees_fasttree($$) {
 };
 	`chmod 755 /tmp/ps_tree.sh`;
 	chdir($marker_dir);
-	my @markerlist = get_marker_list($marker_dir);
+	my @markerlist = Phylosift::Utilities::gather_markers();
 	unshift( @markerlist, "concat" );
 	my @jobids;
 
@@ -454,7 +591,7 @@ rm RAxML*.\$1*
 };
 	`chmod 755 /tmp/ps_tree.sh`;
 	chdir($marker_dir);
-	my @markerlist = get_marker_list($marker_dir);
+	my @markerlist = Phylosift::Utilities::gather_markers();
 	unshift( @markerlist, "concat" );
 	my @jobids;
 
@@ -522,9 +659,34 @@ sub createTempReadFasta {
 	}
 }
 
+sub filter_fasta {
+	my %args = @_;
+	my $input_fasta = $args{input_fasta};
+	my $output_fasta = $args{output_fasta};
+	my $keep_taxa = $args{keep_taxa};
+	# create a pruned fasta
+	open( FASTA,       $input_fasta );
+	open( PRUNEDFASTA, $output_fasta );
+	my $printing = 0;
+	while ( my $line = <FASTA> ) {
+		chomp $line;
+		if ( $line =~ /^>(.+)/ ) {
+			$printing = defined( $keep_taxa->{$1} ) ? 1 : 0;
+		}
+		print PRUNEDFASTA "$line\n" if $printing;
+	}
+
+}
+
 sub prune_marker {
 	my %args      = @_;
-	my $prune_cmd = "pda -k 20000 -g -minlen $args{distance} $args{tre} $args{tre}.pruning.log";
+	my $tree = $args{tre};
+	my $distance = $args{distance};
+	my $tre = $args{tre};
+	my $fasta = $args{fasta};
+	my $pruned_fasta = $args{pruned_fasta};
+
+	my $prune_cmd = "$Phylosift::Utilities::pda -k 20000 -g -minlen $args{distance} $args{tre} $args{tre}.pruning.log";
 	system("$prune_cmd");
 
 	# read the list of taxa to keep
@@ -539,32 +701,36 @@ sub prune_marker {
 		last if ( length($line) < 2 );    # taxa set ends with empty line
 	}
 
-	# create a pruned fasta
-	open( FASTA,       $args{fasta} );
-	open( PRUNEDFASTA, $args{pruned_fasta} );
-	my $printing = 0;
-	while ( my $line = <FASTA> ) {
-		chomp $line;
-		if ( $line =~ /^>(.+)/ ) {
-			$printing = defined( $keep_taxa{$1} ) ? 1 : 0;
-		}
-		print PRUNEDFASTA "$line\n" if $printing;
-	}
+	# create a pruned alignment fasta
+	filter_fasta(input_fasta=>$args{fasta}, output_fasta=>$args{pruned_fasta}, keep_taxa=>\%keep_taxa);
 }
 
 sub pd_prune_markers($) {
 	my $marker_dir = shift;
 
 	# prune distance is different for AA and DNA
+	# these distances are in substitutions per site
 	my %PRUNE_DISTANCE = ( 0 => 0.01, 1 => 0.003 );
-	my @markerlist = get_marker_list($marker_dir);
+	my $REPS_DISTANCE = 0.05;	# reps can be further diverged since we care only about similarity search and not read placement
+	my @markerlist = Phylosift::Utilities::gather_markers();
 	unshift( @markerlist, "concat" );
 	for ( my $dna = 0 ; $dna < 2 ; $dna++ ) {    # zero for aa, one for dna
 		foreach my $marker (@markerlist) {
+			next unless Phylosift::Utilities::is_protein_marker(marker=>$marker);
 			my $tre = get_fasttree_tre_filename( marker => $marker, dna => $dna, updated => 1, pruned => 0 );
 			my $fasta  = get_fasta_filename( marker => $marker, dna => $dna, updated => 1, pruned => 0 );
 			my $pruned = get_fasta_filename( marker => $marker, dna => $dna, updated => 1, pruned => 1 );
+			my $reps_fasta = "";
+			my $clean_reps;
+			my $pruned_reps;
 			prune_marker( distance => $PRUNE_DISTANCE{$dna}, tre => $tre, fasta => $fasta, pruned_fasta => $pruned );
+
+			# if on protein, also create a pruned reps file. Prune more aggressively for this.
+			if($dna == 0){
+				$clean_reps = get_reps_filename(marker=>$marker,updated=>1,clean=>1);
+				$pruned_reps = get_reps_filename(marker=>$marker,updated=>1,clean=>1);
+				prune_marker( distance => $REPS_DISTANCE, tre => $tre, fasta => $clean_reps, pruned_fasta => $pruned_reps );
+			}
 		}
 	}
 }
@@ -574,9 +740,7 @@ sub reconcile_with_ncbi($$$$) {
 	my $results_dir = shift;
 	my $marker_dir  = shift;
 	my $pruned      = shift;
-	print STDERR "Updating NCBI tree and taxon map...";
-	Phylosift::Summarize::makeNcbiTreeFromUpdate( $self, $results_dir, $marker_dir );
-	print STDERR "done\n";
+
 	my $codon_fasta = get_fasta_filename( marker => '\\$1', dna => 1, updated => 1, pruned => $pruned );
 	my $aa_fasta    = get_fasta_filename( marker => '\\$1', dna => 0, updated => 1, pruned => $pruned );
 	my $codon_tre = get_fasttree_tre_filename( marker => '\\$1', dna => 1, updated => 1, pruned => $pruned );
@@ -606,7 +770,7 @@ readconciler ncbi_tree.updated.tre \$1.codon.updated.tmpread.jplace.mangled mark
 rm \$1.codon.updated.tmpread.jplace \$1.codon.updated.tmpread.jplace.mangled \$1.codon.updated.tmpread.fasta \$1.codon.updated.fasttree.log
 EOF
 	`chmod 755 /tmp/ps_reconcile.sh`;
-	my @markerlist = get_marker_list($marker_dir);
+	my @markerlist = Phylosift::Utilities::gather_markers();
 	unshift( @markerlist, "concat" );
 	my @jobids;
 
@@ -629,6 +793,21 @@ EOF
 
 sub package_markers($) {
 	my $marker_dir = shift;
+
+
+	my @markerlist = Phylosift::Utilities::gather_markers();
+	unshift( @markerlist, "concat" );
+	foreach my $marker (@markerlist) {
+		# move in reps
+		my $pruned_reps = get_reps_filename(marker=>$marker,updated=>1,clean=>1);
+		`mv $pruned_reps $marker.updated/$marker.reps`;
+		for ( my $dna = 0 ; $dna < 2 ; $dna++ ) {    # zero for aa, one for dna
+			# move in taxonmap
+			my $taxonmap = get_taxonmap_filename(marker=>$marker, dna=>$dna, updated=>1, pruned=>1);
+			`mv $taxonmap $marker.updated/$marker.taxonmap`;		
+		}
+	}
+
 	chdir( $marker_dir . "/../" );
 	my @timerval = localtime();
 	my $datestr  = Phylosift::Utilities::get_date_YYYYMMDD;
