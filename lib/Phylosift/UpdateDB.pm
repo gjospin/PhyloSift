@@ -312,7 +312,7 @@ sub collate_markers($$) {
 	my @alldata = `find $results_dir -name "*.trim.fasta"`;
 	print STDERR "Found " . scalar(@alldata) . " files\n";
 	foreach my $marker (@markerlist) {
-		my $cat_ch = ">";
+		my $cat_ch = ">";	# first time through ensures that existing files get clobbered
 
 		# find all alignments with this marker
 		my @catfiles = ();
@@ -331,10 +331,10 @@ sub collate_markers($$) {
 				`cat $catline $cat_ch $marker_dir/$marker.updated.fasta`;
 				$catline =~ s/\.trim\.fasta/\.trim\.fna\.fasta/g;
 				`cat $catline $cat_ch $marker_dir/$marker.codon.updated.fasta`;
-				$catline =~ s/\.trim\.fna\.fasta/\.reps/g;
+				$catline =~ s/\.trim\.fna\.fasta/\.unmasked/g;
 				`cat $catline $cat_ch $marker_dir/$marker.updated.reps`;
 				@catfiles = ();
-				$cat_ch   = ">>";
+				$cat_ch   = ">>"; # now add to existing files
 			}
 		}
 		if ( @catfiles > 0 ) {
@@ -343,7 +343,7 @@ sub collate_markers($$) {
 			`cat $catline $cat_ch $marker_dir/$marker.updated.fasta`;
 			$catline =~ s/\.trim\.fasta/\.trim\.fna\.fasta/g;
 			`cat $catline $cat_ch $marker_dir/$marker.codon.updated.fasta`;
-			$catline =~ s/\.trim\.fna\.fasta/\.reps/g;
+			$catline =~ s/\.trim\.fna\.fasta/\.unmasked/g;
 			`cat $catline $cat_ch $marker_dir/$marker.updated.reps`;
 		}
 		fix_names_in_alignment("$marker_dir/$marker.updated.fasta");
@@ -372,15 +372,14 @@ sub clean_representatives {
 			my $first_lower;
 			my $last_upper;
 			# strip all chars outside the first and last uppercase character -- these are the boundaries of the homologous region
-			if($line =~ /[A-Z]/){
-				$line = substr($line, $-[0]);
+			for(my $i=0; $i<2; $i++){
+				if($line =~ /[A-Z]/){
+					$line = substr($line, $-[0]);
+				}
+				$line = reverse($line);
 			}
-			$line = reverse($line);
-			if($line =~ /[A-Z]/){
-				$line = substr($line, $-[0]);
-			}
-			$line = reverse($line);
-			$line =~ s/-//g;
+			$line =~ s/-//g; # remove gap chars
+			$line .= "\n";	# trailing newline was removed above
 		}
 		print OUTALN $line;
 	}
@@ -728,7 +727,7 @@ sub pd_prune_markers($) {
 			# if on protein, also create a pruned reps file. Prune more aggressively for this.
 			if($dna == 0){
 				$clean_reps = get_reps_filename(marker=>$marker,updated=>1,clean=>1);
-				$pruned_reps = get_reps_filename(marker=>$marker,updated=>1,clean=>1);
+				$pruned_reps = get_reps_filename(marker=>$marker,updated=>1,clean=>1,pruned=>1);
 				prune_marker( distance => $REPS_DISTANCE, tre => $tre, fasta => $clean_reps, pruned_fasta => $pruned_reps );
 			}
 		}
@@ -799,7 +798,7 @@ sub package_markers($) {
 	unshift( @markerlist, "concat" );
 	foreach my $marker (@markerlist) {
 		# move in reps
-		my $pruned_reps = get_reps_filename(marker=>$marker,updated=>1,clean=>1);
+		my $pruned_reps = get_reps_filename(marker=>$marker,updated=>1,clean=>1,pruned=>1);
 		`mv $pruned_reps $marker.updated/$marker.reps`;
 		for ( my $dna = 0 ; $dna < 2 ; $dna++ ) {    # zero for aa, one for dna
 			# move in taxonmap
