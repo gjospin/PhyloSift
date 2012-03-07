@@ -317,8 +317,9 @@ sub alignAndMask {
 			#if the marker is rna, use infernal instead of hmmalign
 #			$cmalign =
 #			    "$Phylosift::Utilities::cmalign -q -l --dna "  # use -l for short sequences
+			# use tau=1e-6 instead of default 1e-7 to reduce memory consumption to under 4GB
 			$cmalign =
-			    "$Phylosift::Utilities::cmalign -q --dna "
+			    "$Phylosift::Utilities::cmalign -q --dna --tau 1e-6 "
 			  . Phylosift::Utilities::get_marker_cm_file( $self, $marker ) . " $candidate | ";
 		}
 		my $outputFastaAA  = $self->{"alignDir"} . "/" . Phylosift::Utilities::getAlignerOutputFastaAA($marker);
