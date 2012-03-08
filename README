@@ -3,12 +3,14 @@ PhyloSift
 PhyloSift is a suite of software tools to conduct phylogenetic
 analysis of genomes and metagenomes.
 
-Using a reference database of protein sequences, PhyloSift can scan new
-sequences against that database for homologs and identify the
+Using a reference database of protein sequences, PhyloSift can scan
+new sequences against that database for homologs and identify the
 phylogenetic relationship of the new sequence to the database
 sequences. During this procedure, high quality alignments of codon and
 amino acid sequence are generated.
 
+Website : http://phylosift.wordpress.com/
+Twitter : @PhyloSift
 
 == NEW VERSION ==
 
