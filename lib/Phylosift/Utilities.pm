@@ -521,6 +521,7 @@ sub get_marker_path {
 	return "$markers_extended_dir" if ( -d "$markers_extended_dir/$marker" );
 
 	# TODO: check any local marker repositories
+	warn "Could not find repository for marker $marker\n";
 }
 
 =head2 get_marker_basename
@@ -610,13 +611,11 @@ sub get_marker_hmm_file {
 	my $marker_path = get_marker_path( self => $self, marker => $marker );
 	my $bname       = get_marker_basename( marker => $marker );
 	if ( $self->{"updated"} == 0 ) {
-		return $self->{"alignDir"} . "/$bname.hmm" if ( -e "$marker_path/$bname.hmm" && $local );
 		return "$marker_path/$bname.hmm" if ( -e "$marker_path/$bname.hmm" );
 
 		# using new-style marker directories
 		return "$marker_path/$marker/$bname.hmm";
 	} else {
-		return $self->{"alignDir"} . "/$bname.hmm" if ( -e "$marker_path/$bname.hmm" && $local );
 		return "$marker_path/$bname.hmm";
 	}
 }
@@ -648,7 +647,7 @@ sub get_marker_stockholm_file {
 	my $marker_path = get_marker_path( self => $self, marker => $marker );
 	my $bname       = get_marker_basename( marker => $marker );
 	if ( $self->{"updated"} == 0 ) {
-		return $self->{"alignDir"} . "/$bname.stk" if ( -e "$marker_path/$bname.ali" );
+		return "$marker_path/$bname.stk" if ( -e "$marker_path/$bname.ali" );
 
 		# using new-style marker directories
 		return "$marker_path/$marker/$bname.stk";
@@ -685,7 +684,8 @@ sub is_protein_marker {
 	# only protein markers have HMMs
 	return 1 if ( -e "$marker_path/$marker/$bname.hmm" );
 	return 1 if ( -e "$marker_path/$bname.hmm" );
-	return 0;
+	return 0 if ( -e "$marker_path/$marker/$bname.cm" );
+	return 1;
 }
 
 =head2 getFastaMarkerFile
@@ -964,6 +964,8 @@ sub concatenate_alignments {
 		$catobj = cat( $catobj, $aln );
 		$catobj->verbose(-1);
 	}
+	return unless $catobj;	# exit if there's nothing to write about
+	
 	print MRBAYES "$partlist;\n";
 	my $out = Bio::AlignIO->new( -file => ">$outputFasta", '-format' => 'fasta' );
 	foreach my $dummyseq ( $catobj->each_seq_with_id("dummydummydummy") ) {
@@ -1160,6 +1162,8 @@ sub index_marker_db {
 	open( my $RNADBOUT, ">" . $bowtie2_db_fasta );
 	foreach my $marker (@markers) {
 		my $marker_rep = get_marker_rep_file( $args{self}, $marker );
+		debug "marker $marker is protein\n" if is_protein_marker( marker => $marker );
+		debug "marker rep file $marker_rep\n";
 		my $DBOUT = $RNADBOUT;
 		$DBOUT = $PDBOUT if is_protein_marker( marker => $marker );
 		unless ( -f $marker_rep ) {
@@ -1185,18 +1189,28 @@ sub index_marker_db {
 	# make a blast database
 	my $blastp_db = get_blastp_db( path => $path );
 	system("$Phylosift::Utilities::formatdb -i $blastp_db -o F -p T -t RepDB");
-	`mv $blastp_db $path/rep.faa`;
+	`mv $blastp_db $path/rep.dbfasta`;
 
 	# make a rapsearch database
-	`cd $path ; $Phylosift::Utilities::preRapSearch -d rep.faa -n rep`;
+	`cd $path ; $Phylosift::Utilities::preRapSearch -d rep.dbfasta -n rep`;
 
 	# make a last database
-	`cd $path ; $Phylosift::Utilities::lastdb -p -c replast rep.faa`;
-	unlink("$path/rep.faa");    # don't need this anymore!
+	`cd $path ; $Phylosift::Utilities::lastdb -p -c replast rep.dbfasta`;
+#	unlink("$path/rep.dbfasta");    # don't need this anymore!
 
 	# make a bowtie2 database
 	if ( -e "$bowtie2_db_fasta" ) {
 		`cd $path ; $Phylosift::Utilities::bowtie2build $bowtie2_db_fasta $bowtie2_db`;
+	}
+	
+	# now create the .hmm files if they aren't already present
+	# this is the case in the extended marker set, since the hmms are too big for transit
+	foreach my $marker (@markers) {
+		my $hmm_file = get_marker_hmm_file($args{self}, $marker);
+		next if -e $hmm_file;
+		next if is_protein_marker( marker => $marker );
+		my $stk_file = get_marker_stockholm_file($args{self}, $marker);
+		`$hmmbuild $hmm_file $stk_file`;
 	}
 }
 
