@@ -113,12 +113,15 @@ unless ( (POSIX::uname)[4] =~ /64/ || $^O =~ /arwin/ ) {
 debug "PAIR : $pair\n";
 if ( $pair == 0 ) {
 	debug "notpaired @ARGV\n";
-	$ps = $ps->initialize( $ARGV[0], $ARGV[1] );
-} else {
+	$ps = $ps->initialize( mode=>$ARGV[0], file_1=>$ARGV[1] );
+} elsif($ARGV[0] ne 'index') {
 	debug "INSIDE paired\n";
-	$ps = $ps->initialize( $ARGV[0], $ARGV[1], $ARGV[2] );
+	$ps = $ps->initialize( mode=>$ARGV[0], file_1=>$ARGV[1], file_2=>$ARGV[2] );
+}else{
+	debug "Indexing\n";
+	$ps = $ps->initialize( mode=>$ARGV[0] );
 }
 debug "FORCE: " . $force . "\n";
 debug "Continue : " . $continue . "\n";
-$ps->run( $force, $custom, $continue );
+$ps->run(force=> $force, custom=>$custom, cont=>$continue );
 

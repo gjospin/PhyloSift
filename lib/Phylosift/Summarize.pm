@@ -6,7 +6,7 @@ use Phylosift::Utilities qw(debug);
 use Carp;
 use Bio::Phylo;
 use Bio::Phylo::Forest::Tree;
-
+use JSON;
 if ( $^O =~ /arwin/ ) {
 	use lib "$FindBin::Bin/osx/darwin-thread-multi-2level/";
 }

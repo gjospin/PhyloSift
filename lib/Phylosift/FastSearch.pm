@@ -550,7 +550,7 @@ sub get_hits_contigs {
 					 && $query_start + $max_hit_overlap < $prevhit[3] )
 				{
 
-					#					print STDERR "Found overlap $query and $markerName, $query_start:$query_end\n";
+					# print STDERR "Found overlap $query and $markerName, $query_start:$query_end\n";
 					$contig_hits{$query}->[$i] = [ $markerName, $bitScore, $query_start, $query_end ] if ( $bitScore > $prevhit[1] );
 					last;
 				}
@@ -562,7 +562,7 @@ sub get_hits_contigs {
 					 && $query_end + $max_hit_overlap < $prevhit[2] )
 				{
 
-					#					print STDERR "Found overlap $query and $markerName, $query_start:$query_end\n";
+					# print STDERR "Found overlap $query and $markerName, $query_start:$query_end\n";
 					$contig_hits{$query}->[$i] = [ $markerName, $bitScore, $query_start, $query_end ] if ( $bitScore > $prevhit[1] );
 					last;
 				}

@@ -841,15 +841,16 @@ sub getTreeStatsMarkerFile {
 	}
 }
 
-=head2 getNcbiMapFile
+=head2 get_ncbi_map_file
 
 Returns the updated of stock version of the NCBI map file
 
 =cut
 
 sub getNcbiMapFile {
-	my $self        = shift;
-	my $marker      = shift;
+	my %args = @_;
+	my $self        = $args{self};
+	my $marker      = $args{marker};
 	my $marker_path = get_marker_path( self => $self, marker => $marker );
 	my $bname       = get_marker_basename( marker => $marker );
 	if ( $self->{"updated"} == 0 ) {
@@ -866,27 +867,29 @@ Returns the number of representatives for a marker using the .rep file from the 
 =cut
 
 sub get_count_from_reps {
-	my $self        = shift;
-	my $marker      = shift;
+	my %args = @_;
+	my $self        = $args{self};
+	my $marker      = $args{marker};
 	my $marker_file = get_marker_rep_file( $self, $marker );
 	my $rep_num     = `grep -c '>' $marker_file`;
 	chomp($rep_num);
 	return $rep_num;
 }
 
-=head2 concatenateAlignments
+=head2 concatenate_alignments
 
 creates a file with a table of name to marker ID mappings
 Requires a marker directory as an argument
 
 =cut
 
-sub concatenateAlignments {
-	my $self          = shift;
-	my $outputFasta   = shift;
-	my $outputMrBayes = shift;
-	my $gapmultiplier = shift;    # 1 for protein, 3 for reverse-translated DNA
-	my @alignments    = @_;
+sub concatenate_alignments {
+	my %args = @_;
+	my $self          = $args{self};
+	my $outputFasta   = $args{out_fasta};
+	my $outputMrBayes = $args{out_bayes};
+	my $gapmultiplier = $args{gap};    # 1 for protein, 3 for reverse-translated DNA
+	my @alignments    = $args{markers_aln};
 	my $catobj        = 0;
 	open( MRBAYES, ">$outputMrBayes" );
 	my $partlist = "partition genes = " . scalar(@alignments) . ": ";
@@ -971,7 +974,8 @@ sub concatenateAlignments {
 my %timers;
 
 sub start_timer {
-	my $timername = shift;
+	my %args= @_;
+	my $timername = $args{name};
 	my $t         = time;
 	my @timerval  = localtime($t);
 	$timers{$timername} = $t;
@@ -982,7 +986,8 @@ sub start_timer {
 }
 
 sub end_timer {
-	my $timername = shift;
+	my %args = @_;
+	my $timername = $args{name};
 	my $t         = time;
 	my @timerval  = localtime($t);
 	debug sprintf( "After $timername %4d-%02d-%02d %02d:%02d:%02d\n",
@@ -999,7 +1004,8 @@ Checks whether a marker is in the old style format (PMPROK*) or the new format (
 =cut
 
 sub marker_oldstyle {
-	my $marker = shift;
+	my %args=@_;
+	my $marker = $args{marker};
 	return 1 if ( $marker =~ /PMPROK/ );
 	return 0;
 }
@@ -1175,7 +1181,7 @@ sub index_marker_db {
 	print $RNADBOUT "\n";
 	close $PDBOUT;    # be sure to flush I/O
 	close $RNADBOUT;
-
+	#print $path."\n";
 	# make a blast database
 	my $blastp_db = get_blastp_db( path => $path );
 	system("$Phylosift::Utilities::formatdb -i $blastp_db -o F -p T -t RepDB");
