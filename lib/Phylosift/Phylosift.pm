@@ -76,8 +76,6 @@ sub initialize {
 	$self->{"alignDir"}    = $self->{"fileDir"} . "/alignDir";
 	$self->{"treeDir"}     = $self->{"fileDir"} . "/treeDir";
 	$self->{"dna"}         = 0;
-	$self->{"updated"}     = 0;
-	$self->{"16s"}         = 0;
 	return $self;
 }
 
@@ -151,6 +149,8 @@ sub run {
 	$self->fileCheck() unless $self->{"mode"} eq 'index';
 	$self->directoryPrep($force) unless $self->{"mode"} eq 'index';
 	$self->{"readsFile"} = $self->prepIsolateFiles( $self->{"readsFile"} ) if $self->{"isolate"} == 1;
+	
+	debug "Using updated markers\n" if $self->{"updated"};
 
 	#create a file with a list of markers called markers.list
 	debug "CUSTOM = " . $custom . "\n";
