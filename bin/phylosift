@@ -9,23 +9,17 @@ use Carp;
 use Phylosift::Utilities qw(debug);
 use POSIX;
 my $pair             = 0;
-my $threadNum        = 1;
 my $clean            = 0;
-my $force            = 0;
 my $continue         = 0;
-my $isolate          = 0;
-my $custom           = "";
-my $reverseTranslate = 0;
-my $besthit          = 0;
-my $updated          = 0;
+my $custom           = 0;
+my $force            = 0;
 my $my_debug         = 0;
 my $coverage;
 my $configuration;
 my $help=0;
-my $s16=0;
 my $usage = qq~
 
-$0 Usage
+$0
 
 Usage
 ==========================================
@@ -37,12 +31,25 @@ Usage
 
    sequence_file_1 and _2 need to be in fastq format
 
+Creating a PhyloSift Marker (Does not allow for taxonomic summaries, only searching, aligning and placement steps)
+===========================================
+
+> phylosift build_marker <alignment_file> <PD pruning threshold>
+Example 1:  > phylosift build_marker test.aln 0.01
+Example 2:  > phylosift build_marker -f test.aln 0.01
+   
+Index the search databases
+============================================
+> phylosift index
+
 Mode : Only execute a specific step in the pipeline
   all - execute all the following steps in that order.
   search - only execute the database searches + write candidate files
   align - hmmsearch + hmmalign + trims + coverage filters
   placer - run pplacer on the results from the align step
   summary - run the taxonomy assignment steps
+  index - indexes the various databases needed for Rapsearch, Bowtie and Blast
+  build_maker - creates a reference package from a multiple alignment file
 
 Options Available at this time :
    -h --help             Prints the usage section of the README
@@ -57,19 +64,24 @@ Options Available at this time :
    --isolate             Use this mode if you are running data from an Isolate genome
 
 ~;
+
+my $ps = new Phylosift::Phylosift();
+$ps->{"threads"} = 1;
+
 GetOptions(
-	"threaded=i" => \$threadNum,
 	"clean"      => \$clean,
 	"paired"     => \$pair,        # used for paired fastQ input split in 2 different files
 	"custom=s"   => \$custom,      #need a file containing the marker names to use without extensions ** marker names shouldn't contain '_'
 	"f"          => \$force,       #overrides a previous run otherwise stop
 	"continue"   => \$continue,    #when a mode different than all is used, continue the rest of Phylosift after the section specified by the mode is finished
-	"isolate"    => \$isolate,     #use when processing one or more isolate genomes
-	"reverse"         => \$reverseTranslate,    #use to output the reverse translation of the AA alignments
-	"besthit"         => \$besthit,             #should we keep only the best hit when there are multiple?
-	"coverage=s"      => \$coverage,            #provides a contig/scaffold coverage file
-	"updated_markers" => \$updated,             #Indicates if Phylosift uses the updated versions of the Markers.
-	"config=s"        => \$configuration,       #custom config file
+	"threaded=i" => \$ps->{"threads"},
+	"isolate"    => \$ps->{"isolate"},     #use when processing one or more isolate genomes
+	"reverse"         => \$ps->{"reverseTranslate"},    #use to output the reverse translation of the AA alignments
+	"besthit"         => \$ps->{"besthit"},             #should we keep only the best hit when there are multiple?
+	"coverage=s"      => \$ps->{"coverage"},            #provides a contig/scaffold coverage file
+	"updated_markers" => \$ps->{"updated"},             #Indicates if Phylosift uses the updated versions of the Markers.
+	"extended"        => \$ps->{"extended"},  #Should the full extended set of markers be used?
+	"config=s"        => \$ps->{"configuration"},       #custom config file
 	"h"               => \$help,                #prints the usage part of the README file
 	"help"            => \$help,                #same as -h
 	"debug"           => \$my_debug,            #print debugging messages?
@@ -81,35 +93,31 @@ if ( $help != 0 ) {
 
 $Phylosift::Utilities::debuglevel = $my_debug;
 debug("@ARGV\n");
-if ( $pair == 0 ) {
-	croak $usage unless ( $ARGV[0] && $ARGV[1] );
-} elsif ( scalar(@ARGV) == 3 ) {
+if ( scalar(@ARGV) < 1 ) {
+	croak $usage ;
+}elsif ( scalar(@ARGV) == 1 ) {
+	croak $usage unless ( $ARGV[0] eq 'index' );
+}elsif ( scalar(@ARGV) == 2 ) {
+	croak $usage if ($ARGV[0] eq 'index');
+	croak $usage unless ( $ARGV[0] && $ARGV[1] && $pair == 0 );
+}elsif ( scalar(@ARGV) == 3 ) {
 	croak $usage unless ( $ARGV[0] && $ARGV[1] && $ARGV[2] );
 } else {
 	croak $usage. "\nOR\n" . $usage . "\n";
 }
+# make sure we're on a 64-bit OS
 unless ( (POSIX::uname)[4] =~ /64/ || $^O =~ /arwin/ ) {
 	print STDERR (POSIX::uname)[4] . "\n";
 	die "Sorry, PhyloSift requires a 64-bit OS to run.\n";
 }
-my $newObject = new Phylosift::Phylosift();
 debug "PAIR : $pair\n";
 if ( $pair == 0 ) {
 	debug "notpaired @ARGV\n";
-	$newObject = $newObject->initialize( $ARGV[0], $ARGV[1] );
+	$ps = $ps->initialize( mode=>$ARGV[0], file_1=>$ARGV[1] );
 } else {
 	debug "INSIDE paired\n";
-	$newObject = $newObject->initialize( $ARGV[0], $ARGV[1], $ARGV[2] );
+	$ps = $ps->initialize( mode=>$ARGV[0], file_1=>$ARGV[1], file_2=>$ARGV[2] );
 }
-$newObject->{"threads"}          = $threadNum;
-$newObject->{"isolate"}          = $isolate;
-$newObject->{"besthit"}          = $besthit;
-$newObject->{"reverseTranslate"} = $reverseTranslate;
-$newObject->{"updated"}          = $updated;
-$newObject->{"coverage"}         = $coverage;
-$newObject->{"configuration"}    = $configuration if defined($configuration);
-my $readsFile = $newObject->getReadsFile;
 debug "FORCE: " . $force . "\n";
 debug "Continue : " . $continue . "\n";
-$newObject->run( $force, $custom, $continue );
-
+$ps->run( force=>$force, custom=>$custom, cont=>$continue );
