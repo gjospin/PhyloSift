@@ -45,11 +45,11 @@ sub Export($$$) {
 	my $markRef    = shift;
 	my $outputFile = shift;
 	foreach my $marker ( @{$markRef} ) {
-		my $trimfinalFastaFile = Phylosift::Utilities::getTrimfinalFastaMarkerFile( $self, $marker );
-		my $trimfinalFile = Phylosift::Utilities::getTrimfinalMarkerFile( $self, $marker );
-		my $treeFile = Phylosift::Utilities::getTreeMarkerFile( $self, $marker );
-		my $treeStatsFile = Phylosift::Utilities::getTreeStatsMarkerFile( $self, $marker );
-		my $readAlignmentFile = $self->{"alignDir"} . "/" . Phylosift::Utilities::getAlignerOutputFastaAA($marker);
+		my $trimfinalFastaFile = Phylosift::Utilities::get_trimfinal_fasta_marker_file( self=>$self, marker=> $marker );
+		my $trimfinalFile = Phylosift::Utilities::get_trimfinal_marker_file( self=>$self, marker=>$marker );
+		my $treeFile = Phylosift::Utilities::get_tree_marker_file( self=>$self,marker=> $marker );
+		my $treeStatsFile = Phylosift::Utilities::get_tree_stats_marker_file( self=>$self, marker=>$marker );
+		my $readAlignmentFile = $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta_AA(marker=>$marker);
 
 		if ( !-e "$trimfinalFastaFile" ) {
 			`cp $trimfinalFile $trimfinalFastaFile`;
@@ -64,8 +64,8 @@ sub Export($$$) {
 	my %refseqs;
 	my @metareadseqs;
 	foreach my $marker ( @{$markRef} ) {
-		my $trimfinalFastaFile = Phylosift::Utilities::getTrimfinalFastaMarkerFile( $self, $marker );
-		my $readAlignmentFile  = $self->{"alignDir"} . "/" . Phylosift::Utilities::getAlignerOutputFastaAA($marker);
+		my $trimfinalFastaFile = Phylosift::Utilities::get_trimfinal_fasta_marker_file(self=> $self,marker=> $marker );
+		my $readAlignmentFile  = $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta_AA(marker=>$marker);
 
 		# read the alignment of reads
 		my $in = Bio::AlignIO->new( -file => $readAlignmentFile, '-format' => 'fasta' );

@@ -72,15 +72,15 @@ sub MarkerAlign {
 	# produce a concatenate alignment for the base marker package
 	unless($self->{"extended"}){
 		my @markeralignments = getPMPROKMarkerAlignmentFiles( $self, \@allmarkers );
-		my $outputFastaAA = $self->{"alignDir"} . "/" . Phylosift::Utilities::getAlignerOutputFastaAA("concat");
-		Phylosift::Utilities::concatenateAlignments( $self, $outputFastaAA, $self->{"alignDir"} . "/mrbayes.nex", 1, @markeralignments );
+		my $outputFastaAA = $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta_AA(marker=>"concat");
+		Phylosift::Utilities::concatenate_alignments( self=>$self, output_fasta=>$outputFastaAA, output_bayes=>$self->{"alignDir"} . "/mrbayes.nex", gap_multiplier=>1,alignments=> @markeralignments );
 		# now concatenate any DNA alignments
 		for ( my $i = 0 ; $i < @markeralignments ; $i++ ) {
 			$markeralignments[$i] =~ s/trim.fasta/trim.fna.fasta/g;
 			splice @markeralignments, $i--, 1 unless( -f $markeralignments[$i]);
 		}
-		my $outputFastaDNA = $self->{"alignDir"} . "/" . Phylosift::Utilities::getAlignerOutputFastaDNA("concat");
-		Phylosift::Utilities::concatenateAlignments( $self, $outputFastaDNA, $self->{"alignDir"} . "/mrbayes-dna.nex", 3, @markeralignments );
+		my $outputFastaDNA = $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta_DNA(marker=>"concat");
+		Phylosift::Utilities::concatenate_alignments(self=> $self, output_fasta=>$outputFastaDNA, output_bayes=>$self->{"alignDir"} . "/mrbayes-dna.nex", gap_multiplier=>3, alignments=>@markeralignments );
 		debug "AFTER concatenateALI\n";
 	}
 	return $self;
@@ -123,13 +123,13 @@ sub markerPrepAndRun {
 	debug "ALIGNDIR : " . $self->{"alignDir"} . "\n";
 	foreach my $marker ( @{$markRef} ) {
 		next unless Phylosift::Utilities::is_protein_marker( marker => $marker );
-		my $hmm_file = Phylosift::Utilities::get_marker_hmm_file( $self, $marker, 1 );
-		my $stockholm_file = Phylosift::Utilities::get_marker_stockholm_file( $self, $marker );
+		my $hmm_file = Phylosift::Utilities::get_marker_hmm_file(self=> $self, marker=>$marker, loc=>1 );
+		my $stockholm_file = Phylosift::Utilities::get_marker_stockholm_file( self=>$self,marker=> $marker );
 		unless ( -e $hmm_file && -e $stockholm_file ) {
-			my $trimfinalFile = Phylosift::Utilities::getTrimfinalMarkerFile( $self, $marker );
+			my $trimfinalFile = Phylosift::Utilities::get_trimfinal_marker_file( self=>$self, marker=>$marker );
 
 			#converting the marker's reference alignments from Fasta to Stockholm (required by Hmmer3)
-			Phylosift::Utilities::fasta2stockholm( "$trimfinalFile", $stockholm_file );
+			Phylosift::Utilities::fasta2stockholm(fasta=> "$trimfinalFile",output=> $stockholm_file );
 
 			#build the Hmm for the marker using Hmmer3
 			if ( !-e $hmm_file ) {
@@ -297,13 +297,13 @@ sub alignAndMask {
 	for ( my $index = 0 ; $index < @{$markRef} ; $index++ ) {
 		my $marker         = ${$markRef}[$index];
 		my $refcount       = 0;
-		my $stockholm_file = Phylosift::Utilities::get_marker_stockholm_file( $self, $marker );
+		my $stockholm_file = Phylosift::Utilities::get_marker_stockholm_file( self=>$self,marker=> $marker );
 		my $hmmalign       = "";
 		my $cmalign        = "";
 		if ( Phylosift::Utilities::is_protein_marker( marker => $marker ) ) {
 			my $new_candidate = Phylosift::Utilities::get_candidate_file(self=>$self,marker=>$marker,type=>"",new=>1);
 			next unless -e $new_candidate && -s $new_candidate > 0;
-			my $hmm_file = Phylosift::Utilities::get_marker_hmm_file( $self, $marker, 1 );
+			my $hmm_file = Phylosift::Utilities::get_marker_hmm_file(self=> $self, marker=>$marker, loc=>1 );
 			open( HMM, $hmm_file );
 			while ( my $line = <HMM> ) {
 				if ( $line =~ /NSEQ\s+(\d+)/ ) {
@@ -321,15 +321,15 @@ sub alignAndMask {
 		} else {
 			my $candidate = Phylosift::Utilities::get_candidate_file(self=>$self,marker=>$marker,type=>".rna");
 			next unless ( -e $candidate );
-			$refcount = Phylosift::Utilities::get_count_from_reps( $self, $marker );
+			$refcount = Phylosift::Utilities::get_count_from_reps(self=> $self,marker=> $marker );
 
 			#if the marker is rna, use infernal instead of hmmalign
 			$cmalign =
 			    "$Phylosift::Utilities::cmalign -q -l --dna "
-			  . Phylosift::Utilities::get_marker_cm_file( $self, $marker ) . " $candidate | ";
+			  . Phylosift::Utilities::get_marker_cm_file( self=>$self, marker=>$marker ) . " $candidate | ";
 		}
-		my $outputFastaAA  = $self->{"alignDir"} . "/" . Phylosift::Utilities::getAlignerOutputFastaAA($marker);
-		my $outputFastaDNA = $self->{"alignDir"} . "/" . Phylosift::Utilities::getAlignerOutputFastaDNA($marker);
+		my $outputFastaAA  = $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta_AA(marker=>$marker);
+		my $outputFastaDNA = $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta_DNA(marker=>$marker);
 		my $mbname = Phylosift::Utilities::get_marker_basename(marker=>$marker);
 		open( my $aliout, ">" . $outputFastaAA ) or die "Couldn't open $outputFastaAA for writing\n";
 		open( my $updatedout, ">" . $self->{"alignDir"} . "/$mbname.updated.hmm.fasta" );
@@ -426,7 +426,7 @@ sub getPMPROKMarkerAlignmentFiles {
 	my @markeralignments = ();
 	foreach my $marker ( @{$markRef} ) {
 		next unless $marker =~ /PMPROK/;
-		push( @markeralignments, $self->{"alignDir"} . "/" . Phylosift::Utilities::getAlignerOutputFastaAA($marker) );
+		push( @markeralignments, $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta_AA(marker=>$marker) );
 	}
 	return @markeralignments;
 }

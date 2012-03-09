@@ -326,7 +326,7 @@ sub cleanup {
 sub read_marker_lengths {
 	my $self = shift;
 	foreach my $marker (@markers) {
-		$markerLength{$marker} = Phylosift::Utilities::get_marker_length( $self, $marker );
+		$markerLength{$marker} = Phylosift::Utilities::get_marker_length( self=>$self, marker=>$marker );
 	}
 }
 
