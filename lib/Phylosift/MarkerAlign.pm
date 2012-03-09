@@ -74,14 +74,14 @@ sub MarkerAlign {
 	unless($self->{"extended"}){
 		my @markeralignments = getPMPROKMarkerAlignmentFiles( self=>$self, marker_reference=>\@allmarkers );
 		my $outputFastaAA = $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta_AA(marker=>"concat");
-		Phylosift::Utilities::concatenate_alignments( self=>$self, output_fasta=>$outputFastaAA, output_bayes=>$self->{"alignDir"} . "/mrbayes.nex", gap_multiplier=>1,alignments=> @markeralignments );
+		Phylosift::Utilities::concatenate_alignments( self=>$self, output_fasta=>$outputFastaAA, output_bayes=>$self->{"alignDir"} . "/mrbayes.nex", gap_multiplier=>1,alignments=> \@markeralignments );
 		# now concatenate any DNA alignments
 		for ( my $i = 0 ; $i < @markeralignments ; $i++ ) {
 			$markeralignments[$i] =~ s/trim.fasta/trim.fna.fasta/g;
 			splice @markeralignments, $i--, 1 unless( -f $markeralignments[$i]);
 		}
 		my $outputFastaDNA = $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta_DNA(marker=>"concat");
-		Phylosift::Utilities::concatenate_alignments(self=> $self, output_fasta=>$outputFastaDNA, output_bayes=>$self->{"alignDir"} . "/mrbayes-dna.nex", gap_multiplier=>3, alignments=>@markeralignments );
+		Phylosift::Utilities::concatenate_alignments(self=> $self, output_fasta=>$outputFastaDNA, output_bayes=>$self->{"alignDir"} . "/mrbayes-dna.nex", gap_multiplier=>3, alignments=>\@markeralignments );
 		debug "AFTER concatenateALI\n";
 	}
 	return $self;
