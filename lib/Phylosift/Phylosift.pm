@@ -340,13 +340,13 @@ sub directory_prep {
 	return $self;
 }
 
-=head2 taxonomyAssignments
+=head2 taxonomy_assignments
 
     performs the appropriate checks before running the taxonomy classification parts of the pipeline
 
 =cut
 
-sub taxonomyAssignments {
+sub taxonomy_assignments {
     my %args = @_;
 	my $self        = $args{self};
 	my $continue    = $args{cont};

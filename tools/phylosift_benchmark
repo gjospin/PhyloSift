@@ -18,7 +18,7 @@ die "Usage: phylosift_benchmarks <path to phylosift> <path to report output>\n" 
 
 my $ps = new Phylosift::Phylosift();
 $ps->readPhylosiftConfig();
-Phylosift::Utilities::dataChecks($ps);
+Phylosift::Utilities::data_checks(self=>$ps);
 
 my @benchmark_data = (
 ["A simulated 454 dataset with 10 organisms","http://edhar.genomecenter.ucdavis.edu/~koadman/phylosift/accuracy/sim_454.fna"],
@@ -32,14 +32,14 @@ for(my $bI=0; $bI<@benchmark_data; $bI++){
 	my $seqname = $1 if $url =~ /.+\/(.+?)$/;
 	$ff->fetch(to=>".");
 	# run through the command-line just to test the interface as well
-	print STDOUT "Running $phylosift/phylosift all -f $seqname\n";
-	Phylosift::Utilities::start_timer($seqname);
-	system("$phylosift/phylosift all --config benchmarkrc -f $seqname");
-	my $seconds = Phylosift::Utilities::end_timer($seqname);
+	print STDOUT "Running $phylosift/bin/phylosift all -f $seqname\n";
+	Phylosift::Utilities::start_timer(name=>$seqname);
+	system("export PATH=\"$phylosift/bin:\$PATH\" ; $phylosift/bin/phylosift all --debug --config benchmarkrc -f $seqname");
+	my $seconds = Phylosift::Utilities::end_timer(name=>$seqname);
 
 	# now benchmark
 	$ps->{"readsFile"} = $seqname;
-	$ps->{"fileDir"} = cwd()."/Amph_temp/$seqname/";;
+	$ps->{"fileDir"} = cwd()."/PS_temp/$seqname/";;
 	Phylosift::Benchmark::runBenchmark($ps, $report_path);
 	
 	$times{$seqname} = $seconds;
