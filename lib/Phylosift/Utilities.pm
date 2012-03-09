@@ -529,7 +529,7 @@ sub make_dummy_file {
 	my $self          = $args{self};
 	my $marker        = $args{marker};
 	my $gapmultiplier = $args{gap_multiplier};
-	my $len           = get_marker_length( $self, $marker );
+	my $len           = get_marker_length( self=> $self, marker => $marker );
 	my $glen;
 	$glen = "P" x $len x $gapmultiplier if $gapmultiplier == 1;
 	$glen = "A" x $len x $gapmultiplier if $gapmultiplier == 3;
@@ -549,7 +549,6 @@ sub get_marker_path {
 	my %args   = @_;
 	my $self   = $args{self};
 	my $marker = $args{marker};
-	
 	# check for old-style marker first
 	return "$marker_dir" if ( -e "$marker_dir/$marker.faa" );
 
@@ -952,7 +951,8 @@ sub concatenate_alignments {
 	my $outputFasta   = $args{output_fasta};
 	my $outputMrBayes = $args{output_bayes};
 	my $gapmultiplier = $args{gap_multiplier};    # 1 for protein, 3 for reverse-translated DNA
-	my @alignments    = $args{alignments};
+	my $aln_ref       = $args{alignments};
+	my @alignments    = @$aln_ref;
 	my $catobj        = 0;
 	open( MRBAYES, ">$outputMrBayes" );
 	my $partlist = "partition genes = " . scalar(@alignments) . ": ";
