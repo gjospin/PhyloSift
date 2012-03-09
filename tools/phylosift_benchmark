@@ -39,7 +39,7 @@ for(my $bI=0; $bI<@benchmark_data; $bI++){
 
 	# now benchmark
 	$ps->{"readsFile"} = $seqname;
-	$ps->{"fileDir"} = cwd()."/Amph_temp/$seqname/";;
+	$ps->{"fileDir"} = cwd()."/PS_temp/$seqname/";;
 	Phylosift::Benchmark::runBenchmark($ps, $report_path);
 	
 	$times{$seqname} = $seconds;
