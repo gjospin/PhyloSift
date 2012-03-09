@@ -144,7 +144,7 @@ sub run {
 	my $continue = shift;
 	debug "force : $force\n";
 	Phylosift::Utilities::print_citations();
-	start_timer("START");
+	start_timer(name=>"START");
 	$self->readPhylosiftConfig();
 	$self->runProgCheck();
 	Phylosift::Utilities::data_checks( self => $self );
@@ -349,9 +349,9 @@ sub taxonomyAssignments {
 	my $self        = shift;
 	my $continue    = shift;
 	my $markListRef = shift;
-	Phylosift::Utilities::start_timer("taxonomy assignments");
+	Phylosift::Utilities::start_timer(name=>"taxonomy assignments");
 	Phylosift::Summarize::summarize( $self, $markListRef );
-	Phylosift::Utilities::end_timer("taxonomy assignments");
+	Phylosift::Utilities::end_timer(name=>"taxonomy assignments");
 	return $self;
 }
 
@@ -388,9 +388,9 @@ sub runPplacer {
 	my $continue    = shift;
 	my $markListRef = shift;
 	debug "PPLACER MARKS @{$markListRef}\n";
-	Phylosift::Utilities::start_timer("runPPlacer");
+	Phylosift::Utilities::start_timer(name=>"runPPlacer");
 	Phylosift::pplacer::pplacer( $self, $markListRef );
-	Phylosift::Utilities::end_timer("runPPlacer");
+	Phylosift::Utilities::end_timer(name=>"runPPlacer");
 	if ( $continue != 0 ) {
 		$self->{"mode"} = 'summary';
 	}
@@ -408,7 +408,7 @@ sub runMarkerAlign {
 	my $self     = shift;
 	my $continue = shift;
 	my $markRef  = shift;
-	Phylosift::Utilities::start_timer("Alignments");
+	Phylosift::Utilities::start_timer(name=>"Alignments");
 
 	#clearing the alignment directory if needed
 	my $alignDir = $self->{"alignDir"};
@@ -419,7 +419,7 @@ sub runMarkerAlign {
 	Phylosift::MarkerAlign::MarkerAlign( $self, $markRef );
 
 	#    Phylosift::BeastInterface::Export($self, $markRef, $self->{"fileDir"}."/beast.xml");
-	Phylosift::Utilities::end_timer("Alignments");
+	Phylosift::Utilities::end_timer(name=>"Alignments");
 	if ( $continue != 0 ) {
 		$self->{"mode"} = 'placer';
 	}
@@ -442,7 +442,7 @@ sub runSearch {
 	my $custom        = shift;
 	my $type          = shift;
 	my $markerListRef = shift;
-	Phylosift::Utilities::start_timer("runBlast");
+	Phylosift::Utilities::start_timer(name=>"runBlast");
 
 	#clearing the blast directory
 	my $blastDir = $self->{"blastDir"};
@@ -450,7 +450,7 @@ sub runSearch {
 
 	#run Blast
 	Phylosift::FastSearch::RunSearch( $self, $custom, $type, $markerListRef );
-	Phylosift::Utilities::end_timer("runBlast");
+	Phylosift::Utilities::end_timer(name=>"runBlast");
 	if ( $continue != 0 ) {
 		$self->{"mode"} = 'align';
 	}
