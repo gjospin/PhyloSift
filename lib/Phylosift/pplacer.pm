@@ -39,9 +39,10 @@ if you don't export anything, such as for a purely object-oriented module.
 =cut
 
 sub pplacer {
-	my $self    = shift;
-	my $markRef = shift;
-	directoryPrepAndClean($self);
+    my %args = @_;
+	my $self    = $args{self};
+	my $markRef = $args{marker_reference};
+	directoryPrepAndClean(self=>$self);
 
 	# if we have a coverage map then weight the placements
 	my $covref;
@@ -175,8 +176,8 @@ sub weight_placements {
 =cut
 
 sub directoryPrepAndClean {
-	my $self    = shift;
-	my @markers = @_;
+    my %args = @_;
+	my $self    = $args{self};
 	`mkdir $self->{"tempDir"}` unless ( -e $self->{"tempDir"} );
 
 	#create a directory for the Reads file being processed.

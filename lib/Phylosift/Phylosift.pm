@@ -365,7 +365,7 @@ sub benchmark {
     my %args = @_;
 	my $self = $args{self};
 	debug "RUNNING Benchmark\n";
-	Phylosift::Benchmark::runBenchmark( $self, "./" );
+	Phylosift::Benchmark::runBenchmark( self=>$self, parent_dir=>"./" );
 }
 
 =head2 compare
@@ -376,7 +376,7 @@ sub compare {
     my %args = @_;
 	my $self = $args{self};
 	debug "RUNNING Compare\n";
-	Phylosift::Comparison::compare( $self, "./" );
+	Phylosift::Comparison::compare( self=>$self, parent_dir=>"./" );
 }
 
 =head2 run_pplacer
@@ -394,7 +394,7 @@ sub run_pplacer {
 	my $markListRef = $args{marker};
 	debug "PPLACER MARKS @{$markListRef}\n";
 	Phylosift::Utilities::start_timer(name=>"runPPlacer");
-	Phylosift::pplacer::pplacer( $self, $markListRef );
+	Phylosift::pplacer::pplacer( self=>$self, marker_reference=>$markListRef );
 	Phylosift::Utilities::end_timer(name=>"runPPlacer");
 	if ( $continue != 0 ) {
 		$self->{"mode"} = 'summary';
@@ -422,9 +422,9 @@ sub run_marker_align {
 
 	#Align Markers
 	my $threadNum = 1;
-	Phylosift::MarkerAlign::MarkerAlign( $self, $markRef );
+	Phylosift::MarkerAlign::MarkerAlign( self=>$self, marker_reference=>$markRef );
 
-	#    Phylosift::BeastInterface::Export($self, $markRef, $self->{"fileDir"}."/beast.xml");
+	#    Phylosift::BeastInterface::Export(self=>$self, marker_reference=>$markRef, output_file=>$self->{"fileDir"}."/beast.xml");
 	Phylosift::Utilities::end_timer(name=>"Alignments");
 	if ( $continue != 0 ) {
 		$self->{"mode"} = 'placer';
@@ -452,7 +452,7 @@ sub run_search {
 	`rm $self->{"blastDir"}/*` if (<$blastDir/*>);
 
 	#run Searches
-	Phylosift::FastSearch::RunSearch( $self, $custom, $markerListRef );
+	Phylosift::FastSearch::RunSearch( self=>$self, custom=>$custom, marker_reference=>$markerListRef );
 	Phylosift::Utilities::end_timer(name=>"runBlast");
 	if ( $continue != 0 ) {
 		$self->{"mode"} = 'align';
