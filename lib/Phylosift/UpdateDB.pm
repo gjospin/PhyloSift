@@ -592,7 +592,8 @@ sub get_marker_name_base {
 	my $name = $args{marker};
 	$name .= ".codon"   if $args{dna};
 	$name .= ".updated" if $args{updated};
-	$name .= ".pruned"  if $args{pruned};
+	# rna markers don't get pruned
+	$name .= ".pruned"  if $args{pruned} && !Phylosift::Utilities::is_protein_marker(marker=>$name);
 	return $name;
 }
 
@@ -1149,7 +1150,7 @@ sub package_markers($) {
 		`mv $pruned_reps $marker.updated/$marker.reps`;
 		for ( my $dna = 0 ; $dna < 2 ; $dna++ ) {    # zero for aa, one for dna
 			# move in taxonmap
-			my $taxonmap = get_taxonmap_filename(marker=>$marker, dna=>$dna, updated=>1, pruned=>1);
+			my $taxonmap = get_taxonmap_filename(marker=>$marker, dna=>$dna, updated=>1, pruned=>0);
 			`mv $taxonmap $marker.updated/$marker.taxonmap`;		
 		}
 	}
