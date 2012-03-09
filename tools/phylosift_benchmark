@@ -18,7 +18,7 @@ die "Usage: phylosift_benchmarks <path to phylosift> <path to report output>\n" 
 
 my $ps = new Phylosift::Phylosift();
 $ps->readPhylosiftConfig();
-Phylosift::Utilities::dataChecks($ps);
+Phylosift::Utilities::data_checks(self=>$ps);
 
 my @benchmark_data = (
 ["A simulated 454 dataset with 10 organisms","http://edhar.genomecenter.ucdavis.edu/~koadman/phylosift/accuracy/sim_454.fna"],
