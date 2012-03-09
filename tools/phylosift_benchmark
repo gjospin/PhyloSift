@@ -33,9 +33,9 @@ for(my $bI=0; $bI<@benchmark_data; $bI++){
 	$ff->fetch(to=>".");
 	# run through the command-line just to test the interface as well
 	print STDOUT "Running $phylosift/phylosift all -f $seqname\n";
-	Phylosift::Utilities::start_timer($seqname);
+	Phylosift::Utilities::start_timer(name=>$seqname);
 	system("export PATH=\"$phylosift/bin:\$PATH\" ; $phylosift/bin/phylosift all --config benchmarkrc -f $seqname");
-	my $seconds = Phylosift::Utilities::end_timer($seqname);
+	my $seconds = Phylosift::Utilities::end_timer(name=>$seqname);
 
 	# now benchmark
 	$ps->{"readsFile"} = $seqname;
