@@ -31,6 +31,9 @@ for(my $bI=0; $bI<@benchmark_data; $bI++){
 	my $ff = File::Fetch->new(uri=>$url);
 	my $seqname = $1 if $url =~ /.+\/(.+?)$/;
 	$ff->fetch(to=>".");
+	# pull down the marker DB and index it -- don't count this in runtime
+	system("export PATH=\"$phylosift/bin:\$PATH\" ; $phylosift/bin/phylosift index --config benchmarkrc");
+
 	# run through the command-line just to test the interface as well
 	print STDOUT "Running $phylosift/bin/phylosift all -f $seqname\n";
 	Phylosift::Utilities::start_timer(name=>$seqname);
