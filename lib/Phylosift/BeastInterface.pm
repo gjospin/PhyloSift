@@ -41,15 +41,16 @@ if you don't export anything, such as for a purely object-oriented module.
     Writes BEAST model XML to the specified file
 =cut
 sub Export($$$) {
-	my $self       = shift;
-	my $markRef    = shift;
-	my $outputFile = shift;
+    my %args = @_;
+	my $self       = $args{self};
+	my $markRef    = $args{marker_reference};
+	my $outputFile = $args{output_file};
 	foreach my $marker ( @{$markRef} ) {
-		my $trimfinalFastaFile = Phylosift::Utilities::getTrimfinalFastaMarkerFile( $self, $marker );
-		my $trimfinalFile = Phylosift::Utilities::getTrimfinalMarkerFile( $self, $marker );
-		my $treeFile = Phylosift::Utilities::getTreeMarkerFile( $self, $marker );
-		my $treeStatsFile = Phylosift::Utilities::getTreeStatsMarkerFile( $self, $marker );
-		my $readAlignmentFile = $self->{"alignDir"} . "/" . Phylosift::Utilities::getAlignerOutputFastaAA($marker);
+		my $trimfinalFastaFile = Phylosift::Utilities::get_trimfinal_fasta_marker_file( self=>$self, marker=> $marker );
+		my $trimfinalFile = Phylosift::Utilities::get_trimfinal_marker_file( self=>$self, marker=>$marker );
+		my $treeFile = Phylosift::Utilities::get_tree_marker_file( self=>$self,marker=> $marker );
+		my $treeStatsFile = Phylosift::Utilities::get_tree_stats_marker_file( self=>$self, marker=>$marker );
+		my $readAlignmentFile = $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta_AA(marker=>$marker);
 
 		if ( !-e "$trimfinalFastaFile" ) {
 			`cp $trimfinalFile $trimfinalFastaFile`;
@@ -64,8 +65,8 @@ sub Export($$$) {
 	my %refseqs;
 	my @metareadseqs;
 	foreach my $marker ( @{$markRef} ) {
-		my $trimfinalFastaFile = Phylosift::Utilities::getTrimfinalFastaMarkerFile( $self, $marker );
-		my $readAlignmentFile  = $self->{"alignDir"} . "/" . Phylosift::Utilities::getAlignerOutputFastaAA($marker);
+		my $trimfinalFastaFile = Phylosift::Utilities::get_trimfinal_fasta_marker_file(self=> $self,marker=> $marker );
+		my $readAlignmentFile  = $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta_AA(marker=>$marker);
 
 		# read the alignment of reads
 		my $in = Bio::AlignIO->new( -file => $readAlignmentFile, '-format' => 'fasta' );
@@ -98,17 +99,24 @@ sub Export($$$) {
 		}
 	}
 	return if ( @metareadseqs == 0 );    # nothing to see here...move along
-	writeXML( $outputFile, $markRef, \%refseqs, \@metareadseqs, \@alignio, \@metaalignio, 1 );
+	writeXML( xml_file=>$outputFile, marker_reference=>$markRef, ref_seq_reference=>\%refseqs, meta_Reads_seqs_reference=>\@metareadseqs, alignoi_reference=>\@alignio,meta_alignio_reference=> \@metaalignio,cmult=> 1 );
 }
 
+=head2 writeXML
+
+
+
+=cut
+
 sub writeXML {
-	my $xmlfile         = shift;
-	my $markRef         = shift;
-	my $refseqsref      = shift;
-	my $metareadseqsref = shift;
-	my $alignioref      = shift;
-	my $metaalignioref  = shift;
-	my $cmult           = shift;               # 1 for amino acid, 3 for codons
+    my %args = @_;
+    my $xmlfile         = $args{xml_file};
+    my $markRef         = $args{marker_reference};
+	my $refseqsref      = $args{ref_seq_reference};
+	my $metareadseqsref = $args{meta_reads_seqs_reference};
+	my $alignioref      = $args{alignio_reference};
+	my $metaalignioref  = $args{meta_alignio_reference};
+	my $cmult           = $args{cmult};               # 1 for amino acid, 3 for codons
 	my %refseqs         = %$refseqsref;
 	my @metareadseqs    = @$metareadseqsref;
 	my @alignio         = @$alignioref;

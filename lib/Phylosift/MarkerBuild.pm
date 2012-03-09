@@ -49,12 +49,12 @@ sub build_marker {
 		`mkdir $target_dir`;
 	}
 	my $fasta_file = "$target_dir/$core.fasta";
-	my $seq_count  = Phylosift::Utilities::unalign_sequences( $aln_file, $fasta_file );
+	my $seq_count  = Phylosift::Utilities::unalign_sequences( aln=>$aln_file,output_path=> $fasta_file );
 	my $masked_aln = "$target_dir/$core.masked";
 	mask( file => $aln_file, output => $masked_aln );
 	my $hmm_file = "$target_dir/$core.hmm";
 	generate_hmm( $masked_aln, $hmm_file );
-	Phylosift::Utilities::fasta2stockholm( $masked_aln, "$target_dir/$core.stk" );
+	Phylosift::Utilities::fasta2stockholm( fasta=>$masked_aln, output=>"$target_dir/$core.stk" );
 	my $stk_aln = "$target_dir/$core.stk";
 
 	#may need to create an unaligned file for the sequences before aligning them

@@ -114,14 +114,10 @@ debug "PAIR : $pair\n";
 if ( $pair == 0 ) {
 	debug "notpaired @ARGV\n";
 	$ps = $ps->initialize( mode=>$ARGV[0], file_1=>$ARGV[1] );
-} elsif($ARGV[0] ne 'index') {
+} else {
 	debug "INSIDE paired\n";
 	$ps = $ps->initialize( mode=>$ARGV[0], file_1=>$ARGV[1], file_2=>$ARGV[2] );
-}else{
-	debug "Indexing\n";
-	$ps = $ps->initialize( mode=>$ARGV[0] );
 }
 debug "FORCE: " . $force . "\n";
 debug "Continue : " . $continue . "\n";
-$ps->run(force=> $force, custom=>$custom, cont=>$continue );
-
+$ps->run( force=>$force, custom=>$custom, cont=>$continue );

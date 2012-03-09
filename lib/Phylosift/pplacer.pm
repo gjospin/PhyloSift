@@ -39,9 +39,10 @@ if you don't export anything, such as for a purely object-oriented module.
 =cut
 
 sub pplacer {
-	my $self    = shift;
-	my $markRef = shift;
-	directoryPrepAndClean($self);
+    my %args = @_;
+	my $self    = $args{self};
+	my $markRef = $args{marker_reference};
+	directoryPrepAndClean(self=>$self);
 
 	# if we have a coverage map then weight the placements
 	my $covref;
@@ -49,7 +50,7 @@ sub pplacer {
 		$covref = Phylosift::Summarize::read_coverage( file => $self->{"coverage"} );
 	}
 	if ( $self->{"updated"} ) {
-		my $markerPackage = Phylosift::Utilities::getMarkerPackage( $self, "concat" );
+		my $markerPackage = Phylosift::Utilities::get_marker_package( self=>$self, marker=>"concat" );
 		my $pp =
 		    "$Phylosift::Utilities::pplacer --verbosity 0 -p -c $markerPackage -j "
 		  . $self->{"threads"}
@@ -65,22 +66,22 @@ sub pplacer {
 		return;
 	}
 	foreach my $marker ( @{$markRef} ) {
-		my $readAlignmentFile    = $self->{"alignDir"} . "/" . Phylosift::Utilities::getAlignerOutputFastaAA($marker);
-		my $readAlignmentDNAFile = $self->{"alignDir"} . "/" . Phylosift::Utilities::getAlignerOutputFastaDNA($marker);
+		my $readAlignmentFile    = $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta_AA(marker=>$marker);
+		my $readAlignmentDNAFile = $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta_DNA(marker=>$marker);
 		next unless -e $readAlignmentFile || -e $readAlignmentDNAFile;
-		my $markerPackage = Phylosift::Utilities::getMarkerPackage( $self, $marker );
+		my $markerPackage = Phylosift::Utilities::get_marker_package( self=>$self, marker=> $marker );
 		debug "Running Placer on $marker ....\t";
-		my $placeFile    = Phylosift::Utilities::getReadPlacementFile($marker);
-		my $placeFileDNA = Phylosift::Utilities::getReadPlacementFileDNA($marker);
+		my $placeFile    = Phylosift::Utilities::get_read_placement_file(marker=>$marker);
+		my $placeFileDNA = Phylosift::Utilities::get_read_placement_file_DNA(marker=>$marker);
 		if ( $self->{"updated"} == 0 ) {
 			my $pp = "";
-			if ( Phylosift::Utilities::marker_oldstyle($marker) ) {
+			if ( Phylosift::Utilities::marker_oldstyle(marker=>$marker) ) {
 
 				# run pplacer the old way, using phyml trees which aren't supported by reference packages
-				my $trimfinalFastaFile = Phylosift::Utilities::getTrimfinalFastaMarkerFile( $self, $marker );
-				my $trimfinalFile = Phylosift::Utilities::getTrimfinalMarkerFile( $self, $marker );
-				my $treeFile = Phylosift::Utilities::getTreeMarkerFile( $self, $marker );
-				my $treeStatsFile = Phylosift::Utilities::getTreeStatsMarkerFile( $self, $marker );
+				my $trimfinalFastaFile = Phylosift::Utilities::get_trimfinal_fasta_marker_file( self=>$self,marker=> $marker );
+				my $trimfinalFile = Phylosift::Utilities::get_trimfinal_marker_file(self=> $self, marker=>$marker );
+				my $treeFile = Phylosift::Utilities::get_tree_marker_file( self=>$self, marker=>$marker );
+				my $treeStatsFile = Phylosift::Utilities::get_tree_stats_marker_file(self=> $self,marker=> $marker );
 
 				# Pplacer requires the alignment files to have a .fasta extension
 				if ( !-e "$trimfinalFastaFile" ) {
@@ -175,8 +176,8 @@ sub weight_placements {
 =cut
 
 sub directoryPrepAndClean {
-	my $self    = shift;
-	my @markers = @_;
+    my %args = @_;
+	my $self    = $args{self};
 	`mkdir $self->{"tempDir"}` unless ( -e $self->{"tempDir"} );
 
 	#create a directory for the Reads file being processed.

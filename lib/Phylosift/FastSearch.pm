@@ -65,9 +65,10 @@ my $blastn_params = "-p blastn -e 0.1 -b 50000 -v 50000 -m 8";
 my %markerLength;
 
 sub RunSearch {
-	my $self       = shift;
-	my $custom     = shift;
-	my $markersRef = shift;
+    my %args = @_;
+	my $self       = $args{self};
+	my $custom     = $args{custom};
+	my $markersRef = $args{marker_reference};
 	@markers    = @{$markersRef};
 	%markerHits = ();
 	my $position = rindex( $self->{"readsFile"}, "/" );
@@ -87,7 +88,7 @@ sub RunSearch {
 	# ensure databases and sequences are prepared for search
 	debug "before rapPrepandclean\n";
 	prep_and_clean( self => $self );
-	read_marker_lengths($self);
+	read_marker_lengths(self=>$self);
 
 	# search reads/contigs against marker database
 	my $searchtype = "blast";
@@ -142,18 +143,18 @@ sub launch_searches {
 			my $hitstream;
 			my $candidate_type = ".$count";
 			if ( $count == 1 ) {
-				$hitstream = lastal_table( $self, $blastx_pipe );
+				$hitstream = lastal_table(self=> $self, query_file=>$blastx_pipe );
 				$candidate_type = ".blastx";
 			} elsif ( $count == 2 ) {
 				$hitstream = bowtie2( self => $self, readtype => $args{readtype}, reads1 => $bowtie2_r1_pipe, reads2 => $bowtie2_r2_pipe );
 				$candidate_type = ".rna";
 			} elsif ( $count == 3 ) {
-				$hitstream = executeBlast( $self, $blastp_pipe );
+				$hitstream = executeBlast( self=>$self, query_file=>$blastp_pipe );
 				$candidate_type = ".blastp";
 			} elsif ( $count == 4 ) {
 
 				# rapsearch can't read from a pipe
-				$hitstream = executeRap( $self, $rap_pipe );
+				$hitstream = executeRap( self=>$self, query_file=>$rap_pipe );
 				$candidate_type = ".rap";
 			}
 			my $hitsref;
@@ -323,9 +324,10 @@ sub cleanup {
 }
 
 sub read_marker_lengths {
-	my $self = shift;
+    my %args = @_;
+	my $self = $args{self};
 	foreach my $marker (@markers) {
-		$markerLength{$marker} = Phylosift::Utilities::get_marker_length( $self, $marker );
+		$markerLength{$marker} = Phylosift::Utilities::get_marker_length( self=>$self, marker=>$marker );
 	}
 }
 
@@ -337,8 +339,9 @@ returns a stream file handle
 =cut
 
 sub lastal_table {
-	my $self       = shift;
-	my $query_file = shift;
+    my %args = @_;
+	my $self       = $args{self};
+	my $query_file = $args{query_file};
 	my $lastal_cmd = "$Phylosift::Utilities::lastal -F15 -e300 -f0 $Phylosift::Utilities::marker_dir/replast $query_file |";
 	debug "Running $lastal_cmd";
 	open( my $hitstream, $lastal_cmd );
@@ -353,8 +356,9 @@ returns a stream file handle
 =cut
 
 sub blastXoof_table {
-	my $self       = shift;
-	my $query_file = shift;
+    my %args = @_;
+	my $self       = $args{self};
+	my $query_file = $args{query_file};
 	debug "INSIDE tabular OOF blastx\n";
 	my $blastxoof_cmd =
 	    "$Phylosift::Utilities::blastall -p blastx -i $query_file -e 0.1 -w 20 -b 50000 -v 50000 -d "
@@ -451,8 +455,12 @@ Launches rapsearch2, returns a stream
 =cut
 
 sub executeRap {
-	my $self       = shift;
-	my $query_file = shift;
+    my %args=@_;
+	my $self       = $args{self};
+	my $query_file = $args{query_file};
+	my $dbDir      = "$Phylosift::Utilities::marker_dir/representatives";
+	$dbDir = $self->{"blastDir"} if ( $custom ne "" );
+	my $out_file      = $self->{"blastDir"} . "/$readsCore.rapSearch";
 	my $rapsearch_cmd = "cd "
 	  . $self->{"blastDir"}
 	  . "; $Phylosift::Utilities::rapSearch -d "
@@ -472,8 +480,9 @@ Launches blastp, returns a stream
 =cut
 
 sub executeBlast {
-	my $self       = shift;
-	my $query_file = shift;
+    my %args=@_;
+	my $self       = $args{self};
+	my $query_file = $args{query_file};
 	my $db         = Phylosift::Utilities::get_blastp_db();
 	debug "INSIDE BLAST\n";
 	my $blast_cmd = "$Phylosift::Utilities::blastall $blastp_params -i $query_file -d $db -a " . $self->{"threads"} . " |";
