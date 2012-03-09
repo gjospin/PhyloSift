@@ -549,7 +549,7 @@ sub get_marker_path {
 	my %args   = @_;
 	my $self   = $args{self};
 	my $marker = $args{marker};
-
+	
 	# check for old-style marker first
 	return "$marker_dir" if ( -e "$marker_dir/$marker.faa" );
 
