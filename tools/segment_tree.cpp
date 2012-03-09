@@ -43,7 +43,6 @@ int main(int argc, char** argv){
 	PhyloTree< TreeNode > reftree;
 	reftree.readTree( reftreein );
 	PhyloTree< TreeNode > original_tree = reftree;
-	cout << "The reference tree has " << reftree.size() << " nodes\n";
 		
 	double max_length = atof(argv[2]);
 
