@@ -1158,6 +1158,7 @@ sub index_marker_db {
 	foreach my $marker (@markers) {
 		# use the updated reps file
 		my $marker_rep = get_marker_rep_file( $args{self}, $marker, 1 );
+		$marker_rep = get_marker_rep_file( $args{self}, $marker, 0 ) unless -e $marker_rep;
 		debug "marker $marker is protein\n" if is_protein_marker( marker => $marker );
 		debug "marker rep file $marker_rep\n";
 		my $DBOUT = $RNADBOUT;
