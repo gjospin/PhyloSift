@@ -34,7 +34,7 @@ for(my $bI=0; $bI<@benchmark_data; $bI++){
 	# run through the command-line just to test the interface as well
 	print STDOUT "Running $phylosift/phylosift all -f $seqname\n";
 	Phylosift::Utilities::start_timer($seqname);
-	system("$phylosift/phylosift all --config benchmarkrc -f $seqname");
+	system("export PATH=\"$phylosift/bin:\$PATH\" ; $phylosift/bin/phylosift all --config benchmarkrc -f $seqname");
 	my $seconds = Phylosift::Utilities::end_timer($seqname);
 
 	# now benchmark
