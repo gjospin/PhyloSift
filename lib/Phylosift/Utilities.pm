@@ -547,7 +547,8 @@ sub get_marker_hmm_file {
 		return "$marker_dir/$marker/$marker.hmm";
 	} else {
 		return $self->{"alignDir"} . "/$marker.hmm" if ( -e "$marker_dir/$marker.hmm" && $local );
-		return "$marker_dir/$marker.hmm";
+		return "$marker_dir/$marker.hmm" if -e "$marker_dir/$marker.hmm";
+		return "$marker_dir/$marker/$marker.hmm";
 	}
 }
 
@@ -560,8 +561,7 @@ Returns the CM (infernal covarion model) file for the marker
 sub get_marker_cm_file {
 	my $self    = shift;
 	my $marker  = shift;
-	my $updated = $self->{"updated"} ? ".updated" : "";
-	return "$marker_dir/$marker$updated/$marker.cm";
+	return "$marker_dir/$marker/$marker.cm";
 }
 
 =head2 get_marker_stockholm_file
@@ -692,9 +692,14 @@ sub getTrimfinalMarkerFile {
 	my $marker = shift;
 	if ( $self->{"updated"} == 0 ) {
 		return "$marker.trimfinal" if -e "$marker_dir/$marker.trimfinal";
+		return "$marker/$marker.masked" if -e "$marker_dir/$marker/$marker.masked";
+		return "$marker/$marker.clean" if -e "$marker_dir/$marker/$marker.clean";
 		return "$marker/$marker.aln";
 	} else {
-		return "$marker.trimfinal";
+		return "$marker.trimfinal" if -e "$marker_dir/$marker.trimfinal";
+		return "$marker/$marker.masked" if -e "$marker_dir/$marker/$marker.masked";
+		return "$marker/$marker.clean" if -e "$marker_dir/$marker/$marker.clean";
+		return "$marker/$marker.aln";
 	}
 }
 
@@ -710,9 +715,10 @@ sub getTrimfinalFastaMarkerFile {
 	my $marker = shift;
 	if ( $self->{"updated"} == 0 ) {
 		return "$marker.trimfinal.fasta" if -e "$marker_dir/$marker.trimfinal.fasta";
-		return "$marker/$marker.aln";
+		return "$marker/$marker.masked";
 	} else {
-		return "$marker.trimfinal.fasta";
+		return "$marker.trimfinal.fasta" if -e "$marker_dir/$marker.trimfinal.fasta";
+		return "$marker/$marker.masked";
 	}
 }
 
@@ -1038,6 +1044,7 @@ sub gather_markers {
 			next if $line =~ /PMPROK/;
 			next if $line =~ /concat/;
 			next if $line =~ /representatives/;
+			next if $line =~ /.updated$/; # just include the base version name
 			$line = basename($line);
 			push( @marks, $line );
 		}
