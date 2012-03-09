@@ -51,7 +51,7 @@ sub pplacer {
 	if ( $self->{"updated"} ) {
 		my $markerPackage = Phylosift::Utilities::getMarkerPackage( $self, "concat" );
 		my $pp =
-		    "$Phylosift::Utilities::pplacer --verbosity 0 -p -c $markerPackage -j "
+		    "$Phylosift::Utilities::pplacer --verbosity 0 -c $markerPackage -j "
 		  . $self->{"threads"}
 		  . " --groups 5 "
 		  . $self->{"alignDir"}
@@ -87,18 +87,18 @@ sub pplacer {
 					`cp $trimfinalFile $trimfinalFastaFile`;
 				}
 				$pp =
-				    "$Phylosift::Utilities::pplacer --verbosity 0 -p -j "
+				    "$Phylosift::Utilities::pplacer --verbosity 0 -j "
 				  . $self->{"threads"}
 				  . " -r $trimfinalFastaFile -t $treeFile -s $treeStatsFile $readAlignmentFile";
 			} else {
-				$pp = "$Phylosift::Utilities::pplacer --verbosity 0 -p -c $markerPackage -j " . $self->{"threads"} . " $readAlignmentFile";
+				$pp = "$Phylosift::Utilities::pplacer --verbosity 0 -c $markerPackage -j " . $self->{"threads"} . " $readAlignmentFile";
 			}
 			debug "Running $pp\n";
 			system("$pp");
 		} else {
 
 			#run pplacer on amino acid data
-			my $pp = "$Phylosift::Utilities::pplacer --verbosity 0 -p -j " . $self->{"threads"} . " -c $markerPackage $readAlignmentFile";
+			my $pp = "$Phylosift::Utilities::pplacer --verbosity 0 -j " . $self->{"threads"} . " -c $markerPackage $readAlignmentFile";
 			print "Running $pp\n";
 			system($pp);
 
