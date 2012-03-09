@@ -570,7 +570,8 @@ sub get_marker_aln_file {
 		return "$marker_path/$bname.ali" if ( -e "$marker_path/$bname.ali" );
 
 		# using new-style marker directories
-		return "$marker_path/$marker/$bname.aln";
+		return "$marker_path/$marker/$bname.aln"  if ( -e "$marker_path/$marker/$bname.aln" );
+		return "$marker_path/$marker/$bname.masked";
 	} else {
 		return "$marker_path/$marker.updated/$bname.ali";
 	}
@@ -585,15 +586,16 @@ Returns the fasta file of unaligned full length representative sequences for the
 sub get_marker_rep_file {
 	my $self        = shift;
 	my $marker      = shift;
+	my $updated     = shift || $self->{"updated"};
 	my $marker_path = get_marker_path( self => $self, marker => $marker );
 	my $bname       = get_marker_basename( marker => $marker );
-	if ( $self->{"updated"} == 0 ) {
+	if ( $updated == 0 ) {
 		return "$marker_path/$bname.faa" if ( -e "$marker_path/$bname.faa" );
 
 		# using new-style marker directories
 		return "$marker_path/$marker/$bname.rep";
 	} else {
-		return "$marker_path/$marker.updated/$bname.rep";
+		return "$marker_path/$marker.updated/$bname.reps";
 	}
 }
 
@@ -1154,7 +1156,8 @@ sub index_marker_db {
 	open( my $PDBOUT, ">" . get_blastp_db( path => $path ) );
 	open( my $RNADBOUT, ">" . $bowtie2_db_fasta );
 	foreach my $marker (@markers) {
-		my $marker_rep = get_marker_rep_file( $args{self}, $marker );
+		# use the updated reps file
+		my $marker_rep = get_marker_rep_file( $args{self}, $marker, 1 );
 		debug "marker $marker is protein\n" if is_protein_marker( marker => $marker );
 		debug "marker rep file $marker_rep\n";
 		my $DBOUT = $RNADBOUT;
