@@ -357,6 +357,7 @@ returns a stream file handle
 =cut
 
 sub blastXoof_table {
+    my %args = @_;
 	my $self       = $args{self};
 	my $query_file = $args{query_file};
 	debug "INSIDE tabular OOF blastx\n";
