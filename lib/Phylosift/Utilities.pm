@@ -635,7 +635,7 @@ sub get_marker_rep_file {
 		# using new-style marker directories
 		return "$marker_path/$marker/$bname.rep";
 	} else {
-		return "$marker_path/$marker.updated/$bname.rep";
+		return "$marker_path/$marker.updated/$bname.reps";
 	}
 }
 
@@ -1220,7 +1220,8 @@ sub index_marker_db {
 	open( my $PDBOUT, ">" . get_blastp_db( path => $path ) );
 	open( my $RNADBOUT, ">" . $bowtie2_db_fasta );
 	foreach my $marker (@markers) {
-		my $marker_rep = get_marker_rep_file( self=>$args{self}, marker=>$marker );
+		my $marker_rep = get_marker_rep_file( self=>$args{self}, marker=>$marker, updated=>1 );
+		$marker_rep = get_marker_rep_file( self=>$args{self}, marker=>$marker ) unless -e $marker_rep;
 		my $DBOUT = $RNADBOUT;
 		$DBOUT = $PDBOUT if is_protein_marker( marker => $marker );
 		unless ( -f $marker_rep ) {
