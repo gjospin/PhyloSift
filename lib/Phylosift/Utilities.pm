@@ -665,9 +665,6 @@ Returns the CM (infernal covarion model) file for the marker
 =cut
 
 sub get_marker_cm_file {
-#	my $self    = shift;
-#	my $marker  = shift;
-#	return "$marker_dir/$marker/$marker.cm";
 	my %args = @_;
 	my $self        = $args{self};
 	my $marker      = $args{marker};
@@ -1266,6 +1263,8 @@ sub index_marker_db {
 	foreach my $marker (@markers) {
 		my $hmm_file = get_marker_hmm_file(self=>$args{self}, marker=>$marker);
 		next if -e $hmm_file;
+		my $cm_file = get_marker_cm_file(self=>$args{self}, marker=>$marker);
+		next if -e $cm_file;
 		next if is_protein_marker( marker => $marker );
 		my $stk_file = get_marker_stockholm_file(self=>$args{self}, marker=>$marker);
 		`$hmmbuild $hmm_file $stk_file`;
