@@ -1263,10 +1263,10 @@ sub index_marker_db {
 	# now create the .hmm files if they aren't already present
 	# this is the case in the extended marker set, since the hmms are too big for transit
 	foreach my $marker (@markers) {
-		my $hmm_file = get_marker_hmm_file($args{self}, $marker);
+		my $hmm_file = get_marker_hmm_file(self=>$args{self}, marker=>$marker);
 		next if -e $hmm_file;
 		next if is_protein_marker( marker => $marker );
-		my $stk_file = get_marker_stockholm_file($args{self}, $marker);
+		my $stk_file = get_marker_stockholm_file(self=>$args{self}, marker=>$marker);
 		`$hmmbuild $hmm_file $stk_file`;
 	}
 }
