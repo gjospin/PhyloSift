@@ -6,7 +6,6 @@ use Phylosift::Utilities qw(debug);
 use Carp;
 use Bio::Phylo;
 use Bio::Phylo::Forest::Tree;
-
 if ( $^O =~ /arwin/ ) {
 	use lib "$FindBin::Bin/osx/darwin-thread-multi-2level/";
 }
@@ -89,7 +88,7 @@ sub makeNcbiTree {
 	# construct a phylo tree with the NCBI topology containing
 	# just the organisms in our database
 	my $markerdir = $Phylosift::Utilities::marker_dir;
-	my %namemap   = Phylosift::Utilities::readNameTable($markerdir);
+	my %namemap   = Phylosift::Utilities::read_name_table(marker_directory=>$markerdir);
 	my $phylotree = Bio::Phylo::Forest::Tree->new();
 	open( MARKERTAXONMAP, ">$markerdir/marker_taxon_map.txt" );
 	my %tidnodes;
@@ -164,7 +163,7 @@ sub summarize {
 	readNcbiTaxonNameMap();
 	readNcbiTaxonomyStructure();
 	my $markerdir = $Phylosift::Utilities::marker_dir;
-	my %namemap   = Phylosift::Utilities::readNameTable($markerdir);
+	my %namemap   = Phylosift::Utilities::read_name_table(marker_directory=>$markerdir);
 	foreach my $key ( keys(%namemap) ) {
 		$namemap{$key} = homogenizeNameAlaDongying( $namemap{$key} );
 	}
@@ -187,10 +186,10 @@ sub summarize {
 	foreach my $marker ( @{$markRef} ) {
 		next unless -e "$markerdir/$marker.ncbimap";
 		# don't bother with this one if there's no read placements
-		my $placeFile = $self->{"treeDir"} . "/" . Phylosift::Utilities::getReadPlacementFile($marker);
+		my $placeFile = $self->{"treeDir"} . "/" . Phylosift::Utilities::get_read_placement_file(marker=>$marker);
 		next unless ( -e $placeFile );
 		my $pp_covfile;
-		open( $pp_covfile, ">" . Phylosift::Utilities::getReadPlacementFile($marker) . ".cov" ) if ( defined $self->{"coverage"} );
+		open( $pp_covfile, ">" . Phylosift::Utilities::get_read_placement_file(marker=>$marker) . ".cov" ) if ( defined $self->{"coverage"} );
 
 		# first read the taxonomy mapping
 		my $markermapfile = "$markerdir/$marker.ncbimap";

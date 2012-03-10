@@ -29,8 +29,9 @@ and also do an edge PCA on them. Transforms the XML output into something with m
 =cut
 
 sub compare {
-	my $self             = shift;
-	my $parent_directory = shift;
+    my %args = @_;
+	my $self             = $args{self};
+	my $parent_directory = $args{parent_dir};
 
 	# what do we want to accomplish with this?
 	# simplest approach:
@@ -76,13 +77,14 @@ sub compare {
 	}
 
 
-	rename_nodes( "pca.xml", "pca.named.xml" );
+	rename_nodes( in_file=>"pca.xml", out_file=>"pca.named.xml" );
 	
 }
 
 sub rename_nodes {
-	my $infile  = shift;
-	my $outfile = shift;
+    my %args= @_;
+	my $infile  = $args{in_file};
+	my $outfile = $args{out_file};
 	my $data = parse(
 					  '-file'       => $infile,
 					  '-format'     => 'phyloxml',
