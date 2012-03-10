@@ -473,8 +473,6 @@ sub executeRap {
     my %args=@_;
 	my $self       = $args{self};
 	my $query_file = $args{query_file};
-	my $dbDir      = "$Phylosift::Utilities::marker_dir/representatives";
-	$dbDir = $self->{"blastDir"} if ( $custom ne "" );
 	my $out_file      = $self->{"blastDir"} . "/$readsCore.rapSearch";
 	my $rapsearch_cmd = "cd "
 	  . $self->{"blastDir"}
