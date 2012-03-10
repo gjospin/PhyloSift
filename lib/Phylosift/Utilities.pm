@@ -688,14 +688,10 @@ sub get_marker_stockholm_file {
 	my $marker      = $args{marker};
 	my $marker_path = get_marker_path( self => $self, marker => $marker );
 	my $bname       = get_marker_basename( marker => $marker );
-	if ( $self->{"updated"} == 0 ) {
-		return "$marker_path/$bname.stk" if ( -e "$marker_path/$bname.ali" );
+	return "$marker_path/$bname.stk" if ( -e "$marker_path/$bname.ali" );
 
-		# using new-style marker directories
-		return "$marker_path/$marker/$bname.stk";
-	} else {
-		return "$marker_path/$marker.updated/$bname.stk";
-	}
+	# using new-style marker directories
+	return "$marker_path/$marker/$bname.stk";
 }
 
 =head2 get_marker_taxon_map
