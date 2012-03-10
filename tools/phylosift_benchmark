@@ -17,7 +17,7 @@ use Phylosift::Benchmark;
 die "Usage: phylosift_benchmarks <path to phylosift> <path to report output>\n" if(@ARGV !=2);
 
 my $ps = new Phylosift::Phylosift();
-$ps->read_phylosift_config(self=>$self);
+$ps->read_phylosift_config(self=>$ps);
 Phylosift::Utilities::data_checks(self=>$ps);
 
 my @benchmark_data = (
