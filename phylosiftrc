@@ -1,7 +1,13 @@
 #
 # configuration file for Phylosift
-# Global config lives in $PREFIX/etc/phylosiftrc, e.g. /usr/local/etc/phylosiftrc
-# User config lives in $HOME/.phylosiftrc, e.g. /home/koadman/.phylosiftrc
+# this file can be edited to change the behavior of Phylosift
+# and cause it to use something other than the default values for certain variables
+# This can be used, for example, on a shared computing system to store a single shared copy of the 
+# phylosift database or programs.
+#
+# The system-wide config should be copied to $PREFIX/etc/phylosiftrc, e.g. /usr/local/etc/phylosiftrc
+# User-specific config files can be copied to $HOME/.phylosiftrc, e.g. /home/koadman/.phylosiftrc
+# User-specific configs override values in the system-wide config.
 #
 
 #
@@ -10,10 +16,8 @@
 #
 # $hmmer3_path="";
 # $blast_path="";
-# $R_path="";
 # $pplacer_path="";
 # $ps_path="";
-$fast_tree_path="/home/gjospin/projects/PhyloSift/bin";
 #
 # paths to required datasets
 # leave these blank to use whatever is in $prefix/share/phylosift
