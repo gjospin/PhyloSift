@@ -281,7 +281,7 @@ sub summarize {
 					my $mapcount = scalar( @{ $markerncbimap{$edge} } );
 					print STDERR "Found 0 taxa for edge $edge\n" if ( scalar( @{ $markerncbimap{$edge} } ) == 0 );
 					foreach my $taxon ( @{ $markerncbimap{$edge} } ) {
-						my ( $taxon_name, $taxon_level, $taxon_id ) = getTaxonInfo($taxon);
+						my ( $taxon_name, $taxon_level, $taxon_id ) = get_taxon_info(taxon=>$taxon);
 						$placements{$qname} = () unless defined( $placements{$qname} );
 						$placements{$qname}{$taxon_id} = 0 unless defined( $placements{$qname}{$taxon_id} );
 						$placements{$qname}{$taxon_id} += $curplaces{$edge} / $mapcount;
@@ -315,12 +315,12 @@ sub summarize {
 		# normalize to probability distribution
 		foreach my $taxon_id ( sort { $placements{$qname}{$b} <=> $placements{$qname}{$a} } keys %{ $placements{$qname} } ) {
 			$placements{$qname}{$taxon_id} /= $placecount;
-			my ( $taxon_name, $taxon_level, $tid ) = getTaxonInfo($taxon_id);
+			my ( $taxon_name, $taxon_level, $tid ) = get_taxon_info(taxon=>$taxon_id);
 			print SEQUENCETAXA "$qname\t$taxon_id\t$taxon_level\t$taxon_name\t" . $placements{$qname}{$taxon_id} . "\n";
 		}
-		my $readsummary = sum_taxon_levels( $placements{$qname} );
+		my $readsummary = sum_taxon_levels( placements=>$placements{$qname} );
 		foreach my $taxon_id ( sort { $readsummary->{$b} <=> $readsummary->{$a} } keys %{$readsummary} ) {
-			my ( $taxon_name, $taxon_level, $tid ) = getTaxonInfo($taxon_id);
+			my ( $taxon_name, $taxon_level, $tid ) = get_taxon_info(taxon=>$taxon_id);
 			print SEQUENCESUMMARY "$qname\t$taxon_id\t$taxon_level\t$taxon_name\t" . $readsummary->{$taxon_id} . "\n";
 		}
 	}
@@ -330,7 +330,7 @@ sub summarize {
 	# sort descending
 	open( taxaOUT, ">" . $self->{"fileDir"} . "/taxasummary.txt" );
 	foreach my $taxon ( sort { $ncbireads{$b} <=> $ncbireads{$a} } keys %ncbireads ) {
-		my ( $taxon_name, $taxon_level, $taxon_id ) = getTaxonInfo($taxon);
+		my ( $taxon_name, $taxon_level, $taxon_id ) = get_taxon_info(taxon=>$taxon);
 		print taxaOUT join( "\t", $taxon_id, $taxon_level, $taxon_name, $ncbireads{$taxon} ), "\n";
 	}
 	close(taxaOUT);
@@ -348,7 +348,7 @@ sub summarize {
 	open( TAXAHPDOUT, ">" . $self->{"fileDir"} . "/taxa_90pct_HPD.txt" );
 	foreach my $taxon ( sort { $ncbireads{$b} <=> $ncbireads{$a} } keys %ncbireads ) {
 		$taxasum += $ncbireads{$taxon};
-		my ( $taxon_name, $taxon_level, $taxon_id ) = getTaxonInfo($taxon);
+		my ( $taxon_name, $taxon_level, $taxon_id ) = get_taxon_info(taxon=>$taxon);
 		print TAXAHPDOUT join( "\t", $taxon_id, $taxon_level, $taxon_name, $ncbireads{$taxon} ), "\n";
 		last if $taxasum >= $totalreads * 0.9;
 	}
