@@ -333,9 +333,11 @@ sub alignAndMask {
 			debug "Setting up cmalign for marker $marker\n";
 			my $candidate = Phylosift::Utilities::get_candidate_file(self=>$self,marker=>$marker,type=>".rna");
 			next unless ( -e $candidate );
+			$refcount = Phylosift::Utilities::get_count_from_reps(self=> $self,marker=> $marker );
 			#if the marker is rna, use infernal instead of hmmalign
+			# use tau=1e-6 instead of default 1e-7 to reduce memory consumption to under 4GB
 			$cmalign =
-			    "$Phylosift::Utilities::cmalign -q -l --dna "
+			    "$Phylosift::Utilities::cmalign -q -l --dna --tau 1e-6 "
 			  . Phylosift::Utilities::get_marker_cm_file( self=>$self, marker=>$marker ) . " $candidate | ";
 		}
 		my $outputFastaAA  = $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta_AA(marker=>$marker);
@@ -349,6 +351,7 @@ sub alignAndMask {
 		my @lines;
 
 		if ( Phylosift::Utilities::is_protein_marker( marker => $marker ) ) {
+			debug "Running $hmmalign\n";
 			open( HMMALIGN, $hmmalign );
 			@lines = <HMMALIGN>;
 		} else {
@@ -368,7 +371,7 @@ sub alignAndMask {
 					writeAlignedSeq( self=>$self, output=>$updatedout, unmasked_out=>$null, prev_name=>$prev_name, prev_seq=>$prev_seq, seq_count=>0 ) if $seqCount <= $refcount && $seqCount > 0;
 					writeAlignedSeq( self=>$self, output=>$aliout,unmasked_out=> $UNMASKEDOUT,prev_name=> $prev_name, prev_seq=>$prev_seq, seq_count=>$seqCount - $refcount - 1) if $seqCount > $refcount  && $seqCount > 0;
 				} else {
-					writeAlignedSeq( self=>$self,output=> $aliout, unmasked_out=>$UNMASKEDOUT, prev_name=>$prev_name,prev_seq=> $prev_seq,seq_count=> $seqCount - 1) if $seqCount > 0;
+					writeAlignedSeq( self=>$self,output=> $aliout, unmasked_out=>$UNMASKEDOUT, prev_name=>$prev_name,prev_seq=> $prev_seq,seq_count=> $seqCount ) if $seqCount > 0;
 				}
 				$seqCount++;
 				$prev_name = $new_name;
@@ -381,7 +384,7 @@ sub alignAndMask {
 			writeAlignedSeq( self=>$self,output=> $updatedout,unmasked_out=> $null,prev_name=> $prev_name, prev_seq=>$prev_seq, seq_count=>0 ) if $seqCount <= $refcount && $seqCount > 0;
 			writeAlignedSeq( self=>$self, output=>$aliout, unmasked_out=>    $UNMASKEDOUT, prev_name=>$prev_name, prev_seq=>$prev_seq,seq_count=> $seqCount - $refcount - 1) if $seqCount > $refcount;
 		} else {
-			writeAlignedSeq( self=>$self,output=> $aliout, unmasked_out=>$UNMASKEDOUT, prev_name=>$prev_name,prev_seq=> $prev_seq,seq_count=> $seqCount - 1) if $seqCount > 0;
+			writeAlignedSeq( self=>$self,output=> $aliout, unmasked_out=>$UNMASKEDOUT, prev_name=>$prev_name,prev_seq=> $prev_seq,seq_count=> $seqCount ) if $seqCount > 0;
 		}
 		$seqCount -= $refcount;
 		close $UNMASKEDOUT;

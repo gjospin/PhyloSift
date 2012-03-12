@@ -63,7 +63,7 @@ my %parent;
 
 sub readNcbiTaxonomyStructure {
 	my $ncbidir = $Phylosift::Utilities::ncbi_dir;
-	open( TAXSTRUCTURE, "$ncbidir/nodes.dmp" );
+	open( TAXSTRUCTURE, "$ncbidir/nodes.dmp" ) || croak "Unable to read $ncbidir/nodes.dmp";
 	while ( my $line = <TAXSTRUCTURE> ) {
 		chomp $line;
 		my @vals = split( /\s+\|\s+/, $line );
@@ -72,51 +72,6 @@ sub readNcbiTaxonomyStructure {
 	return %parent;
 }
 
-sub makeNcbiTreeFromUpdate {
-	my $self        = shift;
-	my $results_dir = shift;
-	my $markerdir   = shift;
-	readNcbiTaxonNameMap();
-	readNcbiTaxonomyStructure();
-	open( AAIDS,          "$markerdir/gene_ids.aa.txt" );
-	open( MARKERTAXONMAP, ">$markerdir/marker_taxon_map.updated.txt" );
-	my @taxonids;
-
-	while ( my $line = <AAIDS> ) {
-		chomp $line;
-		my ( $marker, $taxon, $uniqueid ) = split( /\t/, $line );
-		push( @taxonids, $taxon ) if $taxon =~ /^\d+$/;
-		print MARKERTAXONMAP "$uniqueid\t$taxon\n";
-	}
-	close MARKERTAXONMAP;
-	my %tidnodes;
-	my $phylotree = Bio::Phylo::Forest::Tree->new();
-	foreach my $tid (@taxonids) {
-		next if ( $tid eq "" );
-		my $child;
-		while ( $tid != 1 ) {
-
-			# check if we've already seen this one
-			last if ( defined( $tidnodes{$tid} ) );
-
-			# create a new node & add to tree
-			my $parentid = $parent{$tid}->[0];
-			my $newnode;
-			$newnode = Bio::Phylo::Forest::Node->new( -parent => $tidnodes{$parentid}, -name => $tid ) if defined( $tidnodes{$parentid} );
-			$newnode = Bio::Phylo::Forest::Node->new( -name => $tid ) if !defined( $tidnodes{$parentid} );
-			$tidnodes{$tid} = $newnode;
-			$newnode->set_child($child) if ( defined($child) );
-			$phylotree->insert($newnode);
-
-			# continue traversal toward root
-			$tid   = $parentid;
-			$child = $newnode;
-		}
-	}
-	open( TREEOUT, ">ncbi_tree.updated.tre" );
-	print TREEOUT $phylotree->to_newick( "-nodelabels" => 1 );
-	close TREEOUT;
-}
 
 =head2 makeNcbiTree
 Reads all the marker gene trees, finds their corresponding taxa in the NCBI taxonomy, and

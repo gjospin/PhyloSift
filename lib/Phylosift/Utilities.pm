@@ -610,7 +610,8 @@ sub get_marker_aln_file {
 		return "$marker_path/$bname.ali" if ( -e "$marker_path/$bname.ali" );
 
 		# using new-style marker directories
-		return "$marker_path/$marker/$bname.aln";
+		return "$marker_path/$marker/$bname.aln"  if ( -e "$marker_path/$marker/$bname.aln" );
+		return "$marker_path/$marker/$bname.masked";
 	} else {
 		return "$marker_path/$marker.updated/$bname.ali";
 	}
@@ -626,9 +627,10 @@ sub get_marker_rep_file {
 	my %args = @_;
 	my $self        = $args{self};
 	my $marker      = $args{marker};
+	my $updated     = $args{updated} || $self->{"updated"};
 	my $marker_path = get_marker_path( self => $self, marker => $marker );
 	my $bname       = get_marker_basename( marker => $marker );
-	if ( $self->{"updated"} == 0 ) {
+	if ( $updated == 0 ) {
 		return "$marker_path/$bname.faa" if ( -e "$marker_path/$bname.faa" );
 
 		# using new-style marker directories
@@ -1218,6 +1220,8 @@ sub index_marker_db {
 	foreach my $marker (@markers) {
 		my $marker_rep = get_marker_rep_file( self=>$args{self}, marker=>$marker, updated=>1 );
 		$marker_rep = get_marker_rep_file( self=>$args{self}, marker=>$marker ) unless -e $marker_rep;
+		debug "marker $marker is protein\n" if is_protein_marker( marker => $marker );
+		debug "marker rep file $marker_rep\n";
 		my $DBOUT = $RNADBOUT;
 		$DBOUT = $PDBOUT if is_protein_marker( marker => $marker );
 		unless ( -f $marker_rep ) {
@@ -1286,7 +1290,6 @@ sub index_marker_db {
 
 sub gather_markers {
 	my %args        = @_;
-	my $self        = $args{self};
 	my $marker_file = $args{marker_file};
 	my $path        = $args{path} || $marker_dir;
 	my @marks       = ();
