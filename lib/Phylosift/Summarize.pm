@@ -67,7 +67,7 @@ my %parent;
 
 sub read_ncbi_taxonomy_structure {
 	my $ncbidir = $Phylosift::Utilities::ncbi_dir;
-	open( TAXSTRUCTURE, "$ncbidir/nodes.dmp" );
+	open( TAXSTRUCTURE, "$ncbidir/nodes.dmp" ) || croak "Unable to read $ncbidir/nodes.dmp";
 	while ( my $line = <TAXSTRUCTURE> ) {
 		chomp $line;
 		my @vals = split( /\s+\|\s+/, $line );

@@ -2,7 +2,7 @@
 use warnings;
 use strict;
 use FindBin qw($Bin);
-use lib "$Bin/lib";
+use lib "$Bin/../lib";
 use Getopt::Long;
 use Phylosift::Phylosift;
 use Carp;
@@ -19,6 +19,7 @@ my $marker_dir               = $repository . "/markers";
 my $newObject                = new Phylosift::Phylosift();
 my @new_genomes = ();
 $newObject->readPhylosiftConfig();
+
 Phylosift::Utilities::dataChecks(self=>$newObject);
 Phylosift::UpdateDB::get_ebi_genomes(directory=>$ebi_repository);
 Phylosift::UpdateDB::get_ncbi_draft_genomes(directory=>$ncbi_draft_repository);
@@ -30,6 +31,11 @@ Phylosift::UpdateDB::find_new_genomes( genome_directory=>$local_repository,     
 Phylosift::UpdateDB::qsub_updates( results_directory=>$result_repository, files=>\@new_genomes );
 Phylosift::UpdateDB::collate_markers( results_dir=>$result_repository, marker_dir=>$marker_dir );
 Phylosift::UpdateDB::assign_seqids( marker_directory=>$marker_dir );
+Phylosift::UpdateDB::update_rna( self=>$newObject, marker_dir => $marker_dir );
+Phylosift::UpdateDB::update_ncbi_taxonomy(repository=>$repository);
+debug "Updating NCBI tree and taxon map...";
+Phylosift::UpdateDB::make_ncbi_tree_from_update( self=>$newObject, results_dir=>$result_repository, marker_dir=>$marker_dir );
+debug "done\n";
 Phylosift::UpdateDB::build_marker_trees_fasttree(directory=>$marker_dir,pruned=>0);
 Phylosift::UpdateDB::pd_prune_markers(marker_directory=>$marker_dir);
 Phylosift::UpdateDB::build_marker_trees_fasttree(marker_directory=>$marker_dir,pruned=>1);
