@@ -146,7 +146,7 @@ sub run {
 	Phylosift::Utilities::data_checks( self => $self );
 	file_check(self=>$self) unless $self->{"mode"} eq 'index';
 	directory_prep(self=>$self,force=>$force) unless $self->{"mode"} eq 'index';
-	$self->{"readsFile"} = prep_isolate_files(self=>$self) if $self->{"isolate"} == 1;
+	$self->{"readsFile"} = prep_isolate_files(self=>$self, file=>$self->{"readsFile"}) if $self->{"isolate"} == 1;
 	
 	debug "Using updated markers\n" if $self->{"updated"};
 
@@ -287,18 +287,17 @@ and isolate names in memory and using that at later stages of the pipeline
 sub prep_isolate_files {
     my %args = @_;
     my $self = $args{self};
+    my $file = $args{file};
 	open( OUTFILE, ">" . $self->{"fileDir"} . "/isolates.fasta" );
-	while ( my $file = shift ) {
-		open( ISOLATEFILE, $file ) || croak("Unable to read $file\n");
-		my $fname = $self->{"fileDir"} . "/" . basename($file);
-		debug "Operating on isolate file $fname\n";
-		print OUTFILE ">" . basename($file) . "\n";
-		while ( my $line = <ISOLATEFILE> ) {
-			next if $line =~ /^>/;
-			print OUTFILE $line;
-		}
-		close ISOLATEFILE;
+	open( ISOLATEFILE, $file ) || croak("Unable to read $file\n");
+	my $fname = $self->{"fileDir"} . "/" . basename($file);
+	debug "Operating on isolate file $fname\n";
+	print OUTFILE ">" . basename($file) . "\n";
+	while ( my $line = <ISOLATEFILE> ) {
+		next if $line =~ /^>/;
+		print OUTFILE $line;
 	}
+	close ISOLATEFILE;
 	close OUTFILE;
 	$self->{"readsFile"} = "isolates.fasta";
 	return $self->{"fileDir"} . "/isolates.fasta";
