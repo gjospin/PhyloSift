@@ -40,9 +40,13 @@ if you don't export anything, such as for a purely object-oriented module.
 my %nameidmap;
 my %idnamemap;
 
+=head2 read_ncbi_taxon_name_map
+
 # read the NCBI taxon names
 # stash them in hashes called nameidmap and idnamemap to go back & forth from tax ids to names
-sub readNcbiTaxonNameMap {
+
+=cut
+sub read_ncbi_taxon_name_map {
 	return if %nameidmap;
 	my $ncbidir = $Phylosift::Utilities::ncbi_dir;
 	open( TAXIDS, "$ncbidir/names.dmp" );
@@ -50,8 +54,8 @@ sub readNcbiTaxonNameMap {
 		chomp $line;
 		if ( ( $line =~ /scientific name/ ) || ( $line =~ /synonym/ ) || ( $line =~ /misspelling/ ) ) {
 			my @vals = split( /\s+\|\s+/, $line );
-			$nameidmap{ homogenizeNameAlaDongying( $vals[1] ) } = $vals[0];
-			$idnamemap{ $vals[0] } = homogenizeNameAlaDongying( $vals[1] ) if ( $line =~ /scientific name/ );
+			$nameidmap{ homogenize_name_ala_dongying( name=>$vals[1] ) } = $vals[0];
+			$idnamemap{ $vals[0] } = homogenize_name_ala_dongying(name=> $vals[1] ) if ( $line =~ /scientific name/ );
 		}
 	}
 	return ( %nameidmap, %idnamemap );
@@ -61,7 +65,7 @@ sub readNcbiTaxonNameMap {
 # puts the results in a hash called "parent"
 my %parent;
 
-sub readNcbiTaxonomyStructure {
+sub read_ncbi_taxonomy_structure {
 	my $ncbidir = $Phylosift::Utilities::ncbi_dir;
 	open( TAXSTRUCTURE, "$ncbidir/nodes.dmp" );
 	while ( my $line = <TAXSTRUCTURE> ) {
@@ -72,12 +76,13 @@ sub readNcbiTaxonomyStructure {
 	return %parent;
 }
 
-sub makeNcbiTreeFromUpdate {
-	my $self        = shift;
-	my $results_dir = shift;
-	my $markerdir   = shift;
-	readNcbiTaxonNameMap();
-	readNcbiTaxonomyStructure();
+sub make_ncbi_tree_from_update {
+    my %args = @_;
+	my $self        = $args{self};
+	my $results_dir = $args{results_directory};
+	my $markerdir   = $args{marker_directory};
+	read_ncbi_taxon_name_map();
+	read_ncbi_taxonomy_structure();
 	open( AAIDS,          "$markerdir/gene_ids.aa.txt" );
 	open( MARKERTAXONMAP, ">$markerdir/marker_taxon_map.updated.txt" );
 	my @taxonids;
@@ -118,16 +123,17 @@ sub makeNcbiTreeFromUpdate {
 	close TREEOUT;
 }
 
-=head2 makeNcbiTree
+=head2 make_ncbi_tree
 Reads all the marker gene trees, finds their corresponding taxa in the NCBI taxonomy, and
 constructs a newick format tree representation of the NCBI taxonomy containing only the
 organisms present in the marker gene trees.  
 =cut
 
-sub makeNcbiTree {
-	my $self = shift;
-	readNcbiTaxonNameMap();
-	readNcbiTaxonomyStructure();
+sub make_ncbi_tree {
+    my %args = @_;
+	my $self = $args{self};
+	read_ncbi_taxon_name_map();
+	read_ncbi_taxonomy_structure();
 
 	# now read the list of organisms we have in our DB
 	# construct a phylo tree with the NCBI topology containing
@@ -138,15 +144,15 @@ sub makeNcbiTree {
 	open( MARKERTAXONMAP, ">$markerdir/marker_taxon_map.txt" );
 	my %tidnodes;
 	foreach my $key ( keys(%namemap) ) {
-		$namemap{$key} = homogenizeNameAlaDongying( $namemap{$key} );
-		my ( $tid, $name ) = dongyingFindNameInTaxaDb( $namemap{$key} );
+		$namemap{$key} = homogenize_name_ala_dongying(name=> $namemap{$key} );
+		my ( $tid, $name ) = donying_find_name_in_taxa_db(name=> $namemap{$key} );
 		if ( $tid eq "ERROR" ) {
 			print STDERR "Error! Could not find $namemap{$key} in name map\n" if length($key) > 12;
 			next;
 		}
 
 		# add it to the mapping file
-		my $treename = treeName( $idnamemap{$tid} );
+		my $treename = treeName( name=>$idnamemap{$tid} );
 		print MARKERTAXONMAP "$key\t$treename\n";
 
 		#got the taxon id, now walk to root adding tree nodes as necessary
@@ -158,7 +164,7 @@ sub makeNcbiTree {
 			last if ( defined( $tidnodes{$tid} ) );
 
 			# create a new node & add to tree
-			my $nodename = treeName( $idnamemap{$tid} );
+			my $nodename = treeName( name=>$idnamemap{$tid} );
 			my $parentid = $parent{$tid}->[0];
 			my $newnode;
 			$newnode = Bio::Phylo::Forest::Node->new( -parent => $tidnodes{$parentid}, -name => $nodename ) if defined( $tidnodes{$parentid} );
@@ -203,14 +209,15 @@ NCBI taxonomy
 =cut
 
 sub summarize {
-	my $self    = shift;
-	my $markRef = shift;    # list of the markers we're using
-	readNcbiTaxonNameMap();
-	readNcbiTaxonomyStructure();
+    my %args = @_;
+	my $self    = $args{self};
+	my $markRef = $args{marker_reference};    # list of the markers we're using
+	read_ncbi_taxon_name_map();
+	read_ncbi_taxonomy_structure();
 	my $markerdir = $Phylosift::Utilities::marker_dir;
 	my %namemap   = Phylosift::Utilities::read_name_table(marker_directory=>$markerdir);
 	foreach my $key ( keys(%namemap) ) {
-		$namemap{$key} = homogenizeNameAlaDongying( $namemap{$key} );
+		$namemap{$key} = homogenize_name_ala_dongying(name=>$namemap{$key} );
 	}
 
 	# keep a hash counting up all the read placements
@@ -352,9 +359,10 @@ sub summarize {
 # non-functional until dependency on Math::Random can be eliminated
 #
 sub write_confidence_intervals {
-	my $self         = shift;
-	my $ncbireadsref = shift;
-	my $totalreads   = shift;
+    my %args = @_;
+	my $self         = $args{self};
+	my $ncbireadsref = $args{ncbi_reads_reference};
+	my $totalreads   = $args{total_reads};
 	my %ncbireads    = %$ncbireadsref;
 
 	# normalize to a sampling distribution
@@ -398,7 +406,8 @@ sub write_confidence_intervals {
 }
 
 sub sum_taxon_levels {
-	my $placements = shift;
+    my %args = @_;
+	my $placements = $args{placements};
 	my %summarized = ();
 	foreach my $taxon_id ( keys %$placements ) {
 		my $cur_tid = $taxon_id;
@@ -411,8 +420,9 @@ sub sum_taxon_levels {
 	return \%summarized;
 }
 
-sub getTaxonInfo {
-	my $in = shift;
+sub get_taxon_info {
+    my %args= @_;
+	my $in = $args{taxon};
 	if ( $in =~ /^\d+$/ ) {
 
 		#it's an ncbi taxon id.  look up its name and level.
@@ -424,7 +434,7 @@ sub getTaxonInfo {
 		# old style map, need to go from NCBI name back to ID
 		my $name = $in;
 		$name =~ s/_/ /g;    # map uses spaces instead of underscores
-		my ( $id, $qname ) = dongyingFindNameInTaxaDb($name);
+		my ( $id, $qname ) = donying_find_name_in_taxa_db(name=>$name);
 		my $level = $parent{$id}->[1];
 		return ( $in, $level, $id );
 	} else {
@@ -432,8 +442,9 @@ sub getTaxonInfo {
 	return ( $in, "", "" );
 }
 
-sub treeName {
-	my $inName = shift;
+sub tree_name {
+    my %args = @_;
+	my $inName = $args{name};
 	$inName =~ s/\s+/_/g;
 	$inName =~ s/'//g;
 	$inName =~ s/[\(\)]//g;
@@ -444,12 +455,13 @@ sub treeName {
 	return $inName;
 }
 
-=head2 homogenizeNameAlaDongying
+=head2 homogenize_name_ala_dongying
 
 =cut
 
-sub homogenizeNameAlaDongying {
-	my $inName = shift;
+sub homogenize_name_ala_dongying{
+    my %args = @_;
+	my $inName = $args{name};
 	return "" unless defined($inName);
 	$inName =~ s/^\s+//;
 	$inName =~ s/\s+$//;
@@ -461,12 +473,13 @@ sub homogenizeNameAlaDongying {
 	return $inName;
 }
 
-=head2 dongyingFindNameInTaxaDb
+=head2 donying_find_name_in_taxa_db
     
 =cut
 
-sub dongyingFindNameInTaxaDb {
-	my $name = shift;
+sub donying_find_name_in_taxa_db {
+    my %args=@_;
+    my $name = $args{name};
 	return "" unless defined($name);
 	$name =~ s/^\s+//;
 	my @t = split( /\s+/, $name );
