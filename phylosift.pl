@@ -1,1 +1,1 @@
-bin/phylosift $1 $2 $3
+bin/phylosift "$@"

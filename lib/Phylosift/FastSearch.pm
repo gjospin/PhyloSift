@@ -437,7 +437,7 @@ sub translate_frame {
 	$new_seq = $new_seq->revcom() if ( $frame < 0 );
 
 	if ($reverse_translate) {
-		$id = Phylosift::Summarize::treeName($id);
+		$id = Phylosift::Summarize::treeName(name=>$id);
 		if ( exists $markerNuc{$marker} ) {
 			$markerNuc{$marker} .= ">" . $id . "\n" . $new_seq->seq . "\n";
 		} else {

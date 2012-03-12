@@ -51,23 +51,22 @@ sub build_marker {
 	my $fasta_file = "$target_dir/$core.fasta";
 	my $seq_count  = Phylosift::Utilities::unalign_sequences( aln=>$aln_file,output_path=> $fasta_file );
 	my $masked_aln = "$target_dir/$core.masked";
-	mask( file => $aln_file, output => $masked_aln );
+	mask_aln( file => $aln_file, output => $masked_aln );
 	my $hmm_file = "$target_dir/$core.hmm";
-	generate_hmm( $masked_aln, $hmm_file );
+	generate_hmm( file_name=>$masked_aln,hmm_name=> $hmm_file );
 	Phylosift::Utilities::fasta2stockholm( fasta=>$masked_aln, output=>"$target_dir/$core.stk" );
 	my $stk_aln = "$target_dir/$core.stk";
 
 	#may need to create an unaligned file for the sequences before aligning them
-	my $new_alignment_file = hmmalign_to_model( $hmm_file, $fasta_file, $target_dir, $stk_aln, $seq_count );
+	my $new_alignment_file = hmmalign_to_model( hmm_profile=>$hmm_file, sequence_file=>$fasta_file,target_dir=> $target_dir, reference_alignment=>$stk_aln, sequence_count=>$seq_count );
 	my $clean_aln          = "$target_dir/$core.clean";
-	my %id_map             = mask_and_clean_alignment( $new_alignment_file, $clean_aln );
-	my ( $fasttree_file, $tree_log_file ) = generate_fasttree( $clean_aln, $target_dir );
+	my %id_map             = mask_and_clean_alignment( alignment_file=>$new_alignment_file, output_file=>$clean_aln );
+	my ( $fasttree_file, $tree_log_file ) = generate_fasttree( alignment_file=>$clean_aln, target_directory=>$target_dir );
 
 	#need to generate representatives using PDA
 	my $rep_file = get_representatives_from_tree( tree => $fasttree_file, target_directory => $target_dir, cutoff => $cutoff );
-
 	#need to read the representatives picked by PDA and generate a representative fasta file
-	my $rep_fasta = get_fasta_from_pda_representatives( $rep_file, $target_dir, $fasta_file, \%id_map );
+	my $rep_fasta = get_fasta_from_pda_representatives(pda_file=> $rep_file, target_dir=>$target_dir,fasta_reference=> $fasta_file, id_map=>\%id_map );
 
 	#use taxit to create a new reference package required for running PhyloSift
 	#needed are : 1 alignment file, 1 representatives fasta file, 1 hmm profile, 1 tree file, 1 log tree file.
@@ -92,8 +91,9 @@ generates a HMM profile from an alignment in FASTA format (arg) using hmmbuild. 
 =cut
 
 sub generate_hmm {
-	my $file_name = shift;
-	my $hmm_name  = shift;
+    my %args = @_;
+	my $file_name = $args{file_name};
+	my $hmm_name  = $args{hmm_name};
 	`$Phylosift::Utilities::hmmbuild --informat afa $hmm_name $file_name`;
 }
 
@@ -104,11 +104,12 @@ Aligns sequences to an HMM model and outputs an alignment
 =cut
 
 sub hmmalign_to_model {
-	my $hmm_profile   = shift;
-	my $sequence_file = shift;
-	my $target_dir    = shift;
-	my $ref_ali       = shift;
-	my $seq_count     = shift;
+    my %args = @_;
+	my $hmm_profile   = $args{hmm_profile};
+	my $sequence_file = $args{sequence_file};
+	my $target_dir    = $args{target_dir};
+	my $ref_ali       = $args{reference_alignment};
+	my $seq_count     = $args{sequence_count};
 	my ( $core_name, $path, $ext ) = fileparse( $sequence_file, qr/\.[^.]*$/ );
 	open( ALNOUT, ">$target_dir/$core_name.aln" );
 	open( ALNIN,  "$Phylosift::Utilities::hmmalign --mapali $ref_ali --trim --outformat afa $hmm_profile $sequence_file |" );
@@ -133,8 +134,9 @@ Also removes duplicate IDs
 =cut
 
 sub mask_and_clean_alignment {
-	my $aln_file    = shift;
-	my $output_file = shift;
+    my %args = @_;
+	my $aln_file    = $args{alignment_file};
+	my $output_file = $args{output_file};
 	my %id_map;    # will store a map of unique IDs to sequence names
 
 	#    open(FILEIN,$aln_file) or carp("Couldn't open $aln_file for reading \n");
@@ -166,8 +168,9 @@ generates a tree using fasttree and write the output along with the log/info fil
 =cut
 
 sub generate_fasttree {
-	my $aln_file   = shift;
-	my $target_dir = shift;
+    my %args = @_;
+	my $aln_file   = $args{alignment_file};
+	my $target_dir = $args{target_directory};
 	my ( $core, $path, $ext ) = fileparse( $aln_file, qr/\.[^.]*$/ );
 	my %type = Phylosift::Utilities::get_sequence_input_type($aln_file);
 	if ( $type{seqtype} eq "dna" ) {
@@ -218,10 +221,11 @@ reads the selected representatives from the pda file and prints the sequences to
 =cut
 
 sub get_fasta_from_pda_representatives {
-	my $pda_file        = shift;
-	my $target_dir      = shift;
-	my $reference_fasta = shift;
-	my $id_map          = shift;
+    my %args=@_;
+	my $pda_file        = $args{pda_file};
+	my $target_dir      = $args{target_dir};
+	my $reference_fasta = $args{fasta_reference};
+	my $id_map          = $args{id_map};
 	my ( $core, $path, $ext ) = fileparse( $pda_file, qr/\.[^.]*$/ );
 
 	#reading the pda file to get the representative IDs
@@ -252,19 +256,19 @@ sub get_fasta_from_pda_representatives {
 	return "$target_dir/$core.rep";
 }
 
-=head2 mask
+=head2 mask_aln
 
 Remove columns from a sequence alignment that contain too many gaps or that are otherwise unreliable
 
 =cut
 
-sub mask {
+sub mask_aln {
 	my %args       = @_;
 	my $infile     = $args{file};
 	my $outfile    = $args{output};
 	my $gap_cutoff = 10;
 	my $cutoff     = 10;
-	my $maskcont   = martin_mask( $args{file}, $cutoff, $gap_cutoff );
+	my $maskcont   = martin_mask( input_file=>$args{file},cutoff=> $cutoff, opt_g=>$gap_cutoff );
 	my %maskseq;
 	my @ori_order;
 	$maskcont =~ s/^>//;
@@ -304,22 +308,24 @@ sub mask {
 }
 
 sub martin_mask {
-	my ( $input_file, $cutoff, $opt_g ) = @_;
+    my %args = @_;
+	my ( $input_file, $cutoff, $opt_g ) = ($args{input_file},$args{cutoff},$args{opt_g});
 	if ( !( length($opt_g) > 1 ) ) { $opt_g = 101; }
 	my $self = {};
 	$self->{inputfile}  = $input_file;
 	$self->{cutoff}     = $cutoff;
 	$self->{gap_cutoff} = $opt_g;
-	$self               = &ReadMatrix($self);
-	$self               = &ReadAlignment($self);
-	$self               = &CalculateScore($self);
-	$self               = &Mask($self);
-	my $return_mask = &Output($self);
+	$self               = &read_matrix(self=>$self);
+	$self               = &read_alignment(self=>$self);
+	$self               = &calculate_score(self=>$self);
+	$self               = &mask(self=>$self);
+	my $return_mask = &output(self=>$self);
 	return $return_mask;
 }
 
-sub ReadMatrix {
-	my $self = shift;
+sub read_matrix {
+    my %args = @_;
+	my $self =  $args{self};
 	my @aa;
 	my %matrix;
 	my ( $matrix_name, $i, $j );
@@ -364,8 +370,9 @@ sub ReadMatrix {
 	return $self;
 }
 
-sub ReadAlignment {
-	my $self = shift;
+sub read_alignment {
+    my %args = @_;
+	my $self = $args{self};
 	my %seq;
 	my @order;
 	my $id;
@@ -392,8 +399,9 @@ sub ReadAlignment {
 	return $self;
 }
 
-sub CalculateScore {
-	my $self = shift;
+sub calculate_score {
+    my %args= @_;
+	my $self = $args{self};
 	my %seq  = %{ $self->{seq} };
 	my $seqlength;
 	my %seqArray;
@@ -481,8 +489,9 @@ sub CalculateScore {
 	return $self;
 }
 
-sub Mask {
-	my $self         = shift;
+sub mask {
+    my %args = @_;
+	my $self         = $args{self};
 	my %matrix       = %{ $self->{matrix} };
 	my %seq          = %{ $self->{seq} };
 	my %seqArray     = %{ $self->{seqArray} };
@@ -526,8 +535,9 @@ sub Mask {
 	return $self;
 }
 
-sub Output {
-	my $self        = shift;
+sub output {
+    my %args = @_;
+	my $self        = $args{self};
 	my %seq         = %{ $self->{seq} };
 	my $mask        = $self->{mask};
 	my @order       = @{ $self->{order} };

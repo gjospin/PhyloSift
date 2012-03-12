@@ -225,7 +225,7 @@ sub writeAlignedSeq {
 	return if $aligned_count < $minAlignedResidues;
 
 	#substitute all the non letter or number characters into _ in the IDs to avoid parsing issues in tree viewing programs or others
-	$prev_name = Phylosift::Summarize::treeName($prev_name);
+	$prev_name = Phylosift::Summarize::treeName(name=>$prev_name);
 
 	#add a paralog ID if we're running in isolate mode and more than one good hit
 	$prev_name .= "_p$seq_count" if $seq_count > 0 && $self->{"isolate"};

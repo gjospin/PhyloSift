@@ -35,20 +35,22 @@ if you don't export anything, such as for a purely object-oriented module.
 =cut
 
 sub get_ebi_genomes {
-	my $directory = shift;
+    my %args = @_;
+	my $directory = $args{directory};
 	chdir($directory);
-	get_ebi_from_list("http://www.ebi.ac.uk/genomes/organelle.details.txt");
-	get_ebi_from_list("http://www.ebi.ac.uk/genomes/virus.details.txt");
-	get_ebi_from_list("http://www.ebi.ac.uk/genomes/phage.details.txt");
-	get_ebi_from_list("http://www.ebi.ac.uk/genomes/archaea.details.txt");
-	get_ebi_from_list("http://www.ebi.ac.uk/genomes/archaealvirus.details.txt");
-	get_ebi_from_list("http://www.ebi.ac.uk/genomes/bacteria.details.txt");
+	get_ebi_from_list(url=>"http://www.ebi.ac.uk/genomes/organelle.details.txt");
+	get_ebi_from_list(url=>"http://www.ebi.ac.uk/genomes/virus.details.txt");
+	get_ebi_from_list(url=>"http://www.ebi.ac.uk/genomes/phage.details.txt");
+	get_ebi_from_list(url=>"http://www.ebi.ac.uk/genomes/archaea.details.txt");
+	get_ebi_from_list(url=>"http://www.ebi.ac.uk/genomes/archaealvirus.details.txt");
+	get_ebi_from_list(url=>"http://www.ebi.ac.uk/genomes/bacteria.details.txt");
 
 	#	get_ebi_from_list("http://www.ebi.ac.uk/genomes/eukaryota.details.txt");
 }
 
 sub get_ebi_from_list() {
-	my $list_url = shift;    # URL to EBI's table of genome characteristics
+    my %args = @_;
+	my $list_url = $args{url};    # URL to EBI's table of genome characteristics
 	`wget $list_url -O list.txt`;
 	open( DETAILS, "list.txt" );
 	my $line = <DETAILS>;
@@ -96,10 +98,10 @@ sub get_ebi_from_list() {
 	`rm list.txt`;
 }
 
-sub get_taxid_from_gbk($) {
-
+sub get_taxid_from_gbk() {
+    my %args = @_;
 	# first get the taxon ID
-	my $file = shift;
+	my $file = $args{file};
 	open( GBK, $file );
 	my $taxid;
 	while ( my $l2 = <GBK> ) {
@@ -111,8 +113,9 @@ sub get_taxid_from_gbk($) {
 	return $taxid;
 }
 
-sub get_ncbi_finished_genomes($) {
-	my $directory = shift;
+sub get_ncbi_finished_genomes() {
+    my %args = @_;
+	my $directory = $args{directory};
 	`mkdir -p $directory`;
 
 	# First download all finished bacterial genomes
@@ -136,7 +139,7 @@ sub get_ncbi_finished_genomes($) {
 		while ( my $gbk = <LSSER> ) {
 			chomp $gbk;
 			if ( !defined($fasta_name) ) {
-				my $taxid = get_taxid_from_gbk($gbk);
+				my $taxid = get_taxid_from_gbk(file=>$gbk);
 				$fasta_name = "$orgname.$taxid.fasta";
 
 				# skip this one if it exists and hasn't been updated
@@ -155,8 +158,9 @@ sub get_ncbi_finished_genomes($) {
 	}
 }
 
-sub get_ncbi_draft_genomes($) {
-	my $directory = shift;
+sub get_ncbi_draft_genomes() {
+    my %args = @_;
+	my $directory = $args{directory};
 	`mkdir -p $directory`;
 	chdir($directory);
 	my $ncbi_wget_cmd = "wget -m --continue --timeout=20 --accept=gbk ftp://ftp.ncbi.nih.gov/genomes/Bacteria_DRAFT";
@@ -167,7 +171,7 @@ sub get_ncbi_draft_genomes($) {
 
 	while ( my $line = <FINDER> ) {
 		chomp $line;
-		my $taxid = get_taxid_from_gbk($line);
+		my $taxid = get_taxid_from_gbk(file=>$line);
 
 		# then unpack all the files and combine them
 		my $fasta_out = basename( $line, ".gbk" ) . ".$taxid.fasta";
@@ -201,10 +205,11 @@ sub get_ncbi_draft_genomes($) {
 	}
 }
 
-sub find_new_genomes($$$) {
-	my $genome_dir  = shift;
-	my $results_dir = shift;
-	my $files       = shift;
+sub find_new_genomes() {
+    my %args = @_;
+	my $genome_dir  = $args{genome_directory};
+	my $results_dir = $args{results_directory};
+	my $files       = $args{files};
 	open( FINDER, "find $genome_dir |" );
 	while ( my $genome = <FINDER> ) {
 		chomp $genome;
@@ -220,9 +225,10 @@ sub find_new_genomes($$$) {
 	}
 }
 
-sub qsub_updates($$) {
-	my $results_dir = shift;
-	my $files       = shift;
+sub qsub_updates() {
+    my %args =@_;
+	my $results_dir = $args{results_directory};
+	my $files       = $args{files};
 	my @jobids;
 	`mkdir -p $results_dir`;
 	foreach my $file ( @{$files} ) {
@@ -231,13 +237,14 @@ sub qsub_updates($$) {
 		$job =~ /Your job (\d+) /;
 		push( @jobids, $1 );
 	}
-	wait_for_jobs(@jobids);
+	wait_for_jobs(job_ids=>@jobids);
 }
 
 sub wait_for_jobs {
+    my %args = @_;
 
 	# wait for all jobs to complete
-	while ( my $jobid = shift ) {
+	while ( my $jobid = $args{job_ids} ) {
 		while (1) {
 			my $output = `qstat -j $jobid 2>&1`;
 			last if $output =~ /Following jobs do not exist/;
@@ -246,13 +253,14 @@ sub wait_for_jobs {
 	}
 }
 
-sub collate_markers($$) {
-	my $results_dir = shift;
-	my $marker_dir  = shift;
+sub collate_markers() {
+    my %args= @_;
+	my $results_dir = $args{results_dir};
+	my $marker_dir  = $args{marker_dir};
 
 	# get list of markers
 	chdir($marker_dir);
-	my @markerlist = get_marker_list($marker_dir);
+	my @markerlist = get_marker_list(marker_directory=>$marker_dir);
 	print STDERR "Markers are " . join( " ", @markerlist ) . "\n";
 
 	# get a list of genomes available in the results directory
@@ -293,41 +301,43 @@ sub collate_markers($$) {
 			$catline =~ s/\.aln_hmmer3\.trim/\.aln_hmmer3\.trim\.ffn/g;
 			`cat $catline $cat_ch $marker_dir/$marker.codon.updated.fasta`;
 		}
-		fix_names_in_alignment("$marker_dir/$marker.updated.fasta");
-		fix_names_in_alignment("$marker_dir/$marker.codon.updated.fasta");
+		fix_names_in_alignment(alignment=>"$marker_dir/$marker.updated.fasta");
+		fix_names_in_alignment(alignment=>"$marker_dir/$marker.codon.updated.fasta");
 	}
 	`rm -f $marker_dir/concat.updated.fasta`;
 	`rm -f $marker_dir/concat.codon.updated.fasta`;
 	`cat $results_dir/*/alignDir/concat.fasta >> $marker_dir/concat.updated.fasta`;
 	`cat $results_dir/*/alignDir/concat-dna.fasta >> $marker_dir/concat.codon.updated.fasta`;
-	fix_names_in_alignment("$marker_dir/concat.updated.fasta");
-	fix_names_in_alignment("$marker_dir/concat.codon.updated.fasta");
+	fix_names_in_alignment(alignment=>"$marker_dir/concat.updated.fasta");
+	fix_names_in_alignment(alignment=>"$marker_dir/concat.codon.updated.fasta");
 }
 
 # assign 10 digit unique identifiers to each gene
 # todo: will need to move into alphabetical space here
-sub assign_seqids($) {
-	my $marker_dir = shift;
+sub assign_seqids() {
+    my %args = @_;
+	my $marker_dir = $args{marker_directory};
 
 	# get list of markers
 	chdir($marker_dir);
-	my @markerlist    = get_marker_list($marker_dir);
+	my @markerlist    = get_marker_list(marker_directory=>$marker_dir);
 	my $aa_counter    = 0;
 	my $codon_counter = 0;
 	open( my $aa_idtable,    ">gene_ids.aa.txt" );
 	open( my $codon_idtable, ">gene_ids.codon.txt" );
 	push( @markerlist, "concat" );
 	foreach my $marker (@markerlist) {
-		$aa_counter    = assign_seqids_for_marker( $marker, "$marker.updated.fasta",       $aa_idtable,    $aa_counter );
-		$codon_counter = assign_seqids_for_marker( $marker, "$marker.codon.updated.fasta", $codon_idtable, $codon_counter );
+		$aa_counter    = assign_seqids_for_marker( marker=>$marker, alignment=>"$marker.updated.fasta", id_table=>      $aa_idtable,   counter=> $aa_counter );
+		$codon_counter = assign_seqids_for_marker( marker=>$marker,alignment=> "$marker.codon.updated.fasta",id_table=> $codon_idtable, counter=>$codon_counter );
 	}
 }
 
-sub assign_seqids_for_marker($$$) {
-	my $marker    = shift;
-	my $alignment = shift;
-	my $idtable   = shift;
-	my $counter   = shift;
+sub assign_seqids_for_marker() {
+    my %args = @_;
+	my $marker    = $args{marker};
+	my $alignment = $args{alignment};
+	my $idtable   = $args{id_table};
+	my $counter   = $args{counter};
 	open( INALN,  $alignment );
 	open( OUTALN, ">$alignment.seqids" );
 	my %seen_ids;
@@ -357,7 +367,8 @@ sub assign_seqids_for_marker($$$) {
 }
 
 sub get_marker_list {
-	my $marker_dir = shift;
+    my %args= @_;
+	my $marker_dir = $args{marker_directory};
 	my @markerlist = `find $marker_dir -name \"*.hmm\"`;
 	for ( my $i = 0 ; $i < @markerlist ; $i++ ) {
 		chomp $markerlist[$i];
@@ -398,9 +409,10 @@ sub get_fasttree_tre_filename {
 	return $name;
 }
 
-sub build_marker_trees_fasttree($$) {
-	my $marker_dir  = shift;
-	my $pruned      = shift;
+sub build_marker_trees_fasttree() {
+    my %args =@_;
+    my $marker_dir  = $args{directory};
+	my $pruned      = $args{pruned};
 	my $codon_fasta = get_fasta_filename( marker => '\\$1', dna => 1, updated => 1, pruned => $pruned );
 	my $aa_fasta    = get_fasta_filename( marker => '\\$1', dna => 0, updated => 1, pruned => $pruned );
 	my $codon_tre   = get_fasttree_tre_filename( marker => '\\$1', dna => 1, updated => 1, pruned => $pruned );
@@ -417,7 +429,7 @@ sub build_marker_trees_fasttree($$) {
 };
 	`chmod 755 /tmp/ps_tree.sh`;
 	chdir($marker_dir);
-	my @markerlist = get_marker_list($marker_dir);
+	my @markerlist = get_marker_list(marker_directory=>$marker_dir);
 	unshift( @markerlist, "concat" );
 	my @jobids;
 
@@ -430,12 +442,13 @@ sub build_marker_trees_fasttree($$) {
 		$job =~ /Your job (\d+) /;
 		push( @jobids, $1 );
 	}
-	wait_for_jobs(@jobids);
+	wait_for_jobs(job_ids=>@jobids);
 	`rm ps_tree.sh.*`;
 }
 
-sub build_marker_trees_raxml($) {
-	my $marker_dir = shift;
+sub build_marker_trees_raxml() {
+    my %args= @_;
+	my $marker_dir = $args{marker_directory};
 	open( TREESCRIPT, ">/tmp/ps_tree.sh" );
 	print TREESCRIPT qq{#!/bin/sh
 #\$ -cwd
@@ -454,7 +467,7 @@ rm RAxML*.\$1*
 };
 	`chmod 755 /tmp/ps_tree.sh`;
 	chdir($marker_dir);
-	my @markerlist = get_marker_list($marker_dir);
+	my @markerlist = get_marker_list(marker_directory=>$marker_dir);
 	unshift( @markerlist, "concat" );
 	my @jobids;
 
@@ -468,7 +481,7 @@ rm RAxML*.\$1*
 			$out->write_aln($inseq);
 		}
 		if ( -e "$marker.codon.updated.fasta" ) {
-			fix_names_in_alignment("$marker_dir/$marker.codon.updated.fasta");
+			fix_names_in_alignment(alignment=>"$marker_dir/$marker.codon.updated.fasta");
 			my $in_dna  = Bio::AlignIO->new( -file => "$marker.codon.updated.fasta", -format => "fasta" );
 			my $out_dna = Bio::AlignIO->new( -file => ">$marker.codon.updated.phy",  -format => "phylip" );
 			while ( my $inseq = $in_dna->next_aln ) {
@@ -482,12 +495,13 @@ rm RAxML*.\$1*
 		$job =~ /Your job (\d+) /;
 		push( @jobids, $1 );
 	}
-	wait_for_jobs(@jobids);
+	wait_for_jobs(job_ids=>@jobids);
 	`rm ps_tree.sh.*`;
 }
 
-sub fix_names_in_alignment($) {
-	my $alignment = shift;
+sub fix_names_in_alignment() {
+    my %args = @_;
+	my $alignment = $args{alignment};
 	my %markertaxa;
 
 	# naive means to remove most trivial duplicates. TODO: allow divergent paralogs to remain.
@@ -510,8 +524,9 @@ sub fix_names_in_alignment($) {
 	`mv $alignment.fixed $alignment`;
 }
 
-sub createTempReadFasta {
-	my $file = shift;
+sub create_temp_read_fasta {
+    my %args=@_;
+	my $file = $args{file};
 	open( TMPREAD, ">$file.tmpread.fasta" );
 	print TMPREAD ">blahblahblah\n";
 	open( ALNIN, "$file.fasta" );
@@ -552,12 +567,13 @@ sub prune_marker {
 	}
 }
 
-sub pd_prune_markers($) {
-	my $marker_dir = shift;
+sub pd_prune_markers() {
+    my %args = @_;
+	my $marker_dir = $args{marker_directory};
 
 	# prune distance is different for AA and DNA
 	my %PRUNE_DISTANCE = ( 0 => 0.01, 1 => 0.003 );
-	my @markerlist = get_marker_list($marker_dir);
+	my @markerlist = get_marker_list(marker_directory=>$marker_dir);
 	unshift( @markerlist, "concat" );
 	for ( my $dna = 0 ; $dna < 2 ; $dna++ ) {    # zero for aa, one for dna
 		foreach my $marker (@markerlist) {
@@ -569,13 +585,14 @@ sub pd_prune_markers($) {
 	}
 }
 
-sub reconcile_with_ncbi($$$$) {
-	my $self        = shift;
-	my $results_dir = shift;
-	my $marker_dir  = shift;
-	my $pruned      = shift;
+sub reconcile_with_ncbi() {
+    my %args = @_;
+	my $self        = $args{self};
+	my $results_dir = $args{results_directory};
+	my $marker_dir  = $args{marker_directory};
+	my $pruned      = $args{pruned};
 	print STDERR "Updating NCBI tree and taxon map...";
-	Phylosift::Summarize::makeNcbiTreeFromUpdate( $self, $results_dir, $marker_dir );
+	Phylosift::Summarize::makeNcbiTreeFromUpdate( self=>$self, results_directory=>$results_dir, marker_directory=>$marker_dir );
 	print STDERR "done\n";
 	my $codon_fasta = get_fasta_filename( marker => '\\$1', dna => 1, updated => 1, pruned => $pruned );
 	my $aa_fasta    = get_fasta_filename( marker => '\\$1', dna => 0, updated => 1, pruned => $pruned );
@@ -606,15 +623,15 @@ readconciler ncbi_tree.updated.tre \$1.codon.updated.tmpread.jplace.mangled mark
 rm \$1.codon.updated.tmpread.jplace \$1.codon.updated.tmpread.jplace.mangled \$1.codon.updated.tmpread.fasta \$1.codon.updated.fasttree.log
 EOF
 	`chmod 755 /tmp/ps_reconcile.sh`;
-	my @markerlist = get_marker_list($marker_dir);
+	my @markerlist = get_marker_list(marker_directory=>$marker_dir);
 	unshift( @markerlist, "concat" );
 	my @jobids;
 
 	foreach my $marker (@markerlist) {
 
 		# create some read files for pplacer to place so we can get its jplace
-		createTempReadFasta("$marker.updated");
-		createTempReadFasta("$marker.codon.updated");
+		create_temp_read_fasta(file=>"$marker.updated");
+		create_temp_read_fasta(file=>"$marker.codon.updated");
 
 		# run reconciliation on them
 		my $qsub_cmd = "qsub -q all.q -q eisen.q /tmp/ps_reconcile.sh $marker";
@@ -622,13 +639,14 @@ EOF
 		$job =~ /Your job (\d+) /;
 		push( @jobids, $1 );
 	}
-	wait_for_jobs(@jobids);
+	wait_for_jobs(job_ids=>@jobids);
 	`rm ps_reconcile.sh.o*`;
 	`rm ps_reconcile.sh.e*`;
 }
 
-sub package_markers($) {
-	my $marker_dir = shift;
+sub package_markers() {
+    my %args = @_;
+	my $marker_dir = $args{marker_directory};
 	chdir( $marker_dir . "/../" );
 	my @timerval = localtime();
 	my $datestr  = Phylosift::Utilities::get_date_YYYYMMDD;

@@ -228,8 +228,8 @@ sub name_taxa_in_jplace {
 #		next if ( scalar($node->get_children())>0 );
 		my $name = $node->get_name;
 		next unless defined $namemap{$name};
-		my @data = Phylosift::Summarize::getTaxonInfo( $namemap{$name} );
-		my $ncbi_name = Phylosift::Summarize::treeName($data[0]);
+		my @data = Phylosift::Summarize::get_taxon_info(taxon=> $namemap{$name} );
+		my $ncbi_name = Phylosift::Summarize::treeName(name=>$data[0]);
 		$node->set_name($ncbi_name);
 	}
 	my $new_string = "  \"".unparse('-phylo'=>$tree, '-format'=> 'newick')."\",\n";
