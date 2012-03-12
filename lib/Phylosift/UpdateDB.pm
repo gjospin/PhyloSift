@@ -1138,6 +1138,56 @@ sub join_trees {
 	# with a little luck we can now 
 }
 
+sub get_gene_id_file {
+	my %args = @_;
+	my $dna = $args{dna};
+	return "gene_ids.codon.txt" if $dna;
+	return "gene_ids.aa.txt";
+}
+
+sub add_taxit_taxonomy {
+	my %args = @_;
+	my $marker_dir = $args{marker_dir};
+	my $pruned = $args{pruned} || 1;
+	
+	# only need to run this if it hasnt been done already
+	# -- or do we need to re-do it for every taxonomy update?
+#	my $newdb_cl = "taxit new_database -d taxonomy.db";
+#	system($newdb_cl);
+
+	my @markerlist = Phylosift::Utilities::gather_markers();
+	unshift( @markerlist, "concat" );	
+	foreach my $marker (@markerlist) {
+		for(my $dna = 0; $dna < 2; $dna++){
+			# create a taxon id list for this marker
+			my $gene_id_file = get_gene_id_file(dna=>$dna);
+			open(AAIDS, $gene_id_file) || croak "Unable to read $gene_id_file";
+			open(TAXIDS, ">tax_ids.txt") || croak "Unable to write tax_ids.txt";
+			open(SEQINFO, ">seq_info.csv") || croak "Unable to write seq_info.csv";
+			while(my $line=<AAIDS>){
+				chomp $line;
+				my @dat = split(/\t/, $line);
+				next unless $dat[0] eq $marker;
+				print TAXIDS $dat[1]."\n";
+				print SEQINFO "$dat[2],$dat[0],$dat[1],\n";
+			}
+			close TAXIDS;
+			close SEQINFO;
+			my $taxtable_cl = "taxit taxtable -d taxonomy.db -t tax_ids.txt -o taxa.csv";
+			system($taxtable_cl);
+	
+			# gather filenames to stuff into marker package
+			my $fasta  = get_fasta_filename( marker => $marker, dna => $dna, updated => 1, pruned => $pruned );
+			my $tre    = get_fasttree_tre_filename( marker => $marker, dna => $dna, updated => 1, pruned => $pruned );
+			my $log    = get_fasttree_log_filename( marker => $marker, dna => $dna, updated => 1, pruned => $pruned );		
+	
+			my $taxit_cl = "taxit create -l $marker.updated -P $marker.updated --taxonomy taxa.csv --seq-info seq_info.csv --tree-stats $log --tree-file $tre --aln-fasta $fasta ";
+			system($taxit_cl);
+		}
+	}
+
+}
+
 sub package_markers($) {
 	my $marker_dir = shift;
 
