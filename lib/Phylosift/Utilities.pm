@@ -666,9 +666,6 @@ Returns the CM (infernal covarion model) file for the marker
 =cut
 
 sub get_marker_cm_file {
-#	my $self    = shift;
-#	my $marker  = shift;
-#	return "$marker_dir/$marker/$marker.cm";
 	my %args = @_;
 	my $self        = $args{self};
 	my $marker      = $args{marker};
@@ -1221,9 +1218,8 @@ sub index_marker_db {
 	open( my $PDBOUT, ">" . get_blastp_db( path => $path ) );
 	open( my $RNADBOUT, ">" . $bowtie2_db_fasta );
 	foreach my $marker (@markers) {
-		# use the updated reps file
-		my $marker_rep = get_marker_rep_file( $args{self}, $marker, 1 );
-		$marker_rep = get_marker_rep_file( $args{self}, $marker, 0 ) unless -e $marker_rep;
+		my $marker_rep = get_marker_rep_file( self=>$args{self}, marker=>$marker, updated=>1 );
+		$marker_rep = get_marker_rep_file( self=>$args{self}, marker=>$marker ) unless -e $marker_rep;
 		debug "marker $marker is protein\n" if is_protein_marker( marker => $marker );
 		debug "marker rep file $marker_rep\n";
 		my $DBOUT = $RNADBOUT;
@@ -1269,12 +1265,12 @@ sub index_marker_db {
 	# now create the .hmm files if they aren't already present
 	# this is the case in the extended marker set, since the hmms are too big for transit
 	foreach my $marker (@markers) {
-		my $hmm_file = get_marker_hmm_file($args{self}, $marker);
-		my $cm_file = get_marker_cm_file($args{self}, $marker);
+		my $hmm_file = get_marker_hmm_file(self=>$args{self}, marker=>$marker);
 		next if -e $hmm_file;
+		my $cm_file = get_marker_cm_file(self=>$args{self}, marker=>$marker);
 		next if -e $cm_file;
 		next if is_protein_marker( marker => $marker );
-		my $stk_file = get_marker_stockholm_file($args{self}, $marker);
+		my $stk_file = get_marker_stockholm_file(self=>$args{self}, marker=>$marker);
 		`$hmmbuild $hmm_file $stk_file`;
 	}
 }

@@ -184,7 +184,9 @@ sub summarize {
 	my %placements;
 	unshift( @{$markRef}, "concat" ) if $self->{"updated"};
 	foreach my $marker ( @{$markRef} ) {
-		next unless -e "$markerdir/$marker.ncbimap";
+		my $markermapfile = "$markerdir/$marker.ncbimap";
+		$markermapfile = "$markerdir/$marker.updated/$marker.taxonmap" if $self->{"updated"};
+		next unless -e $markermapfile;
 		# don't bother with this one if there's no read placements
 		my $placeFile = $self->{"treeDir"} . "/" . Phylosift::Utilities::get_read_placement_file(marker=>$marker);
 		next unless ( -e $placeFile );
@@ -192,9 +194,7 @@ sub summarize {
 		open( $pp_covfile, ">" . Phylosift::Utilities::get_read_placement_file(marker=>$marker) . ".cov" ) if ( defined $self->{"coverage"} );
 
 		# first read the taxonomy mapping
-		my $markermapfile = "$markerdir/$marker.ncbimap";
-		$markermapfile = "$markerdir/$marker.updated.taxonmap" if $self->{"updated"};
-		open( TAXONMAP, $markermapfile ) || croak("Unable to read file $markerdir/$marker.ncbimap\n");
+		open( TAXONMAP, $markermapfile ) || croak("Unable to read file $markermapfile\n");
 		my %markerncbimap;
 		while ( my $line = <TAXONMAP> ) {
 			chomp($line);

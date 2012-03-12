@@ -60,9 +60,10 @@ sub pplacer {
 
 		system($pp);
 		`mv $self->{"workingDir"}/concat.trim.jplace $self->{"treeDir"}` if ( -e $self->{"workingDir"} . "/concat.trim.jplace" );
-		name_taxa_in_jplace(self=>$self, input=>$self->{"treeDir"}."/concat.trim.jplace",output=>$self->{"treeDir"}."/concat.trim.jplace");
+		return unless -e $self->{"treeDir"}."/concat.trim.jplace";
+#		name_taxa_in_jplace(self=>$self, input=>$self->{"treeDir"}."/concat.trim.jplace",output=>$self->{"treeDir"}."/concat.trim.jplace");
 		return unless defined($covref);
-		weight_placements( self => $self, coverage => $covref, place_file => $self->{"treeDir"} . "/concat.trim.jplace" );
+#		weight_placements( self => $self, coverage => $covref, place_file => $self->{"treeDir"} . "/concat.trim.jplace" );
 		return;
 	}
 	foreach my $marker ( @{$markRef} ) {

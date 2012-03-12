@@ -213,6 +213,9 @@ sub writeAlignedSeq {
 	my $prev_seq    = $args{prev_seq};
 	my $seq_count   = $args{seq_count};
 	my $orig_seq    = $prev_seq;
+	if(!defined($prev_seq)){
+		print "abc";
+	}
 	$prev_seq =~ s/[a-z]//g;    # lowercase chars didnt align to model
 	$prev_seq =~ s/\.//g;       # shouldnt be any dots
 	                            #skip paralogs if we don't want them
@@ -366,9 +369,9 @@ sub alignAndMask {
 				my $new_name = $1;
 				if ( Phylosift::Utilities::is_protein_marker( marker => $marker ) ) {
 					writeAlignedSeq( self=>$self, output=>$updatedout, unmasked_out=>$null, prev_name=>$prev_name, prev_seq=>$prev_seq, seq_count=>0 ) if $seqCount <= $refcount && $seqCount > 0;
-					writeAlignedSeq( self=>$self, output=>$aliout,unmasked_out=> $UNMASKEDOUT,prev_name=> $prev_name, prev_seq=>$prev_seq, seq_count=>$seqCount - $refcount - 1 ) if $seqCount > $refcount;
+					writeAlignedSeq( self=>$self, output=>$aliout,unmasked_out=> $UNMASKEDOUT,prev_name=> $prev_name, prev_seq=>$prev_seq, seq_count=>$seqCount - $refcount - 1) if $seqCount > $refcount  && $seqCount > 0;
 				} else {
-					writeAlignedSeq( self=>$self,output=> $aliout, unmasked_out=>$UNMASKEDOUT, prev_name=>$prev_name,prev_seq=> $prev_seq,seq_count=> $seqCount - 1) if $seqCount > 0;
+					writeAlignedSeq( self=>$self,output=> $aliout, unmasked_out=>$UNMASKEDOUT, prev_name=>$prev_name,prev_seq=> $prev_seq,seq_count=> $seqCount ) if $seqCount > 0;
 				}
 				$seqCount++;
 				$prev_name = $new_name;
@@ -378,10 +381,10 @@ sub alignAndMask {
 			}
 		}
 		if ( Phylosift::Utilities::is_protein_marker( marker => $marker ) ) {
-			writeAlignedSeq( self=>$self,output=> $updatedout,unmasked_out=> $null,prev_name=> $prev_name, prev_seq=>$prev_seq, seq_count=>0 ) if $seqCount <= $refcount  && $seqCount > 0;
+			writeAlignedSeq( self=>$self,output=> $updatedout,unmasked_out=> $null,prev_name=> $prev_name, prev_seq=>$prev_seq, seq_count=>0 ) if $seqCount <= $refcount && $seqCount > 0;
 			writeAlignedSeq( self=>$self, output=>$aliout, unmasked_out=>    $UNMASKEDOUT, prev_name=>$prev_name, prev_seq=>$prev_seq,seq_count=> $seqCount - $refcount - 1) if $seqCount > $refcount;
 		} else {
-			writeAlignedSeq( self=>$self,output=> $aliout, unmasked_out=>$UNMASKEDOUT, prev_name=>$prev_name,prev_seq=> $prev_seq,seq_count=> $seqCount - 1);
+			writeAlignedSeq( self=>$self,output=> $aliout, unmasked_out=>$UNMASKEDOUT, prev_name=>$prev_name,prev_seq=> $prev_seq,seq_count=> $seqCount ) if $seqCount > 0;
 		}
 		$seqCount -= $refcount;
 		close $UNMASKEDOUT;

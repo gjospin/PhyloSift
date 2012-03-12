@@ -17,7 +17,7 @@ use Phylosift::Benchmark;
 die "Usage: phylosift_benchmarks <path to phylosift> <path to report output>\n" if(@ARGV !=2);
 
 my $ps = new Phylosift::Phylosift();
-$ps->readPhylosiftConfig();
+Phylosift::Phylosift::read_phylosift_config(self=>$ps);
 Phylosift::Utilities::data_checks(self=>$ps);
 
 my @benchmark_data = (
@@ -25,19 +25,20 @@ my @benchmark_data = (
 ["A simulated illumina dataset with 10 organisms","http://edhar.genomecenter.ucdavis.edu/~koadman/phylosift/accuracy/sim_illumina.fna"], 
 );
 
+# pull down the marker DB and index it -- don't count this in runtime
+system("export PATH=\"$phylosift/bin:\$PATH\" ; $phylosift/bin/phylosift index --config benchmarkrc");
+
 my %times;
 for(my $bI=0; $bI<@benchmark_data; $bI++){
 	my $url = $benchmark_data[$bI][1];
 	my $ff = File::Fetch->new(uri=>$url);
 	my $seqname = $1 if $url =~ /.+\/(.+?)$/;
 	$ff->fetch(to=>".");
-	# pull down the marker DB and index it -- don't count this in runtime
-	system("export PATH=\"$phylosift/bin:\$PATH\" ; $phylosift/bin/phylosift index --config benchmarkrc");
 
 	# run through the command-line just to test the interface as well
 	print STDOUT "Running $phylosift/bin/phylosift all -f $seqname\n";
 	Phylosift::Utilities::start_timer(name=>$seqname);
-	system("export PATH=\"$phylosift/bin:\$PATH\" ; $phylosift/bin/phylosift all --debug --config benchmarkrc -f $seqname");
+	system("export PATH=\"$phylosift/bin:\$PATH\" ; $phylosift/bin/phylosift all --updated_markers --debug --config benchmarkrc -f $seqname");
 	my $seconds = Phylosift::Utilities::end_timer(name=>$seqname);
 
 	# now benchmark
