@@ -351,7 +351,7 @@ sub taxonomy_assignments {
 	my $continue    = $args{cont};
 	my $markListRef = $args{marker};
 	Phylosift::Utilities::start_timer(name=>"taxonomy assignments");
-	Phylosift::Summarize::summarize( $self, $markListRef );
+	Phylosift::Summarize::summarize( self=>$self, marker_reference=>$markListRef );
 	Phylosift::Utilities::end_timer(name=>"taxonomy assignments");
 	return $self;
 }
