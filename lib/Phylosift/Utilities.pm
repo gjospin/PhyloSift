@@ -528,7 +528,7 @@ sub make_dummy_file {
 	my $self          = $args{self};
 	my $marker        = $args{marker};
 	my $gapmultiplier = $args{gap_multiplier};
-	my $len           = get_marker_length( $self, $marker );
+	my $len           = get_marker_length( self=> $self, marker => $marker );
 	my $glen;
 	$glen = "P" x $len x $gapmultiplier if $gapmultiplier == 1;
 	$glen = "A" x $len x $gapmultiplier if $gapmultiplier == 3;
@@ -548,7 +548,6 @@ sub get_marker_path {
 	my %args   = @_;
 	my $self   = $args{self};
 	my $marker = $args{marker};
-	
 	# check for old-style marker first
 	return "$marker_dir" if ( -e "$marker_dir/$marker.faa" );
 
@@ -635,7 +634,7 @@ sub get_marker_rep_file {
 		# using new-style marker directories
 		return "$marker_path/$marker/$bname.rep";
 	} else {
-		return "$marker_path/$marker.updated/$bname.rep";
+		return "$marker_path/$marker.updated/$bname.reps";
 	}
 }
 
@@ -652,14 +651,10 @@ sub get_marker_hmm_file {
 	my $local       = $args{loc} || 0; #using loc instead of local (reserved word)
 	my $marker_path = get_marker_path( self => $self, marker => $marker );
 	my $bname       = get_marker_basename( marker => $marker );
-	if ( $self->{"updated"} == 0 ) {
-		return "$marker_path/$bname.hmm" if ( -e "$marker_path/$bname.hmm" );
+	return "$marker_path/$bname.hmm" if ( -e "$marker_path/$bname.hmm" );
 
-		# using new-style marker directories
-		return "$marker_path/$marker/$bname.hmm";
-	} else {
-		return "$marker_path/$bname.hmm";
-	}
+	# using new-style marker directories
+	return "$marker_path/$marker/$bname.hmm";
 }
 
 =head2 get_marker_cm_file
@@ -674,8 +669,7 @@ sub get_marker_cm_file {
 	my $marker      = $args{marker};
 	my $marker_path = get_marker_path( self => $self, marker => $marker );
 	my $bname       = get_marker_basename( marker => $marker );
-	my $updated     = $self->{"updated"} ? ".updated" : "";
-	return "$marker_path/$marker$updated/$bname.cm";
+	return "$marker_path/$marker/$bname.cm";
 }
 
 =head2 get_marker_stockholm_file
@@ -690,14 +684,10 @@ sub get_marker_stockholm_file {
 	my $marker      = $args{marker};
 	my $marker_path = get_marker_path( self => $self, marker => $marker );
 	my $bname       = get_marker_basename( marker => $marker );
-	if ( $self->{"updated"} == 0 ) {
-		return "$marker_path/$bname.stk" if ( -e "$marker_path/$bname.ali" );
+	return "$marker_path/$bname.stk" if ( -e "$marker_path/$bname.ali" );
 
-		# using new-style marker directories
-		return "$marker_path/$marker/$bname.stk";
-	} else {
-		return "$marker_path/$marker.updated/$bname.stk";
-	}
+	# using new-style marker directories
+	return "$marker_path/$marker/$bname.stk";
 }
 
 =head2 get_marker_taxon_map
@@ -832,9 +822,14 @@ sub get_trimfinal_marker_file {
 	my $bname       = get_marker_basename( marker => $marker );
 	if ( $self->{"updated"} == 0 ) {
 		return "$marker_path/$bname.trimfinal" if -e "$marker_path/$bname.trimfinal";
+		return "$marker_path/$marker/$bname.masked" if -e "$marker_path/$marker/$bname.masked";
+		return "$marker_path/$marker/$bname.clean" if -e "$marker_path/$marker/$bname.clean";
 		return "$marker_path/$marker/$bname.aln";
 	} else {
-		return "$marker_path/$bname.trimfinal";
+		return "$marker_path/$bname.trimfinal" if -e "$marker_path/$bname.trimfinal";
+		return "$marker_path/$marker/$bname.masked" if -e "$marker_path/$marker/$bname.masked";
+		return "$marker_path/$marker/$bname.clean" if -e "$marker_path/$marker/$bname.clean";
+		return "$marker_path/$marker/$bname.aln";
 	}
 }
 
@@ -855,7 +850,8 @@ sub get_trimfinal_fasta_marker_file {
 		return "$marker_path/$bname.trimfinal.fasta" if -e "$marker_path/$bname.trimfinal.fasta";
 		return "$marker_path/$marker/$bname.aln";
 	} else {
-		return "$marker_path/$bname.trimfinal.fasta";
+		return "$marker_path/$bname.trimfinal.fasta" if -e "$marker_path/$bname.trimfinal.fasta";
+		return "$marker_path/$marker/$bname.aln";
 	}
 }
 
@@ -947,7 +943,8 @@ sub concatenate_alignments {
 	my $outputFasta   = $args{output_fasta};
 	my $outputMrBayes = $args{output_bayes};
 	my $gapmultiplier = $args{gap_multiplier};    # 1 for protein, 3 for reverse-translated DNA
-	my @alignments    = $args{alignments};
+	my $aln_ref       = $args{alignments};
+	my @alignments    = @$aln_ref;
 	my $catobj        = 0;
 	open( MRBAYES, ">$outputMrBayes" );
 	my $partlist = "partition genes = " . scalar(@alignments) . ": ";
@@ -1219,7 +1216,8 @@ sub index_marker_db {
 	open( my $PDBOUT, ">" . get_blastp_db( path => $path ) );
 	open( my $RNADBOUT, ">" . $bowtie2_db_fasta );
 	foreach my $marker (@markers) {
-		my $marker_rep = get_marker_rep_file( self=>$args{self}, marker=>$marker );
+		my $marker_rep = get_marker_rep_file( self=>$args{self}, marker=>$marker, updated=>1 );
+		$marker_rep = get_marker_rep_file( self=>$args{self}, marker=>$marker ) unless -e $marker_rep;
 		my $DBOUT = $RNADBOUT;
 		$DBOUT = $PDBOUT if is_protein_marker( marker => $marker );
 		unless ( -f $marker_rep ) {
@@ -1263,12 +1261,12 @@ sub index_marker_db {
 	# now create the .hmm files if they aren't already present
 	# this is the case in the extended marker set, since the hmms are too big for transit
 	foreach my $marker (@markers) {
-		my $hmm_file = get_marker_hmm_file($args{self}, $marker);
-		my $cm_file = get_marker_cm_file($args{self}, $marker);
+		my $hmm_file = get_marker_hmm_file(self=>$args{self}, marker=>$marker);
 		next if -e $hmm_file;
+		my $cm_file = get_marker_cm_file(self=>$args{self}, marker=>$marker);
 		next if -e $cm_file;
 		next if is_protein_marker( marker => $marker );
-		my $stk_file = get_marker_stockholm_file($args{self}, $marker);
+		my $stk_file = get_marker_stockholm_file(self=>$args{self}, marker=>$marker);
 		`$hmmbuild $hmm_file $stk_file`;
 	}
 }
@@ -1321,6 +1319,7 @@ sub gather_markers {
 			next if $line =~ /PMPROK/;
 			next if $line =~ /concat/;
 			next if $line =~ /representatives/;
+			next if $line =~ /.updated$/; # just include the base version name
 			$line = substr( $line, length($path) + 1 );
 
 			# all markers need to have an hmm or a cm else they are not usable

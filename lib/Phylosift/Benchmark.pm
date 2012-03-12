@@ -55,6 +55,8 @@ sub readSeqSummary {
 			my $taxPlacement   = $4;
 			my $probability    = $5;
 			my @taxPlacementID = Phylosift::Summarize::getTaxonInfo($2);
+			
+			$read =~ s/\\.+//g;	# get rid of bioperl garbage
 
 			#	    print "TaxPlacement : $2\t $taxPlacementID[0]\t\n";
 			my @readAncestor = getAncestorArray( $taxPlacementID[2] );
