@@ -23,13 +23,14 @@ my %correctReadPlacement = ();
 my %refTaxa              = ();
 
 sub runBenchmark {
-	my $self        = shift;
-	my $output_path = shift;
+    my %args = @_;
+    my $self        = $args{self};
+    my $output_path = $args{output_path};
 	( %nameidmap, %idnamemap ) = Phylosift::Summarize::readNcbiTaxonNameMap();
 	%parent  = Phylosift::Summarize::readNcbiTaxonomyStructure();
-	%refTaxa = getInputTaxa( $self->{"readsFile"} );
+	%refTaxa = getInputTaxa( file_name=>$self->{"readsFile"} );
 	print "Number of reads counted = " . scalar( keys(%readSource) ) . "\n";
-	readSeqSummary( $self, $output_path, \%readSource );
+	readSeqSummary( self=>$self, output_path=>$output_path,read_source=> \%readSource );
 }
 
 =head2 readSeqSummary
@@ -40,9 +41,10 @@ prints the percentage of all PLACED reads that have the correct taxonmic ID
 =cut
 
 sub readSeqSummary {
-	my $self        = shift;
-	my $output_path = shift;
-	my $readSource  = shift;
+    my %args = @_;
+    my $self        = $args{self};
+	my $output_path = $args{output_path};
+	my $readSource  =$args{read_source};
 	my $targetDir   = $self->{"fileDir"};
 	open( fileIN, $targetDir . "/sequence_taxa.txt" );
 	my %topReadScore   = ();
@@ -57,7 +59,7 @@ sub readSeqSummary {
 			my @taxPlacementID = Phylosift::Summarize::getTaxonInfo($2);
 
 			#	    print "TaxPlacement : $2\t $taxPlacementID[0]\t\n";
-			my @readAncestor = getAncestorArray( $taxPlacementID[2] );
+			my @readAncestor = get_ancestor_array(tax_id=> $taxPlacementID[2] );
 
 			#	    print $read." $taxPlacementID[1]\t$taxPlacementID[2]:\t@readAncestor\n";
 			my $rank = $taxPlacementID[1];
@@ -81,7 +83,7 @@ sub readSeqSummary {
 
 		#look at each taxonomic level for each Read
 		my $trueTaxon    = $readSource{$readID};
-		my @ancArrayRead = getAncestorArray( $topReadScore{$readID}->[1] );
+		my @ancArrayRead = get_ancestor_array( tax_id=>$topReadScore{$readID}->[1] );
 		my @tt           = Phylosift::Summarize::getTaxonInfo($trueTaxon);
 		my @firstTaxon   = Phylosift::Summarize::getTaxonInfo( $ancArrayRead[0] );
 		print "Read $readID assigned to $firstTaxon[0], true $tt[0]\n";
@@ -105,7 +107,7 @@ sub readSeqSummary {
 	foreach my $readID ( keys %allPlacedScore ) {
 		foreach my $tax ( keys %{ $allPlacedScore{$readID} } ) {
 			$allReadNumber++;
-			my @ancArrayRead = getAncestorArray( $allPlacedScore{$readID}{$tax}->[1] );
+			my @ancArrayRead = get_ancestor_array( tax_id=>$allPlacedScore{$readID}{$tax}->[1] );
 			pop(@ancArrayRead);
 			push( @ancArrayRead, $allPlacedScore{$readID}{$tax}->[1] );
 			foreach my $id (@ancArrayRead) {
@@ -128,8 +130,8 @@ sub readSeqSummary {
 		}
 	}
 
-	#	report_text($self, "accuracy.txt", \%matchTop, \%matchAll, $readNumber, $allReadNumber, $totalProb, \%rankTotalProb);
-	report_csv( $self, $output_path, \%matchTop, \%matchAll, $readNumber, $allReadNumber, $totalProb, \%rankTotalProb );
+	#	report_text(self=>$self, output_file=>"accuracy.txt", mtref=>\%matchTop, maref=>\%matchAll, read_number=>$readNumber, all_read_number=>$allReadNumber, total_prob=>$totalProb, rtpref=>\%rankTotalProb);
+	report_csv( self=>$self, report_dir=>$output_path, mtref=>\%matchTop,maref=> \%matchAll, read_number=>$readNumber, all_read_number=>$allReadNumber, total_prob=>$totalProb, rtpref=>\%rankTotalProb );
 }
 
 #    foreach my $m (keys %matchTop){
@@ -138,8 +140,9 @@ sub readSeqSummary {
 #	print "Top placed Matches : $m\t".$matchTop{$m}."\n";
 #}
 sub init_taxonomy_levels {
-	my $ncbihash = shift;
-	my $initval  = shift;
+    my %args = @_;
+	my $ncbihash = $args{ncbi_hash};
+	my $initval  = $args{initial_value};
 	$initval = 0 unless defined $initval;
 	$ncbihash->{"superkingdom"} = $initval;
 	$ncbihash->{"phylum"}       = $initval;
@@ -154,12 +157,13 @@ sub init_taxonomy_levels {
 }
 
 sub report_flot_json {
-	my $mtref         = shift;
-	my $maref         = shift;
-	my $readNumber    = shift;
-	my $allReadNumber = shift;
-	my $totalProb     = shift;
-	my $rtpref        = shift;
+    my %args = @_;
+	my $mtref         = $args{mtref};
+	my $maref         = $args{maref};
+	my $readNumber    = $args{read_number};
+	my $allReadNumber = $args{all_read_number};
+	my $totalProb     = $args{total_prob};
+	my $rtpref        = $args{rt_pref};
 	my %matchTop      = %$mtref;
 	my %matchAll      = %$maref;
 	my %rankTotalProb = %$rtpref;
@@ -167,10 +171,11 @@ sub report_flot_json {
 	#	open(JSON, ">phylosift_accuracy.json");
 }
 
-sub reportTiming {
-	my $self        = shift;
-	my $data        = shift;
-	my $output_path = shift;
+sub report_timing {
+    my %args = @_;
+	my $self        = $args{self};
+	my $data        = $args{data};
+	my $output_path = $args{output_path};
 	my $timing_file = $output_path . "/timing.csv";
 	unless ( -f $timing_file ) {
 		open( TIMING, ">$timing_file" );
@@ -186,8 +191,9 @@ sub reportTiming {
 }
 
 sub as_percent {
-	my $num   = shift;
-	my $denom = shift;
+    my %args = @_;
+	my $num   = $args{num};
+	my $denom =$args{denom};
 	if ( defined $num && defined $denom && $denom > 0 ) {
 		my $pretty = sprintf( "%.2f", 100 * $num / $denom );
 		return $pretty;
@@ -196,14 +202,15 @@ sub as_percent {
 }
 
 sub report_csv {
-	my $self          = shift;
-	my $report_dir    = shift;
-	my $mtref         = shift;
-	my $maref         = shift;
-	my $readNumber    = shift;
-	my $allReadNumber = shift;
-	my $totalProb     = shift;
-	my $rtpref        = shift;
+    my %args = @_;
+	my $self          = $args{self};
+	my $report_dir    = $args{report_dir};
+	my $mtref         = $args{mtref};
+	my $maref         = $args{maref};
+	my $readNumber    = $args{read_number};
+	my $allReadNumber = $args{all_read_number};
+	my $totalProb     = $args{total_prob};
+	my $rtpref        = $args{rtpref};
 	my %matchTop      = %$mtref;
 	my %matchAll      = %$maref;
 	my %rankTotalProb = %$rtpref;
@@ -218,27 +225,29 @@ sub report_csv {
 	# append an entry to the tophits file
 	open( TOPHITS, ">>$tophitfile" );
 	print TOPHITS $date;
-	print TOPHITS "," . as_percent( $matchTop{"superkingdom"}, $readNumber );
-	print TOPHITS "," . as_percent( $matchTop{"phylum"},       $readNumber );
-	print TOPHITS "," . as_percent( $matchTop{"subphylum"},    $readNumber );
-	print TOPHITS "," . as_percent( $matchTop{"class"},        $readNumber );
-	print TOPHITS "," . as_percent( $matchTop{"order"},        $readNumber );
-	print TOPHITS "," . as_percent( $matchTop{"family"},       $readNumber );
-	print TOPHITS "," . as_percent( $matchTop{"genus"},        $readNumber );
-	print TOPHITS "," . as_percent( $matchTop{"species"},      $readNumber );
-	print TOPHITS "," . as_percent( $matchTop{"subspecies"},   $readNumber );
-	print TOPHITS "," . as_percent( $matchTop{"no rank"},      $readNumber );
+	print TOPHITS "," . as_percent( num=>$matchTop{"superkingdom"}, denom=>$readNumber );
+	print TOPHITS "," . as_percent( num=>$matchTop{"phylum"},       denom=>$readNumber );
+	print TOPHITS "," . as_percent( num=>$matchTop{"subphylum"},    denom=>$readNumber );
+	print TOPHITS "," . as_percent( num=>$matchTop{"class"},        denom=>$readNumber );
+	print TOPHITS "," . as_percent( num=>$matchTop{"order"},        denom=>$readNumber );
+	print TOPHITS "," . as_percent( num=>$matchTop{"family"},       denom=>$readNumber );
+	print TOPHITS "," . as_percent( num=>$matchTop{"genus"},        denom=>$readNumber );
+	print TOPHITS "," . as_percent( num=>$matchTop{"species"},      denom=>$readNumber );
+	print TOPHITS "," . as_percent( num=>$matchTop{"subspecies"},   denom=>$readNumber );
+	print TOPHITS "," . as_percent( num=>$matchTop{"no rank"},      denom=>$readNumber );
 	print TOPHITS "\n";
 }
 
 sub report_text {
-	my $outputfile    = shift;
-	my $mtref         = shift;
-	my $maref         = shift;
-	my $readNumber    = shift;
-	my $allReadNumber = shift;
-	my $totalProb     = shift;
-	my $rtpref        = shift;
+    my %args = @_;
+    my $self = $args{self};
+	my $outputfile    = $args{output_file};
+	my $mtref         = $args{mtref};
+	my $maref         = $args{maref};
+	my $readNumber    = $args{read_number};
+	my $allReadNumber = $args{all_read_number};
+	my $totalProb     = $args{total_prob};
+	my $rtpref        = $args{rtpref};
 	my %matchTop      = %$mtref;
 	my %matchAll      = %$maref;
 	my %rankTotalProb = %$rtpref;
@@ -303,7 +312,8 @@ TODO : Determine which reads came from the marker gene regions from the source g
 =cut
 
 sub getInputTaxa {
-	my $fileName         = shift;
+    my %args = @_;
+	my $fileName         = $args{file_name} ;
 	my %sourceTaxa       = ();
 	my %sourceReadCounts = ();
 	open( fileIN, $fileName ) or carp( "Couldn't open " . $fileName . "\n" );
@@ -313,7 +323,7 @@ sub getInputTaxa {
 
 		#push(@sourceTaxa,$1);
 		$readSource{$1} = $2;
-		my @ancestors = getAncestorArray($2);
+		my @ancestors = get_ancestor_array($2);
 		foreach my $id (@ancestors) {
 			$sourceIDs{$id} = 1;
 		}
@@ -334,14 +344,15 @@ sub getInputTaxa {
 	return %sourceTaxa;
 }
 
-=head2 getAncestorArray
+=head2 get_ancestor_array
 Takes an input taxID and returns the ancestors in an array going up the tree.
 index 0 being the first ancestor.
 last index being the root of the tree.
 =cut
 
-sub getAncestorArray {
-	my $taxID    = shift;
+sub get_ancestor_array {
+    my %args = @_;
+	my $taxID    = $args{tax_id};
 	my $curID    = $taxID;
 	my @ancestor = ();
 	while ( $curID != 1 ) {
