@@ -365,7 +365,7 @@ sub benchmark {
     my %args = @_;
 	my $self = $args{self};
 	debug "RUNNING Benchmark\n";
-	Phylosift::Benchmark::runBenchmark( self=>$self, parent_dir=>"./" );
+	Phylosift::Benchmark::runBenchmark( self=>$self, output_dir=>"./" );
 }
 
 =head2 compare
