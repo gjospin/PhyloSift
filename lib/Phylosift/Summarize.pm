@@ -152,7 +152,7 @@ sub make_ncbi_tree {
 		}
 
 		# add it to the mapping file
-		my $treename = treeName( name=>$idnamemap{$tid} );
+		my $treename = tree_name( name=>$idnamemap{$tid} );
 		print MARKERTAXONMAP "$key\t$treename\n";
 
 		#got the taxon id, now walk to root adding tree nodes as necessary
@@ -164,7 +164,7 @@ sub make_ncbi_tree {
 			last if ( defined( $tidnodes{$tid} ) );
 
 			# create a new node & add to tree
-			my $nodename = treeName( name=>$idnamemap{$tid} );
+			my $nodename = tree_name( name=>$idnamemap{$tid} );
 			my $parentid = $parent{$tid}->[0];
 			my $newnode;
 			$newnode = Bio::Phylo::Forest::Node->new( -parent => $tidnodes{$parentid}, -name => $nodename ) if defined( $tidnodes{$parentid} );

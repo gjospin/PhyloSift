@@ -208,7 +208,7 @@ sub name_taxa_in_jplace {
 		$namemap{ $pair[0] } = $pair[1];
 	}
 
-	Phylosift::Summarize::readNcbiTaxonNameMap();
+	Phylosift::Summarize::read_ncbi_taxon_name_map();
 
 	# parse the tree file to get leaf node names
 	# replace leaf node names with taxon labels
@@ -229,7 +229,7 @@ sub name_taxa_in_jplace {
 		my $name = $node->get_name;
 		next unless defined $namemap{$name};
 		my @data = Phylosift::Summarize::get_taxon_info(taxon=> $namemap{$name} );
-		my $ncbi_name = Phylosift::Summarize::treeName(name=>$data[0]);
+		my $ncbi_name = Phylosift::Summarize::tree_name(name=>$data[0]);
 		$node->set_name($ncbi_name);
 	}
 	my $new_string = "  \"".unparse('-phylo'=>$tree, '-format'=> 'newick')."\",\n";
