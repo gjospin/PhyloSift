@@ -73,7 +73,6 @@ sub initialize {
 	$self->{"alignDir"}    = $self->{"fileDir"} . "/alignDir";
 	$self->{"treeDir"}     = $self->{"fileDir"} . "/treeDir";
 	$self->{"dna"}         = 0;
-	$self->{"updated"}     = 0;
 	$self->{"16s"}         = 0;
 	return $self;
 }

@@ -405,7 +405,7 @@ sub bowtie2 {
 	my $bowtie2_cmd =
 	    "$Phylosift::Utilities::bowtie2align -x "
 	  . Phylosift::Utilities::get_bowtie2_db( self => $self )
-	  . " --quiet --sam-nohead --sam-nosq --maxins 1000 --mm --local ";
+	  . " --quiet --sam-nohead --sam-nosq --maxins 1000 --local ";
 	$bowtie2_cmd .= " -f " if $args{readtype}->{format} eq "fasta";
 	if ( $args{readtype}->{paired} ) {
 		$bowtie2_cmd .= " -1 $args{reads1} -2 $args{reads2} ";

@@ -12,6 +12,15 @@ amino acid sequence are generated.
 Website : http://phylosift.wordpress.com/
 Twitter : @PhyloSift
 
+User support forum: https://groups.google.com/d/forum/phylosift
+Our google group is a place to ask questions, request functionalities, 
+get help if you're stuck, and generally interact with our development 
+team at UC Davis.
+
+If you run into a bug during your analysis, please post this as
+an "Issue" in GitHub. These tasks get priority, and we'll fix any 
+broken pipes as soon a possible!
+
 == NEW VERSION ==
 
 PhyloSift has several new features :

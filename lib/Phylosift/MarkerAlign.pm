@@ -74,14 +74,14 @@ sub MarkerAlign {
 	unless($self->{"extended"}){
 		my @markeralignments = getPMPROKMarkerAlignmentFiles( self=>$self, marker_reference=>\@allmarkers );
 		my $outputFastaAA = $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta_AA(marker=>"concat");
-		Phylosift::Utilities::concatenate_alignments( self=>$self, output_fasta=>$outputFastaAA, output_bayes=>$self->{"alignDir"} . "/mrbayes.nex", gap_multiplier=>1,alignments=> @markeralignments );
+		Phylosift::Utilities::concatenate_alignments( self=>$self, output_fasta=>$outputFastaAA, output_bayes=>$self->{"alignDir"} . "/mrbayes.nex", gap_multiplier=>1,alignments=> \@markeralignments );
 		# now concatenate any DNA alignments
 		for ( my $i = 0 ; $i < @markeralignments ; $i++ ) {
 			$markeralignments[$i] =~ s/trim.fasta/trim.fna.fasta/g;
 			splice @markeralignments, $i--, 1 unless( -f $markeralignments[$i]);
 		}
 		my $outputFastaDNA = $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta_DNA(marker=>"concat");
-		Phylosift::Utilities::concatenate_alignments(self=> $self, output_fasta=>$outputFastaDNA, output_bayes=>$self->{"alignDir"} . "/mrbayes-dna.nex", gap_multiplier=>3, alignments=>@markeralignments );
+		Phylosift::Utilities::concatenate_alignments(self=> $self, output_fasta=>$outputFastaDNA, output_bayes=>$self->{"alignDir"} . "/mrbayes-dna.nex", gap_multiplier=>3, alignments=>\@markeralignments );
 		debug "AFTER concatenateALI\n";
 	}
 	return $self;
@@ -213,6 +213,9 @@ sub writeAlignedSeq {
 	my $prev_seq    = $args{prev_seq};
 	my $seq_count   = $args{seq_count};
 	my $orig_seq    = $prev_seq;
+	if(!defined($prev_seq)){
+		print "abc";
+	}
 	$prev_seq =~ s/[a-z]//g;    # lowercase chars didnt align to model
 	$prev_seq =~ s/\.//g;       # shouldnt be any dots
 	                            #skip paralogs if we don't want them
@@ -360,10 +363,10 @@ sub alignAndMask {
 			if ( $line =~ /^>(.+)/ ) {
 				my $new_name = $1;
 				if ( Phylosift::Utilities::is_protein_marker( marker => $marker ) ) {
-					writeAlignedSeq( self=>$self, update=>$updatedout, unmasked_out=>$null, prev_name=>$prev_name, prev_seq=>$prev_seq, seq_count=>0 ) if $seqCount <= $refcount && $seqCount > 0;
-					writeAlignedSeq( self=>$self, update=>$aliout,unmasked_out=> $UNMASKEDOUT,prev_name=> $prev_name, prev_seq=>$prev_seq, seq_count=>$seqCount - $refcount - 1) if $seqCount > $refcount;
+					writeAlignedSeq( self=>$self, output=>$updatedout, unmasked_out=>$null, prev_name=>$prev_name, prev_seq=>$prev_seq, seq_count=>0 ) if $seqCount <= $refcount && $seqCount > 0;
+					writeAlignedSeq( self=>$self, output=>$aliout,unmasked_out=> $UNMASKEDOUT,prev_name=> $prev_name, prev_seq=>$prev_seq, seq_count=>$seqCount - $refcount - 1) if $seqCount > $refcount  && $seqCount > 0;
 				} else {
-					writeAlignedSeq( self=>$self,update=> $aliout, unmasked_out=>$UNMASKEDOUT, prev_name=>$prev_name,prev_seq=> $prev_seq,seq_count=> $seqCount ) if $seqCount > 0;
+					writeAlignedSeq( self=>$self,output=> $aliout, unmasked_out=>$UNMASKEDOUT, prev_name=>$prev_name,prev_seq=> $prev_seq,seq_count=> $seqCount ) if $seqCount > 0;
 				}
 				$seqCount++;
 				$prev_name = $new_name;
@@ -373,10 +376,10 @@ sub alignAndMask {
 			}
 		}
 		if ( Phylosift::Utilities::is_protein_marker( marker => $marker ) ) {
-			writeAlignedSeq( self=>$self,update=> $updatedout,unmasked_out=> $null,prev_name=> $prev_name, prev_seq=>$prev_seq, seq_count=>0 ) if $seqCount <= $refcount;
-			writeAlignedSeq( self=>$self, update=>$aliout, unmasked_out=>    $UNMASKEDOUT, prev_name=>$prev_name, prv_seq=>$prev_seq,seq_count=> $seqCount - $refcount - 1) if $seqCount > $refcount;
+			writeAlignedSeq( self=>$self,output=> $updatedout,unmasked_out=> $null,prev_name=> $prev_name, prev_seq=>$prev_seq, seq_count=>0 ) if $seqCount <= $refcount && $seqCount > 0;
+			writeAlignedSeq( self=>$self, output=>$aliout, unmasked_out=>    $UNMASKEDOUT, prev_name=>$prev_name, prev_seq=>$prev_seq,seq_count=> $seqCount - $refcount - 1) if $seqCount > $refcount;
 		} else {
-			writeAlignedSeq( self=>$self,update=> $aliout, unmasked_out=>$UNMASKEDOUT, prev_name=>$prev_name,prev_seq=> $prev_seq,seq_count=> $seqCount );
+			writeAlignedSeq( self=>$self,output=> $aliout, unmasked_out=>$UNMASKEDOUT, prev_name=>$prev_name,prev_seq=> $prev_seq,seq_count=> $seqCount ) if $seqCount > 0;
 		}
 		$seqCount -= $refcount;
 		close $UNMASKEDOUT;
