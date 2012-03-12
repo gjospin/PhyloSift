@@ -421,39 +421,38 @@ sub stockholm2fasta {
 	my $gapped   = $args{gapped} || 1;      # should gapped fasta (aligned) be written?
 	my $sorted   = $args{sorted} || 1;      # should sequences be sorted?
 	my $STREAMIN = $args{in};
-	my %seq;
+	my @seq;
+	my @names;
 	my $outbuffer = "";
-	while (<$STREAMIN>) {
-		next unless /\S/;
-		next if /^\s*\#/;
-		if (/^\s*\/\//) { $outbuffer .= printseq( columns => $columns, sorted => $sorted, seq => \%seq ); }
+	my $seq_line = 0;	# counter for which line we're on in each block.
+	while (my $line = <$STREAMIN>) {
+		if( $line  !~ /\S/ || $line =~ /^\s*#/ || length($line)<2){
+			$seq_line = 0;
+			next;
+		}
+		if ($line =~ /^\s*\/\//) { $outbuffer .= printseq( columns => $columns, sorted => $sorted, seq => \@seq, names => \@names, out => $args{out} ); }
 		else {
-			chomp;
-			my ( $name, $seq ) = split;
+			chomp $line;
+			my ( $name, $seq ) = split /\s+/, $line;
 			$seq =~ s/[\.\-]//g unless $gapped;
-			$seq{$name} .= $seq;
+			$seq[$seq_line] .= $seq;
+			$names[$seq_line] = $name;
+			$seq_line++;
 		}
 	}
-	$outbuffer .= printseq( columns => $columns, sorted => $sorted, seq => \%seq, out => $args{out} );
+	$outbuffer .= printseq( columns => $columns, sorted => $sorted, seq => \@seq, names => \@names, out => $args{out} );
 	return $outbuffer;
 }
 
 sub printseq {
 	my %args = @_;
+	my @seq = @{$args{seq}};
+	my @names = @{$args{names}};
 	my $out  = "";
-	if ( $args{sorted} ) {
-		foreach my $key ( sort keys %{ $args{seq} } ) {
-			$out .= ">$key\n";
-			for ( my $i = 0 ; $i < length( $args{seq}->{$key} ) ; $i += $args{columns} ) {
-				$out .= substr( $args{seq}->{$key}, $i, $args{columns} ) . "\n";
-			}
-		}
-	} else {
-		while ( my ( $name, $seq ) = each %{ $args{seq} } ) {
-			$out .= ">$name\n";
-			for ( my $i = 0 ; $i < length $seq ; $i += $args{columns} ) {
-				$out .= substr( $seq, $i, $args{columns} ) . "\n";
-			}
+	for(my $j=0; $j<@names; $j++){
+		$out .= ">$names[$j]\n";
+		for ( my $i = 0 ; $i < length( $seq[$j] ) ; $i += $args{columns} ) {
+			$out .= substr( $seq[$j], $i, $args{columns} ) . "\n";
 		}
 	}
 	return $out;
@@ -611,7 +610,8 @@ sub get_marker_aln_file {
 		return "$marker_path/$bname.ali" if ( -e "$marker_path/$bname.ali" );
 
 		# using new-style marker directories
-		return "$marker_path/$marker/$bname.aln";
+		return "$marker_path/$marker/$bname.aln"  if ( -e "$marker_path/$marker/$bname.aln" );
+		return "$marker_path/$marker/$bname.masked";
 	} else {
 		return "$marker_path/$marker.updated/$bname.ali";
 	}
@@ -627,9 +627,10 @@ sub get_marker_rep_file {
 	my %args = @_;
 	my $self        = $args{self};
 	my $marker      = $args{marker};
+	my $updated     = $args{updated} || $self->{"updated"};
 	my $marker_path = get_marker_path( self => $self, marker => $marker );
 	my $bname       = get_marker_basename( marker => $marker );
-	if ( $self->{"updated"} == 0 ) {
+	if ( $updated == 0 ) {
 		return "$marker_path/$bname.faa" if ( -e "$marker_path/$bname.faa" );
 
 		# using new-style marker directories
@@ -1219,6 +1220,8 @@ sub index_marker_db {
 	foreach my $marker (@markers) {
 		my $marker_rep = get_marker_rep_file( self=>$args{self}, marker=>$marker, updated=>1 );
 		$marker_rep = get_marker_rep_file( self=>$args{self}, marker=>$marker ) unless -e $marker_rep;
+		debug "marker $marker is protein\n" if is_protein_marker( marker => $marker );
+		debug "marker rep file $marker_rep\n";
 		my $DBOUT = $RNADBOUT;
 		$DBOUT = $PDBOUT if is_protein_marker( marker => $marker );
 		unless ( -f $marker_rep ) {
@@ -1251,10 +1254,11 @@ sub index_marker_db {
 
 	# make a last database
 	`cd $path ; $Phylosift::Utilities::lastdb -p -c replast rep.dbfasta`;
-#	unlink("$path/rep.dbfasta");    # don't need this anymore!
+	unlink("$path/rep.dbfasta");    # don't need this anymore!
 
 	# make a bowtie2 database
 	if ( -e "$bowtie2_db_fasta" ) {
+		`cd $path ; $Phylosift::Utilities::lastdb -c $bowtie2_db $bowtie2_db_fasta`;
 		`cd $path ; $Phylosift::Utilities::bowtie2build $bowtie2_db_fasta $bowtie2_db`;
 	}
 	
@@ -1286,7 +1290,6 @@ sub index_marker_db {
 
 sub gather_markers {
 	my %args        = @_;
-	my $self        = $args{self};
 	my $marker_file = $args{marker_file};
 	my $path        = $args{path} || $marker_dir;
 	my @marks       = ();

@@ -48,17 +48,13 @@ if you don't export anything, such as for a purely object-oriented module.
 =head2 RunBlast
 
 =cut
-my $clean                 = 0;      #option set up, but not used for later
-my $isolateMode           = 0;      # set to 1 if running on an isolate assembly instead of raw reads
 my $bestHitsBitScoreRange = 30;     # all hits with a bit score within this amount of the best will be used
 my $align_fraction        = 0.3;    # at least this amount of min[length(query),length(marker)] must align to be considered a hit
+my $align_fraction_isolate = 0.8;   # use this align_fraction when in isolate mode on long sequences
 my $pair                  = 0;      #used if using paired FastQ files
 my @markers;
-my ( %hitsStart, %hitsEnd, %topscore, %hits, %markerHits, %markerNuc ) = ();
+my %markerNuc = ();
 my $readsCore;
-my $custom        = "";
-my %marker_lookup = ();
-my %frames        = ();
 my $blastdb_name  = "blastrep.faa";
 my $blastp_params = "-p blastp -e 0.1 -b 50000 -v 50000 -m 8";
 my $blastn_params = "-p blastn -e 0.1 -b 50000 -v 50000 -m 8";
@@ -70,11 +66,12 @@ sub RunSearch {
 	my $custom     = $args{custom};
 	my $markersRef = $args{marker_reference};
 	@markers    = @{$markersRef};
-	%markerHits = ();
 	my $position = rindex( $self->{"readsFile"}, "/" );
 	$self->{"readsFile"} =~ m/(\w+)\.?(\w*)$/;
 	$readsCore   = $1;
-	$isolateMode = $self->{"isolate"};
+	
+	# set align_fraction appropriately
+	$align_fraction = $align_fraction_isolate if ($self->{"isolate"});
 
 	# check what kind of input was provided
 	my $type = Phylosift::Utilities::get_sequence_input_type( $self->{"readsFile"} );
@@ -146,7 +143,8 @@ sub launch_searches {
 				$hitstream = lastal_table(self=> $self, query_file=>$blastx_pipe );
 				$candidate_type = ".blastx";
 			} elsif ( $count == 2 ) {
-				$hitstream = bowtie2( self => $self, readtype => $args{readtype}, reads1 => $bowtie2_r1_pipe, reads2 => $bowtie2_r2_pipe );
+				$hitstream = lastal_table_rna($self, $bowtie2_r1_pipe);
+#				$hitstream = bowtie2( self => $self, readtype => $args{readtype}, reads1 => $bowtie2_r1_pipe, reads2 => $bowtie2_r2_pipe );
 				$candidate_type = ".rna";
 			} elsif ( $count == 3 ) {
 				$hitstream = executeBlast( self=>$self, query_file=>$blastp_pipe );
@@ -161,7 +159,8 @@ sub launch_searches {
 			if ( $count == 1 ) {
 				$hitsref = get_hits_contigs( self => $self, HITSTREAM => $hitstream, searchtype => "lastal" );
 			} elsif ( $count == 2 ) {
-				$hitsref = get_hits_sam( self => $self, HITSTREAM => $hitstream );
+#				$hitsref = get_hits_sam( self => $self, HITSTREAM => $hitstream );
+				$hitsref = get_hits_contigs( self => $self, HITSTREAM => $hitstream, searchtype => "lastal" );
 			} elsif ( $count == 4 ) {
 				$hitsref = get_hits( self => $self, HITSTREAM => $hitstream, searchtype => "rap" );
 				unlink( $self->{"blastDir"} . "/rapjunk.aln" );	# rap leaves some trash lying about
@@ -348,6 +347,22 @@ sub lastal_table {
 	return $hitstream;
 }
 
+=head2 lastal_table_rna
+
+runs lastal rna search on a query file (or named pipe)
+returns a stream file handle
+
+=cut
+
+sub lastal_table_rna {
+	my $self       = shift;
+	my $query_file = shift;
+	my $lastal_cmd = "$Phylosift::Utilities::lastal -e300 -f0 $Phylosift::Utilities::marker_dir/rnadb $query_file |";
+	debug "Running $lastal_cmd";
+	open( my $hitstream, $lastal_cmd );
+	return $hitstream;
+}
+
 =head2 blastXoof_table
 
 runs blastx with out-of-frame (OOF) detection on a query file (or named pipe)
@@ -458,8 +473,6 @@ sub executeRap {
     my %args=@_;
 	my $self       = $args{self};
 	my $query_file = $args{query_file};
-	my $dbDir      = "$Phylosift::Utilities::marker_dir/representatives";
-	$dbDir = $self->{"blastDir"} if ( $custom ne "" );
 	my $out_file      = $self->{"blastDir"} . "/$readsCore.rapSearch";
 	my $rapsearch_cmd = "cd "
 	  . $self->{"blastDir"}
@@ -519,6 +532,7 @@ sub get_hits_contigs {
 		if ( $searchtype eq "blastx" ) {
 			( $query, $subject, $two, $three, $four, $five, $query_start, $query_end, $eight, $nine, $ten, $bitScore ) = split( /\t/, $_ );
 		} else {
+			# read table in lastal format
 			my @dat = split( /\t/, $_ );
 			$bitScore    = $dat[0];
 			$subject     = $dat[1];
@@ -540,7 +554,7 @@ sub get_hits_contigs {
 		# running on long reads or an assembly
 		# allow each region of a sequence to have a top hit
 		# do not allow overlap
-		if ( defined( $contig_top_bitscore{$query}{$markerName} ) ) {
+		if ( defined( $contig_top_bitscore{$query} ) ) {
 			my $i = 0;
 			for ( ; $i < @{ $contig_hits{$query} } ; $i++ ) {
 				my $prevhitref = $contig_hits{$query}->[$i];
@@ -577,7 +591,7 @@ sub get_hits_contigs {
 				my @hitdata = [ $markerName, $bitScore, $query_start, $query_end ];
 				push( @{ $contig_hits{$query} }, @hitdata );
 			}
-		} elsif ( !defined( $contig_top_bitscore{$query}{$markerName} ) ) {
+		} elsif ( !defined( $contig_top_bitscore{$query} ) ) {
 			my @hitdata = [ $markerName, $bitScore, $query_start, $query_end ];
 			push( @{ $contig_hits{$query} }, @hitdata );
 			$contig_top_bitscore{$query}{$markerName} = $bitScore;
@@ -614,7 +628,7 @@ sub get_hits {
 		my $markerName = get_marker_name( subject => $subject, search_type => $searchtype );
 
 		#parse once to get the top score for each marker (if isolate is ON, assume best hit comes first)
-		if ( $isolateMode == 1 ) {
+		if ( $self->{"isolate"} ) {
 
 			# running on a genome assembly, allow only 1 hit per marker (TOP hit)
 			if ( !defined( $markerTopScores{$markerName} ) || $markerTopScores{$markerName} < $bitScore ) {
@@ -739,6 +753,7 @@ sub writeCandidates {
 	my $type       = $args{searchtype} || ""; # search type -- candidate filenames will have this name embedded, enables parallel output from different programs
 	my $reads_file = $args{reads};
 	my %contig_hits = %$contigHitsRef;
+	my %markerHits;
 	debug "ReadsFile:  $self->{\"readsFile\"}" . "\n";
 	my $seqin = Phylosift::Utilities::open_SeqIO_object( file => $reads_file );
 
@@ -771,8 +786,8 @@ sub writeCandidates {
 			my $seqLength = length( $seq->seq );
 			$end = $end - ceil( ( $end - $seqLength ) / 3 ) * 3 if ( $end >= $seqLength );
 			my $newSeq;
-			$newSeq = substr( $seq->seq, $start, $end - $start ) unless $type =~ /\.rna/;
-			$newSeq = $cur_hit[4] if $type =~ /\.rna/;
+			$newSeq = substr( $seq->seq, $start, $end - $start ); #unless $type =~ /\.rna/;
+#			$newSeq = $cur_hit[4] if $type =~ /\.rna/;
 
 			#if we're working from DNA then need to translate to protein
 			if ( $self->{"dna"} && $type !~ /\.rna/ ) {
