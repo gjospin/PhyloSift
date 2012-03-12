@@ -679,7 +679,7 @@ sub build_marker_trees_fasttree() {
 		next unless ( -e $marker_fasta );
 		
 		my $tree_script = "/tmp/ps_tree.sh";
-		$tree_script = "/tmp/ps_tree_rna.sh" unless Phylosift::Utilities::is_protein_marker($marker);
+		$tree_script = "/tmp/ps_tree_rna.sh" unless Phylosift::Utilities::is_protein_marker(marker=>$marker);
 
 		# run fasttree on them
 		my $qsub_cmd = "qsub -q all.q -q eisen.q $tree_script $marker";
@@ -687,7 +687,7 @@ sub build_marker_trees_fasttree() {
 		$job =~ /Your job (\d+) /;
 		push( @jobids, $1 );
 		
-		next unless Phylosift::Utilities::is_protein_marker($marker);
+		next unless Phylosift::Utilities::is_protein_marker(marker=>$marker);
 
 		# run fasttree on codons
 		$qsub_cmd = "qsub -q all.q -q eisen.q /tmp/ps_tree_codon.sh $marker";
@@ -995,7 +995,7 @@ sub make_codon_submarkers {
 	# TODO: tune this value
 	my $max_aa_branch_distance = 0.2;
 
-	my (%id_to_taxon,%marker_taxon_to_id) = read_gene_ids("$marker_dir/gene_ids_aa.txt");
+	my (%id_to_taxon,%marker_taxon_to_id) = read_gene_ids(file=>"$marker_dir/gene_ids_aa.txt");
 	
 	my @subalignments; # list of subalignments created that will later need marker packages made
 
