@@ -368,11 +368,7 @@ sub benchmark {
 	my %args = @_;
 	my $self = $args{self};
 	debug "RUNNING Benchmark\n";
-<<<<<<< HEAD
 	Phylosift::Benchmark::runBenchmark( self=>$self, output_path=>"./" );
-=======
-	Phylosift::Benchmark::runBenchmark( self => $self, output_dir => "./" );
->>>>>>> d046ab7611fc309091b627ce32d85e0d06bb4284
 }
 
 =head2 compare
