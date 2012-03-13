@@ -20,6 +20,7 @@ Phylosift::Summarize - Summarize placed reads using the NCBI taxonomy
 Version 0.01
 
 =cut
+
 our $VERSION = '0.01';
 
 =head1 SYNOPSIS
@@ -36,6 +37,7 @@ if you don't export anything, such as for a purely object-oriented module.
 =head2 summarize
 
 =cut
+
 my %nameidmap;
 my %idnamemap;
 
@@ -332,6 +334,8 @@ sub summarize {
 	open( taxaOUT, ">" . $self->{"fileDir"} . "/taxasummary.txt" );
 	foreach my $taxon ( sort { $ncbireads{$b} <=> $ncbireads{$a} } keys %ncbireads ) {
 		my ( $taxon_name, $taxon_level, $taxon_id ) = get_taxon_info( taxon => $taxon );
+		$taxon_level = "Unknown" unless defined($taxon_level);
+		$taxon_name  = "Unknown" unless defined($taxon_name);
 		print taxaOUT join( "\t", $taxon_id, $taxon_level, $taxon_name, $ncbireads{$taxon} ), "\n";
 	}
 	close(taxaOUT);
@@ -558,4 +562,5 @@ See http://dev.perl.org/licenses/ for more information.
 
 
 =cut
+
 1;    # End of Phylosift::Summarize.pm
