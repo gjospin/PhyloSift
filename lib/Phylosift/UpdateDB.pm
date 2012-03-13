@@ -48,7 +48,7 @@ sub get_ebi_genomes {
 	#	get_ebi_from_list("http://www.ebi.ac.uk/genomes/eukaryota.details.txt");
 }
 
-sub get_ebi_from_list() {
+sub get_ebi_from_list {
 	my %args     = @_;
 	my $list_url = $args{url} // miss("url");    # URL to EBI's table of genome characteristics
 	`wget $list_url -O list.txt`;
@@ -98,11 +98,11 @@ sub get_ebi_from_list() {
 	`rm list.txt`;
 }
 
-sub get_taxid_from_gbk() {
+sub get_taxid_from_gbk {
 	my %args = @_;
+	my $file = $args{file} // miss("file");
 
 	# first get the taxon ID
-	my $file = $args{file} // miss("file");
 	open( GBK, $file );
 	my $taxid;
 	while ( my $l2 = <GBK> ) {
@@ -114,7 +114,7 @@ sub get_taxid_from_gbk() {
 	return $taxid;
 }
 
-sub get_ncbi_finished_genomes() {
+sub get_ncbi_finished_genomes {
 	my %args      = @_;
 	my $directory = $args{directory} // miss("directory");
 	`mkdir -p $directory`;
@@ -159,7 +159,7 @@ sub get_ncbi_finished_genomes() {
 	}
 }
 
-sub get_ncbi_draft_genomes() {
+sub get_ncbi_draft_genomes {
 	my %args      = @_;
 	my $directory = $args{directory} // miss("directory");
 	`mkdir -p $directory`;
@@ -206,7 +206,7 @@ sub get_ncbi_draft_genomes() {
 	}
 }
 
-sub find_new_genomes() {
+sub find_new_genomes {
 	my %args        = @_;
 	my $genome_dir  = $args{genome_directory} // miss("genome_directory");
 	my $results_dir = $args{results_directory} // miss("results_directory");
@@ -231,7 +231,7 @@ sub find_new_genomes() {
 # limit on the number of jobs that can be queued to SGE at once
 use constant MAX_SGE_JOBS => 5000;
 
-sub qsub_updates() {
+sub qsub_updates {
 	my %args        = @_;
 	my $results_dir = $args{results_directory} // miss("results_directory");
 	my $files       = $args{files} // miss("files");
@@ -303,7 +303,7 @@ sub wait_for_jobs {
 	}
 }
 
-sub collate_markers() {
+sub collate_markers {
 	my %args        = @_;
 	my $results_dir = $args{results_dir} // miss("results_dir");
 	my $marker_dir  = $args{marker_dir} // miss("marker_dir");
@@ -401,7 +401,7 @@ sub clean_representatives {
  todo: will need to move into alphabetical space here
 =cut
 
-sub assign_seqids($) {
+sub assign_seqids {
 	my %args       = @_;
 	my $marker_dir = $args{marker_directory} // miss("marker_directory");
 
@@ -414,29 +414,29 @@ sub assign_seqids($) {
 	open( my $CODON_IDTABLE, ">gene_ids.codon.txt" );
 	push( @markerlist, "concat" );
 	foreach my $marker (@markerlist) {
-	}
+		my %id_mapping = ();
+		my %id_mapping_codon = ();
+		$aa_counter    = assign_seqids_for_marker( marker=>$marker, alignment=>"$marker.updated.fasta",       IDTABLE=>$AA_IDTABLE,    counter=>$aa_counter,   existing_ids=>\%id_mapping );
+		$codon_counter = assign_seqids_for_marker( marker=>$marker, alignment=>"$marker.codon.updated.fasta", IDTABLE=>$CODON_IDTABLE, counter=>$codon_counter,existing_ids=>\%id_mapping_codon );
 
-	sub assign_seqids_for_marker() {
+		# now put the IDs in the reps file
+		my $no_counter = 0;
+		my $NO_TABLE;
+		my $clean_reps = get_reps_filename(marker=>$marker,updated=>1,clean=>1);		
+		$no_counter    = assign_seqids_for_marker( marker=>$marker, alignment=>$clean_reps, IDTABLE=>$NO_TABLE,      counter=>$no_counter,   existing_ids=>\%id_mapping );
+	}
+}
+
+	sub assign_seqids_for_marker {
 		my %args         = @_;
 		my $marker       = $args{marker};
 		my $alignment    = $args{alignment};
-		my $idtable      = $args{id_table};
+		my $IDTABLE      = $args{IDTABLE};
 		my $counter      = $args{counter};
 		my $existing_ids = $args{existing_ids};
 		open( INALN,  $alignment )           || croak "Unable to read $alignment";
 		open( OUTALN, ">$alignment.seqids" ) || croak "Unable to write to $alignment.seqids";
 		my %mapped_ids;
-		my %id_mapping       = ();
-		my %id_mapping_codon = ();
-		$aa_counter = assign_seqids_for_marker ( marker => $marker, alignment => "$marker.updated.fasta", id_table => $aa_idtable, counter => $aa_counter,
-												 existing_ids => \%id_mapping );
-		$codon_counter = assign_seqids_for_marker (
-													marker       => $marker,
-													alignment    => "$marker.codon.updated.fasta",
-													id_table     => $codon_idtable,
-													counter      => $codon_counter,
-													existing_ids => \%id_mapping_codon
-		);
 		my $printing = 0;
 
 		while ( my $line = <INALN> ) {
@@ -492,7 +492,7 @@ sub assign_seqids($) {
 
 	sub update_ncbi_taxonomy {
 		my %args = @_;
-		my $repository = $args{repository} ||  // miss("repository");
+		my $repository = $args{repository} // miss("repository");
 		print "Downloading new NCBI taxonomy...\n";
 		my $url = "ftp://ftp.ncbi.nih.gov/pub/taxonomy/taxdump.tar.gz";
 		my $ff = File::Fetch->new( uri => $url );
@@ -641,7 +641,7 @@ sub assign_seqids($) {
 		return $name;
 	}
 
-	sub build_marker_trees_fasttree() {
+	sub build_marker_trees_fasttree {
 		my %args        = @_;
 		my $marker_dir  = $args{directory} // miss("directory");
 		my $pruned      = $args{pruned} // miss("pruned");
@@ -706,7 +706,7 @@ sub assign_seqids($) {
 		`rm ps_tree.sh.*`;
 	}
 
-	sub build_marker_trees_raxml() {
+	sub build_marker_trees_raxml {
 		my %args       = @_;
 		my $marker_dir = $args{marker_directory} // miss("marker_directory");
 		open( TREESCRIPT, ">/tmp/ps_tree.sh" );
@@ -759,7 +759,7 @@ rm RAxML*.\$1*
 		`rm ps_tree.sh.*`;
 	}
 
-	sub fix_names_in_alignment() {
+	sub fix_names_in_alignment {
 		my %args      = @_;
 		my $alignment = $args{alignment} // miss("alignment");
 		my %markertaxa;
@@ -843,7 +843,7 @@ rm RAxML*.\$1*
 		filter_fasta( input_fasta => $fasta, output_fasta => $pruned_fasta, keep_taxa => \%keep_taxa );
 	}
 
-	sub pd_prune_markers() {
+	sub pd_prune_markers {
 		my %args       = @_;
 		my $marker_dir = $args{marker_directory} // miss("marker_directory");
 
@@ -874,7 +874,7 @@ rm RAxML*.\$1*
 		}
 	}
 
-	sub reconcile_with_ncbi() {
+	sub reconcile_with_ncbi {
 		my %args        = @_;
 		my $self        = $args{self} // miss("self");
 		my $results_dir = $args{results_directory} // miss("results_directory");
@@ -1191,7 +1191,7 @@ Create protein & rna trees with compatible topologies
 		}
 	}
 
-	sub package_markers($) {
+	sub package_markers {
 		my $marker_dir = shift // miss("marker_dir");
 		my @markerlist = Phylosift::Utilities::gather_markers();
 		unshift( @markerlist, "concat" );
