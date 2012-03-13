@@ -10,6 +10,7 @@ use Phylosift::Utilities qw(debug);
 use Phylosift::UpdateDB;
 die "Usage: phylosift_dbupdate.pl <data repository path>" unless @ARGV == 1;
 my $repository               = $ARGV[0];
+my $local = "/state/partition1/koadman/phylosift/";
 my $ebi_repository           = $repository . "/ebi";
 my $ncbi_draft_repository    = $repository . "/ncbi_draft";
 my $ncbi_finished_repository = $repository . "/ncbi_finished";
@@ -27,8 +28,8 @@ Phylosift::UpdateDB::find_new_genomes( genome_directory => $ncbi_finished_reposi
 Phylosift::UpdateDB::find_new_genomes( genome_directory => $ncbi_draft_repository,    results_directory => $result_repository, files => \@new_genomes );
 Phylosift::UpdateDB::find_new_genomes( genome_directory => $ebi_repository,           results_directory => $result_repository, files => \@new_genomes );
 Phylosift::UpdateDB::find_new_genomes( genome_directory => $local_repository,         results_directory => $result_repository, files => \@new_genomes );
-Phylosift::UpdateDB::qsub_updates( results_directory => $result_repository, files => \@new_genomes );
-Phylosift::UpdateDB::collate_markers( results_dir => $result_repository, marker_dir => $marker_dir );
+Phylosift::UpdateDB::qsub_updates( results_directory => $result_repository, local_directory => $local, files => \@new_genomes );
+Phylosift::UpdateDB::collate_markers( results_dir => $result_repository, local_directory => $local, marker_dir => $marker_dir );
 Phylosift::UpdateDB::assign_seqids( marker_directory => $marker_dir );
 Phylosift::UpdateDB::update_rna( self => $newObject, marker_dir => $marker_dir );
 Phylosift::UpdateDB::update_ncbi_taxonomy( repository => $repository );
