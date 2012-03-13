@@ -1,7 +1,7 @@
 package Phylosift::MarkerBuild;
 use Cwd;
 use Carp;
-use Phylosift::Utilities;
+use Phylosift::Utilities qw(:all);
 use File::Basename;
 
 =head1 NAME
