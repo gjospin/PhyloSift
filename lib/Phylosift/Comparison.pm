@@ -30,8 +30,8 @@ and also do an edge PCA on them. Transforms the XML output into something with m
 
 sub compare {
 	my %args             = @_;
-	my $self             = $args{self};
-	my $parent_directory = $args{parent_dir};
+	my $self             = $args{self} // miss("self");
+	my $parent_directory = $args{parent_dir} // miss("parent_dir");
 
 	# what do we want to accomplish with this?
 	# simplest approach:
@@ -48,9 +48,9 @@ sub compare {
 	# 4. re-place reads from each sample
 	# 5. now do the above steps listed in "simple approach"
 	$parent_directory = $self->{"tempDir"};
-	open( JPLACES, "ls -1 $parent_directory/*/treeDir/concat.trim.jplace |" );
+	my $JPLACES = ps_open( "ls -1 $parent_directory/*/treeDir/concat.trim.jplace |" );
 	my @files;
-	while ( my $file = <JPLACES> ) {
+	while ( my $file = <$JPLACES> ) {
 		chomp $file;
 		push( @files, $file );
 	}
@@ -77,8 +77,8 @@ sub compare {
 
 sub rename_nodes {
 	my %args    = @_;
-	my $infile  = $args{in_file};
-	my $outfile = $args{out_file};
+	my $infile  = $args{in_file} // miss("in_file");
+	my $outfile = $args{out_file} // miss("out_file");
 	my $data = parse(
 					  '-file'       => $infile,
 					  '-format'     => 'phyloxml',

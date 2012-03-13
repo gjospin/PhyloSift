@@ -24,7 +24,7 @@ if ( $^O =~ /arwin/ ) {
 use Exporter;
 use vars qw[ @EXPORT @EXPORT_OK %EXPORT_TAGS @ISA ];
 @ISA       = 'Exporter';
-@EXPORT    = qw[start_timer end_timer debug];
+@EXPORT    = qw[start_timer end_timer debug miss ps_open];
 @EXPORT_OK = qw[];
 %EXPORT_TAGS = (
 				 STD => \@EXPORT,
@@ -75,6 +75,27 @@ writes to STDERR if a program is missing or the wrong version is installed
 returns 1 or 0 depending on success of failure.
 
 =cut
+
+sub miss {
+	my $arg_name = shift;
+	$Carp::Verbose=1;
+	croak("Missing required argument $arg_name");
+}
+
+sub ps_open {
+	my $open_string = shift;
+	my $result = open(my $FH, $open_string );
+	unless($result){
+		my $type = "read from";
+		$type = "write to" if $open_string =~ /^>/;
+		$type = "append to" if $open_string =~ /^>>/;
+		$type = "append to" if $open_string =~ /^\+>/;
+		$type = "pipe" if $open_string =~ /\|$/;
+		$Carp::Verbose=1;
+		croak("Unable to $type $open_string");
+	}
+	return $FH;
+}
 
 sub get_program_path {
 	my %args      = @_;
@@ -352,15 +373,15 @@ sub fasta2stockholm {
 	my %args   = @_;
 	my $fasta  = $args{fasta};
 	my $output = $args{output};
-	open( STOCKOUT, ">$output" );
+	my $STOCKOUT = ps_open( ">$output" );
 
 	# read FASTA file
 	my @seq;
 	my @name;
 	my $name;
 	my $curseq = "";
-	open FASTA, "<$fasta" or die "Couldn't open '$fasta': $!";
-	while (<FASTA>) {
+	my $FASTA = ps_open ("<$fasta");
+	while (<$FASTA>) {
 		if (/^\s*>\s*(\S+)/) {
 			if ( length($curseq) > 0 ) {
 				push @seq,  $curseq;
@@ -382,7 +403,7 @@ sub fasta2stockholm {
 		push @name, $name;
 		$curseq = "";
 	}
-	close FASTA;
+	close $FASTA;
 
 	# check all seqs are same length
 	my $length;
@@ -400,11 +421,11 @@ sub fasta2stockholm {
 	}
 
 	# print Stockholm output
-	print STOCKOUT "# STOCKHOLM 1.0\n";
+	print $STOCKOUT "# STOCKHOLM 1.0\n";
 	for ( my $sI = 0 ; $sI < @name ; $sI++ ) {
-		print STOCKOUT $name[$sI], " ", $seq[$sI], "\n";
+		print $STOCKOUT $name[$sI], " ", $seq[$sI], "\n";
 	}
-	print STOCKOUT "//\n";
+	print $STOCKOUT "//\n";
 }
 
 =head2 stockholm2fasta
@@ -470,8 +491,8 @@ sub read_name_table {
 	my %args      = @_;
 	my $markerDir = $args{marker_directory};
 	my %result;
-	open( ALINAMES, "grep \">\" $markerDir/*.ali |" );
-	while ( my $line = <ALINAMES> ) {
+	my $ALINAMES = ps_open( "grep \">\" $markerDir/*.ali |" );
+	while ( my $line = <$ALINAMES> ) {
 		$line =~ s/.+\:\>//g;
 		my $commonName;
 		if ( $line =~ /\{(.+)\}.+\[.+\]/ ) {
@@ -498,8 +519,8 @@ sub get_marker_length {
 	my $length = 0;
 	if ( is_protein_marker( marker => $marker ) ) {
 		my $hmm_file = get_marker_hmm_file( self => $self, marker => $marker );
-		open( HMM, $hmm_file ) || croak "Unable to open $hmm_file\n";
-		while ( my $line = <HMM> ) {
+		my $HMM = ps_open( $hmm_file );
+		while ( my $line = <$HMM> ) {
 			if ( $line =~ /LENG\s+(\d+)/ ) {
 				$length = $1;
 				last;
@@ -507,8 +528,8 @@ sub get_marker_length {
 		}
 	} else {
 		my $cm_file = get_marker_cm_file( self => $self, marker => $marker );
-		open( CM, $cm_file ) || croak "Unable to open $cm_file\n";
-		while ( my $line = <CM> ) {
+		my $CM = ps_open( $cm_file );
+		while ( my $line = <$CM> ) {
 			if ( $line =~ /CLEN\s+(\d+)/ ) {
 				$length = $1;
 				last;
@@ -951,7 +972,7 @@ sub concatenate_alignments {
 	my $aln_ref       = $args{alignments};
 	my @alignments    = @$aln_ref;
 	my $catobj        = 0;
-	open( MRBAYES, ">$outputMrBayes" );
+	my $MRBAYES = ps_open( ">$outputMrBayes" );
 	my $partlist = "partition genes = " . scalar(@alignments) . ": ";
 	my $prevlen  = 0;
 
@@ -975,7 +996,7 @@ sub concatenate_alignments {
 		$csname =~ s/\..+//g;
 		$partlist .= "," if $catobj != 0;
 		$partlist .= $csname;
-		print MRBAYES "charset $csname = " . ( $prevlen + 1 ) . "-" . ( $prevlen + $aln->length() ) . "\n";
+		print $MRBAYES "charset $csname = " . ( $prevlen + 1 ) . "-" . ( $prevlen + $aln->length() ) . "\n";
 		$prevlen += $aln->length();
 		my $prevseq = 0;
 		my $newaln = $aln->select( 1, 1 );
@@ -1025,7 +1046,7 @@ sub concatenate_alignments {
 		$catobj->verbose(-1);
 	}
 	return unless $catobj;    # exit if there's nothing to write about
-	print MRBAYES "$partlist;\n";
+	print $MRBAYES "$partlist;\n";
 	my $out = Bio::AlignIO->new( -file => ">$outputFasta", '-format' => 'fasta' );
 	foreach my $dummyseq ( $catobj->each_seq_with_id("dummydummydummy") ) {
 		$catobj->remove_seq($dummyseq);
@@ -1104,13 +1125,14 @@ Returns an open filehandle
 
 sub open_sequence_file {
 	my %args = @_;
+	my $file = $args{file} // miss("file");
 	my $F1IN;
 	if ( $args{file} =~ /\.gz$/ ) {
-		open( $F1IN, "zcat $args{file} |" ) or croak "Can't open $args{file}\n";
+		$F1IN = ps_open( "zcat $file |" );
 	} elsif ( $args{file} =~ /\.bz2$/ ) {
-		open( $F1IN, "bzcat $args{file} |" );
+		$F1IN = ps_open( "bzcat $file |" );
 	} else {
-		open( $F1IN, $args{file} );
+		$F1IN = ps_open( $args{file} );
 	}
 	return $F1IN;
 }
@@ -1217,8 +1239,8 @@ sub index_marker_db {
 	# strip gaps from the alignments
 	my $bowtie2_db = get_bowtie2_db( path => $path );
 	my $bowtie2_db_fasta = "$bowtie2_db.fasta";
-	open( my $PDBOUT, ">" . get_blastp_db( path => $path ) );
-	open( my $RNADBOUT, ">" . $bowtie2_db_fasta );
+	my $PDBOUT = ps_open( ">" . get_blastp_db( path => $path ) );
+	my $RNADBOUT = ps_open( ">" . $bowtie2_db_fasta );
 	foreach my $marker (@markers) {
 		my $marker_rep = get_marker_rep_file( self => $args{self}, marker => $marker, updated => 1 );
 		$marker_rep = get_marker_rep_file( self => $args{self}, marker => $marker ) unless -e $marker_rep;
@@ -1230,8 +1252,8 @@ sub index_marker_db {
 			warn "Warning: marker $marker appears to be missing data\n";
 			next;
 		}
-		open( INALN, $marker_rep );
-		while ( my $line = <INALN> ) {
+		my $INALN = ps_open( $marker_rep );
+		while ( my $line = <$INALN> ) {
 			if ( $line =~ /^>(.+)/ ) {
 				print $DBOUT "\n>$marker" . "__$1\n";
 			} else {
@@ -1301,12 +1323,12 @@ sub gather_markers {
 	if ( defined($marker_file) && -f $marker_file && $marker_file ne "" ) {
 
 		#gather a custom list of makers, list convention is 1 marker per line
-		open( markersIN, $marker_file );
-		while (<markersIN>) {
+		my $MARKERS_IN = ps_open( $marker_file );
+		while (<$MARKERS_IN>) {
 			chomp($_);
 			push( @marks, $_ );
 		}
-		close(markersIN);
+		close($MARKERS_IN);
 	} else {
 
 		# gather all markers
@@ -1319,8 +1341,8 @@ sub gather_markers {
 
 		# now gather directory packaged markers (new style)
 		# use maxdepth 2 for two-directory-level markers in the extended marker set
-		open( MLIST, "find $path -maxdepth 2 -mindepth 1 -type d |" );
-		while ( my $line = <MLIST> ) {
+		my $MLIST = ps_open( "find $path -maxdepth 2 -mindepth 1 -type d |" );
+		while ( my $line = <$MLIST> ) {
 			chomp $line;
 			next if $line =~ /PMPROK/;
 			next if $line =~ /concat/;
@@ -1406,7 +1428,7 @@ without reading the whole file.
 sub get_sequence_input_type_quickndirty {
 	my $file         = shift;
 	my $maxshortread = 500;
-	open( FILE, $file );
+	my $FILE = ps_open( $file );
 	my $filesize = -s "$file";
 	my $counter  = 0;
 	my $maxfound = 0;
@@ -1418,10 +1440,10 @@ sub get_sequence_input_type_quickndirty {
 	for ( my $i = 0 ; $i < 200 ; $i++ ) {
 		my $seekpos = int( rand( $filesize - 100 ) );
 		$seekpos = 0 if ( $i == 0 );    # always start with the first line in case the sequence is on a single line!
-		seek( FILE, $seekpos, 0 );
+		seek( $FILE, $seekpos, 0 );
 		$counter = 0;
-		my $line = <FILE>;              # burn a line to be sure we get to sequence
-		while ( $line = <FILE> ) {
+		my $line = <$FILE>;              # burn a line to be sure we get to sequence
+		while ( $line = <$FILE> ) {
 			if ( $line =~ /^>/ ) {
 				$format = "fasta";
 				last if $i > 0;
@@ -1518,14 +1540,14 @@ sub alignment_to_fasta {
 	my $target_dir = $args{target_dir};
 	my ( $core, $path, $ext ) = fileparse( $aln_file, qr/\.[^.]*$/ );
 	my $in = open_SeqIO_object( file => $aln_file );
-	open( FILEOUT, ">" . $target_dir . "/" . $core . ".fasta" ) or carp("Couldn't open $target_dir$core.fasta for writing\n");
+	my $FILEOUT = ps_open( ">" . $target_dir . "/" . $core . ".fasta" );
 	while ( my $seq_object = $in->next_seq() ) {
 		my $seq = $seq_object->seq;
 		my $id  = $seq_object->id;
 		$seq =~ s/-\.//g; # shouldnt be any gaps
-		print FILEOUT ">" . $id . "\n" . $seq . "\n";
+		print $FILEOUT ">" . $id . "\n" . $seq . "\n";
 	}
-	close(FILEOUT);
+	close($FILEOUT);
 	return "$target_dir/$core.fasta";
 }
 
@@ -1582,15 +1604,15 @@ sub unalign_sequences {
 	my ( $core, $path, $ext ) = fileparse( $aln_file, qr/\.[^.]*$/ );
 	my $in = open_SeqIO_object( file => $aln_file );
 	my $seq_count = 0;
-	open( FILEOUT, ">$output_path" ) or carp("Couldn't open $output_path for writing\n");
+	my $FILEOUT = ps_open( ">$output_path" );
 	while ( my $seq_object = $in->next_seq() ) {
 		my $seq = $seq_object->seq;
 		my $id  = $seq_object->id;
 		$seq =~ s/[-\.]//g;    # shouldnt be any gaps
-		print FILEOUT ">" . $id . "\n" . $seq . "\n";
+		print $FILEOUT ">" . $id . "\n" . $seq . "\n";
 		$seq_count++;
 	}
-	close(FILEOUT);
+	close($FILEOUT);
 	return $seq_count;
 }
 

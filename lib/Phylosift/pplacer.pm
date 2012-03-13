@@ -3,7 +3,7 @@ use Cwd;
 use Getopt::Long;
 use Bio::AlignIO;
 use Phylosift::Phylosift;
-use Phylosift::Utilities qw(debug);
+use Phylosift::Utilities qw(:all);
 use Phylosift::Summarize;
 use Bio::Phylo::IO qw(parse unparse);
 
@@ -39,8 +39,8 @@ if you don't export anything, such as for a purely object-oriented module.
 
 sub pplacer {
 	my %args    = @_;
-	my $self    = $args{self};
-	my $markRef = $args{marker_reference};
+	my $self    = $args{self} // miss("self");
+	my $markRef = $args{marker_reference} // miss("marker_reference");
 	directoryPrepAndClean( self => $self );
 
 	# if we have a coverage map then weight the placements
@@ -130,12 +130,12 @@ sub pplacer {
 
 sub weight_placements {
 	my %args       = @_;
-	my $coverage   = $args{coverage};
-	my $place_file = $args{place_file};
+	my $coverage   = $args{coverage} // miss("coverage");
+	my $place_file = $args{place_file} // miss("place_file");
 
 	# weight the placements
-	open( $INPLACE,  $place_file );
-	open( $OUTPLACE, ">$place_file.wt" );
+	my $INPLACE = ps_open(  $place_file );
+	my $OUTPLACE = ps_open( ">$place_file.wt" );
 	my $placeline = 0;
 	while ( my $line = <$INPLACE> ) {
 		$placeline = 1 if ( $line =~ /"placements"/ );
@@ -177,7 +177,7 @@ sub weight_placements {
 
 sub directoryPrepAndClean {
 	my %args = @_;
-	my $self = $args{self};
+	my $self = $args{self} // miss("self");
 	`mkdir $self->{"tempDir"}` unless ( -e $self->{"tempDir"} );
 
 	#create a directory for the Reads file being processed.
@@ -193,15 +193,15 @@ sub directoryPrepAndClean {
 
 sub name_taxa_in_jplace {
 	my %args   = @_;
-	my $self   = $args{self};
-	my $input  = $args{input};
-	my $output = $args{output};
+	my $self   = $args{self} // miss("self");
+	my $input  = $args{input} // miss("input");
+	my $output = $args{output} // miss("output");
 
 	# read in the taxon name map
 	my %namemap;
 	my $taxon_map_file = Phylosift::Utilities::get_marker_taxon_map( self => $self );
-	open( NAMETABLE, $taxon_map_file ) or die "Couldn't open $taxon_map_file\n";
-	while ( my $line = <NAMETABLE> ) {
+	my $NAMETABLE = ps_open( $taxon_map_file );
+	while ( my $line = <$NAMETABLE> ) {
 		chomp $line;
 		my @pair = split( /\t/, $line );
 		$namemap{ $pair[0] } = $pair[1];
@@ -210,9 +210,9 @@ sub name_taxa_in_jplace {
 
 	# parse the tree file to get leaf node names
 	# replace leaf node names with taxon labels
-	open( TREEFILE, $input );
-	my @treedata = <TREEFILE>;
-	close TREEFILE;
+	my $TREEFILE = ps_open( $input );
+	my @treedata = <$TREEFILE>;
+	close $TREEFILE;
 	my $tree_string = $treedata[1];
 	$tree_string =~ s/^\s+\"//g;
 	$tree_string =~ s/\{\d+?\}//g;
@@ -234,9 +234,9 @@ sub name_taxa_in_jplace {
 	}
 	my $new_string = "  \"" . unparse( '-phylo' => $tree, '-format' => 'newick' ) . "\",\n";
 	$treedata[1] = $new_string;
-	open( TREEFILE, ">$output" );
-	print TREEFILE @treedata;
-	close TREEFILE;
+	$TREEFILE = ps_open( ">$output" );
+	print $TREEFILE @treedata;
+	close $TREEFILE;
 }
 
 =head1 AUTHOR

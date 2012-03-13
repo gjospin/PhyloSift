@@ -62,9 +62,9 @@ my %markerLength;
 
 sub RunSearch {
 	my %args       = @_;
-	my $self       = $args{self};
+	my $self       = $args{self} // miss("self");
 	my $custom     = $args{custom};
-	my $markersRef = $args{marker_reference};
+	my $markersRef = $args{marker_reference} // miss("marker_reference");
 	@markers = @{$markersRef};
 	my $position = rindex( $self->{"readsFile"}, "/" );
 	$self->{"readsFile"} =~ m/(\w+)\.?(\w*)$/;
@@ -95,8 +95,6 @@ sub RunSearch {
 	# launch the searches
 	launch_searches( self => $self, readtype => $type, dir => $self->{"blastDir"}, contigs => $contigs );
 
-	# delete files that we don't need anymore
-	#	cleanup($self);
 	return $self;
 }
 
@@ -111,6 +109,7 @@ the parent process writes sequence data to files, child processes launch a simil
 sub launch_searches {
 	my %args            = @_;
 	my $self            = $args{self};
+	my $dir             = $args{dir} // miss("dir");
 	my $last_pipe       = $args{dir} . "last.pipe";
 	my $bowtie2_r1_pipe = $args{dir} . "/bowtie2_r1.pipe";
 	my $reads_file      = $args{dir} . "/reads.fasta";
@@ -160,12 +159,12 @@ sub launch_searches {
 			croak "couldn't fork: $!\n";
 		}
 	}
-	open( my $LAST_PIPE,       ">$last_pipe" );
-	open( my $BOWTIE2_R1_PIPE, ">$bowtie2_r1_pipe" );
+	my $LAST_PIPE = ps_open( ">$last_pipe" );
+	my $BOWTIE2_R1_PIPE = ps_open( ">$bowtie2_r1_pipe" );
 	my $BOWTIE2_R2_PIPE;
 	debug "TESTING" . $args{readtype}->{paired};
-	open( $BOWTIE2_R2_PIPE, ">$bowtie2_r2_pipe" ) if $args{readtype}->{paired};
-	open( my $READS_PIPE, "+>$reads_file" );
+	$BOWTIE2_R2_PIPE = ps_open( ">$bowtie2_r2_pipe" ) if $args{readtype}->{paired};
+	my $READS_PIPE = ps_open( "+>$reads_file" );
 
 	# parent process streams out sequences to fifos
 	# child processes run the search on incoming sequences
@@ -197,12 +196,12 @@ reads a sequence file and streams it out to named pipes
 =cut
 
 sub demux_sequences {
-	my %args          = @_;
-	my $BOWTIE2_PIPE1 = $args{bowtie2_pipe1};
-	my $BOWTIE2_PIPE2 = $args{bowtie2_pipe2};
-	my $LAST_PIPE     = $args{lastal_pipe};
-	my $READS_PIPE    = $args{reads_pipe};
-	my $F1IN          = Phylosift::Utilities::open_sequence_file( file => $args{file1} );
+	my %args           = @_;
+	my $BOWTIE2_PIPE1  = $args{bowtie2_pipe1} // miss("bowtie2_pipe1");
+	my $BOWTIE2_PIPE2  = $args{bowtie2_pipe2};
+	my $READS_PIPE     = $args{reads_pipe} // miss("reads_pipe");
+	my $LAST_PIPE     = $args{lastal_pipe} // miss("lastal_pipe");
+	my $F1IN           = Phylosift::Utilities::open_sequence_file( file => $args{file1} );
 	my $F2IN;
 	$F2IN = Phylosift::Utilities::open_sequence_file( file => $args{file2} ) if length( $args{file2} ) > 0;
 	my @lines1;
@@ -273,16 +272,6 @@ sub demux_sequences {
 	close($READS_PIPE);
 }
 
-sub cleanup {
-	my $self = shift;
-	`rm -f $self->{"blastDir"}/$readsCore.tabblastx`;
-	`rm -f $self->{"blastDir"}/$readsCore.blastx`;
-	`rm -f $self->{"blastDir"}/$readsCore.rapsearch.m8`;
-	`rm -f $self->{"blastDir"}/$readsCore.rapsearch.aln`;
-	`rm -f $self->{"blastDir"}/rep.faa`;
-	`rm -f $self->{"blastDir"}/$blastdb_name`;
-}
-
 sub read_marker_lengths {
 	my %args = @_;
 	my $self = $args{self};
@@ -300,12 +289,12 @@ returns a stream file handle
 
 sub lastal_table {
 	my %args       = @_;
-	my $self       = $args{self};
-	my $query_file = $args{query_file};
+	my $self       = $args{self} // miss("self");
+	my $query_file = $args{query_file} // miss("query_file");
 	my $lastal_cmd = "$Phylosift::Utilities::lastal -F15 -e100 -f0 $Phylosift::Utilities::marker_dir/replast $query_file |";
 	debug "Running $lastal_cmd";
-	open( my $hitstream, $lastal_cmd );
-	return $hitstream;
+	my $HISTREAM = ps_open( $lastal_cmd );
+	return $HISTREAM;
 }
 
 =head2 lastal_table_rna
@@ -316,12 +305,12 @@ returns a stream file handle
 =cut
 
 sub lastal_table_rna {
-	my $self       = shift;
-	my $query_file = shift;
+	my $self       = shift // miss("self");
+	my $query_file = shift // miss("query_file");
 	my $lastal_cmd = "$Phylosift::Utilities::lastal -e300 -f0 $Phylosift::Utilities::marker_dir/rnadb $query_file |";
 	debug "Running $lastal_cmd";
-	open( my $hitstream, $lastal_cmd );
-	return $hitstream;
+	my $HISTREAM = ps_open( $lastal_cmd );
+	return $HISTREAM;
 }
 
 =head2 bowtie2
@@ -333,8 +322,8 @@ returns a stream file handle
 
 sub bowtie2 {
 	my %args     = @_;
-	my $self     = $args{self};
-	my $readtype = $args{readtype};
+	my $self     = $args{self} // miss("self");
+	my $readtype = $args{readtype} // miss("readtype");
 	debug "INSIDE bowtie2\n";
 	my $bowtie2_cmd =
 	    "$Phylosift::Utilities::bowtie2align -x "
@@ -348,8 +337,8 @@ sub bowtie2 {
 	}
 	$bowtie2_cmd .= " |";
 	debug "Running $bowtie2_cmd";
-	open( my $hitstream, $bowtie2_cmd );
-	return $hitstream;
+	my $HISTREAM = ps_open( $bowtie2_cmd );
+	return $HISTREAM;
 }
 
 =head2 translate_frame
@@ -358,13 +347,13 @@ sub bowtie2 {
 
 sub translate_frame {
 	my %args              = @_;
-	my $id                = $args{id};
-	my $seq               = $args{seq};
-	my $start             = $args{start};
-	my $end               = $args{end};
-	my $frame             = $args{frame};
-	my $marker            = $args{marker};
-	my $reverse_translate = $args{reverse_translate};
+	my $id                = $args{id} // miss("id");
+	my $seq               = $args{seq} // miss("seq");
+	my $start             = $args{start} // miss("start");
+	my $end               = $args{end} // miss("end");
+	my $frame             = $args{frame} // miss("frame");
+	my $marker            = $args{marker} // miss("marker");
+	my $reverse_translate = $args{reverse_translate} // miss("reverse_translate");
 	my $return_seq        = "";
 	my $local_seq         = substr( $seq, $start - 1, $end - $start + 1 );
 	my $new_seq           = Bio::LocatableSeq->new( -seq => $local_seq, -id => 'temp' );
@@ -390,9 +379,9 @@ parse the blast file
 
 sub get_hits_contigs {
 	my %args       = @_;
-	my $self       = $args{self};
-	my $HITSTREAM  = $args{HITSTREAM};
-	my $searchtype = $args{searchtype};    # can be blastx or lastal
+	my $self       = $args{self} // miss("self");
+	my $HITSTREAM  = $args{HITSTREAM} // miss("HITSTREAM");
+	my $searchtype = $args{searchtype} // miss("searchtype");    # can be blastx or lastal
 
 	# key is a contig name
 	# value is an array of arrays, each one has [marker,bit_score,left-end,right-end]
@@ -488,9 +477,9 @@ parse the blast file, return a hash containing hits to reads
 
 sub get_hits {
 	my %args       = @_;
-	my $self       = $args{self};
-	my $HITSTREAM  = $args{HITSTREAM};
-	my $searchtype = $args{searchtype};
+	my $self       = $args{self} // miss("self");
+	my $HITSTREAM  = $args{HITSTREAM} // miss("HISTREAM");
+	my $searchtype = $args{searchtype} // miss("searchtype");
 	my %markerTopScores;
 	my %topScore = ();
 	my %contig_hits;
@@ -538,8 +527,8 @@ sub get_hits {
 
 sub get_hits_sam {
 	my %args      = @_;
-	my $self      = $args{self};
-	my $HITSTREAM = $args{HITSTREAM};
+	my $self      = $args{self} // miss("self");
+	my $HITSTREAM = $args{HITSTREAM} // miss("HISTREAM");
 	my %markerTopScores;
 	my %topScore = ();
 	my %contig_hits;
@@ -605,8 +594,8 @@ Extracts a marker gene name from a blast or rapsearch subject sequence name
 
 sub get_marker_name {
 	my %args        = @_;
-	my $subject     = $args{subject};
-	my $search_type = $args{search_type};
+	my $subject     = $args{subject} // miss("subject");
+	my $search_type = $args{search_type} // miss("search_type");
 	my $marker_name = "";
 	if ( $search_type eq "blast" ) {
 		my @marker = split( /\_/, $subject );
@@ -628,10 +617,10 @@ write out results
 
 sub write_candidates {
 	my %args          = @_;
-	my $self          = $args{self};
-	my $contigHitsRef = $args{hitsref};
+	my $self          = $args{self} // miss("self");
+	my $contigHitsRef = $args{hitsref} // miss("hitsref");
 	my $type       = $args{searchtype} || ""; # search type -- candidate filenames will have this name embedded, enables parallel output from different programs
-	my $reads_file = $args{reads};
+	my $reads_file = $args{reads} // miss("reads");
 	my %contig_hits = %$contigHitsRef;
 	my %markerHits;
 	debug "ReadsFile:  $self->{\"readsFile\"}" . "\n";
@@ -706,16 +695,14 @@ sub write_candidates {
 
 		#writing the hits to the candidate file
 		my $candidate_file = Phylosift::Utilities::get_candidate_file( self => $self, marker => $marker, type => $type );
-		open( fileOUT, ">$candidate_file" )
-		  or croak " Couldn't open $candidate_file for writing\n";
-		print fileOUT $markerHits{$marker};
-		close(fileOUT);
+		my $FILE_OUT = ps_open( ">$candidate_file" );
+		print $FILE_OUT $markerHits{$marker};
+		close($FILE_OUT);
 		if ( $self->{"dna"} && $type !~ /\.rna/ ) {
 			$candidate_file = Phylosift::Utilities::get_candidate_file( self => $self, marker => $marker, type => $type, dna => 1 );
-			open( fileOUT, ">$candidate_file" )
-			  or croak " Couldn't open $candidate_file for writing\n";
-			print fileOUT $markerNuc{$marker} if defined( $markerNuc{$marker} );
-			close(fileOUT);
+			my $FILE_OUT = ps_open(">$candidate_file" );
+			print $FILE_OUT $markerNuc{$marker} if defined( $markerNuc{$marker} );
+			close($FILE_OUT);
 		}
 	}
 }
@@ -734,7 +721,7 @@ Generates the blastable database using the marker representatives
 
 sub prep_and_clean {
 	my %args = @_;
-	my $self = $args{self};
+	my $self = $args{self} // miss("self");
 	debug "prepclean MARKERS @markers\nTESTING\n ";
 	`mkdir $self->{"tempDir"}` unless ( -e $self->{"tempDir"} );
 

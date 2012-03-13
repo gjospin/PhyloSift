@@ -58,8 +58,8 @@ sub initialize {
 	my $self        = shift;
 	my %args        = @_;
 	my $mode        = $args{mode};
-	my $readsFile   = $args{file_1} || "";
-	my $readsFile_2 = $args{file_2} || "";
+	my $readsFile   = $args{file_1} // "";
+	my $readsFile_2 = $args{file_2} // "";
 	debug "READSFILE\t" . $readsFile . "\n" if length($readsFile_2);
 	my $position = rindex( $readsFile, "/" );
 	$self->{"fileName"}    = substr( $readsFile, $position + 1, length($readsFile) - $position - 1 );
@@ -135,9 +135,9 @@ my $workingDir = getcwd;
 sub run {
 	my $self     = shift;
 	my %args     = @_;
-	my $force    = $args{force} || 0;
-	my $custom   = $args{custom} || "";
-	my $continue = $args{cont} || 0;      #continue is a reserved word, using a shortened versionc
+	my $force    = $args{force} // 0;
+	my $custom   = $args{custom} // "";
+	my $continue = $args{cont} // 0;      #continue is a reserved word, using a shortened versionc
 	debug "force : $force\n";
 	Phylosift::Utilities::print_citations();
 	start_timer( name => "START" );
@@ -202,7 +202,7 @@ sub run {
 
 sub read_phylosift_config {
 	my %args          = @_;
-	my $self          = $args{self};
+	my $self          = $args{self} // miss("self");
 	my $custom_config = $self->{"configuration"};
 
 	# first get the install prefix of this script
@@ -231,7 +231,7 @@ sub read_phylosift_config {
 
 sub file_check {
 	my %args = @_;
-	my $self = $args{self};
+	my $self = $args{self} // miss("self");
 	if ( !-e $self->{"readsFile"} ) {
 		die $self->{"readsFile"} . "  was not found \n";
 	}
@@ -264,7 +264,7 @@ sub file_check {
 
 sub run_program_check {
 	my %args = @_;
-	my $self = $args{self};
+	my $self = $args{self} // miss("self");
 
 	#check if the various programs used in this pipeline are installed on the machine
 	my $progCheck = Phylosift::Utilities::programChecks($self);
@@ -290,20 +290,20 @@ and isolate names in memory and using that at later stages of the pipeline
 
 sub prep_isolate_files {
 	my %args = @_;
-	my $self = $args{self};
-	my $file = $args{file};
-	open( OUTFILE, ">" . $self->{"fileDir"} . "/isolates.fasta" );
-	open( ISOLATEFILE, $file ) || croak("Unable to read $file\n");
+	my $self = $args{self} // miss("self");
+	my $file = $args{file} // miss("file");
+	my $OUTFILE = ps_open( ">" . $self->{"fileDir"} . "/isolates.fasta" );
+	my $ISOLATEFILE = ps_open( $file );
 	my $fname = $self->{"fileDir"} . "/" . basename($file);
 	debug "Operating on isolate file $fname\n";
-	print OUTFILE ">" . basename($file) . "\n";
+	print $OUTFILE ">" . basename($file) . "\n";
 
-	while ( my $line = <ISOLATEFILE> ) {
+	while ( my $line = <$ISOLATEFILE> ) {
 		next if $line =~ /^>/;
-		print OUTFILE $line;
+		print $OUTFILE $line;
 	}
-	close ISOLATEFILE;
-	close OUTFILE;
+	close $ISOLATEFILE;
+	close $OUTFILE;
 	$self->{"readsFile"} = "isolates.fasta";
 	return $self->{"fileDir"} . "/isolates.fasta";
 }
@@ -316,8 +316,8 @@ sub prep_isolate_files {
 
 sub directory_prep {
 	my %args  = @_;
-	my $self  = $args{self};
-	my $force = $args{force};
+	my $self  = $args{self} // miss("self");
+	my $force = $args{force} // miss("force");
 
 	#    print "FORCE DIRPREP   $force\t mode   ".$self->{"mode"}."\n";
 	#    exit;
@@ -352,9 +352,9 @@ sub directory_prep {
 
 sub taxonomy_assignments {
 	my %args        = @_;
-	my $self        = $args{self};
-	my $continue    = $args{cont};
-	my $markListRef = $args{marker};
+	my $self        = $args{self} // miss("self");
+	my $continue    = $args{cont} // miss("cont");
+	my $markListRef = $args{marker} // miss("marker");
 	Phylosift::Utilities::start_timer( name => "taxonomy assignments" );
 	Phylosift::Summarize::summarize( self => $self, marker_reference => $markListRef );
 	Phylosift::Utilities::end_timer( name => "taxonomy assignments" );
@@ -367,7 +367,7 @@ sub taxonomy_assignments {
 
 sub benchmark {
 	my %args = @_;
-	my $self = $args{self};
+	my $self = $args{self} // miss("self");
 	debug "RUNNING Benchmark\n";
 	Phylosift::Benchmark::runBenchmark( self=>$self, output_path=>"./" );
 }
@@ -378,7 +378,7 @@ sub benchmark {
 
 sub compare {
 	my %args = @_;
-	my $self = $args{self};
+	my $self = $args{self} // miss("self");
 	debug "RUNNING Compare\n";
 	Phylosift::Comparison::compare( self => $self, parent_dir => "./" );
 }
@@ -393,9 +393,9 @@ sub compare {
 
 sub run_pplacer {
 	my %args        = @_;
-	my $self        = $args{self};
-	my $continue    = $args{cont};
-	my $markListRef = $args{marker};
+	my $self        = $args{self} // miss("self");
+	my $continue    = $args{cont} // miss("cont");
+	my $markListRef = $args{marker} // miss("marker");
 	debug "PPLACER MARKS @{$markListRef}\n";
 	Phylosift::Utilities::start_timer( name => "runPPlacer" );
 	Phylosift::pplacer::pplacer( self => $self, marker_reference => $markListRef );
@@ -416,9 +416,9 @@ sub run_pplacer {
 
 sub run_marker_align {
 	my %args     = @_;
-	my $self     = $args{self};
-	my $continue = $args{cont};
-	my $markRef  = $args{marker};
+	my $self     = $args{self} // miss("self");
+	my $continue = $args{cont} // miss("cont");
+	my $markRef  = $args{marker} // miss("marker");
 	Phylosift::Utilities::start_timer( name => "Alignments" );
 
 	#clearing the alignment directory if needed
@@ -446,10 +446,10 @@ sub run_marker_align {
 
 sub run_search {
 	my %args          = @_;
-	my $self          = $args{self};
-	my $continue      = $args{cont};
-	my $custom        = $args{custom};
-	my $markerListRef = $args{marker};
+	my $self          = $args{self} // miss("self");
+	my $continue      = $args{cont} // miss("cont");
+	my $custom        = $args{custom} // miss("custom");
+	my $markerListRef = $args{marker} // miss("marker");
 	Phylosift::Utilities::start_timer( name => "runBlast" );
 
 	#clearing the blast directory
