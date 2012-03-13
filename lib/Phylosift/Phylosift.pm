@@ -233,23 +233,23 @@ sub file_check {
 	my %args = @_;
 	my $self = $args{self} // miss("self");
 	if ( !-e $self->{"readsFile"} ) {
-		die $self->{"readsFile"} . "  was not found \n";
+		croak( $self->{"readsFile"} . "  was not found \n" );
 	}
 
 	#check if the input file is a file and not a directory
 	if ( !-f $self->{"readsFile"} ) {
-		die $self->{"readsFile"} . " is not a plain file, could be a directory\n";
+		croak( $self->{"readsFile"} . " is not a plain file, could be a directory\n" );
 	}
 	if ( $self->{"readsFile_2"} ne "" ) {
 
 		#check the input file exists
 		if ( !-e $self->{"readsFile_2"} ) {
-			die $self->{"readsFile_2"} . " was not found\n";
+			croak( $self->{"readsFile_2"} . " was not found\n" );
 		}
 
 		#check if the input file is a file and not a directory
 		if ( !-e $self->{"readsFile_2"} ) {
-			die $self->{"readsFile_2"} . " is not a plain file, could be a directory\n";
+			croak( $self->{"readsFile_2"} . " is not a plain file, could be a directory\n" );
 		}
 	}
 	return $self;
