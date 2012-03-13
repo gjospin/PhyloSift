@@ -80,9 +80,9 @@ sub read_ncbi_taxonomy_structure {
 
 sub make_ncbi_tree_from_update {
 	my %args        = @_;
-	my $self        = $args{self};
-	my $results_dir = $args{results_directory};
-	my $markerdir   = $args{marker_directory};
+	my $self        = $args{self} // miss("self");
+	my $results_dir = $args{results_directory} // miss("results_directory");
+	my $markerdir   = $args{marker_directory} // miss("marker_directory");
 	read_ncbi_taxon_name_map();
 	read_ncbi_taxonomy_structure();
 	open( AAIDS,          "$markerdir/gene_ids.aa.txt" );
@@ -133,7 +133,7 @@ organisms present in the marker gene trees.
 
 sub make_ncbi_tree {
 	my %args = @_;
-	my $self = $args{self};
+	my $self = $args{self} // miss("self");
 	read_ncbi_taxon_name_map();
 	read_ncbi_taxonomy_structure();
 
@@ -193,8 +193,9 @@ Input: file - a file name
 
 sub read_coverage {
 	my %args = @_;
+	my $file = $args{file} // miss("file");
 	my %coverage;
-	open( COVERAGE, $args{file} ) || return %coverage;
+	open( COVERAGE, $file ) || croak("Unable to read coverage file $file");
 	while ( my $line = <COVERAGE> ) {
 		chomp $line;
 		my @data = split( /\t/, $line );
@@ -212,8 +213,8 @@ NCBI taxonomy
 
 sub summarize {
 	my %args    = @_;
-	my $self    = $args{self};
-	my $markRef = $args{marker_reference};    # list of the markers we're using
+	my $self    = $args{self} // miss("self");
+	my $markRef = $args{marker_reference} // miss("marker_reference");    # list of the markers we're using
 	read_ncbi_taxon_name_map();
 	read_ncbi_taxonomy_structure();
 	my $markerdir = $Phylosift::Utilities::marker_dir;
@@ -365,9 +366,9 @@ sub summarize {
 #
 sub write_confidence_intervals {
 	my %args         = @_;
-	my $self         = $args{self};
-	my $ncbireadsref = $args{ncbi_reads_reference};
-	my $totalreads   = $args{total_reads};
+	my $self         = $args{self} // miss("self");
+	my $ncbireadsref = $args{ncbi_reads_reference} // miss("ncbi_reads_reference");
+	my $totalreads   = $args{total_reads} // miss("total_reads");
 	my %ncbireads    = %$ncbireadsref;
 
 	# normalize to a sampling distribution
@@ -412,7 +413,7 @@ sub write_confidence_intervals {
 
 sub sum_taxon_levels {
 	my %args       = @_;
-	my $placements = $args{placements};
+	my $placements = $args{placements} // miss("placements");
 	my %summarized = ();
 	foreach my $taxon_id ( keys %$placements ) {
 		my $cur_tid = $taxon_id;
@@ -427,7 +428,7 @@ sub sum_taxon_levels {
 
 sub get_taxon_info {
 	my %args = @_;
-	my $in   = $args{taxon};
+	my $in   = $args{taxon} // miss("taxon");
 	if ( $in =~ /^\d+$/ ) {
 
 		#it's an ncbi taxon id.  look up its name and level.
@@ -449,7 +450,7 @@ sub get_taxon_info {
 
 sub tree_name {
 	my %args   = @_;
-	my $inName = $args{name};
+	my $inName = $args{name} // miss("name");
 	$inName =~ s/\s+/_/g;
 	$inName =~ s/'//g;
 	$inName =~ s/[\(\)]//g;
@@ -466,7 +467,7 @@ sub tree_name {
 
 sub homogenize_name_ala_dongying {
 	my %args   = @_;
-	my $inName = $args{name};
+	my $inName = $args{name} // miss("name");
 	return "" unless defined($inName);
 	$inName =~ s/^\s+//;
 	$inName =~ s/\s+$//;
@@ -484,7 +485,7 @@ sub homogenize_name_ala_dongying {
 
 sub donying_find_name_in_taxa_db {
 	my %args = @_;
-	my $name = $args{name};
+	my $name = $args{name} // miss("name");
 	return "" unless defined($name);
 	$name =~ s/^\s+//;
 	my @t = split( /\s+/, $name );

@@ -33,10 +33,10 @@ if you don't export anything, such as for a purely object-oriented module.
 
 sub build_marker {
 	my %args     = @_;
-	my $self     = $args{self};
-	my $aln_file = $args{alignment};
-	my $cutoff   = $args{cutoff};
-	my $force    = $args{force};
+	my $self     = $args{self} // miss("self");
+	my $aln_file = $args{alignment} // miss("alignment");
+	my $cutoff   = $args{cutoff} // miss("cutoff");
+	my $force    = $args{force} // miss("force");
 	my ( $core, $path, $ext ) = fileparse( $aln_file, qr/\.[^.]*$/ );
 	my $marker_dir = $Phylosift::Utilities::marker_dir;
 	my $target_dir = $marker_dir . "/$core";
@@ -98,8 +98,8 @@ generates a HMM profile from an alignment in FASTA format (arg) using hmmbuild. 
 
 sub generate_hmm {
 	my %args      = @_;
-	my $file_name = $args{file_name};
-	my $hmm_name  = $args{hmm_name};
+	my $file_name = $args{file_name} // miss("file_name");
+	my $hmm_name  = $args{hmm_name} // miss("hmm_name");
 	`$Phylosift::Utilities::hmmbuild --informat afa $hmm_name $file_name`;
 }
 
@@ -111,11 +111,11 @@ Aligns sequences to an HMM model and outputs an alignment
 
 sub hmmalign_to_model {
 	my %args          = @_;
-	my $hmm_profile   = $args{hmm_profile};
-	my $sequence_file = $args{sequence_file};
-	my $target_dir    = $args{target_dir};
-	my $ref_ali       = $args{reference_alignment};
-	my $seq_count     = $args{sequence_count};
+	my $hmm_profile   = $args{hmm_profile} // miss("hmm_profile");
+	my $sequence_file = $args{sequence_file} // miss("sequence_file");
+	my $target_dir    = $args{target_dir} // miss("target_dir");
+	my $ref_ali       = $args{reference_alignment} // miss("reference_alignment");
+	my $seq_count     = $args{sequence_count} // miss("sequence_count");
 	my ( $core_name, $path, $ext ) = fileparse( $sequence_file, qr/\.[^.]*$/ );
 	open( ALNOUT, ">$target_dir/$core_name.aln" );
 	open( ALNIN,  "$Phylosift::Utilities::hmmalign --mapali $ref_ali --trim --outformat afa $hmm_profile $sequence_file |" );
@@ -141,8 +141,8 @@ Also removes duplicate IDs
 
 sub mask_and_clean_alignment {
 	my %args        = @_;
-	my $aln_file    = $args{alignment_file};
-	my $output_file = $args{output_file};
+	my $aln_file    = $args{alignment_file} // miss("alignment_file");
+	my $output_file = $args{output_file} // miss("output_file");
 	my %id_map;    # will store a map of unique IDs to sequence names
 
 	#    open(FILEIN,$aln_file) or carp("Couldn't open $aln_file for reading \n");
@@ -175,8 +175,8 @@ generates a tree using fasttree and write the output along with the log/info fil
 
 sub generate_fasttree {
 	my %args       = @_;
-	my $aln_file   = $args{alignment_file};
-	my $target_dir = $args{target_directory};
+	my $aln_file   = $args{alignment_file} // miss("alignment_file");
+	my $target_dir = $args{target_directory} // miss("target_directory");
 	my ( $core, $path, $ext ) = fileparse( $aln_file, qr/\.[^.]*$/ );
 	my %type = Phylosift::Utilities::get_sequence_input_type($aln_file);
 	if ( $type{seqtype} eq "dna" ) {
@@ -196,9 +196,9 @@ uses the PDA program to prune a tree to get representative sequences
 
 sub get_representatives_from_tree {
 	my %args       = @_;
-	my $tree_file  = $args{tree};
-	my $target_dir = $args{target_directory};
-	my $cutoff     = $args{cutoff};
+	my $tree_file  = $args{tree} // miss("tree");
+	my $target_dir = $args{target_directory} // miss("target_directory");
+	my $cutoff     = $args{cutoff} // miss("cutoff");
 	my ( $core, $path, $ext ) = fileparse( $tree_file, qr/\.[^.]*$/ );
 
 	#get the number of taxa in the tree
@@ -228,10 +228,10 @@ reads the selected representatives from the pda file and prints the sequences to
 
 sub get_fasta_from_pda_representatives {
 	my %args            = @_;
-	my $pda_file        = $args{pda_file};
-	my $target_dir      = $args{target_dir};
-	my $reference_fasta = $args{fasta_reference};
-	my $id_map          = $args{id_map};
+	my $pda_file        = $args{pda_file} // miss("pda_file");
+	my $target_dir      = $args{target_dir} // miss("target_dir");
+	my $reference_fasta = $args{fasta_reference} // miss("fasta_reference");
+	my $id_map          = $args{id_map} // miss("id_map");
 	my ( $core, $path, $ext ) = fileparse( $pda_file, qr/\.[^.]*$/ );
 
 	#reading the pda file to get the representative IDs
@@ -270,8 +270,8 @@ Remove columns from a sequence alignment that contain too many gaps or that are 
 
 sub mask_aln {
 	my %args       = @_;
-	my $infile     = $args{file};
-	my $outfile    = $args{output};
+	my $infile     = $args{file} // miss("file");
+	my $outfile    = $args{output} // miss("output");
 	my $gap_cutoff = 10;
 	my $cutoff     = 10;
 	my $maskcont   = martin_mask( input_file => $args{file}, cutoff => $cutoff, opt_g => $gap_cutoff );

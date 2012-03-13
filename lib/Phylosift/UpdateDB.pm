@@ -36,7 +36,7 @@ if you don't export anything, such as for a purely object-oriented module.
 
 sub get_ebi_genomes {
 	my %args      = @_;
-	my $directory = $args{directory};
+	my $directory = $args{directory} // miss("directory");
 	chdir($directory);
 	get_ebi_from_list( url => "http://www.ebi.ac.uk/genomes/organelle.details.txt" );
 	get_ebi_from_list( url => "http://www.ebi.ac.uk/genomes/virus.details.txt" );
@@ -50,7 +50,7 @@ sub get_ebi_genomes {
 
 sub get_ebi_from_list() {
 	my %args     = @_;
-	my $list_url = $args{url};    # URL to EBI's table of genome characteristics
+	my $list_url = $args{url} // miss("url");    # URL to EBI's table of genome characteristics
 	`wget $list_url -O list.txt`;
 	open( DETAILS, "list.txt" );
 	my $line = <DETAILS>;
@@ -102,7 +102,7 @@ sub get_taxid_from_gbk() {
 	my %args = @_;
 
 	# first get the taxon ID
-	my $file = $args{file};
+	my $file = $args{file} // miss("file");
 	open( GBK, $file );
 	my $taxid;
 	while ( my $l2 = <GBK> ) {
@@ -116,7 +116,7 @@ sub get_taxid_from_gbk() {
 
 sub get_ncbi_finished_genomes() {
 	my %args      = @_;
-	my $directory = $args{directory};
+	my $directory = $args{directory} // miss("directory");
 	`mkdir -p $directory`;
 
 	# First download all finished bacterial genomes
@@ -161,7 +161,7 @@ sub get_ncbi_finished_genomes() {
 
 sub get_ncbi_draft_genomes() {
 	my %args      = @_;
-	my $directory = $args{directory};
+	my $directory = $args{directory} // miss("directory");
 	`mkdir -p $directory`;
 	chdir($directory);
 	my $ncbi_wget_cmd = "wget -m --continue --timeout=20 --accept=gbk ftp://ftp.ncbi.nih.gov/genomes/Bacteria_DRAFT";
@@ -208,9 +208,9 @@ sub get_ncbi_draft_genomes() {
 
 sub find_new_genomes() {
 	my %args        = @_;
-	my $genome_dir  = $args{genome_directory};
-	my $results_dir = $args{results_directory};
-	my $files       = $args{files};
+	my $genome_dir  = $args{genome_directory} // miss("genome_directory");
+	my $results_dir = $args{results_directory} // miss("results_directory");
+	my $files       = $args{files} // miss("files");
 	open( FINDER, "find $genome_dir |" );
 	while ( my $genome = <FINDER> ) {
 		chomp $genome;
@@ -233,8 +233,8 @@ use constant MAX_SGE_JOBS => 5000;
 
 sub qsub_updates() {
 	my %args        = @_;
-	my $results_dir = $args{results_directory};
-	my $files       = $args{files};
+	my $results_dir = $args{results_directory} // miss("results_directory");
+	my $files       = $args{files} // miss("files");
 	my @jobids;
 	`mkdir -p $results_dir`;
 	open( PHYLOSIFTSCRIPT, ">/tmp/pssge.sh" );
@@ -291,9 +291,10 @@ rm -rf \$WORKDIR
 
 sub wait_for_jobs {
 	my %args = @_;
+	my $job_ids = $args{job_ids}  // miss("job_ids");
 
 	# wait for all jobs to complete
-	while ( my $jobid = $args{job_ids} ) {
+	while ( my $jobid = $job_ids ) {
 		while (1) {
 			my $output = `qstat -j $jobid 2>&1`;
 			last if $output =~ /Following jobs do not exist/;
@@ -304,8 +305,8 @@ sub wait_for_jobs {
 
 sub collate_markers() {
 	my %args        = @_;
-	my $results_dir = $args{results_dir};
-	my $marker_dir  = $args{marker_dir};
+	my $results_dir = $args{results_dir} // miss("results_dir");
+	my $marker_dir  = $args{marker_dir} // miss("marker_dir");
 
 	# get list of markers
 	chdir($marker_dir);
@@ -371,8 +372,8 @@ sub collate_markers() {
 
 sub clean_representatives {
 	my %args    = @_;
-	my $file    = $args{infile};
-	my $outfile = $args{outfile};
+	my $file    = $args{infile} // miss("infile");
+	my $outfile = $args{outfile} // miss("outfile");
 	open( INALN,  $file );
 	open( OUTALN, ">$outfile" );
 	while ( my $line = <INALN> ) {
@@ -402,7 +403,7 @@ sub clean_representatives {
 
 sub assign_seqids($) {
 	my %args       = @_;
-	my $marker_dir = $args{marker_directory};
+	my $marker_dir = $args{marker_directory} // miss("marker_directory");
 
 	# get list of markers
 	chdir($marker_dir);
@@ -476,7 +477,7 @@ sub assign_seqids($) {
 
 	sub read_gene_ids {
 		my %args = @_;
-		my $file = $args{file};
+		my $file = $args{file} // miss("file");
 		open( IDS, $file ) || croak "Unable to read $file\n";
 		my %id_to_taxon;
 		my %marker_taxon_to_id;
@@ -491,7 +492,7 @@ sub assign_seqids($) {
 
 	sub update_ncbi_taxonomy {
 		my %args = @_;
-		my $repository = $args{repository} || croak "Missing required argument \"repository\"";
+		my $repository = $args{repository} ||  // miss("repository");
 		print "Downloading new NCBI taxonomy...\n";
 		my $url = "ftp://ftp.ncbi.nih.gov/pub/taxonomy/taxdump.tar.gz";
 		my $ff = File::Fetch->new( uri => $url );
@@ -524,9 +525,9 @@ sub assign_seqids($) {
 
 	sub make_ncbi_tree_from_update {
 		my %args        = @_;
-		my $self        = $args{self};
-		my $results_dir = $args{results_dir};
-		my $markerdir   = $args{marker_dir};
+		my $self        = $args{self} // miss("self");
+		my $results_dir = $args{results_dir} // miss("results_dir");
+		my $markerdir   = $args{marker_dir} // miss("marker_dir");
 		my ( %nameidmap, %idnamemap ) = Phylosift::Summarize::readNcbiTaxonNameMap();
 		my %parent = Phylosift::Summarize::readNcbiTaxonomyStructure();
 		print STDERR "ncbi tree has " . scalar( keys(%parent) ) . " nodes\n";
@@ -594,9 +595,9 @@ sub assign_seqids($) {
 
 	sub get_marker_name_base {
 		my %args = @_;
-		my $name = $args{marker};
-		$name .= ".codon"   if $args{dna};
-		$name .= ".updated" if $args{updated};
+		my $name = $args{marker} // miss("marker");
+		$name .= ".codon"   if $args{dna} // miss("dna");
+		$name .= ".updated" if $args{updated} // miss("updated");
 
 		# rna markers don't get pruned
 		$name .= ".pruned" if $args{pruned} && !Phylosift::Utilities::is_protein_marker( marker => $name );
@@ -642,8 +643,8 @@ sub assign_seqids($) {
 
 	sub build_marker_trees_fasttree() {
 		my %args        = @_;
-		my $marker_dir  = $args{directory};
-		my $pruned      = $args{pruned};
+		my $marker_dir  = $args{directory} // miss("directory");
+		my $pruned      = $args{pruned} // miss("pruned");
 		my $codon_fasta = get_fasta_filename( marker => '$1', dna => 1, updated => 1, pruned => $pruned );
 		my $aa_fasta    = get_fasta_filename( marker => '$1', dna => 0, updated => 1, pruned => $pruned );
 		my $codon_tre   = get_fasttree_tre_filename( marker => '$1', dna => 1, updated => 1, pruned => $pruned );
@@ -707,7 +708,7 @@ sub assign_seqids($) {
 
 	sub build_marker_trees_raxml() {
 		my %args       = @_;
-		my $marker_dir = $args{marker_directory};
+		my $marker_dir = $args{marker_directory} // miss("marker_directory");
 		open( TREESCRIPT, ">/tmp/ps_tree.sh" );
 		print TREESCRIPT qq{#!/bin/sh
 #\$ -cwd
@@ -760,7 +761,7 @@ rm RAxML*.\$1*
 
 	sub fix_names_in_alignment() {
 		my %args      = @_;
-		my $alignment = $args{alignment};
+		my $alignment = $args{alignment} // miss("alignment");
 		my %markertaxa;
 
 		# naive means to remove most trivial duplicates. TODO: allow divergent paralogs to remain.
@@ -785,7 +786,7 @@ rm RAxML*.\$1*
 
 	sub create_temp_read_fasta {
 		my %args = @_;
-		my $file = $args{file};
+		my $file = $args{file} // miss("file");
 		open( TMPREAD, ">$file.tmpread.fasta" );
 		print TMPREAD ">blahblahblah\n";
 		open( ALNIN, "$file.fasta" );
@@ -798,9 +799,9 @@ rm RAxML*.\$1*
 
 	sub filter_fasta {
 		my %args         = @_;
-		my $input_fasta  = $args{input_fasta};
-		my $output_fasta = $args{output_fasta};
-		my $keep_taxa    = $args{keep_taxa};
+		my $input_fasta  = $args{input_fasta} // miss("input_fasta");
+		my $output_fasta = $args{output_fasta} // miss("output_fasta");
+		my $keep_taxa    = $args{keep_taxa} // miss("keep_taxa");
 
 		# create a pruned fasta
 		open( FASTA,       $input_fasta )        || croak "Unable to read $input_fasta";
@@ -817,18 +818,17 @@ rm RAxML*.\$1*
 
 	sub prune_marker {
 		my %args         = @_;
-		my $tree         = $args{tre};
-		my $distance     = $args{distance};
-		my $tre          = $args{tre};
-		my $fasta        = $args{fasta};
-		my $pruned_fasta = $args{pruned_fasta};
+		my $tre          = $args{tre} // miss("tre");
+		my $distance     = $args{distance} // miss("distance");
+		my $fasta        = $args{fasta} // miss("fasta");
+		my $pruned_fasta = $args{pruned_fasta} // miss("pruned_fasta");
 
 		#	my $prune_cmd = "$Phylosift::Utilities::pda -k 20000 -g -minlen $args{distance} $args{tre} $args{tre}.pruning.log";
-		my $prune_cmd = "pda -k 20000 -g -minlen $args{distance} $args{tre} $args{tre}.pruning.log";
+		my $prune_cmd = "pda -k 20000 -g -minlen $distance $tre $tre.pruning.log";
 		system("$prune_cmd");
 
 		# read the list of taxa to keep
-		open( PRUNE, "$args{tre}.pruning.log" );
+		open( PRUNE, "$tre.pruning.log" );
 		my $intaxa = 0;
 		my %keep_taxa;
 		while ( my $line = <PRUNE> ) {
@@ -840,12 +840,12 @@ rm RAxML*.\$1*
 		}
 
 		# create a pruned alignment fasta
-		filter_fasta( input_fasta => $args{fasta}, output_fasta => $args{pruned_fasta}, keep_taxa => \%keep_taxa );
+		filter_fasta( input_fasta => $fasta, output_fasta => $pruned_fasta, keep_taxa => \%keep_taxa );
 	}
 
 	sub pd_prune_markers() {
 		my %args       = @_;
-		my $marker_dir = $args{marker_directory};
+		my $marker_dir = $args{marker_directory} // miss("marker_directory");
 
 		# prune distance is different for AA and DNA
 		# these distances are in substitutions per site
@@ -876,10 +876,10 @@ rm RAxML*.\$1*
 
 	sub reconcile_with_ncbi() {
 		my %args        = @_;
-		my $self        = $args{self};
-		my $results_dir = $args{results_directory};
-		my $marker_dir  = $args{marker_directory};
-		my $pruned      = $args{pruned};
+		my $self        = $args{self} // miss("self");
+		my $results_dir = $args{results_directory} // miss("results_directory");
+		my $marker_dir  = $args{marker_directory} // miss("marker_directory");
+		my $pruned      = $args{pruned} // miss("pruned");
 		my $codon_fasta = get_fasta_filename( marker => '\\$1', dna => 1, updated => 1, pruned => $pruned );
 		my $aa_fasta    = get_fasta_filename( marker => '\\$1', dna => 0, updated => 1, pruned => $pruned );
 		my $codon_tre   = get_fasttree_tre_filename( marker => '\\$1', dna => 1, updated => 1, pruned => $pruned );
@@ -939,8 +939,8 @@ We want the updated markers to retain these original sequences.
 
 	sub update_rna {
 		my %args        = @_;
-		my $self        = $args{self} || croak("Missing required argument self");
-		my $marker_dir  = $args{marker_dir} || croak("Missing required argument marker_dir");
+		my $self        = $args{self} // miss("self");
+		my $marker_dir  = $args{marker_dir} // miss("marker_dir");
 		my @marker_list = Phylosift::Utilities::gather_markers();
 		foreach my $marker (@marker_list) {
 			next if Phylosift::Utilities::is_protein_marker( marker => $marker );
@@ -994,7 +994,7 @@ Find groups of closely related taxa that can would be better analyzed with DNA s
 
 	sub make_codon_submarkers {
 		my %args = @_;
-		my $marker_dir = $args{marker_dir} || croak("Missing required argument marker_dir");
+		my $marker_dir = $args{marker_dir} // miss("marker_dir");
 
 		# this is the maximum distance in amino acid substitutions per site that are allowed
 		# on any branch of the tree relating members of a group
@@ -1057,9 +1057,9 @@ Makes a tree for a marker that respects topological constraints given by another
 
 	sub make_constrained_tree {
 		my %args              = @_;
-		my $constraint_marker = $args{constraint_marker} || croak("Missing required argument constraint_marker");
-		my $target_marker     = $args{target_marker} || croak("Missing required argument target_marker");
-		my $marker_dir        = $args{marker_dir} || croak("Missing required argument marker_dir");
+		my $constraint_marker = $args{constraint_marker} // miss("constraint_marker");
+		my $target_marker     = $args{target_marker} // miss("target_marker");
+		my $marker_dir        = $args{marker_dir} // miss("marker_dir");
 		my ( %id_to_taxon, %marker_taxon_to_id ) = read_gene_ids("$marker_dir/gene_ids_aa.txt");
 		my $constraint_tree = get_fasttree_tre_filename( marker => $constraint_marker, dna => 0, updated => 1, pruned => 1 );
 
@@ -1132,7 +1132,7 @@ Create protein & rna trees with compatible topologies
 
 	sub join_trees {
 		my %args       = @_;
-		my $marker_dir = $args{marker_dir};
+		my $marker_dir = $args{marker_dir} // miss("marker_dir");
 
 		# first apply protein constraints to 16s
 		# then apply 16s constraints to protein
@@ -1144,14 +1144,14 @@ Create protein & rna trees with compatible topologies
 
 	sub get_gene_id_file {
 		my %args = @_;
-		my $dna  = $args{dna};
+		my $dna  = $args{dna} // miss("dna");
 		return "gene_ids.codon.txt" if $dna;
 		return "gene_ids.aa.txt";
 	}
 
 	sub add_taxit_taxonomy {
 		my %args       = @_;
-		my $marker_dir = $args{marker_dir};
+		my $marker_dir = $args{marker_dir} // miss("marker_dir");
 		my $pruned     = $args{pruned} || 1;
 
 		# only need to run this if it hasnt been done already
@@ -1192,7 +1192,7 @@ Create protein & rna trees with compatible topologies
 	}
 
 	sub package_markers($) {
-		my $marker_dir = shift;
+		my $marker_dir = shift // miss("marker_dir");
 		my @markerlist = Phylosift::Utilities::gather_markers();
 		unshift( @markerlist, "concat" );
 		foreach my $marker (@markerlist) {

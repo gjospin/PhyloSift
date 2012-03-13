@@ -44,9 +44,9 @@ if you don't export anything, such as for a purely object-oriented module.
 
 sub Export($$$) {
 	my %args       = @_;
-	my $self       = $args{self};
-	my $markRef    = $args{marker_reference};
-	my $outputFile = $args{output_file};
+	my $self       = $args{self} // miss("self");
+	my $markRef    = $args{marker_reference} // miss("marker_reference");
+	my $outputFile = $args{output_file} // miss("output_file");
 	foreach my $marker ( @{$markRef} ) {
 		my $trimfinalFastaFile = Phylosift::Utilities::get_trimfinal_fasta_marker_file( self => $self, marker => $marker );
 		my $trimfinalFile = Phylosift::Utilities::get_trimfinal_marker_file( self => $self, marker => $marker );
@@ -119,13 +119,13 @@ sub Export($$$) {
 
 sub writeXML {
 	my %args            = @_;
-	my $xmlfile         = $args{xml_file};
-	my $markRef         = $args{marker_reference};
-	my $refseqsref      = $args{ref_seq_reference};
-	my $metareadseqsref = $args{meta_reads_seqs_reference};
-	my $alignioref      = $args{alignio_reference};
-	my $metaalignioref  = $args{meta_alignio_reference};
-	my $cmult           = $args{cmult};                       # 1 for amino acid, 3 for codons
+	my $xmlfile         = $args{xml_file} // miss("xml_file");
+	my $markRef         = $args{marker_reference} // miss("marker_reference");
+	my $refseqsref      = $args{ref_seq_reference} // miss("ref_seq_reference");
+	my $metareadseqsref = $args{meta_reads_seqs_reference} // miss("meta_reads_seqs_reference");
+	my $alignioref      = $args{alignio_reference} // miss("alignio_reference");
+	my $metaalignioref  = $args{meta_alignio_reference} // miss("meta_alignio_reference");
+	my $cmult           = $args{cmult} // miss("cmult");                       # 1 for amino acid, 3 for codons
 	my %refseqs         = %$refseqsref;
 	my @metareadseqs    = @$metareadseqsref;
 	my @alignio         = @$alignioref;

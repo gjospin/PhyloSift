@@ -56,8 +56,8 @@ my $minAlignedResidues = 20;
 
 sub MarkerAlign {
 	my %args       = @_;
-	my $self       = $args{self};
-	my $markersRef = $args{marker_reference};
+	my $self       = $args{self} // miss("self");
+	my $markersRef = $args{marker_reference} // miss("marker_reference");
 	my @allmarkers = @{$markersRef};
 	debug "beforeDirprepClean @{$markersRef}\n";
 	directoryPrepAndClean( self => $self, marker_reference => $markersRef );
@@ -104,8 +104,8 @@ sub MarkerAlign {
 
 sub directoryPrepAndClean {
 	my %args    = @_;
-	my $self    = $args{self};
-	my $markRef = $args{marker_reference};
+	my $self    = $args{self} // miss("self");
+	my $markRef = $args{marker_reference} // miss("marker_reference");
 	`mkdir -p $self->{"tempDir"}`;
 
 	#create a directory for the Reads file being processed.
@@ -132,8 +132,8 @@ my @search_types = ( "", ".blastx", ".blastp", ".rap", ".blast" );
 
 sub markerPrepAndRun {
 	my %args    = @_;
-	my $self    = $args{self};
-	my $markRef = $args{marker_reference};
+	my $self    = $args{self} // miss("self");
+	my $markRef = $args{marker_reference} // miss("marker_reference");
 	debug "ALIGNDIR : " . $self->{"alignDir"} . "\n";
 	foreach my $marker ( @{$markRef} ) {
 		next unless Phylosift::Utilities::is_protein_marker( marker => $marker );
@@ -172,10 +172,10 @@ sub markerPrepAndRun {
 
 sub hmmsearch_parse {
 	my %args      = @_;
-	my $self      = $args{self};
-	my $marker    = $args{marker};
-	my $type      = $args{type};
-	my $HMMSEARCH = $args{HMMSEARCH};
+	my $self      = $args{self} // miss("self");
+	my $marker    = $args{marker} // miss("marker");
+	my $type      = $args{type} // miss("type");
+	my $HMMSEARCH = $args{HMMSEARCH} // miss("HMMSEARCH");
 	my %hmmHits   = ();
 	my %hmmScores = ();
 	my $countHits = 0;
@@ -213,12 +213,12 @@ sub hmmsearch_parse {
 
 sub writeAlignedSeq {
 	my %args        = @_;
-	my $self        = $args{self};
-	my $OUTPUT      = $args{output};
-	my $UNMASKEDOUT = $args{unmasked_out};
-	my $prev_name   = $args{prev_name};
-	my $prev_seq    = $args{prev_seq};
-	my $seq_count   = $args{seq_count};
+	my $self        = $args{self} // miss("self");
+	my $OUTPUT      = $args{OUTPUT};
+	my $UNMASKEDOUT = $args{UNMASKED_OUT};
+	my $prev_name   = $args{prev_name} // miss("prev_name");
+	my $prev_seq    = $args{prev_seq} // miss("prev_seq");
+	my $seq_count   = $args{seq_count} // miss("seq_count");
 	my $orig_seq    = $prev_seq;
 	if ( !defined($prev_seq) ) {
 		print "abc";
@@ -310,8 +310,8 @@ sub aa_to_dna_aln {
 
 sub alignAndMask {
 	my %args    = @_;
-	my $self    = $args{self};
-	my $markRef = $args{marker_reference};
+	my $self    = $args{self} // miss("self");
+	my $markRef = $args{marker_reference} // miss("marker_reference");
 	for ( my $index = 0 ; $index < @{$markRef} ; $index++ ) {
 		my $marker         = ${$markRef}[$index];
 		my $refcount       = 0;
@@ -376,16 +376,16 @@ sub alignAndMask {
 				if ( Phylosift::Utilities::is_protein_marker( marker => $marker ) ) {
 					writeAlignedSeq(
 									 self         => $self,
-									 output       => $updatedout,
-									 unmasked_out => $null,
+									 OUTPUT       => $updatedout,
+									 UNMASKED_OUT => $null,
 									 prev_name    => $prev_name,
 									 prev_seq     => $prev_seq,
 									 seq_count    => 0
 					) if $seqCount <= $refcount && $seqCount > 0;
 					writeAlignedSeq(
 									 self         => $self,
-									 output       => $aliout,
-									 unmasked_out => $UNMASKEDOUT,
+									 OUTPUT       => $aliout,
+									 UNMASKED_OUT => $UNMASKEDOUT,
 									 prev_name    => $prev_name,
 									 prev_seq     => $prev_seq,
 									 seq_count    => $seqCount - $refcount - 1
@@ -393,8 +393,8 @@ sub alignAndMask {
 				} else {
 					writeAlignedSeq(
 									 self         => $self,
-									 output       => $aliout,
-									 unmasked_out => $UNMASKEDOUT,
+									 OUTPUT       => $aliout,
+									 UNMASKED_OUT => $UNMASKEDOUT,
 									 prev_name    => $prev_name,
 									 prev_seq     => $prev_seq,
 									 seq_count    => $seqCount
@@ -408,12 +408,12 @@ sub alignAndMask {
 			}
 		}
 		if ( Phylosift::Utilities::is_protein_marker( marker => $marker ) ) {
-			writeAlignedSeq( self => $self, output => $updatedout, unmasked_out => $null, prev_name => $prev_name, prev_seq => $prev_seq, seq_count => 0 )
+			writeAlignedSeq( self => $self, OUTPUT => $updatedout, UNMASKED_OUT => $null, prev_name => $prev_name, prev_seq => $prev_seq, seq_count => 0 )
 			  if $seqCount <= $refcount && $seqCount > 0;
 			writeAlignedSeq(
 							 self         => $self,
-							 output       => $aliout,
-							 unmasked_out => $UNMASKEDOUT,
+							 OUTPUT       => $aliout,
+							 UNMASKED_OUT => $UNMASKEDOUT,
 							 prev_name    => $prev_name,
 							 prev_seq     => $prev_seq,
 							 seq_count    => $seqCount - $refcount - 1
@@ -421,8 +421,8 @@ sub alignAndMask {
 		} else {
 			writeAlignedSeq(
 							 self         => $self,
-							 output       => $aliout,
-							 unmasked_out => $UNMASKEDOUT,
+							 OUTPUT       => $aliout,
+							 UNMASKED_OUT => $UNMASKEDOUT,
 							 prev_name    => $prev_name,
 							 prev_seq     => $prev_seq,
 							 seq_count    => $seqCount
@@ -478,8 +478,8 @@ sub alignAndMask {
 
 sub getPMPROKMarkerAlignmentFiles {
 	my %args             = @_;
-	my $self             = $args{self};
-	my $markRef          = $args{marker_reference};
+	my $self             = $args{self} // miss("self");
+	my $markRef          = $args{marker_reference} // miss("marker_reference");
 	my @markeralignments = ();
 	foreach my $marker ( @{$markRef} ) {
 		next unless $marker =~ /PMPROK/;

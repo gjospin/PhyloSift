@@ -24,7 +24,7 @@ if ( $^O =~ /arwin/ ) {
 use Exporter;
 use vars qw[ @EXPORT @EXPORT_OK %EXPORT_TAGS @ISA ];
 @ISA       = 'Exporter';
-@EXPORT    = qw[start_timer end_timer debug];
+@EXPORT    = qw[start_timer end_timer debug miss];
 @EXPORT_OK = qw[];
 %EXPORT_TAGS = (
 				 STD => \@EXPORT,
@@ -75,6 +75,12 @@ writes to STDERR if a program is missing or the wrong version is installed
 returns 1 or 0 depending on success of failure.
 
 =cut
+
+sub miss {
+	my $arg_name = shift;
+	$Carp::Verbose=1;
+	croak("Missing required argument $arg_name");
+}
 
 sub get_program_path {
 	my %args      = @_;

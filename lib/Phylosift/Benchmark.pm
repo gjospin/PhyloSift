@@ -24,8 +24,8 @@ my %refTaxa              = ();
 
 sub runBenchmark {
     my %args = @_;
-    my $self        = $args{self};
-    my $output_path = $args{output_path};
+    my $self        = $args{self} // miss("self");
+    my $output_path = $args{output_path} // miss("output_path");
 	( %nameidmap, %idnamemap ) = Phylosift::Summarize::readNcbiTaxonNameMap();
 	%parent  = Phylosift::Summarize::readNcbiTaxonomyStructure();
 	%refTaxa = getInputTaxa( file_name=>$self->{"readsFile"} );
@@ -42,9 +42,9 @@ prints the percentage of all PLACED reads that have the correct taxonmic ID
 
 sub readSeqSummary {
     my %args = @_;
-    my $self        = $args{self};
-	my $output_path = $args{output_path};
-	my $readSource  =$args{read_source};
+    my $self        = $args{self} // miss("self");
+	my $output_path = $args{output_path} // miss("output_path");
+	my $readSource  =$args{read_source} // miss("read_source");
 	my $targetDir   = $self->{"fileDir"};
 	open( fileIN, $targetDir . "/sequence_taxa.txt" );
 	my %topReadScore   = ();
@@ -143,8 +143,8 @@ sub readSeqSummary {
 #}
 sub init_taxonomy_levels {
     my %args = @_;
-	my $ncbihash = $args{ncbi_hash};
-	my $initval  = $args{initial_value};
+	my $ncbihash = $args{ncbi_hash} // miss("ncbi_hash");
+	my $initval  = $args{initial_value} // miss("initial_value");
 	$initval = 0 unless defined $initval;
 	$ncbihash->{"superkingdom"} = $initval;
 	$ncbihash->{"phylum"}       = $initval;
@@ -158,26 +158,12 @@ sub init_taxonomy_levels {
 	$ncbihash->{"no rank"}      = $initval;
 }
 
-sub report_flot_json {
-    my %args = @_;
-	my $mtref         = $args{mtref};
-	my $maref         = $args{maref};
-	my $readNumber    = $args{read_number};
-	my $allReadNumber = $args{all_read_number};
-	my $totalProb     = $args{total_prob};
-	my $rtpref        = $args{rt_pref};
-	my %matchTop      = %$mtref;
-	my %matchAll      = %$maref;
-	my %rankTotalProb = %$rtpref;
-
-	#	open(JSON, ">phylosift_accuracy.json");
-}
 
 sub report_timing {
     my %args = @_;
-	my $self        = $args{self};
-	my $data        = $args{data};
-	my $output_path = $args{output_path};
+	my $self        = $args{self} // miss("self");
+	my $data        = $args{data} // miss("data");
+	my $output_path = $args{output_path} // miss("output_path");
 	my $timing_file = $output_path . "/timing.csv";
 	unless ( -f $timing_file ) {
 		open( TIMING, ">$timing_file" );
@@ -194,8 +180,8 @@ sub report_timing {
 
 sub as_percent {
     my %args = @_;
-	my $num   = $args{num};
-	my $denom =$args{denom};
+	my $num   = $args{num} // miss("num");
+	my $denom =$args{denom} // miss("denom");
 	if ( defined $num && defined $denom && $denom > 0 ) {
 		my $pretty = sprintf( "%.2f", 100 * $num / $denom );
 		return $pretty;
@@ -205,14 +191,14 @@ sub as_percent {
 
 sub report_csv {
     my %args = @_;
-	my $self          = $args{self};
-	my $report_dir    = $args{report_dir};
-	my $mtref         = $args{mtref};
-	my $maref         = $args{maref};
-	my $readNumber    = $args{read_number};
-	my $allReadNumber = $args{all_read_number};
-	my $totalProb     = $args{total_prob};
-	my $rtpref        = $args{rtpref};
+	my $self          = $args{self} // miss("self");
+	my $report_dir    = $args{report_dir} // miss("report_dir");
+	my $mtref         = $args{mtref} // miss("mtref");
+	my $maref         = $args{maref} // miss("maref");
+	my $readNumber    = $args{read_number} // miss("read_number");
+	my $allReadNumber = $args{all_read_number} // miss("all_read_number");
+	my $totalProb     = $args{total_prob} // miss("total_prob");
+	my $rtpref        = $args{rtpref} // miss("rtpref");
 	my %matchTop      = %$mtref;
 	my %matchAll      = %$maref;
 	my %rankTotalProb = %$rtpref;
@@ -243,13 +229,13 @@ sub report_csv {
 sub report_text {
     my %args = @_;
     my $self = $args{self};
-	my $outputfile    = $args{output_file};
-	my $mtref         = $args{mtref};
-	my $maref         = $args{maref};
-	my $readNumber    = $args{read_number};
-	my $allReadNumber = $args{all_read_number};
-	my $totalProb     = $args{total_prob};
-	my $rtpref        = $args{rtpref};
+	my $outputfile    = $args{output_file} // miss("output_file");
+	my $mtref         = $args{mtref} // miss("mtref");
+	my $maref         = $args{maref} // miss("maref");
+	my $readNumber    = $args{read_number} // miss("read_number");
+	my $allReadNumber = $args{all_read_number} // miss("all_read_number");
+	my $totalProb     = $args{total_prob} // miss("total_prob");
+	my $rtpref        = $args{rtpref} // miss("rtpref");
 	my %matchTop      = %$mtref;
 	my %matchAll      = %$maref;
 	my %rankTotalProb = %$rtpref;
@@ -315,7 +301,7 @@ TODO : Determine which reads came from the marker gene regions from the source g
 
 sub getInputTaxa {
     my %args = @_;
-	my $fileName         = $args{file_name} ;
+	my $fileName         = $args{file_name} // miss("file_name");
 	my %sourceTaxa       = ();
 	my %sourceReadCounts = ();
 	open( fileIN, $fileName ) or carp( "Couldn't open " . $fileName . "\n" );
@@ -354,7 +340,7 @@ last index being the root of the tree.
 
 sub get_ancestor_array {
     my %args = @_;
-	my $taxID    = $args{tax_id};
+	my $taxID    = $args{tax_id} // miss("tax_id");
 	my $curID    = $taxID;
 	my @ancestor = ();
 	while ( $curID != 1 ) {
