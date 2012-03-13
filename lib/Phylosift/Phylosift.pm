@@ -177,6 +177,7 @@ sub run {
 	}
 	if ( $self->{"mode"} eq 'benchmark' ) {
 		$self = benchmark( self => $self );
+		exit;
 	}
 	if ( $self->{"mode"} eq 'compare' ) {
 		$self = compare( self => $self );
@@ -368,7 +369,7 @@ sub benchmark {
 	my %args = @_;
 	my $self = $args{self};
 	debug "RUNNING Benchmark\n";
-	Phylosift::Benchmark::runBenchmark( self => $self, output_dir => "./" );
+	Phylosift::Benchmark::runBenchmark( self=>$self, output_path=>"./" );
 }
 
 =head2 compare

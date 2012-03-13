@@ -50,4 +50,4 @@ for(my $bI=0; $bI<@benchmark_data; $bI++){
 }
 
 # create a seconds elapsed report
-Phylosift::Benchmark::reportTiming(self=>$ps, data=>\%times,output_path=> $report_path);
+Phylosift::Benchmark::report_timing(self=>$ps, data=>\%times,output_path=> $report_path);

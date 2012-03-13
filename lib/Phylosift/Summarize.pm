@@ -49,7 +49,7 @@ my %idnamemap;
 =cut
 
 sub read_ncbi_taxon_name_map {
-	return if %nameidmap;
+	return ( %nameidmap, %idnamemap ) if %nameidmap;
 	my $ncbidir = $Phylosift::Utilities::ncbi_dir;
 	open( TAXIDS, "$ncbidir/names.dmp" );
 	while ( my $line = <TAXIDS> ) {
