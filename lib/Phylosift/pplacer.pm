@@ -16,7 +16,6 @@ Phylosift::pplacer - place aligned reads onto a phylogenetic tree with pplacer
 Version 0.01
 
 =cut
-
 our $VERSION = '0.01';
 
 =head1 SYNOPSIS
@@ -39,10 +38,10 @@ if you don't export anything, such as for a purely object-oriented module.
 =cut
 
 sub pplacer {
-    my %args = @_;
+	my %args    = @_;
 	my $self    = $args{self};
 	my $markRef = $args{marker_reference};
-	directoryPrepAndClean(self=>$self);
+	directoryPrepAndClean( self => $self );
 
 	# if we have a coverage map then weight the placements
 	my $covref;
@@ -50,39 +49,38 @@ sub pplacer {
 		$covref = Phylosift::Summarize::read_coverage( file => $self->{"coverage"} );
 	}
 	if ( $self->{"updated"} ) {
-		my $markerPackage = Phylosift::Utilities::get_marker_package( self=>$self, marker=>"concat" );
+		my $markerPackage = Phylosift::Utilities::get_marker_package( self => $self, marker => "concat" );
 		my $pp =
 		    "$Phylosift::Utilities::pplacer --verbosity 0 -c $markerPackage -j "
 		  . $self->{"threads"}
 		  . " --groups 5 "
 		  . $self->{"alignDir"}
 		  . "/concat.trim.fasta";
-
 		system($pp);
 		`mv $self->{"workingDir"}/concat.trim.jplace $self->{"treeDir"}` if ( -e $self->{"workingDir"} . "/concat.trim.jplace" );
-		return unless -e $self->{"treeDir"}."/concat.trim.jplace";
-		name_taxa_in_jplace(self=>$self, input=>$self->{"treeDir"}."/concat.trim.jplace",output=>$self->{"treeDir"}."/concat.trim.jplace");
+		return unless -e $self->{"treeDir"} . "/concat.trim.jplace";
+		name_taxa_in_jplace( self => $self, input => $self->{"treeDir"} . "/concat.trim.jplace", output => $self->{"treeDir"} . "/concat.trim.jplace" );
 		return unless defined($covref);
 		weight_placements( self => $self, coverage => $covref, place_file => $self->{"treeDir"} . "/concat.trim.jplace" );
 		return;
 	}
 	foreach my $marker ( @{$markRef} ) {
-		my $readAlignmentFile    = $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta_AA(marker=>$marker);
-		my $readAlignmentDNAFile = $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta_DNA(marker=>$marker);
+		my $readAlignmentFile = $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta_AA( marker => $marker );
+		my $readAlignmentDNAFile = $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta_DNA( marker => $marker );
 		next unless -e $readAlignmentFile || -e $readAlignmentDNAFile;
-		my $markerPackage = Phylosift::Utilities::get_marker_package( self=>$self, marker=> $marker );
+		my $markerPackage = Phylosift::Utilities::get_marker_package( self => $self, marker => $marker );
 		debug "Running Placer on $marker ....\t";
-		my $placeFile    = Phylosift::Utilities::get_read_placement_file(marker=>$marker);
-		my $placeFileDNA = Phylosift::Utilities::get_read_placement_file_DNA(marker=>$marker);
+		my $placeFile = Phylosift::Utilities::get_read_placement_file( marker => $marker );
+		my $placeFileDNA = Phylosift::Utilities::get_read_placement_file_DNA( marker => $marker );
 		if ( $self->{"updated"} == 0 ) {
 			my $pp = "";
-			if ( Phylosift::Utilities::marker_oldstyle(markers=>$marker) ) {
+			if ( Phylosift::Utilities::marker_oldstyle( markers => $marker ) ) {
 
 				# run pplacer the old way, using phyml trees which aren't supported by reference packages
-				my $trimfinalFastaFile = Phylosift::Utilities::get_trimfinal_fasta_marker_file( self=>$self,marker=> $marker );
-				my $trimfinalFile = Phylosift::Utilities::get_trimfinal_marker_file(self=> $self, marker=>$marker );
-				my $treeFile = Phylosift::Utilities::get_tree_marker_file( self=>$self, marker=>$marker );
-				my $treeStatsFile = Phylosift::Utilities::get_tree_stats_marker_file(self=> $self,marker=> $marker );
+				my $trimfinalFastaFile = Phylosift::Utilities::get_trimfinal_fasta_marker_file( self => $self, marker => $marker );
+				my $trimfinalFile = Phylosift::Utilities::get_trimfinal_marker_file( self => $self, marker => $marker );
+				my $treeFile = Phylosift::Utilities::get_tree_marker_file( self => $self, marker => $marker );
+				my $treeStatsFile = Phylosift::Utilities::get_tree_stats_marker_file( self => $self, marker => $marker );
 
 				# Pplacer requires the alignment files to have a .fasta extension
 				if ( !-e "$trimfinalFastaFile" ) {
@@ -117,8 +115,10 @@ sub pplacer {
 		# pplacer writes its output to the directory it is called from. Need to move the output to the trees directory
 		`mv $self->{"workingDir"}/$placeFile $self->{"treeDir"}`    if ( -e $self->{"workingDir"} . "/$placeFile" );
 		`mv $self->{"workingDir"}/$placeFileDNA $self->{"treeDir"}` if ( -e $self->{"workingDir"} . "/$placeFileDNA" );
-		name_taxa_in_jplace(self=>$self, input=>$self->{"treeDir"}."/$placeFile",output=>$self->{"treeDir"}."/$placeFile") if ( -e $self->{"treeDir"} . "/$placeFile" );
-		name_taxa_in_jplace(self=>$self, input=>$self->{"treeDir"}."/$placeFileDNA",output=>$self->{"treeDir"}."/$placeFileDNA")  if ( -e $self->{"treeDir"} . "/$placeFileDNA" );
+		name_taxa_in_jplace( self => $self, input => $self->{"treeDir"} . "/$placeFile", output => $self->{"treeDir"} . "/$placeFile" )
+		  if ( -e $self->{"treeDir"} . "/$placeFile" );
+		name_taxa_in_jplace( self => $self, input => $self->{"treeDir"} . "/$placeFileDNA", output => $self->{"treeDir"} . "/$placeFileDNA" )
+		  if ( -e $self->{"treeDir"} . "/$placeFileDNA" );
 		next unless ( defined($covref) );
 		weight_placements( self => $self, coverage => $covref, place_file => $self->{"treeDir"} . "/$placeFile" );
 	}
@@ -168,7 +168,6 @@ sub weight_placements {
 		print $OUTPLACE $line;
 	}
 	close($OUTPLACE);
-
 	`mv $place_file.wt $place_file`;
 }
 
@@ -177,8 +176,8 @@ sub weight_placements {
 =cut
 
 sub directoryPrepAndClean {
-    my %args = @_;
-	my $self    = $args{self};
+	my %args = @_;
+	my $self = $args{self};
 	`mkdir $self->{"tempDir"}` unless ( -e $self->{"tempDir"} );
 
 	#create a directory for the Reads file being processed.
@@ -200,14 +199,13 @@ sub name_taxa_in_jplace {
 
 	# read in the taxon name map
 	my %namemap;
-	my $taxon_map_file = Phylosift::Utilities::get_marker_taxon_map(self=>$self);
+	my $taxon_map_file = Phylosift::Utilities::get_marker_taxon_map( self => $self );
 	open( NAMETABLE, $taxon_map_file ) or die "Couldn't open $taxon_map_file\n";
 	while ( my $line = <NAMETABLE> ) {
 		chomp $line;
 		my @pair = split( /\t/, $line );
 		$namemap{ $pair[0] } = $pair[1];
 	}
-
 	Phylosift::Summarize::read_ncbi_taxon_name_map();
 
 	# parse the tree file to get leaf node names
@@ -223,16 +221,18 @@ sub name_taxa_in_jplace {
 									  '-string' => $tree_string,
 									  '-format' => 'newick',
 	)->first;
+
 	foreach my $node ( @{ $tree->get_entities } ) {
+
 		# skip this one if it is not a leaf
-#		next if ( scalar($node->get_children())>0 );
+		#		next if ( scalar($node->get_children())>0 );
 		my $name = $node->get_name;
 		next unless defined $namemap{$name};
-		my @data = Phylosift::Summarize::get_taxon_info(taxon=> $namemap{$name} );
-		my $ncbi_name = Phylosift::Summarize::tree_name(name=>$data[0]);
+		my @data = Phylosift::Summarize::get_taxon_info( taxon => $namemap{$name} );
+		my $ncbi_name = Phylosift::Summarize::tree_name( name => $data[0] );
 		$node->set_name($ncbi_name);
 	}
-	my $new_string = "  \"".unparse('-phylo'=>$tree, '-format'=> 'newick')."\",\n";
+	my $new_string = "  \"" . unparse( '-phylo' => $tree, '-format' => 'newick' ) . "\",\n";
 	$treedata[1] = $new_string;
 	open( TREEFILE, ">$output" );
 	print TREEFILE @treedata;
@@ -298,5 +298,4 @@ See http://dev.perl.org/licenses/ for more information.
 
 
 =cut
-
 1;    # End of Phylosift::pplacer.pm

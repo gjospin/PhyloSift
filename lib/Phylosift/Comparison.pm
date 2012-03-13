@@ -29,7 +29,7 @@ and also do an edge PCA on them. Transforms the XML output into something with m
 =cut
 
 sub compare {
-    my %args = @_;
+	my %args             = @_;
 	my $self             = $args{self};
 	my $parent_directory = $args{parent_dir};
 
@@ -57,32 +57,26 @@ sub compare {
 	my $squash_cl = "$Phylosift::Utilities::guppy squash --prefix squash " . join( " ", @files );
 	print STDERR "Squashing with: $squash_cl ";
 	system($squash_cl);
-#	output goes to cluster.tre
 
+	#	output goes to cluster.tre
 	my $pca_cl = "$Phylosift::Utilities::guppy pca --prefix pca " . join( " ", @files );
 	print STDERR "pca with: $pca_cl ";
 	system($pca_cl);
-
-	my $merge_cl = "$Phylosift::Utilities::guppy merge -o $parent_directory/merged.jplace " . join( " ", @files);
+	my $merge_cl = "$Phylosift::Utilities::guppy merge -o $parent_directory/merged.jplace " . join( " ", @files );
 	system($merge_cl);
-	
 	my @processfiles = @files;
-	unshift(@files, "$parent_directory/merged.jplace");
-
-	foreach my $file(@files){
+	unshift( @files, "$parent_directory/merged.jplace" );
+	foreach my $file (@files) {
 		my $rarefact_cl = "$Phylosift::Utilities::guppy rarefact -o $file.rarefaction $file";
 		system($rarefact_cl);
 		my $compress_cl = "$Phylosift::Utilities::guppy compress -o $file.compression --cutoff 0.4 $file";
 		system($compress_cl);
 	}
-
-
-	rename_nodes( in_file=>"pca.xml", out_file=>"pca.named.xml" );
-	
+	rename_nodes( in_file => "pca.xml", out_file => "pca.named.xml" );
 }
 
 sub rename_nodes {
-    my %args= @_;
+	my %args    = @_;
 	my $infile  = $args{in_file};
 	my $outfile = $args{out_file};
 	my $data = parse(

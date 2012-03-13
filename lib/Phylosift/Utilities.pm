@@ -77,7 +77,7 @@ returns 1 or 0 depending on success of failure.
 =cut
 
 sub get_program_path {
-	my %args =@_;
+	my %args      = @_;
 	my $progname  = $args{prog_name};
 	my $progpath  = $args{prog_path};
 	my $progcheck = "";
@@ -131,7 +131,7 @@ sub programChecks {
 		carp "Bioperl was NOT found\n";
 		return 1;
 	}
-	$pplacer = get_program_path( prog_name=>"pplacer", prog_path=>$Phylosift::Settings::pplacer_path );
+	$pplacer = get_program_path( prog_name => "pplacer", prog_path => $Phylosift::Settings::pplacer_path );
 	if ( $pplacer eq "" ) {
 
 		#program not found return;
@@ -145,11 +145,11 @@ sub programChecks {
 			carp("Warning : a different version of pplacer was found. PhyloSift was tested with pplacer v1.1.alpha10\n");
 		}
 	}
-	$guppy    = get_program_path( prog_name=>"guppy",   prog_path=> $Phylosift::Settings::ps_path );
-	$taxit    = get_program_path( prog_name=>"taxit",    prog_path=>$Phylosift::Settings::ps_path );
-	$rppr     = get_program_path( prog_name=>"rppr",    prog_path=> $Phylosift::Settings::ps_path );
-	$cmalign  = get_program_path( prog_name=>"cmalign", prog_path=> $Phylosift::Settings::ps_path );
-	$hmmalign = get_program_path( prog_name=>"hmmalign",prog_path=> $Phylosift::Settings::hmmer3_path );
+	$guppy    = get_program_path( prog_name => "guppy",    prog_path => $Phylosift::Settings::ps_path );
+	$taxit    = get_program_path( prog_name => "taxit",    prog_path => $Phylosift::Settings::ps_path );
+	$rppr     = get_program_path( prog_name => "rppr",     prog_path => $Phylosift::Settings::ps_path );
+	$cmalign  = get_program_path( prog_name => "cmalign",  prog_path => $Phylosift::Settings::ps_path );
+	$hmmalign = get_program_path( prog_name => "hmmalign", prog_path => $Phylosift::Settings::hmmer3_path );
 	if ( $hmmalign eq "" ) {
 
 		#program not found return;
@@ -160,38 +160,38 @@ sub programChecks {
 		# pplacer was found but the version doens't match the one tested with Phylosift
 		carp "Warning : a different version of HMMER was found. PhyloSift was tested with HMMER 3.0rc1\n";
 	}
-	$hmmsearch = get_program_path( prog_name=>"hmmsearch",prog_path=> $Phylosift::Settings::hmmer3_path );
-	$hmmbuild  = get_program_path( prog_name=>"hmmbuild", prog_path=> $Phylosift::Settings::hmmer3_path );
-	$rapSearch = get_program_path( prog_name=>"rapsearch",prog_path=> $Phylosift::Settings::ps_path );
+	$hmmsearch = get_program_path( prog_name => "hmmsearch", prog_path => $Phylosift::Settings::hmmer3_path );
+	$hmmbuild  = get_program_path( prog_name => "hmmbuild",  prog_path => $Phylosift::Settings::hmmer3_path );
+	$rapSearch = get_program_path( prog_name => "rapsearch", prog_path => $Phylosift::Settings::ps_path );
 	if ( $rapSearch eq "" ) {
 		carp("rapsearch was not found\n");
 		return 1;
 	}
-	$preRapSearch = get_program_path( prog_name=>"prerapsearch", prog_path=>$Phylosift::Settings::ps_path );
-	$blastall     = get_program_path( prog_name=>"blastall",   prog_path=>  $Phylosift::Settings::ps_path );
+	$preRapSearch = get_program_path( prog_name => "prerapsearch", prog_path => $Phylosift::Settings::ps_path );
+	$blastall     = get_program_path( prog_name => "blastall",     prog_path => $Phylosift::Settings::ps_path );
 	if ( $blastall eq "" ) {
 		carp("blastall was not found\n");
 		return 1;
 	}
-	$formatdb = get_program_path( prog_name=>"formatdb",prog_path=> $Phylosift::Settings::ps_path );
-	$raxml    = get_program_path( prog_name=>"raxmlHPC", prog_path=>$Phylosift::Settings::ps_path );
+	$formatdb = get_program_path( prog_name => "formatdb", prog_path => $Phylosift::Settings::ps_path );
+	$raxml    = get_program_path( prog_name => "raxmlHPC", prog_path => $Phylosift::Settings::ps_path );
 	if ( $raxml eq "" ) {
 		carp("raxmlHPC was not found\n");
 		return 1;
 	}
-	$readconciler = get_program_path( prog_name=>"readconciler", prog_path=> $Phylosift::Settings::ps_path );
-	$pda          = get_program_path( prog_name=>"pda",          prog_path=> $Phylosift::Settings::ps_path );
-	$fasttree     = get_program_path( prog_name=>"FastTree",     prog_path=> $Phylosift::Settings::ps_path );
-	$lastdb       = get_program_path( prog_name=>"lastdb",       prog_path=> $Phylosift::Settings::ps_path );
-	$lastal       = get_program_path( prog_name=>"lastal",       prog_path=> $Phylosift::Settings::ps_path );
-	$bowtie2align = get_program_path( prog_name=>"bowtie2-align",prog_path=> $Phylosift::Settings::bowtie2_path );
+	$readconciler = get_program_path( prog_name => "readconciler",  prog_path => $Phylosift::Settings::ps_path );
+	$pda          = get_program_path( prog_name => "pda",           prog_path => $Phylosift::Settings::ps_path );
+	$fasttree     = get_program_path( prog_name => "FastTree",      prog_path => $Phylosift::Settings::ps_path );
+	$lastdb       = get_program_path( prog_name => "lastdb",        prog_path => $Phylosift::Settings::ps_path );
+	$lastal       = get_program_path( prog_name => "lastal",        prog_path => $Phylosift::Settings::ps_path );
+	$bowtie2align = get_program_path( prog_name => "bowtie2-align", prog_path => $Phylosift::Settings::bowtie2_path );
 	if ( $bowtie2align eq "" ) {
 
 		#program not found return;
 		carp("bowtie2 not found");
 		return 1;
 	}
-	$bowtie2build = get_program_path(prog_name=> "bowtie2-build",prog_path=> $Phylosift::Settings::bowtie2_path );
+	$bowtie2build = get_program_path( prog_name => "bowtie2-build", prog_path => $Phylosift::Settings::bowtie2_path );
 	return 0;
 }
 
@@ -206,7 +206,7 @@ our $markers_extended_dir = "";
 our $ncbi_dir             = "";
 
 sub get_data_path {
-	my %args = @_;
+	my %args      = @_;
 	my $dataname  = $args{data_name};
 	my $datapath  = $args{data_path};
 	my $datacheck = "";
@@ -231,7 +231,7 @@ Downloads the data given a url and a destination for the data
 =cut
 
 sub download_data {
-	my %args = @_;
+	my %args        = @_;
 	my $url         = $args{url};
 	my $destination = $args{destination};
 	`mkdir -p $destination`;
@@ -288,7 +288,7 @@ sub marker_update_check {
 	}
 	if ($get_new_markers) {
 		warn "Downloading from $url\n";
-		download_data( url=>$url, destination=>$marker_path );
+		download_data( url => $url, destination => $marker_path );
 		my @markers = gather_markers( self => $self, path => $marker_path );
 		index_marker_db( self => $self, markers => \@markers, path => $marker_path );
 	}
@@ -307,19 +307,19 @@ sub data_checks {
 
 	#
 	# first check for the standard marker directory
-	$marker_dir = get_data_path( data_name=>"markers", data_path=>$Phylosift::Settings::marker_path );
+	$marker_dir = get_data_path( data_name => "markers", data_path => $Phylosift::Settings::marker_path );
 	marker_update_check( self => $self, dir => $marker_dir, url => $marker_update_url );
 
 	#
 	# now look for the extended marker directory
-	$markers_extended_dir = get_data_path(data_name=> "markers_extended", data_path=>$Phylosift::Settings::marker_path );
+	$markers_extended_dir = get_data_path( data_name => "markers_extended", data_path => $Phylosift::Settings::marker_path );
 	if ( $self->{"extended"} ) {
 		marker_update_check( self => $self, dir => $markers_extended_dir, url => $markers_extended_update_url );
 	}
 
 	#
 	# now check for the NCBI taxonomy data
-	$ncbi_dir = get_data_path(data_name=> "ncbi", data_path=>$Phylosift::Settings::ncbi_path );
+	$ncbi_dir = get_data_path( data_name => "ncbi", data_path => $Phylosift::Settings::ncbi_path );
 	my ( $content_type, $document_length, $modified_time, $expires, $server ) = head("$ncbi_url");
 	if ( -x $ncbi_dir ) {
 		my $ncbi_time = ( stat($ncbi_dir) )[9];
@@ -328,7 +328,7 @@ sub data_checks {
 		} elsif ( $modified_time > $ncbi_time ) {
 			warn "Found newer version of NCBI taxonomy data!\n";
 			warn "Downloading from $ncbi_url\n";
-			download_data( url=>$ncbi_url, destination=>$ncbi_dir );
+			download_data( url => $ncbi_url, destination => $ncbi_dir );
 		}
 	} else {
 		if ( !defined($modified_time) ) {
@@ -336,7 +336,7 @@ sub data_checks {
 		}
 		warn "Unable to find NCBI taxonomy data!\n";
 		warn "Downloading from $ncbi_url\n";
-		download_data( url=>$ncbi_url, destination=>$ncbi_dir );
+		download_data( url => $ncbi_url, destination => $ncbi_dir );
 	}
 }
 
@@ -349,7 +349,7 @@ See https://github.com/ihh/dart/ for the original source code
 =cut
 
 sub fasta2stockholm {
-	my %args = @_;
+	my %args   = @_;
 	my $fasta  = $args{fasta};
 	my $output = $args{output};
 	open( STOCKOUT, ">$output" );
@@ -424,13 +424,14 @@ sub stockholm2fasta {
 	my @seq;
 	my @names;
 	my $outbuffer = "";
-	my $seq_line = 0;	# counter for which line we're on in each block.
-	while (my $line = <$STREAMIN>) {
-		if( $line  !~ /\S/ || $line =~ /^\s*#/ || length($line)<2){
+	my $seq_line  = 0;                      # counter for which line we're on in each block.
+
+	while ( my $line = <$STREAMIN> ) {
+		if ( $line !~ /\S/ || $line =~ /^\s*#/ || length($line) < 2 ) {
 			$seq_line = 0;
 			next;
 		}
-		if ($line =~ /^\s*\/\//) { $outbuffer .= printseq( columns => $columns, sorted => $sorted, seq => \@seq, names => \@names, out => $args{out} ); }
+		if ( $line =~ /^\s*\/\// ) { $outbuffer .= printseq( columns => $columns, sorted => $sorted, seq => \@seq, names => \@names, out => $args{out} ); }
 		else {
 			chomp $line;
 			my ( $name, $seq ) = split /\s+/, $line;
@@ -445,11 +446,11 @@ sub stockholm2fasta {
 }
 
 sub printseq {
-	my %args = @_;
-	my @seq = @{$args{seq}};
-	my @names = @{$args{names}};
-	my $out  = "";
-	for(my $j=0; $j<@names; $j++){
+	my %args  = @_;
+	my @seq   = @{ $args{seq} };
+	my @names = @{ $args{names} };
+	my $out   = "";
+	for ( my $j = 0 ; $j < @names ; $j++ ) {
 		$out .= ">$names[$j]\n";
 		for ( my $i = 0 ; $i < length( $seq[$j] ) ; $i += $args{columns} ) {
 			$out .= substr( $seq[$j], $i, $args{columns} ) . "\n";
@@ -466,7 +467,7 @@ Requires a marker directory as an argument
 =cut
 
 sub read_name_table {
-	my %args=@_;
+	my %args      = @_;
 	my $markerDir = $args{marker_directory};
 	my %result;
 	open( ALINAMES, "grep \">\" $markerDir/*.ali |" );
@@ -491,12 +492,12 @@ reads in a marker name and returns the number of sequences used to build the HMM
 =cut
 
 sub get_marker_length {
-	my %args = @_;
+	my %args   = @_;
 	my $self   = $args{self};
 	my $marker = $args{marker};
 	my $length = 0;
 	if ( is_protein_marker( marker => $marker ) ) {
-		my $hmm_file = get_marker_hmm_file( self=>$self, marker=>$marker );
+		my $hmm_file = get_marker_hmm_file( self => $self, marker => $marker );
 		open( HMM, $hmm_file ) || croak "Unable to open $hmm_file\n";
 		while ( my $line = <HMM> ) {
 			if ( $line =~ /LENG\s+(\d+)/ ) {
@@ -505,7 +506,7 @@ sub get_marker_length {
 			}
 		}
 	} else {
-		my $cm_file = get_marker_cm_file( self=>$self, marker=>$marker );
+		my $cm_file = get_marker_cm_file( self => $self, marker => $marker );
 		open( CM, $cm_file ) || croak "Unable to open $cm_file\n";
 		while ( my $line = <CM> ) {
 			if ( $line =~ /CLEN\s+(\d+)/ ) {
@@ -524,11 +525,11 @@ Creates a dummy file
 =cut
 
 sub make_dummy_file {
-	my %args = @_;
+	my %args          = @_;
 	my $self          = $args{self};
 	my $marker        = $args{marker};
 	my $gapmultiplier = $args{gap_multiplier};
-	my $len           = get_marker_length( self=> $self, marker => $marker );
+	my $len           = get_marker_length( self => $self, marker => $marker );
 	my $glen;
 	$glen = "P" x $len x $gapmultiplier if $gapmultiplier == 1;
 	$glen = "A" x $len x $gapmultiplier if $gapmultiplier == 3;
@@ -548,6 +549,7 @@ sub get_marker_path {
 	my %args   = @_;
 	my $self   = $args{self};
 	my $marker = $args{marker};
+
 	# check for old-style marker first
 	return "$marker_dir" if ( -e "$marker_dir/$marker.faa" );
 
@@ -582,7 +584,7 @@ If the user chooses the updated markers, the updated filename is returned
 =cut
 
 sub get_alignment_marker_file {
-	my %args = @_;
+	my %args        = @_;
 	my $self        = $args{self};
 	my $marker      = $args{marker};
 	my $marker_path = get_marker_path( self => $self, marker => $marker );
@@ -601,7 +603,7 @@ Returns the aligned fasta file for the marker
 =cut
 
 sub get_marker_aln_file {
-	my %args = @_;
+	my %args        = @_;
 	my $self        = $args{self};
 	my $marker      = $args{marker};
 	my $marker_path = get_marker_path( self => $self, marker => $marker );
@@ -610,7 +612,7 @@ sub get_marker_aln_file {
 		return "$marker_path/$bname.ali" if ( -e "$marker_path/$bname.ali" );
 
 		# using new-style marker directories
-		return "$marker_path/$marker/$bname.aln"  if ( -e "$marker_path/$marker/$bname.aln" );
+		return "$marker_path/$marker/$bname.aln" if ( -e "$marker_path/$marker/$bname.aln" );
 		return "$marker_path/$marker/$bname.masked";
 	} else {
 		return "$marker_path/$marker.updated/$bname.ali";
@@ -624,7 +626,7 @@ Returns the fasta file of unaligned full length representative sequences for the
 =cut
 
 sub get_marker_rep_file {
-	my %args = @_;
+	my %args        = @_;
 	my $self        = $args{self};
 	my $marker      = $args{marker};
 	my $updated     = $args{updated} || $self->{"updated"};
@@ -647,10 +649,10 @@ Returns the HMM file for the marker
 =cut
 
 sub get_marker_hmm_file {
-	my %args = @_;
+	my %args        = @_;
 	my $self        = $args{self};
 	my $marker      = $args{marker};
-	my $local       = $args{loc} || 0; #using loc instead of local (reserved word)
+	my $local       = $args{loc} || 0;                                       #using loc instead of local (reserved word)
 	my $marker_path = get_marker_path( self => $self, marker => $marker );
 	my $bname       = get_marker_basename( marker => $marker );
 	return "$marker_path/$bname.hmm" if ( -e "$marker_path/$bname.hmm" );
@@ -666,7 +668,7 @@ Returns the CM (infernal covarion model) file for the marker
 =cut
 
 sub get_marker_cm_file {
-	my %args = @_;
+	my %args        = @_;
 	my $self        = $args{self};
 	my $marker      = $args{marker};
 	my $marker_path = get_marker_path( self => $self, marker => $marker );
@@ -681,7 +683,7 @@ Returns the stockholm file for the marker
 =cut
 
 sub get_marker_stockholm_file {
-	my %args = @_;
+	my %args        = @_;
 	my $self        = $args{self};
 	my $marker      = $args{marker};
 	my $marker_path = get_marker_path( self => $self, marker => $marker );
@@ -732,7 +734,7 @@ If the user chooses the updated markers, the updated filename is returned
 =cut
 
 sub get_fasta_marker_file {
-	my %args = @_;
+	my %args        = @_;
 	my $self        = $args{self};
 	my $marker      = $args{marker};
 	my $marker_path = get_marker_path( self => $self, marker => $marker );
@@ -751,7 +753,7 @@ Returns the path to the marker package
 =cut
 
 sub get_marker_package {
-	my %args = @_;
+	my %args        = @_;
 	my $self        = $args{self};
 	my $marker      = $args{marker};
 	my $marker_path = get_marker_path( self => $self, marker => $marker );
@@ -768,9 +770,9 @@ given by markerName
 =cut
 
 sub get_aligner_output_fasta_AA {
-	my %args = @_;
+	my %args   = @_;
 	my $marker = $args{marker};
-	my $bname = get_marker_basename( marker => $marker );
+	my $bname  = get_marker_basename( marker => $marker );
 	return "$bname.trim.fasta";
 }
 
@@ -780,9 +782,9 @@ given by markerName
 =cut
 
 sub get_aligner_output_fasta_DNA {
-	my %args = @_;
+	my %args   = @_;
 	my $marker = $args{marker};
-	my $bname = get_marker_basename( marker => $marker );
+	my $bname  = get_marker_basename( marker => $marker );
 	return "$bname.trim.fna.fasta";
 }
 
@@ -792,9 +794,9 @@ given by markerName
 =cut
 
 sub get_read_placement_file {
-	my %args = @_;
+	my %args   = @_;
 	my $marker = $args{marker};
-	my $bname = get_marker_basename( marker => $marker );
+	my $bname  = get_marker_basename( marker => $marker );
 	return "$bname.trim.jplace";
 }
 
@@ -802,10 +804,11 @@ sub get_read_placement_file {
 Returns the read placement Jplace file to the marker
 given by markerName
 =cut
+
 sub get_read_placement_file_DNA {
-	my %args = @_;
+	my %args   = @_;
 	my $marker = $args{marker};
-	my $bname = get_marker_basename( marker => $marker );
+	my $bname  = get_marker_basename( marker => $marker );
 	return "$bname.trim.fna.jplace";
 }
 
@@ -817,20 +820,20 @@ If the user chooses the updated markers, the updated filename is returned
 =cut
 
 sub get_trimfinal_marker_file {
-	my %args = @_;
+	my %args        = @_;
 	my $self        = $args{self};
 	my $marker      = $args{marker};
 	my $marker_path = get_marker_path( self => $self, marker => $marker );
 	my $bname       = get_marker_basename( marker => $marker );
 	if ( $self->{"updated"} == 0 ) {
-		return "$marker_path/$bname.trimfinal" if -e "$marker_path/$bname.trimfinal";
+		return "$marker_path/$bname.trimfinal"      if -e "$marker_path/$bname.trimfinal";
 		return "$marker_path/$marker/$bname.masked" if -e "$marker_path/$marker/$bname.masked";
-		return "$marker_path/$marker/$bname.clean" if -e "$marker_path/$marker/$bname.clean";
+		return "$marker_path/$marker/$bname.clean"  if -e "$marker_path/$marker/$bname.clean";
 		return "$marker_path/$marker/$bname.aln";
 	} else {
-		return "$marker_path/$bname.trimfinal" if -e "$marker_path/$bname.trimfinal";
+		return "$marker_path/$bname.trimfinal"      if -e "$marker_path/$bname.trimfinal";
 		return "$marker_path/$marker/$bname.masked" if -e "$marker_path/$marker/$bname.masked";
-		return "$marker_path/$marker/$bname.clean" if -e "$marker_path/$marker/$bname.clean";
+		return "$marker_path/$marker/$bname.clean"  if -e "$marker_path/$marker/$bname.clean";
 		return "$marker_path/$marker/$bname.aln";
 	}
 }
@@ -843,7 +846,7 @@ If the user chooses the updated markers, the updated file is returned instead
 =cut
 
 sub get_trimfinal_fasta_marker_file {
-	my %args = @_;
+	my %args        = @_;
 	my $self        = $args{self};
 	my $marker      = $args{marker};
 	my $marker_path = get_marker_path( self => $self, marker => $marker );
@@ -865,7 +868,7 @@ The user chooses the updated or stock version
 =cut
 
 sub get_tree_marker_file {
-	my %args = @_;
+	my %args        = @_;
 	my $self        = $args{self};
 	my $marker      = $args{marker};
 	my $marker_path = get_marker_path( self => $self, marker => $marker );
@@ -885,7 +888,7 @@ Return the updated or stock version of the Tree stats file
 =cut
 
 sub get_tree_stats_marker_file {
-	my %args = @_;
+	my %args        = @_;
 	my $self        = $args{self};
 	my $marker      = $args{marker};
 	my $marker_path = get_marker_path( self => $self, marker => $marker );
@@ -904,7 +907,7 @@ Returns the updated of stock version of the NCBI map file
 =cut
 
 sub get_ncbi_map_file {
-	my %args = @_;
+	my %args        = @_;
 	my $self        = $args{self};
 	my $marker      = $args{marker};
 	my $marker_path = get_marker_path( self => $self, marker => $marker );
@@ -923,10 +926,10 @@ Returns the number of representatives for a marker using the .rep file from the 
 =cut
 
 sub get_count_from_reps {
-	my %args = @_;
+	my %args        = @_;
 	my $self        = $args{self};
 	my $marker      = $args{marker};
-	my $marker_file = get_marker_rep_file( self=>$self, marker=>$marker );
+	my $marker_file = get_marker_rep_file( self => $self, marker => $marker );
 	my $rep_num     = `grep -c '>' $marker_file`;
 	chomp($rep_num);
 	return $rep_num;
@@ -940,7 +943,7 @@ Requires a marker directory as an argument
 =cut
 
 sub concatenate_alignments {
-	my %args = @_;
+	my %args          = @_;
 	my $self          = $args{self};
 	my $outputFasta   = $args{output_fasta};
 	my $outputMrBayes = $args{output_bayes};
@@ -955,17 +958,17 @@ sub concatenate_alignments {
 	foreach my $file (@alignments) {
 		my $aln;
 		my $marker = basename($file);
-		$marker =~ s/\..+//g;     # FIXME: this should really come from a list of markers
+		$marker =~ s/\..+//g;                     # FIXME: this should really come from a list of markers
 		unless ( -e $file ) {
 
 			# this marker doesn't exist, need to create a dummy with the right number of gap columns
-			$aln = make_dummy_file(self=> $self, marker=>$marker,gap_multiplier=> $gapmultiplier );
+			$aln = make_dummy_file( self => $self, marker => $marker, gap_multiplier => $gapmultiplier );
 		} else {
 			my $in = Bio::AlignIO->new( -file => $file, '-format' => 'fasta' );
 			unless ( $aln = $in->next_aln() ) {
 
 				# empty marker alignment file, need to create a dummy with the right number of gap columns
-				$aln = make_dummy_file( self=>$self, marker=>$marker, gap_multiplier=>$gapmultiplier );
+				$aln = make_dummy_file( self => $self, marker => $marker, gap_multiplier => $gapmultiplier );
 			}
 		}
 		my $csname = $file;
@@ -1021,8 +1024,7 @@ sub concatenate_alignments {
 		$catobj = cat( $catobj, $aln );
 		$catobj->verbose(-1);
 	}
-	return unless $catobj;	# exit if there's nothing to write about
-	
+	return unless $catobj;    # exit if there's nothing to write about
 	print MRBAYES "$partlist;\n";
 	my $out = Bio::AlignIO->new( -file => ">$outputFasta", '-format' => 'fasta' );
 	foreach my $dummyseq ( $catobj->each_seq_with_id("dummydummydummy") ) {
@@ -1033,7 +1035,7 @@ sub concatenate_alignments {
 my %timers;
 
 sub start_timer {
-	my %args= @_;
+	my %args      = @_;
 	my $timername = $args{name};
 	my $t         = time;
 	my @timerval  = localtime($t);
@@ -1045,7 +1047,7 @@ sub start_timer {
 }
 
 sub end_timer {
-	my %args = @_;
+	my %args      = @_;
 	my $timername = $args{name};
 	my $t         = time;
 	my @timerval  = localtime($t);
@@ -1063,7 +1065,7 @@ Checks whether a marker is in the old style format (PMPROK*) or the new format (
 =cut
 
 sub marker_oldstyle {
-	my %args = @_;
+	my %args   = @_;
 	my $marker = $args{markers};
 	return 1 if ( $marker =~ /PMPROK/ );
 	return 0;
@@ -1218,8 +1220,8 @@ sub index_marker_db {
 	open( my $PDBOUT, ">" . get_blastp_db( path => $path ) );
 	open( my $RNADBOUT, ">" . $bowtie2_db_fasta );
 	foreach my $marker (@markers) {
-		my $marker_rep = get_marker_rep_file( self=>$args{self}, marker=>$marker, updated=>1 );
-		$marker_rep = get_marker_rep_file( self=>$args{self}, marker=>$marker ) unless -e $marker_rep;
+		my $marker_rep = get_marker_rep_file( self => $args{self}, marker => $marker, updated => 1 );
+		$marker_rep = get_marker_rep_file( self => $args{self}, marker => $marker ) unless -e $marker_rep;
 		debug "marker $marker is protein\n" if is_protein_marker( marker => $marker );
 		debug "marker rep file $marker_rep\n";
 		my $DBOUT = $RNADBOUT;
@@ -1243,6 +1245,7 @@ sub index_marker_db {
 	print $RNADBOUT "\n";
 	close $PDBOUT;    # be sure to flush I/O
 	close $RNADBOUT;
+
 	#print $path."\n";
 	# make a blast database
 	my $blastp_db = get_blastp_db( path => $path );
@@ -1261,16 +1264,16 @@ sub index_marker_db {
 		`cd $path ; $Phylosift::Utilities::lastdb -c $bowtie2_db $bowtie2_db_fasta`;
 		`cd $path ; $Phylosift::Utilities::bowtie2build $bowtie2_db_fasta $bowtie2_db`;
 	}
-	
+
 	# now create the .hmm files if they aren't already present
 	# this is the case in the extended marker set, since the hmms are too big for transit
 	foreach my $marker (@markers) {
-		my $hmm_file = get_marker_hmm_file(self=>$args{self}, marker=>$marker);
+		my $hmm_file = get_marker_hmm_file( self => $args{self}, marker => $marker );
 		next if -e $hmm_file;
-		my $cm_file = get_marker_cm_file(self=>$args{self}, marker=>$marker);
+		my $cm_file = get_marker_cm_file( self => $args{self}, marker => $marker );
 		next if -e $cm_file;
 		next if is_protein_marker( marker => $marker );
-		my $stk_file = get_marker_stockholm_file(self=>$args{self}, marker=>$marker);
+		my $stk_file = get_marker_stockholm_file( self => $args{self}, marker => $marker );
 		`$hmmbuild $hmm_file $stk_file`;
 	}
 }
@@ -1322,7 +1325,7 @@ sub gather_markers {
 			next if $line =~ /PMPROK/;
 			next if $line =~ /concat/;
 			next if $line =~ /representatives/;
-			next if $line =~ /.updated$/; # just include the base version name
+			next if $line =~ /.updated$/;         # just include the base version name
 			$line = substr( $line, length($path) + 1 );
 
 			# all markers need to have an hmm or a cm else they are not usable
@@ -1510,7 +1513,7 @@ Removes all gaps from an alignment file and writes the sequences in fasta format
 =cut
 
 sub alignment_to_fasta {
-	my %args = @_;
+	my %args       = @_;
 	my $aln_file   = $args{aln};
 	my $target_dir = $args{target_dir};
 	my ( $core, $path, $ext ) = fileparse( $aln_file, qr/\.[^.]*$/ );
@@ -1519,7 +1522,7 @@ sub alignment_to_fasta {
 	while ( my $seq_object = $in->next_seq() ) {
 		my $seq = $seq_object->seq;
 		my $id  = $seq_object->id;
-		$seq =~ s/-\.//g;    # shouldnt be any gaps
+		$seq =~ s/-\.//g; # shouldnt be any gaps
 		print FILEOUT ">" . $id . "\n" . $seq . "\n";
 	}
 	close(FILEOUT);
@@ -1534,7 +1537,7 @@ generates a HMM profile from an alignement in FASTA format (arg) using hmmbuild.
 =cut
 
 sub generate_hmm {
-	my %args=@_;
+	my %args       = @_;
 	my $file_name  = $args{file};
 	my $target_dir = $args{target_dir};
 	my ( $core_name, $path, $ext ) = fileparse( $file_name, qr/\.[^.]*$/ );
@@ -1551,7 +1554,7 @@ Aligns sequences to an HMM model and outputs an alignment
 =cut
 
 sub hmmalign_to_model {
-	my %args=@_;
+	my %args          = @_;
 	my $hmm_profile   = $args{hmm};
 	my $sequence_file = $args{sequence_file};
 	my $target_dir    = $args{target_dir};
@@ -1573,7 +1576,7 @@ Also removes duplicate IDs
 =cut
 
 sub unalign_sequences {
-		my %args = @_;
+	my %args        = @_;
 	my $aln_file    = $args{aln};
 	my $output_path = $args{output_path};
 	my ( $core, $path, $ext ) = fileparse( $aln_file, qr/\.[^.]*$/ );
