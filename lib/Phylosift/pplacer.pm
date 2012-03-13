@@ -229,6 +229,7 @@ sub name_taxa_in_jplace {
 		my $name = $node->get_name;
 		next unless defined $namemap{$name};
 		my @data = Phylosift::Summarize::get_taxon_info( taxon => $namemap{$name} );
+		print STDERR "TESTING\t$data[0]\n";
 		my $ncbi_name = Phylosift::Summarize::tree_name( name => $data[0] );
 		$node->set_name($ncbi_name);
 	}

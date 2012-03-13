@@ -154,6 +154,7 @@ sub make_ncbi_tree {
 		}
 
 		# add it to the mapping file
+		debug "TEST:".$idnamemap{$tid}."\n";
 		my $treename = tree_name( name => $idnamemap{$tid} );
 		print MARKERTAXONMAP "$key\t$treename\n";
 

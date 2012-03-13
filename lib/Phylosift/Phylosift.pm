@@ -39,7 +39,7 @@ sub new {
 	$self->{"alignDir"}    = undef;
 	$self->{"treeDir"}     = undef;
 	$self->{"dna"}         = undef;
-	$self->{"updated"}     = 0;
+	$self->{"updated"}     = 1;
 	$self->{"coverage"}    = undef;
 	$self->{"isolate"}     = 0;
 	$self->{"threads"}     = 1;
@@ -96,7 +96,6 @@ Phylosift::Phylosift - Implements core functionality for Phylosift
 Version 0.01
 
 =cut
-
 our $VERSION = '0.01';
 
 =head1 SYNOPSIS
@@ -127,7 +126,6 @@ if you don't export anything, such as for a purely object-oriented module.
     Runs the PhyloSift pipeline according to the functions passed as arguments
 
 =cut
-
 my $continue = 0;
 my ( $mode, $readsFile, $readsFile_2, $fileName, $tempDir, $fileDir, $blastDir, $alignDir, $treeDir ) = "";
 my ( $sec,  $min,       $hour,        $mday,     $mon,     $year,    $wday,     $yday,     $isdst )   = 0;
@@ -149,6 +147,9 @@ sub run {
 	file_check( self => $self ) unless $self->{"mode"} eq 'index';
 	directory_prep( self => $self, force => $force ) unless $self->{"mode"} eq 'index';
 	$self->{"readsFile"} = prep_isolate_files( self => $self, file => $self->{"readsFile"} ) if $self->{"isolate"} == 1;
+
+	# Forcing usage of updated markers
+	$self->{"updated"} = 1;
 	debug "Using updated markers\n" if $self->{"updated"};
 
 	#create a file with a list of markers called markers.list
@@ -521,5 +522,4 @@ See http://dev.perl.org/licenses/ for more information.
 
 
 =cut
-
 1;    # End of Phylosift::Phylosift
