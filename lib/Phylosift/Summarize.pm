@@ -331,6 +331,8 @@ sub summarize {
 	open( taxaOUT, ">" . $self->{"fileDir"} . "/taxasummary.txt" );
 	foreach my $taxon ( sort { $ncbireads{$b} <=> $ncbireads{$a} } keys %ncbireads ) {
 		my ( $taxon_name, $taxon_level, $taxon_id ) = get_taxon_info(taxon=>$taxon);
+		$taxon_level = "Unknown" unless defined($taxon_level);
+		$taxon_name = "Unknown" unless defined($taxon_name);
 		print taxaOUT join( "\t", $taxon_id, $taxon_level, $taxon_name, $ncbireads{$taxon} ), "\n";
 	}
 	close(taxaOUT);
