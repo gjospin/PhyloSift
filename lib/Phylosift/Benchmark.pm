@@ -142,14 +142,9 @@ sub readSeqSummary {
 #}
 sub init_taxonomy_levels {
     my %args = @_;
-<<<<<<< HEAD
 	my $ncbihash = $args{ncbi_hash} // miss("ncbi_hash");
 	my $initval  = $args{initial_value} // miss("initial_value");
 	$initval = 0 unless defined $initval;
-=======
-	my $ncbihash = $args{ncbi_hash};
-	my $initval  = $args{initial_value} || 0;
->>>>>>> 120ec113f5c6c11780837922085fadb2e9b1b305
 	$ncbihash->{"superkingdom"} = $initval;
 	$ncbihash->{"phylum"}       = $initval;
 	$ncbihash->{"subphylum"}    = $initval;
