@@ -49,7 +49,7 @@ my %idnamemap;
 =cut
 
 sub read_ncbi_taxon_name_map {
-	return if %nameidmap;
+	return ( %nameidmap, %idnamemap ) if %nameidmap;
 	my $ncbidir = $Phylosift::Utilities::ncbi_dir;
 	my $TAXIDS = ps_open( "$ncbidir/names.dmp" );
 	while ( my $line = <$TAXIDS> ) {
@@ -154,6 +154,7 @@ sub make_ncbi_tree {
 		}
 
 		# add it to the mapping file
+		debug "TEST:".$idnamemap{$tid}."\n";
 		my $treename = tree_name( name => $idnamemap{$tid} );
 		print $MARKERTAXONMAP "$key\t$treename\n";
 
@@ -319,11 +320,15 @@ sub summarize {
 		foreach my $taxon_id ( sort { $placements{$qname}{$b} <=> $placements{$qname}{$a} } keys %{ $placements{$qname} } ) {
 			$placements{$qname}{$taxon_id} /= $placecount;
 			my ( $taxon_name, $taxon_level, $tid ) = get_taxon_info( taxon => $taxon_id );
+			$taxon_level = "Unknown" unless defined($taxon_level);
+			$taxon_name  = "Unknown" unless defined($taxon_name);
 			print $SEQUENCETAXA "$qname\t$taxon_id\t$taxon_level\t$taxon_name\t" . $placements{$qname}{$taxon_id} . "\n";
 		}
 		my $readsummary = sum_taxon_levels( placements => $placements{$qname} );
 		foreach my $taxon_id ( sort { $readsummary->{$b} <=> $readsummary->{$a} } keys %{$readsummary} ) {
 			my ( $taxon_name, $taxon_level, $tid ) = get_taxon_info( taxon => $taxon_id );
+			$taxon_level = "Unknown" unless defined($taxon_level);
+			$taxon_name  = "Unknown" unless defined($taxon_name);
 			print $SEQUENCESUMMARY "$qname\t$taxon_id\t$taxon_level\t$taxon_name\t" . $readsummary->{$taxon_id} . "\n";
 		}
 	}

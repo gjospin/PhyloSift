@@ -26,10 +26,9 @@ sub runBenchmark {
     my %args = @_;
     my $self        = $args{self} // miss("self");
     my $output_path = $args{output_path} // miss("output_path");
-	( %nameidmap, %idnamemap ) = Phylosift::Summarize::readNcbiTaxonNameMap();
-	%parent  = Phylosift::Summarize::readNcbiTaxonomyStructure();
-	%refTaxa = getInputTaxa( file_name=>$self->{"readsFile"} );
-	print "Number of reads counted = " . scalar( keys(%readSource) ) . "\n";
+	my ( %nameidmap, %idnamemap ) = Phylosift::Summarize::read_ncbi_taxon_name_map();
+	my %parent  = Phylosift::Summarize::read_ncbi_taxonomy_structure();
+	my %refTaxa = getInputTaxa( file_name=>$self->{"readsFile"} );
 	readSeqSummary( self=>$self, output_path=>$output_path,read_source=> \%readSource );
 }
 
@@ -56,7 +55,7 @@ sub readSeqSummary {
 			my $read           = $1;
 			my $taxPlacement   = $4;
 			my $probability    = $5;
-			my @taxPlacementID = Phylosift::Summarize::getTaxonInfo($2);
+			my @taxPlacementID = Phylosift::Summarize::get_taxon_info(taxon=>$2);
 			
 			$read =~ s/\\.+//g;	# get rid of bioperl garbage
 
@@ -80,18 +79,18 @@ sub readSeqSummary {
 	#comparing the sequence_taxa information with the Source taxons
 	#    my %overallScore;
 	my %matchTop = ();
-	init_taxonomy_levels( \%matchTop );
+	init_taxonomy_levels( ncbi_hash => \%matchTop );
 	foreach my $readID ( keys %topReadScore ) {
 
 		#look at each taxonomic level for each Read
 		my $trueTaxon    = $readSource{$readID};
 		my @ancArrayRead = get_ancestor_array( tax_id=>$topReadScore{$readID}->[1] );
-		my @tt           = Phylosift::Summarize::getTaxonInfo($trueTaxon);
-		my @firstTaxon   = Phylosift::Summarize::getTaxonInfo( $ancArrayRead[0] );
+		my @tt           = Phylosift::Summarize::get_taxon_info(taxon=>$trueTaxon);
+		my @firstTaxon   = Phylosift::Summarize::get_taxon_info( taxon=>$ancArrayRead[0] );
 		print "Read $readID assigned to $firstTaxon[0], true $tt[0]\n";
 		foreach my $id (@ancArrayRead) {
 			if ( exists $refTaxa{$trueTaxon}{$id} ) {
-				my @currTaxon = Phylosift::Summarize::getTaxonInfo($id);
+				my @currTaxon = Phylosift::Summarize::get_taxon_info(taxon=>$id);
 				my $currRank  = $currTaxon[1];
 				$matchTop{$currRank} = 0 unless exists( $matchTop{$currRank} );
 				$matchTop{$currRank}++;
@@ -103,8 +102,8 @@ sub readSeqSummary {
 	my $totalProb     = 0;
 	my %rankTotalProb = ();
 	my %matchAll      = ();
-	init_taxonomy_levels( \%matchAll );
-	init_taxonomy_levels( \%rankTotalProb, 0.0000000000000001 );    # avoid divide by zero
+	init_taxonomy_levels( ncbi_hash => \%matchAll );
+	init_taxonomy_levels( ncbi_hash => \%rankTotalProb, initial_value => 0.0000000000000001 );    # avoid divide by zero
 
 	foreach my $readID ( keys %allPlacedScore ) {
 		foreach my $tax ( keys %{ $allPlacedScore{$readID} } ) {
@@ -113,7 +112,7 @@ sub readSeqSummary {
 			pop(@ancArrayRead);
 			push( @ancArrayRead, $allPlacedScore{$readID}{$tax}->[1] );
 			foreach my $id (@ancArrayRead) {
-				my @currTaxon = Phylosift::Summarize::getTaxonInfo($id);
+				my @currTaxon = Phylosift::Summarize::get_taxon_info(taxon=>$id);
 				my $currRank  = $currTaxon[1];
 				if ( exists $sourceIDs{$id} ) {
 					if ( exists $matchAll{$currRank} ) {
@@ -143,9 +142,14 @@ sub readSeqSummary {
 #}
 sub init_taxonomy_levels {
     my %args = @_;
+<<<<<<< HEAD
 	my $ncbihash = $args{ncbi_hash} // miss("ncbi_hash");
 	my $initval  = $args{initial_value} // miss("initial_value");
 	$initval = 0 unless defined $initval;
+=======
+	my $ncbihash = $args{ncbi_hash};
+	my $initval  = $args{initial_value} || 0;
+>>>>>>> 120ec113f5c6c11780837922085fadb2e9b1b305
 	$ncbihash->{"superkingdom"} = $initval;
 	$ncbihash->{"phylum"}       = $initval;
 	$ncbihash->{"subphylum"}    = $initval;
@@ -311,7 +315,7 @@ sub getInputTaxa {
 
 		#push(@sourceTaxa,$1);
 		$readSource{$1} = $2;
-		my @ancestors = get_ancestor_array($2);
+		my @ancestors = get_ancestor_array(tax_id=>$2);
 		foreach my $id (@ancestors) {
 			$sourceIDs{$id} = 1;
 		}
@@ -343,7 +347,7 @@ sub get_ancestor_array {
 	my $taxID    = $args{tax_id} // miss("tax_id");
 	my $curID    = $taxID;
 	my @ancestor = ();
-	while ( $curID != 1 ) {
+	while ( defined($curID) && $curID != 1 ) {
 		push( @ancestor, $curID );
 		$curID = ${ $parent{$curID} }[0];
 	}
