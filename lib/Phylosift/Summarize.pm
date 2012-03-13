@@ -6,6 +6,7 @@ use Phylosift::Utilities qw(debug);
 use Carp;
 use Bio::Phylo;
 use Bio::Phylo::Forest::Tree;
+
 if ( $^O =~ /arwin/ ) {
 	use lib "$FindBin::Bin/osx/darwin-thread-multi-2level/";
 }
@@ -46,6 +47,7 @@ my %idnamemap;
 # stash them in hashes called nameidmap and idnamemap to go back & forth from tax ids to names
 
 =cut
+
 sub read_ncbi_taxon_name_map {
 	return ( %nameidmap, %idnamemap ) if %nameidmap;
 	my $ncbidir = $Phylosift::Utilities::ncbi_dir;
@@ -54,8 +56,8 @@ sub read_ncbi_taxon_name_map {
 		chomp $line;
 		if ( ( $line =~ /scientific name/ ) || ( $line =~ /synonym/ ) || ( $line =~ /misspelling/ ) ) {
 			my @vals = split( /\s+\|\s+/, $line );
-			$nameidmap{ homogenize_name_ala_dongying( name=>$vals[1] ) } = $vals[0];
-			$idnamemap{ $vals[0] } = homogenize_name_ala_dongying(name=> $vals[1] ) if ( $line =~ /scientific name/ );
+			$nameidmap{ homogenize_name_ala_dongying( name => $vals[1] ) } = $vals[0];
+			$idnamemap{ $vals[0] } = homogenize_name_ala_dongying( name => $vals[1] ) if ( $line =~ /scientific name/ );
 		}
 	}
 	return ( %nameidmap, %idnamemap );
@@ -77,7 +79,7 @@ sub read_ncbi_taxonomy_structure {
 }
 
 sub make_ncbi_tree_from_update {
-    my %args = @_;
+	my %args        = @_;
 	my $self        = $args{self};
 	my $results_dir = $args{results_directory};
 	my $markerdir   = $args{marker_directory};
@@ -130,7 +132,7 @@ organisms present in the marker gene trees.
 =cut
 
 sub make_ncbi_tree {
-    my %args = @_;
+	my %args = @_;
 	my $self = $args{self};
 	read_ncbi_taxon_name_map();
 	read_ncbi_taxonomy_structure();
@@ -139,20 +141,20 @@ sub make_ncbi_tree {
 	# construct a phylo tree with the NCBI topology containing
 	# just the organisms in our database
 	my $markerdir = $Phylosift::Utilities::marker_dir;
-	my %namemap   = Phylosift::Utilities::read_name_table(marker_directory=>$markerdir);
+	my %namemap   = Phylosift::Utilities::read_name_table( marker_directory => $markerdir );
 	my $phylotree = Bio::Phylo::Forest::Tree->new();
 	open( MARKERTAXONMAP, ">$markerdir/marker_taxon_map.txt" );
 	my %tidnodes;
 	foreach my $key ( keys(%namemap) ) {
-		$namemap{$key} = homogenize_name_ala_dongying(name=> $namemap{$key} );
-		my ( $tid, $name ) = donying_find_name_in_taxa_db(name=> $namemap{$key} );
+		$namemap{$key} = homogenize_name_ala_dongying( name => $namemap{$key} );
+		my ( $tid, $name ) = donying_find_name_in_taxa_db( name => $namemap{$key} );
 		if ( $tid eq "ERROR" ) {
 			print STDERR "Error! Could not find $namemap{$key} in name map\n" if length($key) > 12;
 			next;
 		}
 
 		# add it to the mapping file
-		my $treename = tree_name( name=>$idnamemap{$tid} );
+		my $treename = tree_name( name => $idnamemap{$tid} );
 		print MARKERTAXONMAP "$key\t$treename\n";
 
 		#got the taxon id, now walk to root adding tree nodes as necessary
@@ -164,7 +166,7 @@ sub make_ncbi_tree {
 			last if ( defined( $tidnodes{$tid} ) );
 
 			# create a new node & add to tree
-			my $nodename = tree_name( name=>$idnamemap{$tid} );
+			my $nodename = tree_name( name => $idnamemap{$tid} );
 			my $parentid = $parent{$tid}->[0];
 			my $newnode;
 			$newnode = Bio::Phylo::Forest::Node->new( -parent => $tidnodes{$parentid}, -name => $nodename ) if defined( $tidnodes{$parentid} );
@@ -209,15 +211,15 @@ NCBI taxonomy
 =cut
 
 sub summarize {
-    my %args = @_;
+	my %args    = @_;
 	my $self    = $args{self};
 	my $markRef = $args{marker_reference};    # list of the markers we're using
 	read_ncbi_taxon_name_map();
 	read_ncbi_taxonomy_structure();
 	my $markerdir = $Phylosift::Utilities::marker_dir;
-	my %namemap   = Phylosift::Utilities::read_name_table(marker_directory=>$markerdir);
+	my %namemap = Phylosift::Utilities::read_name_table( marker_directory => $markerdir );
 	foreach my $key ( keys(%namemap) ) {
-		$namemap{$key} = homogenize_name_ala_dongying(name=>$namemap{$key} );
+		$namemap{$key} = homogenize_name_ala_dongying( name => $namemap{$key} );
 	}
 
 	# keep a hash counting up all the read placements
@@ -239,11 +241,12 @@ sub summarize {
 		my $markermapfile = "$markerdir/$marker.ncbimap";
 		$markermapfile = "$markerdir/$marker.updated/$marker.taxonmap" if $self->{"updated"};
 		next unless -e $markermapfile;
+
 		# don't bother with this one if there's no read placements
-		my $placeFile = $self->{"treeDir"} . "/" . Phylosift::Utilities::get_read_placement_file(marker=>$marker);
+		my $placeFile = $self->{"treeDir"} . "/" . Phylosift::Utilities::get_read_placement_file( marker => $marker );
 		next unless ( -e $placeFile );
 		my $pp_covfile;
-		open( $pp_covfile, ">" . Phylosift::Utilities::get_read_placement_file(marker=>$marker) . ".cov" ) if ( defined $self->{"coverage"} );
+		open( $pp_covfile, ">" . Phylosift::Utilities::get_read_placement_file( marker => $marker ) . ".cov" ) if ( defined $self->{"coverage"} );
 
 		# first read the taxonomy mapping
 		open( TAXONMAP, $markermapfile ) || croak("Unable to read file $markermapfile\n");
@@ -281,7 +284,7 @@ sub summarize {
 					my $mapcount = scalar( @{ $markerncbimap{$edge} } );
 					print STDERR "Found 0 taxa for edge $edge\n" if ( scalar( @{ $markerncbimap{$edge} } ) == 0 );
 					foreach my $taxon ( @{ $markerncbimap{$edge} } ) {
-						my ( $taxon_name, $taxon_level, $taxon_id ) = get_taxon_info(taxon=>$taxon);
+						my ( $taxon_name, $taxon_level, $taxon_id ) = get_taxon_info( taxon => $taxon );
 						$placements{$qname} = () unless defined( $placements{$qname} );
 						$placements{$qname}{$taxon_id} = 0 unless defined( $placements{$qname}{$taxon_id} );
 						$placements{$qname}{$taxon_id} += $curplaces{$edge} / $mapcount;
@@ -315,12 +318,12 @@ sub summarize {
 		# normalize to probability distribution
 		foreach my $taxon_id ( sort { $placements{$qname}{$b} <=> $placements{$qname}{$a} } keys %{ $placements{$qname} } ) {
 			$placements{$qname}{$taxon_id} /= $placecount;
-			my ( $taxon_name, $taxon_level, $tid ) = get_taxon_info(taxon=>$taxon_id);
+			my ( $taxon_name, $taxon_level, $tid ) = get_taxon_info( taxon => $taxon_id );
 			print SEQUENCETAXA "$qname\t$taxon_id\t$taxon_level\t$taxon_name\t" . $placements{$qname}{$taxon_id} . "\n";
 		}
-		my $readsummary = sum_taxon_levels( placements=>$placements{$qname} );
+		my $readsummary = sum_taxon_levels( placements => $placements{$qname} );
 		foreach my $taxon_id ( sort { $readsummary->{$b} <=> $readsummary->{$a} } keys %{$readsummary} ) {
-			my ( $taxon_name, $taxon_level, $tid ) = get_taxon_info(taxon=>$taxon_id);
+			my ( $taxon_name, $taxon_level, $tid ) = get_taxon_info( taxon => $taxon_id );
 			print SEQUENCESUMMARY "$qname\t$taxon_id\t$taxon_level\t$taxon_name\t" . $readsummary->{$taxon_id} . "\n";
 		}
 	}
@@ -330,9 +333,9 @@ sub summarize {
 	# sort descending
 	open( taxaOUT, ">" . $self->{"fileDir"} . "/taxasummary.txt" );
 	foreach my $taxon ( sort { $ncbireads{$b} <=> $ncbireads{$a} } keys %ncbireads ) {
-		my ( $taxon_name, $taxon_level, $taxon_id ) = get_taxon_info(taxon=>$taxon);
+		my ( $taxon_name, $taxon_level, $taxon_id ) = get_taxon_info( taxon => $taxon );
 		$taxon_level = "Unknown" unless defined($taxon_level);
-		$taxon_name = "Unknown" unless defined($taxon_name);
+		$taxon_name  = "Unknown" unless defined($taxon_name);
 		print taxaOUT join( "\t", $taxon_id, $taxon_level, $taxon_name, $ncbireads{$taxon} ), "\n";
 	}
 	close(taxaOUT);
@@ -350,7 +353,7 @@ sub summarize {
 	open( TAXAHPDOUT, ">" . $self->{"fileDir"} . "/taxa_90pct_HPD.txt" );
 	foreach my $taxon ( sort { $ncbireads{$b} <=> $ncbireads{$a} } keys %ncbireads ) {
 		$taxasum += $ncbireads{$taxon};
-		my ( $taxon_name, $taxon_level, $taxon_id ) = get_taxon_info(taxon=>$taxon);
+		my ( $taxon_name, $taxon_level, $taxon_id ) = get_taxon_info( taxon => $taxon );
 		print TAXAHPDOUT join( "\t", $taxon_id, $taxon_level, $taxon_name, $ncbireads{$taxon} ), "\n";
 		last if $taxasum >= $totalreads * 0.9;
 	}
@@ -361,7 +364,7 @@ sub summarize {
 # non-functional until dependency on Math::Random can be eliminated
 #
 sub write_confidence_intervals {
-    my %args = @_;
+	my %args         = @_;
 	my $self         = $args{self};
 	my $ncbireadsref = $args{ncbi_reads_reference};
 	my $totalreads   = $args{total_reads};
@@ -408,7 +411,7 @@ sub write_confidence_intervals {
 }
 
 sub sum_taxon_levels {
-    my %args = @_;
+	my %args       = @_;
 	my $placements = $args{placements};
 	my %summarized = ();
 	foreach my $taxon_id ( keys %$placements ) {
@@ -423,8 +426,8 @@ sub sum_taxon_levels {
 }
 
 sub get_taxon_info {
-    my %args= @_;
-	my $in = $args{taxon};
+	my %args = @_;
+	my $in   = $args{taxon};
 	if ( $in =~ /^\d+$/ ) {
 
 		#it's an ncbi taxon id.  look up its name and level.
@@ -436,7 +439,7 @@ sub get_taxon_info {
 		# old style map, need to go from NCBI name back to ID
 		my $name = $in;
 		$name =~ s/_/ /g;    # map uses spaces instead of underscores
-		my ( $id, $qname ) = donying_find_name_in_taxa_db(name=>$name);
+		my ( $id, $qname ) = donying_find_name_in_taxa_db( name => $name );
 		my $level = $parent{$id}->[1];
 		return ( $in, $level, $id );
 	} else {
@@ -445,7 +448,7 @@ sub get_taxon_info {
 }
 
 sub tree_name {
-    my %args = @_;
+	my %args   = @_;
 	my $inName = $args{name};
 	$inName =~ s/\s+/_/g;
 	$inName =~ s/'//g;
@@ -461,8 +464,8 @@ sub tree_name {
 
 =cut
 
-sub homogenize_name_ala_dongying{
-    my %args = @_;
+sub homogenize_name_ala_dongying {
+	my %args   = @_;
 	my $inName = $args{name};
 	return "" unless defined($inName);
 	$inName =~ s/^\s+//;
@@ -480,8 +483,8 @@ sub homogenize_name_ala_dongying{
 =cut
 
 sub donying_find_name_in_taxa_db {
-    my %args=@_;
-    my $name = $args{name};
+	my %args = @_;
+	my $name = $args{name};
 	return "" unless defined($name);
 	$name =~ s/^\s+//;
 	my @t = split( /\s+/, $name );

@@ -20,7 +20,6 @@ Phylosift::MarkerAlign - Subroutines to align reads to marker HMMs
 Version 0.01
 
 =cut
-
 our $VERSION = '0.01';
 
 =head1 SYNOPSIS
@@ -53,35 +52,47 @@ if you don't export anything, such as for a purely object-oriented module.
 =head2 MarkerAlign
 
 =cut
-
 my $minAlignedResidues = 20;
 
 sub MarkerAlign {
-    my %args=@_;
+	my %args       = @_;
 	my $self       = $args{self};
 	my $markersRef = $args{marker_reference};
 	my @allmarkers = @{$markersRef};
 	debug "beforeDirprepClean @{$markersRef}\n";
-	directoryPrepAndClean(self=> $self,marker_reference=> $markersRef );
+	directoryPrepAndClean( self => $self, marker_reference => $markersRef );
 	debug "AFTERdirprepclean @{$markersRef}\n";
 	my $index = -1;
-	markerPrepAndRun( self=>$self, marker_reference=>$markersRef );
+	markerPrepAndRun( self => $self, marker_reference => $markersRef );
 	debug "after HMMSEARCH PARSE\n";
-	alignAndMask( self=>$self, marker_reference=>$markersRef );
+	alignAndMask( self => $self, marker_reference => $markersRef );
 	debug "AFTER ALIGN and MASK\n";
 
 	# produce a concatenate alignment for the base marker package
-	unless($self->{"extended"}){
-		my @markeralignments = getPMPROKMarkerAlignmentFiles( self=>$self, marker_reference=>\@allmarkers );
-		my $outputFastaAA = $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta_AA(marker=>"concat");
-		Phylosift::Utilities::concatenate_alignments( self=>$self, output_fasta=>$outputFastaAA, output_bayes=>$self->{"alignDir"} . "/mrbayes.nex", gap_multiplier=>1,alignments=> \@markeralignments );
+	unless ( $self->{"extended"} ) {
+		my @markeralignments = getPMPROKMarkerAlignmentFiles( self => $self, marker_reference => \@allmarkers );
+		my $outputFastaAA = $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta_AA( marker => "concat" );
+		Phylosift::Utilities::concatenate_alignments(
+													  self           => $self,
+													  output_fasta   => $outputFastaAA,
+													  output_bayes   => $self->{"alignDir"} . "/mrbayes.nex",
+													  gap_multiplier => 1,
+													  alignments     => \@markeralignments
+		);
+
 		# now concatenate any DNA alignments
 		for ( my $i = 0 ; $i < @markeralignments ; $i++ ) {
 			$markeralignments[$i] =~ s/trim.fasta/trim.fna.fasta/g;
-			splice @markeralignments, $i--, 1 unless( -f $markeralignments[$i]);
+			splice @markeralignments, $i--, 1 unless ( -f $markeralignments[$i] );
 		}
-		my $outputFastaDNA = $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta_DNA(marker=>"concat");
-		Phylosift::Utilities::concatenate_alignments(self=> $self, output_fasta=>$outputFastaDNA, output_bayes=>$self->{"alignDir"} . "/mrbayes-dna.nex", gap_multiplier=>3, alignments=>\@markeralignments );
+		my $outputFastaDNA = $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta_DNA( marker => "concat" );
+		Phylosift::Utilities::concatenate_alignments(
+													  self           => $self,
+													  output_fasta   => $outputFastaDNA,
+													  output_bayes   => $self->{"alignDir"} . "/mrbayes-dna.nex",
+													  gap_multiplier => 3,
+													  alignments     => \@markeralignments
+		);
 		debug "AFTER concatenateALI\n";
 	}
 	return $self;
@@ -92,7 +103,7 @@ sub MarkerAlign {
 =cut
 
 sub directoryPrepAndClean {
-    my %args = @_;
+	my %args    = @_;
 	my $self    = $args{self};
 	my $markRef = $args{marker_reference};
 	`mkdir -p $self->{"tempDir"}`;
@@ -102,7 +113,7 @@ sub directoryPrepAndClean {
 	`mkdir -p $self->{"alignDir"}`;
 	for ( my $index = 0 ; $index < @{$markRef} ; $index++ ) {
 		my $marker = ${$markRef}[$index];
-		my $candidate_file = Phylosift::Utilities::get_candidate_file(self=>$self,marker=>$marker,type=>"");
+		my $candidate_file = Phylosift::Utilities::get_candidate_file( self => $self, marker => $marker, type => "" );
 		if ( -z $candidate_file ) {
 			warn "WARNING : the candidate file for $marker is empty\n";
 			splice @{$markRef}, $index--, 1;
@@ -120,37 +131,36 @@ my @search_types = ( "", ".blastx", ".blastp", ".rap", ".blast" );
 =cut
 
 sub markerPrepAndRun {
-    my %args = @_;
+	my %args    = @_;
 	my $self    = $args{self};
 	my $markRef = $args{marker_reference};
 	debug "ALIGNDIR : " . $self->{"alignDir"} . "\n";
 	foreach my $marker ( @{$markRef} ) {
 		next unless Phylosift::Utilities::is_protein_marker( marker => $marker );
-		my $hmm_file = Phylosift::Utilities::get_marker_hmm_file(self=> $self, marker=>$marker, loc=>1 );
-		my $stockholm_file = Phylosift::Utilities::get_marker_stockholm_file( self=>$self,marker=> $marker );
+		my $hmm_file = Phylosift::Utilities::get_marker_hmm_file( self => $self, marker => $marker, loc => 1 );
+		my $stockholm_file = Phylosift::Utilities::get_marker_stockholm_file( self => $self, marker => $marker );
 		unless ( -e $hmm_file && -e $stockholm_file ) {
-			my $trimfinalFile = Phylosift::Utilities::get_trimfinal_marker_file( self=>$self, marker=>$marker );
+			my $trimfinalFile = Phylosift::Utilities::get_trimfinal_marker_file( self => $self, marker => $marker );
 
 			#converting the marker's reference alignments from Fasta to Stockholm (required by Hmmer3)
-			Phylosift::Utilities::fasta2stockholm(fasta=> "$trimfinalFile",output=> $stockholm_file );
+			Phylosift::Utilities::fasta2stockholm( fasta => "$trimfinalFile", output => $stockholm_file );
 
 			#build the Hmm for the marker using Hmmer3
 			if ( !-e $hmm_file ) {
 				`$Phylosift::Utilities::hmmbuild $hmm_file $stockholm_file`;
 			}
 		}
-		my $new_candidate = Phylosift::Utilities::get_candidate_file(self=>$self,marker=>$marker,type=>"",new=>1);
+		my $new_candidate = Phylosift::Utilities::get_candidate_file( self => $self, marker => $marker, type => "", new => 1 );
 		unlink($new_candidate);
 		foreach my $type (@search_types) {
-			my $candidate = Phylosift::Utilities::get_candidate_file(self=>$self,marker=>$marker,type=>$type);
+			my $candidate = Phylosift::Utilities::get_candidate_file( self => $self, marker => $marker, type => $type );
 			next unless -e $candidate;
-			
-			my $fifo_out = $self->{"alignDir"}."/".Phylosift::Utilities::get_marker_basename(marker=>$marker).".tmpout.fifo";
+			my $fifo_out = $self->{"alignDir"} . "/" . Phylosift::Utilities::get_marker_basename( marker => $marker ) . ".tmpout.fifo";
 			`mkfifo $fifo_out`;
-			system("$Phylosift::Utilities::hmmsearch -E 10 --cpu ".$self->{"threads"}." --max --tblout $fifo_out $hmm_file $candidate > /dev/null &");
-			open(my $HMMSEARCH, $fifo_out);
-			hmmsearch_parse(self=>$self, marker=>$marker, type=>$type, HMMSEARCH=>$HMMSEARCH);
-			unlink( $fifo_out );
+			system( "$Phylosift::Utilities::hmmsearch -E 10 --cpu " . $self->{"threads"} . " --max --tblout $fifo_out $hmm_file $candidate > /dev/null &" );
+			open( my $HMMSEARCH, $fifo_out );
+			hmmsearch_parse( self => $self, marker => $marker, type => $type, HMMSEARCH => $HMMSEARCH );
+			unlink($fifo_out);
 		}
 	}
 	return $self;
@@ -161,12 +171,11 @@ sub markerPrepAndRun {
 =cut
 
 sub hmmsearch_parse {
-	my %args = @_;
-	my $self = $args{self};
-	my $marker = $args{marker};
-	my $type = $args{type};
+	my %args      = @_;
+	my $self      = $args{self};
+	my $marker    = $args{marker};
+	my $type      = $args{type};
 	my $HMMSEARCH = $args{HMMSEARCH};
-
 	my %hmmHits   = ();
 	my %hmmScores = ();
 	my $countHits = 0;
@@ -183,14 +192,12 @@ sub hmmsearch_parse {
 			}
 		}
 	}
-	
-
-	my $new_candidate = Phylosift::Utilities::get_candidate_file(self=>$self,marker=>$marker,type=>"",new=>1);
-	$new_candidate = ">".$new_candidate if -f $new_candidate; # append if the file already exists
-	$new_candidate = ">".$new_candidate; # otherwise make a new one
+	my $new_candidate = Phylosift::Utilities::get_candidate_file( self => $self, marker => $marker, type => "", new => 1 );
+	$new_candidate = ">" . $new_candidate if -f $new_candidate;    # append if the file already exists
+	$new_candidate = ">" . $new_candidate;                         # otherwise make a new one
 	open( NEWCANDIDATE, $new_candidate ) || croak "Unable to write $new_candidate\n";
-	my $candidate = Phylosift::Utilities::get_candidate_file(self=>$self,marker=>$marker,type=>$type);
-	my $seqin = Phylosift::Utilities::open_SeqIO_object(file=>$candidate);
+	my $candidate = Phylosift::Utilities::get_candidate_file( self => $self, marker => $marker, type => $type );
+	my $seqin = Phylosift::Utilities::open_SeqIO_object( file => $candidate );
 	while ( my $sequence = $seqin->next_seq ) {
 		my $baseid = $sequence->id;
 		if ( exists $hmmHits{$baseid} && $hmmHits{$baseid} eq $sequence->id ) {
@@ -205,7 +212,7 @@ sub hmmsearch_parse {
 =cut
 
 sub writeAlignedSeq {
-    my %args = @_;
+	my %args        = @_;
 	my $self        = $args{self};
 	my $OUTPUT      = $args{output};
 	my $UNMASKEDOUT = $args{unmasked_out};
@@ -213,7 +220,7 @@ sub writeAlignedSeq {
 	my $prev_seq    = $args{prev_seq};
 	my $seq_count   = $args{seq_count};
 	my $orig_seq    = $prev_seq;
-	if(!defined($prev_seq)){
+	if ( !defined($prev_seq) ) {
 		print "abc";
 	}
 	$prev_seq =~ s/[a-z]//g;    # lowercase chars didnt align to model
@@ -225,13 +232,13 @@ sub writeAlignedSeq {
 	return if $aligned_count < $minAlignedResidues;
 
 	#substitute all the non letter or number characters into _ in the IDs to avoid parsing issues in tree viewing programs or others
-	$prev_name = Phylosift::Summarize::tree_name(name=>$prev_name);
+	$prev_name = Phylosift::Summarize::tree_name( name => $prev_name );
 
 	#add a paralog ID if we're running in isolate mode and more than one good hit
 	$prev_name .= "_p$seq_count" if $seq_count > 0 && $self->{"isolate"};
 
 	#print the new trimmed alignment
-	print $OUTPUT ">$prev_name\n$prev_seq\n" if defined($OUTPUT);
+	print $OUTPUT ">$prev_name\n$prev_seq\n"      if defined($OUTPUT);
 	print $UNMASKEDOUT ">$prev_name\n$orig_seq\n" if defined($UNMASKEDOUT);
 }
 use constant CODONSIZE => 3;
@@ -244,8 +251,8 @@ sequence during reverse translation. Needed to mask out HMM aligned sequences.
 =cut
 
 sub aa_to_dna_aln {
-    my %args = @_;
-	my ( $aln, $dnaseqs ) = ($args{aln},$args{dna_seqs});
+	my %args = @_;
+	my ( $aln, $dnaseqs ) = ( $args{aln}, $args{dna_seqs} );
 	unless (    defined $aln
 			 && ref($aln)
 			 && $aln->isa('Bio::Align::AlignI') )
@@ -272,7 +279,7 @@ sub aa_to_dna_aln {
 			} elsif ( $char eq "." ) {
 				$nt_seqstr .= "...";
 			} else {
-				if(length $dnaseq >= $j + CODONSIZE){
+				if ( length $dnaseq >= $j + CODONSIZE ) {
 					if ( $char eq uc($char) ) {
 						$nt_seqstr .= uc( substr( $dnaseq, $j, CODONSIZE ) );
 					} else {
@@ -302,19 +309,19 @@ sub aa_to_dna_aln {
 =cut 
 
 sub alignAndMask {
-    my %args = @_;
-    my $self             = $args{self};
-	my $markRef          = $args{marker_reference};
+	my %args    = @_;
+	my $self    = $args{self};
+	my $markRef = $args{marker_reference};
 	for ( my $index = 0 ; $index < @{$markRef} ; $index++ ) {
 		my $marker         = ${$markRef}[$index];
 		my $refcount       = 0;
-		my $stockholm_file = Phylosift::Utilities::get_marker_stockholm_file( self=>$self,marker=> $marker );
+		my $stockholm_file = Phylosift::Utilities::get_marker_stockholm_file( self => $self, marker => $marker );
 		my $hmmalign       = "";
 		my $cmalign        = "";
 		if ( Phylosift::Utilities::is_protein_marker( marker => $marker ) ) {
-			my $new_candidate = Phylosift::Utilities::get_candidate_file(self=>$self,marker=>$marker,type=>"",new=>1);
+			my $new_candidate = Phylosift::Utilities::get_candidate_file( self => $self, marker => $marker, type => "", new => 1 );
 			next unless -e $new_candidate && -s $new_candidate > 0;
-			my $hmm_file = Phylosift::Utilities::get_marker_hmm_file(self=> $self, marker=>$marker, loc=>1 );
+			my $hmm_file = Phylosift::Utilities::get_marker_hmm_file( self => $self, marker => $marker, loc => 1 );
 			open( HMM, $hmm_file );
 			while ( my $line = <HMM> ) {
 				if ( $line =~ /NSEQ\s+(\d+)/ ) {
@@ -325,24 +332,23 @@ sub alignAndMask {
 
 			# Align the hits to the reference alignment using Hmmer3
 			# pipe in the aligned sequences, trim them further, and write them back out
-			$hmmalign =
-			    "$Phylosift::Utilities::hmmalign --outformat afa --mapali "
-			  . $stockholm_file
-			  . " $hmm_file $new_candidate |";
+			$hmmalign = "$Phylosift::Utilities::hmmalign --outformat afa --mapali " . $stockholm_file . " $hmm_file $new_candidate |";
 		} else {
 			debug "Setting up cmalign for marker $marker\n";
-			my $candidate = Phylosift::Utilities::get_candidate_file(self=>$self,marker=>$marker,type=>".rna");
+			my $candidate = Phylosift::Utilities::get_candidate_file( self => $self, marker => $marker, type => ".rna" );
 			next unless ( -e $candidate );
-			$refcount = Phylosift::Utilities::get_count_from_reps(self=> $self,marker=> $marker );
+			$refcount = Phylosift::Utilities::get_count_from_reps( self => $self, marker => $marker );
+
 			#if the marker is rna, use infernal instead of hmmalign
 			# use tau=1e-6 instead of default 1e-7 to reduce memory consumption to under 4GB
 			$cmalign =
 			    "$Phylosift::Utilities::cmalign -q -l --dna --tau 1e-6 "
-			  . Phylosift::Utilities::get_marker_cm_file( self=>$self, marker=>$marker ) . " $candidate | ";
+			  . Phylosift::Utilities::get_marker_cm_file( self => $self, marker => $marker )
+			  . " $candidate | ";
 		}
-		my $outputFastaAA  = $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta_AA(marker=>$marker);
-		my $outputFastaDNA = $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta_DNA(marker=>$marker);
-		my $mbname = Phylosift::Utilities::get_marker_basename(marker=>$marker);
+		my $outputFastaAA = $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta_AA( marker => $marker );
+		my $outputFastaDNA = $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta_DNA( marker => $marker );
+		my $mbname = Phylosift::Utilities::get_marker_basename( marker => $marker );
 		open( my $aliout, ">" . $outputFastaAA ) or die "Couldn't open $outputFastaAA for writing\n";
 		my $updatedout;
 		my $prev_seq;
@@ -368,10 +374,31 @@ sub alignAndMask {
 			if ( $line =~ /^>(.+)/ ) {
 				my $new_name = $1;
 				if ( Phylosift::Utilities::is_protein_marker( marker => $marker ) ) {
-					writeAlignedSeq( self=>$self, output=>$updatedout, unmasked_out=>$null, prev_name=>$prev_name, prev_seq=>$prev_seq, seq_count=>0 ) if $seqCount <= $refcount && $seqCount > 0;
-					writeAlignedSeq( self=>$self, output=>$aliout,unmasked_out=> $UNMASKEDOUT,prev_name=> $prev_name, prev_seq=>$prev_seq, seq_count=>$seqCount - $refcount - 1) if $seqCount > $refcount  && $seqCount > 0;
+					writeAlignedSeq(
+									 self         => $self,
+									 output       => $updatedout,
+									 unmasked_out => $null,
+									 prev_name    => $prev_name,
+									 prev_seq     => $prev_seq,
+									 seq_count    => 0
+					) if $seqCount <= $refcount && $seqCount > 0;
+					writeAlignedSeq(
+									 self         => $self,
+									 output       => $aliout,
+									 unmasked_out => $UNMASKEDOUT,
+									 prev_name    => $prev_name,
+									 prev_seq     => $prev_seq,
+									 seq_count    => $seqCount - $refcount - 1
+					) if $seqCount > $refcount && $seqCount > 0;
 				} else {
-					writeAlignedSeq( self=>$self,output=> $aliout, unmasked_out=>$UNMASKEDOUT, prev_name=>$prev_name,prev_seq=> $prev_seq,seq_count=> $seqCount ) if $seqCount > 0;
+					writeAlignedSeq(
+									 self         => $self,
+									 output       => $aliout,
+									 unmasked_out => $UNMASKEDOUT,
+									 prev_name    => $prev_name,
+									 prev_seq     => $prev_seq,
+									 seq_count    => $seqCount
+					) if $seqCount > 0;
 				}
 				$seqCount++;
 				$prev_name = $new_name;
@@ -381,19 +408,33 @@ sub alignAndMask {
 			}
 		}
 		if ( Phylosift::Utilities::is_protein_marker( marker => $marker ) ) {
-			writeAlignedSeq( self=>$self,output=> $updatedout,unmasked_out=> $null,prev_name=> $prev_name, prev_seq=>$prev_seq, seq_count=>0 ) if $seqCount <= $refcount && $seqCount > 0;
-			writeAlignedSeq( self=>$self, output=>$aliout, unmasked_out=>    $UNMASKEDOUT, prev_name=>$prev_name, prev_seq=>$prev_seq,seq_count=> $seqCount - $refcount - 1) if $seqCount > $refcount;
+			writeAlignedSeq( self => $self, output => $updatedout, unmasked_out => $null, prev_name => $prev_name, prev_seq => $prev_seq, seq_count => 0 )
+			  if $seqCount <= $refcount && $seqCount > 0;
+			writeAlignedSeq(
+							 self         => $self,
+							 output       => $aliout,
+							 unmasked_out => $UNMASKEDOUT,
+							 prev_name    => $prev_name,
+							 prev_seq     => $prev_seq,
+							 seq_count    => $seqCount - $refcount - 1
+			) if $seqCount > $refcount;
 		} else {
-			writeAlignedSeq( self=>$self,output=> $aliout, unmasked_out=>$UNMASKEDOUT, prev_name=>$prev_name,prev_seq=> $prev_seq,seq_count=> $seqCount ) if $seqCount > 0;
+			writeAlignedSeq(
+							 self         => $self,
+							 output       => $aliout,
+							 unmasked_out => $UNMASKEDOUT,
+							 prev_name    => $prev_name,
+							 prev_seq     => $prev_seq,
+							 seq_count    => $seqCount
+			) if $seqCount > 0;
 		}
 		$seqCount -= $refcount;
 		close $UNMASKEDOUT;
 
 		# do we need to output a nucleotide alignment in addition to the AA alignment?
-		
 		foreach my $type (@search_types) {
 			if ( -e $self->{"blastDir"} . "/$marker$type.candidate.ffn" && -e $outputFastaAA ) {
-	
+
 				#if it exists read the reference nucleotide sequences for the candidates
 				my %referenceNuc = ();
 				open( REFSEQSIN, $self->{"blastDir"} . "/$marker$type.candidate.ffn" )
@@ -413,7 +454,7 @@ sub alignAndMask {
 				open( ALITRANSOUT, ">" . $outputFastaDNA ) or die "Couldn't open " . $outputFastaDNA / " for writing\n";
 				my $aa_ali = new Bio::AlignIO( -file => $self->{"alignDir"} . "/$marker.unmasked", -format => 'fasta' );
 				if ( my $aln = $aa_ali->next_aln() ) {
-					my $dna_ali = &aa_to_dna_aln( aln=>$aln, dna_seqs=>\%referenceNuc );
+					my $dna_ali = &aa_to_dna_aln( aln => $aln, dna_seqs => \%referenceNuc );
 					foreach my $seq ( $dna_ali->each_seq() ) {
 						my $cleanseq = $seq->seq;
 						$cleanseq =~ s/\.//g;
@@ -436,13 +477,13 @@ sub alignAndMask {
 }
 
 sub getPMPROKMarkerAlignmentFiles {
-    my %args = @_;
+	my %args             = @_;
 	my $self             = $args{self};
 	my $markRef          = $args{marker_reference};
 	my @markeralignments = ();
 	foreach my $marker ( @{$markRef} ) {
 		next unless $marker =~ /PMPROK/;
-		push( @markeralignments, $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta_AA(marker=>$marker) );
+		push( @markeralignments, $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta_AA( marker => $marker ) );
 	}
 	return @markeralignments;
 }
@@ -506,5 +547,4 @@ See http://dev.perl.org/licenses/ for more information.
 
 
 =cut
-
 1;    # End of Phylosift::MarkerAlign.pm

@@ -13,7 +13,6 @@ Phylosift::MarkerBuild - build a seed marker package from an existing multiple s
 Version 0.01
 
 =cut
-
 our $VERSION = '0.01';
 
 =head1 SYNOPSIS
@@ -49,24 +48,31 @@ sub build_marker {
 		`mkdir $target_dir`;
 	}
 	my $fasta_file = "$target_dir/$core.fasta";
-	my $seq_count  = Phylosift::Utilities::unalign_sequences( aln=>$aln_file,output_path=> $fasta_file );
+	my $seq_count  = Phylosift::Utilities::unalign_sequences( aln => $aln_file, output_path => $fasta_file );
 	my $masked_aln = "$target_dir/$core.masked";
 	mask_aln( file => $aln_file, output => $masked_aln );
 	my $hmm_file = "$target_dir/$core.hmm";
-	generate_hmm( file_name=>$masked_aln,hmm_name=> $hmm_file );
-	Phylosift::Utilities::fasta2stockholm( fasta=>$masked_aln, output=>"$target_dir/$core.stk" );
+	generate_hmm( file_name => $masked_aln, hmm_name => $hmm_file );
+	Phylosift::Utilities::fasta2stockholm( fasta => $masked_aln, output => "$target_dir/$core.stk" );
 	my $stk_aln = "$target_dir/$core.stk";
 
 	#may need to create an unaligned file for the sequences before aligning them
-	my $new_alignment_file = hmmalign_to_model( hmm_profile=>$hmm_file, sequence_file=>$fasta_file,target_dir=> $target_dir, reference_alignment=>$stk_aln, sequence_count=>$seq_count );
-	my $clean_aln          = "$target_dir/$core.clean";
-	my %id_map             = mask_and_clean_alignment( alignment_file=>$new_alignment_file, output_file=>$clean_aln );
-	my ( $fasttree_file, $tree_log_file ) = generate_fasttree( alignment_file=>$clean_aln, target_directory=>$target_dir );
+	my $new_alignment_file = hmmalign_to_model(
+												hmm_profile         => $hmm_file,
+												sequence_file       => $fasta_file,
+												target_dir          => $target_dir,
+												reference_alignment => $stk_aln,
+												sequence_count      => $seq_count
+	);
+	my $clean_aln = "$target_dir/$core.clean";
+	my %id_map = mask_and_clean_alignment( alignment_file => $new_alignment_file, output_file => $clean_aln );
+	my ( $fasttree_file, $tree_log_file ) = generate_fasttree( alignment_file => $clean_aln, target_directory => $target_dir );
 
 	#need to generate representatives using PDA
 	my $rep_file = get_representatives_from_tree( tree => $fasttree_file, target_directory => $target_dir, cutoff => $cutoff );
+
 	#need to read the representatives picked by PDA and generate a representative fasta file
-	my $rep_fasta = get_fasta_from_pda_representatives(pda_file=> $rep_file, target_dir=>$target_dir,fasta_reference=> $fasta_file, id_map=>\%id_map );
+	my $rep_fasta = get_fasta_from_pda_representatives( pda_file => $rep_file, target_dir => $target_dir, fasta_reference => $fasta_file, id_map => \%id_map );
 
 	#use taxit to create a new reference package required for running PhyloSift
 	#needed are : 1 alignment file, 1 representatives fasta file, 1 hmm profile, 1 tree file, 1 log tree file.
@@ -91,7 +97,7 @@ generates a HMM profile from an alignment in FASTA format (arg) using hmmbuild. 
 =cut
 
 sub generate_hmm {
-    my %args = @_;
+	my %args      = @_;
 	my $file_name = $args{file_name};
 	my $hmm_name  = $args{hmm_name};
 	`$Phylosift::Utilities::hmmbuild --informat afa $hmm_name $file_name`;
@@ -104,7 +110,7 @@ Aligns sequences to an HMM model and outputs an alignment
 =cut
 
 sub hmmalign_to_model {
-    my %args = @_;
+	my %args          = @_;
 	my $hmm_profile   = $args{hmm_profile};
 	my $sequence_file = $args{sequence_file};
 	my $target_dir    = $args{target_dir};
@@ -134,7 +140,7 @@ Also removes duplicate IDs
 =cut
 
 sub mask_and_clean_alignment {
-    my %args = @_;
+	my %args        = @_;
 	my $aln_file    = $args{alignment_file};
 	my $output_file = $args{output_file};
 	my %id_map;    # will store a map of unique IDs to sequence names
@@ -168,7 +174,7 @@ generates a tree using fasttree and write the output along with the log/info fil
 =cut
 
 sub generate_fasttree {
-    my %args = @_;
+	my %args       = @_;
 	my $aln_file   = $args{alignment_file};
 	my $target_dir = $args{target_directory};
 	my ( $core, $path, $ext ) = fileparse( $aln_file, qr/\.[^.]*$/ );
@@ -221,7 +227,7 @@ reads the selected representatives from the pda file and prints the sequences to
 =cut
 
 sub get_fasta_from_pda_representatives {
-    my %args=@_;
+	my %args            = @_;
 	my $pda_file        = $args{pda_file};
 	my $target_dir      = $args{target_dir};
 	my $reference_fasta = $args{fasta_reference};
@@ -268,7 +274,7 @@ sub mask_aln {
 	my $outfile    = $args{output};
 	my $gap_cutoff = 10;
 	my $cutoff     = 10;
-	my $maskcont   = martin_mask( input_file=>$args{file},cutoff=> $cutoff, opt_g=>$gap_cutoff );
+	my $maskcont   = martin_mask( input_file => $args{file}, cutoff => $cutoff, opt_g => $gap_cutoff );
 	my %maskseq;
 	my @ori_order;
 	$maskcont =~ s/^>//;
@@ -308,24 +314,24 @@ sub mask_aln {
 }
 
 sub martin_mask {
-    my %args = @_;
-	my ( $input_file, $cutoff, $opt_g ) = ($args{input_file},$args{cutoff},$args{opt_g});
+	my %args = @_;
+	my ( $input_file, $cutoff, $opt_g ) = ( $args{input_file}, $args{cutoff}, $args{opt_g} );
 	if ( !( length($opt_g) > 1 ) ) { $opt_g = 101; }
 	my $self = {};
 	$self->{inputfile}  = $input_file;
 	$self->{cutoff}     = $cutoff;
 	$self->{gap_cutoff} = $opt_g;
-	$self               = &read_matrix(self=>$self);
-	$self               = &read_alignment(self=>$self);
-	$self               = &calculate_score(self=>$self);
-	$self               = &mask(self=>$self);
-	my $return_mask = &output(self=>$self);
+	$self = &read_matrix( self => $self );
+	$self = &read_alignment( self => $self );
+	$self = &calculate_score( self => $self );
+	$self = &mask( self => $self );
+	my $return_mask = &output( self => $self );
 	return $return_mask;
 }
 
 sub read_matrix {
-    my %args = @_;
-	my $self =  $args{self};
+	my %args = @_;
+	my $self = $args{self};
 	my @aa;
 	my %matrix;
 	my ( $matrix_name, $i, $j );
@@ -371,7 +377,7 @@ sub read_matrix {
 }
 
 sub read_alignment {
-    my %args = @_;
+	my %args = @_;
 	my $self = $args{self};
 	my %seq;
 	my @order;
@@ -400,7 +406,7 @@ sub read_alignment {
 }
 
 sub calculate_score {
-    my %args= @_;
+	my %args = @_;
 	my $self = $args{self};
 	my %seq  = %{ $self->{seq} };
 	my $seqlength;
@@ -490,7 +496,7 @@ sub calculate_score {
 }
 
 sub mask {
-    my %args = @_;
+	my %args         = @_;
 	my $self         = $args{self};
 	my %matrix       = %{ $self->{matrix} };
 	my %seq          = %{ $self->{seq} };
@@ -536,7 +542,7 @@ sub mask {
 }
 
 sub output {
-    my %args = @_;
+	my %args        = @_;
 	my $self        = $args{self};
 	my %seq         = %{ $self->{seq} };
 	my $mask        = $self->{mask};
@@ -544,6 +550,7 @@ sub output {
 	my $return_mask = '';
 	$seq{"_mask"} = $mask;
 	push( @order, '_mask' );
+
 	foreach my $key (@order) {
 		$return_mask .= ">$key\n";
 		for ( my $i = 0 ; $i < length( $seq{$key} ) ; $i += 60 ) {
@@ -644,5 +651,4 @@ See http://dev.perl.org/licenses/ for more information.
 
 
 =cut
-
 1;    # End of Phylosift::MarkerBuild.pm

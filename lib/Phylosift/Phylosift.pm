@@ -55,10 +55,10 @@ sub new {
 =cut
 
 sub initialize {
-	my $self = shift;
-	my %args = @_;
-	my $mode      = $args{mode};
-	my $readsFile = $args{file_1} || "";
+	my $self        = shift;
+	my %args        = @_;
+	my $mode        = $args{mode};
+	my $readsFile   = $args{file_1} || "";
 	my $readsFile_2 = $args{file_2} || "";
 	debug "READSFILE\t" . $readsFile . "\n" if length($readsFile_2);
 	my $position = rindex( $readsFile, "/" );
@@ -96,6 +96,7 @@ Phylosift::Phylosift - Implements core functionality for Phylosift
 Version 0.01
 
 =cut
+
 our $VERSION = '0.01';
 
 =head1 SYNOPSIS
@@ -126,6 +127,7 @@ if you don't export anything, such as for a purely object-oriented module.
     Runs the PhyloSift pipeline according to the functions passed as arguments
 
 =cut
+
 my $continue = 0;
 my ( $mode, $readsFile, $readsFile_2, $fileName, $tempDir, $fileDir, $blastDir, $alignDir, $treeDir ) = "";
 my ( $sec,  $min,       $hour,        $mday,     $mon,     $year,    $wday,     $yday,     $isdst )   = 0;
@@ -134,20 +136,19 @@ my $workingDir = getcwd;
 #where everything will be written when PhyloSift is running
 sub run {
 	my $self     = shift;
-	my %args = @_;
-	my $force    = $args{force}|| 0;
+	my %args     = @_;
+	my $force    = $args{force} || 0;
 	my $custom   = $args{custom} || "";
-	my $continue = $args{cont} || 0; #continue is a reserved word, using a shortened versionc
+	my $continue = $args{cont} || 0;      #continue is a reserved word, using a shortened versionc
 	debug "force : $force\n";
 	Phylosift::Utilities::print_citations();
-	start_timer(name=>"START");
-	read_phylosift_config(self=>$self);
-	run_program_check(self=>$self);
+	start_timer( name => "START" );
+	read_phylosift_config( self => $self );
+	run_program_check( self => $self );
 	Phylosift::Utilities::data_checks( self => $self );
-	file_check(self=>$self) unless $self->{"mode"} eq 'index';
-	directory_prep(self=>$self,force=>$force) unless $self->{"mode"} eq 'index';
-	$self->{"readsFile"} = prep_isolate_files(self=>$self, file=>$self->{"readsFile"}) if $self->{"isolate"} == 1;
-	
+	file_check( self => $self ) unless $self->{"mode"} eq 'index';
+	directory_prep( self => $self, force => $force ) unless $self->{"mode"} eq 'index';
+	$self->{"readsFile"} = prep_isolate_files( self => $self, file => $self->{"readsFile"} ) if $self->{"isolate"} == 1;
 	debug "Using updated markers\n" if $self->{"updated"};
 
 	#create a file with a list of markers called markers.list
@@ -159,26 +160,26 @@ sub run {
 	debug "@markers\n";
 	debug "MODE :: " . $self->{"mode"} . "\n";
 	if ( $self->{"mode"} eq 'search' || $self->{"mode"} eq 'all' ) {
-		$self = run_search(self=>$self,cont=> $continue, custom=>$custom, marker=>\@markers );
+		$self = run_search( self => $self, cont => $continue, custom => $custom, marker => \@markers );
 		debug "MODE :: " . $self->{"mode"} . "\n";
 	}
 	debug "MODE :: " . $self->{"mode"} . "\n";
 	if ( $self->{"mode"} eq 'align' || $self->{"mode"} eq 'all' ) {
-		$self = run_marker_align(self=>$self,cont=> $continue, marker=>\@markers );
+		$self = run_marker_align( self => $self, cont => $continue, marker => \@markers );
 	}
 	if ( $self->{"mode"} eq 'placer' || $self->{"mode"} eq 'all' ) {
 		croak "No marker gene hits found in the input data. Unable to reconstruct phylogeny and taxonomy." if ( scalar(@markers) == 0 );
-		$self = run_pplacer( self=>$self,cont=>$continue, marker=>\@markers );
+		$self = run_pplacer( self => $self, cont => $continue, marker => \@markers );
 	}
 	if ( $self->{"mode"} eq 'summary' || $self->{"mode"} eq 'all' ) {
-		$self = taxonomy_assignments(self=>$self,cont=> $continue, marker=>\@markers );
+		$self = taxonomy_assignments( self => $self, cont => $continue, marker => \@markers );
 	}
 	if ( $self->{"mode"} eq 'benchmark' ) {
-		$self = benchmark(self=>$self);
+		$self = benchmark( self => $self );
 		exit;
 	}
 	if ( $self->{"mode"} eq 'compare' ) {
-		$self = compare(self=>$self);
+		$self = compare( self => $self );
 	}
 	if ( $self->{"mode"} eq 'index' ) {
 		Phylosift::Utilities::index_marker_db( self => $self, markers => \@markers, path => $Phylosift::Utilities::marker_dir );
@@ -199,7 +200,7 @@ sub run {
 =cut
 
 sub read_phylosift_config {
-    my %args = @_;
+	my %args          = @_;
 	my $self          = $args{self};
 	my $custom_config = $self->{"configuration"};
 
@@ -210,6 +211,7 @@ sub read_phylosift_config {
 	# a dev directory.  then config in system dir, then user's home.
 	# let each one override its predecessor.
 	{
+
 		package Phylosift::Settings;
 		do "$scriptpath/phylosiftrc";
 		do "$scriptpath/../phylosiftrc";
@@ -227,7 +229,7 @@ sub read_phylosift_config {
 =cut
 
 sub file_check {
-    my %args = @_;
+	my %args = @_;
 	my $self = $args{self};
 	if ( !-e $self->{"readsFile"} ) {
 		die $self->{"readsFile"} . "  was not found \n";
@@ -260,7 +262,7 @@ sub file_check {
 =cut
 
 sub run_program_check {
-    my %args = @_;
+	my %args = @_;
 	my $self = $args{self};
 
 	#check if the various programs used in this pipeline are installed on the machine
@@ -286,14 +288,15 @@ and isolate names in memory and using that at later stages of the pipeline
 =cut
 
 sub prep_isolate_files {
-    my %args = @_;
-    my $self = $args{self};
-    my $file = $args{file};
+	my %args = @_;
+	my $self = $args{self};
+	my $file = $args{file};
 	open( OUTFILE, ">" . $self->{"fileDir"} . "/isolates.fasta" );
 	open( ISOLATEFILE, $file ) || croak("Unable to read $file\n");
 	my $fname = $self->{"fileDir"} . "/" . basename($file);
 	debug "Operating on isolate file $fname\n";
 	print OUTFILE ">" . basename($file) . "\n";
+
 	while ( my $line = <ISOLATEFILE> ) {
 		next if $line =~ /^>/;
 		print OUTFILE $line;
@@ -311,7 +314,7 @@ sub prep_isolate_files {
 =cut
 
 sub directory_prep {
-    my %args = @_;
+	my %args  = @_;
 	my $self  = $args{self};
 	my $force = $args{force};
 
@@ -347,13 +350,13 @@ sub directory_prep {
 =cut
 
 sub taxonomy_assignments {
-    my %args = @_;
+	my %args        = @_;
 	my $self        = $args{self};
 	my $continue    = $args{cont};
 	my $markListRef = $args{marker};
-	Phylosift::Utilities::start_timer(name=>"taxonomy assignments");
-	Phylosift::Summarize::summarize( self=>$self, marker_reference=>$markListRef );
-	Phylosift::Utilities::end_timer(name=>"taxonomy assignments");
+	Phylosift::Utilities::start_timer( name => "taxonomy assignments" );
+	Phylosift::Summarize::summarize( self => $self, marker_reference => $markListRef );
+	Phylosift::Utilities::end_timer( name => "taxonomy assignments" );
 	return $self;
 }
 
@@ -362,10 +365,14 @@ sub taxonomy_assignments {
 =cut
 
 sub benchmark {
-    my %args = @_;
+	my %args = @_;
 	my $self = $args{self};
 	debug "RUNNING Benchmark\n";
+<<<<<<< HEAD
 	Phylosift::Benchmark::runBenchmark( self=>$self, output_path=>"./" );
+=======
+	Phylosift::Benchmark::runBenchmark( self => $self, output_dir => "./" );
+>>>>>>> d046ab7611fc309091b627ce32d85e0d06bb4284
 }
 
 =head2 compare
@@ -373,10 +380,10 @@ sub benchmark {
 =cut
 
 sub compare {
-    my %args = @_;
+	my %args = @_;
 	my $self = $args{self};
 	debug "RUNNING Compare\n";
-	Phylosift::Comparison::compare( self=>$self, parent_dir=>"./" );
+	Phylosift::Comparison::compare( self => $self, parent_dir => "./" );
 }
 
 =head2 run_pplacer
@@ -388,14 +395,15 @@ sub compare {
 =cut
 
 sub run_pplacer {
-    my %args = @_;
+	my %args        = @_;
 	my $self        = $args{self};
 	my $continue    = $args{cont};
 	my $markListRef = $args{marker};
 	debug "PPLACER MARKS @{$markListRef}\n";
-	Phylosift::Utilities::start_timer(name=>"runPPlacer");
-	Phylosift::pplacer::pplacer( self=>$self, marker_reference=>$markListRef );
-	Phylosift::Utilities::end_timer(name=>"runPPlacer");
+	Phylosift::Utilities::start_timer( name => "runPPlacer" );
+	Phylosift::pplacer::pplacer( self => $self, marker_reference => $markListRef );
+	Phylosift::Utilities::end_timer( name => "runPPlacer" );
+
 	if ( $continue != 0 ) {
 		$self->{"mode"} = 'summary';
 	}
@@ -410,11 +418,11 @@ sub run_pplacer {
 =cut
 
 sub run_marker_align {
-    my %args=@_;
+	my %args     = @_;
 	my $self     = $args{self};
 	my $continue = $args{cont};
 	my $markRef  = $args{marker};
-	Phylosift::Utilities::start_timer(name=>"Alignments");
+	Phylosift::Utilities::start_timer( name => "Alignments" );
 
 	#clearing the alignment directory if needed
 	my $alignDir = $self->{"alignDir"};
@@ -422,10 +430,10 @@ sub run_marker_align {
 
 	#Align Markers
 	my $threadNum = 1;
-	Phylosift::MarkerAlign::MarkerAlign( self=>$self, marker_reference=>$markRef );
+	Phylosift::MarkerAlign::MarkerAlign( self => $self, marker_reference => $markRef );
 
 	#    Phylosift::BeastInterface::Export(self=>$self, marker_reference=>$markRef, output_file=>$self->{"fileDir"}."/beast.xml");
-	Phylosift::Utilities::end_timer(name=>"Alignments");
+	Phylosift::Utilities::end_timer( name => "Alignments" );
 	if ( $continue != 0 ) {
 		$self->{"mode"} = 'placer';
 	}
@@ -440,20 +448,20 @@ sub run_marker_align {
 =cut
 
 sub run_search {
-    my %args = @_;
+	my %args          = @_;
 	my $self          = $args{self};
 	my $continue      = $args{cont};
 	my $custom        = $args{custom};
 	my $markerListRef = $args{marker};
-	Phylosift::Utilities::start_timer(name=>"runBlast");
+	Phylosift::Utilities::start_timer( name => "runBlast" );
 
 	#clearing the blast directory
 	my $blastDir = $self->{"blastDir"};
 	`rm $self->{"blastDir"}/*` if (<$blastDir/*>);
 
 	#run Searches
-	Phylosift::FastSearch::RunSearch( self=>$self, custom=>$custom, marker_reference=>$markerListRef );
-	Phylosift::Utilities::end_timer(name=>"runBlast");
+	Phylosift::FastSearch::RunSearch( self => $self, custom => $custom, marker_reference => $markerListRef );
+	Phylosift::Utilities::end_timer( name => "runBlast" );
 	if ( $continue != 0 ) {
 		$self->{"mode"} = 'align';
 	}
@@ -518,4 +526,5 @@ See http://dev.perl.org/licenses/ for more information.
 
 
 =cut
+
 1;    # End of Phylosift::Phylosift

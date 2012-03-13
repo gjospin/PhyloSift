@@ -22,6 +22,7 @@ Currently uses either BLAST or RAPsearch.
 Version 0.01
 
 =cut
+
 our $VERSION = '0.01';
 
 =head1 SYNOPSIS
@@ -48,10 +49,11 @@ if you don't export anything, such as for a purely object-oriented module.
 =head2 RunBlast
 
 =cut
-my $bestHitsBitScoreRange = 30;     # all hits with a bit score within this amount of the best will be used
-my $align_fraction        = 0.3;    # at least this amount of min[length(query),length(marker)] must align to be considered a hit
-my $align_fraction_isolate = 0.8;   # use this align_fraction when in isolate mode on long sequences
-my $pair                  = 0;      #used if using paired FastQ files
+
+my $bestHitsBitScoreRange  = 30;     # all hits with a bit score within this amount of the best will be used
+my $align_fraction         = 0.3;    # at least this amount of min[length(query),length(marker)] must align to be considered a hit
+my $align_fraction_isolate = 0.8;    # use this align_fraction when in isolate mode on long sequences
+my $pair                   = 0;      #used if using paired FastQ files
 my @markers;
 my %markerNuc = ();
 my $readsCore;
@@ -61,17 +63,17 @@ my $blastn_params = "-p blastn -e 0.1 -b 50000 -v 50000 -m 8";
 my %markerLength;
 
 sub RunSearch {
-    my %args = @_;
+	my %args       = @_;
 	my $self       = $args{self};
 	my $custom     = $args{custom};
 	my $markersRef = $args{marker_reference};
-	@markers    = @{$markersRef};
+	@markers = @{$markersRef};
 	my $position = rindex( $self->{"readsFile"}, "/" );
 	$self->{"readsFile"} =~ m/(\w+)\.?(\w*)$/;
-	$readsCore   = $1;
-	
+	$readsCore = $1;
+
 	# set align_fraction appropriately
-	$align_fraction = $align_fraction_isolate if ($self->{"isolate"});
+	$align_fraction = $align_fraction_isolate if ( $self->{"isolate"} );
 
 	# check what kind of input was provided
 	my $type = Phylosift::Utilities::get_sequence_input_type( $self->{"readsFile"} );
@@ -85,7 +87,7 @@ sub RunSearch {
 	# ensure databases and sequences are prepared for search
 	debug "before rapPrepandclean\n";
 	prep_and_clean( self => $self );
-	read_marker_lengths(self=>$self);
+	read_marker_lengths( self => $self );
 
 	# search reads/contigs against marker database
 	my $searchtype = "blast";
@@ -118,7 +120,6 @@ sub launch_searches {
 	my $reads_file      = $args{dir} . "/reads.fasta";
 	my $bowtie2_r2_pipe;
 	$bowtie2_r2_pipe = $args{dir} . "/bowtie2_r2.pipe" if $args{readtype}->{paired};
-
 	debug "Making fifos\n";
 	`mkfifo $blastx_pipe`;
 	`mkfifo $bowtie2_r1_pipe`;
@@ -140,30 +141,32 @@ sub launch_searches {
 			my $hitstream;
 			my $candidate_type = ".$count";
 			if ( $count == 1 ) {
-				$hitstream = lastal_table(self=> $self, query_file=>$blastx_pipe );
+				$hitstream = lastal_table( self => $self, query_file => $blastx_pipe );
 				$candidate_type = ".blastx";
 			} elsif ( $count == 2 ) {
-				$hitstream = lastal_table_rna($self, $bowtie2_r1_pipe);
-#				$hitstream = bowtie2( self => $self, readtype => $args{readtype}, reads1 => $bowtie2_r1_pipe, reads2 => $bowtie2_r2_pipe );
+				$hitstream = lastal_table_rna( $self, $bowtie2_r1_pipe );
+
+				#				$hitstream = bowtie2( self => $self, readtype => $args{readtype}, reads1 => $bowtie2_r1_pipe, reads2 => $bowtie2_r2_pipe );
 				$candidate_type = ".rna";
 			} elsif ( $count == 3 ) {
-				$hitstream = executeBlast( self=>$self, query_file=>$blastp_pipe );
+				$hitstream = executeBlast( self => $self, query_file => $blastp_pipe );
 				$candidate_type = ".blastp";
 			} elsif ( $count == 4 ) {
 
 				# rapsearch can't read from a pipe
-				$hitstream = executeRap( self=>$self, query_file=>$rap_pipe );
+				$hitstream = executeRap( self => $self, query_file => $rap_pipe );
 				$candidate_type = ".rap";
 			}
 			my $hitsref;
 			if ( $count == 1 ) {
 				$hitsref = get_hits_contigs( self => $self, HITSTREAM => $hitstream, searchtype => "lastal" );
 			} elsif ( $count == 2 ) {
-#				$hitsref = get_hits_sam( self => $self, HITSTREAM => $hitstream );
+
+				#				$hitsref = get_hits_sam( self => $self, HITSTREAM => $hitstream );
 				$hitsref = get_hits_contigs( self => $self, HITSTREAM => $hitstream, searchtype => "lastal" );
 			} elsif ( $count == 4 ) {
 				$hitsref = get_hits( self => $self, HITSTREAM => $hitstream, searchtype => "rap" );
-				unlink( $self->{"blastDir"} . "/rapjunk.aln" );	# rap leaves some trash lying about
+				unlink( $self->{"blastDir"} . "/rapjunk.aln" );    # rap leaves some trash lying about
 			} elsif ( $args{contigs} ) {
 				$hitsref = get_hits_contigs( self => $self, HITSTREAM => $hitstream, searchtype => "lastal" );
 			} else {
@@ -311,7 +314,6 @@ sub demux_sequences {
 	close($RAPSEARCH_PIPE);
 	close($READS_PIPE);
 }
-
 sub cleanup {
 	my $self = shift;
 	`rm -f $self->{"blastDir"}/$readsCore.tabblastx`;
@@ -323,10 +325,10 @@ sub cleanup {
 }
 
 sub read_marker_lengths {
-    my %args = @_;
+	my %args = @_;
 	my $self = $args{self};
 	foreach my $marker (@markers) {
-		$markerLength{$marker} = Phylosift::Utilities::get_marker_length( self=>$self, marker=>$marker );
+		$markerLength{$marker} = Phylosift::Utilities::get_marker_length( self => $self, marker => $marker );
 	}
 }
 
@@ -338,7 +340,7 @@ returns a stream file handle
 =cut
 
 sub lastal_table {
-    my %args = @_;
+	my %args       = @_;
 	my $self       = $args{self};
 	my $query_file = $args{query_file};
 	my $lastal_cmd = "$Phylosift::Utilities::lastal -F15 -e300 -f0 $Phylosift::Utilities::marker_dir/replast $query_file |";
@@ -371,7 +373,7 @@ returns a stream file handle
 =cut
 
 sub blastXoof_table {
-    my %args = @_;
+	my %args       = @_;
 	my $self       = $args{self};
 	my $query_file = $args{query_file};
 	debug "INSIDE tabular OOF blastx\n";
@@ -452,7 +454,7 @@ sub translate_frame {
 	$new_seq = $new_seq->revcom() if ( $frame < 0 );
 
 	if ($reverse_translate) {
-		$id = Phylosift::Summarize::tree_name(name=>$id);
+		$id = Phylosift::Summarize::tree_name( name => $id );
 		if ( exists $markerNuc{$marker} ) {
 			$markerNuc{$marker} .= ">" . $id . "\n" . $new_seq->seq . "\n";
 		} else {
@@ -470,9 +472,9 @@ Launches rapsearch2, returns a stream
 =cut
 
 sub executeRap {
-    my %args=@_;
-	my $self       = $args{self};
-	my $query_file = $args{query_file};
+	my %args          = @_;
+	my $self          = $args{self};
+	my $query_file    = $args{query_file};
 	my $out_file      = $self->{"blastDir"} . "/$readsCore.rapSearch";
 	my $rapsearch_cmd = "cd "
 	  . $self->{"blastDir"}
@@ -493,7 +495,7 @@ Launches blastp, returns a stream
 =cut
 
 sub executeBlast {
-    my %args=@_;
+	my %args       = @_;
 	my $self       = $args{self};
 	my $query_file = $args{query_file};
 	my $db         = Phylosift::Utilities::get_blastp_db();
@@ -532,6 +534,7 @@ sub get_hits_contigs {
 		if ( $searchtype eq "blastx" ) {
 			( $query, $subject, $two, $three, $four, $five, $query_start, $query_end, $eight, $nine, $ten, $bitScore ) = split( /\t/, $_ );
 		} else {
+
 			# read table in lastal format
 			my @dat = split( /\t/, $_ );
 			$bitScore    = $dat[0];
@@ -786,9 +789,9 @@ sub writeCandidates {
 			my $seqLength = length( $seq->seq );
 			$end = $end - ceil( ( $end - $seqLength ) / 3 ) * 3 if ( $end >= $seqLength );
 			my $newSeq;
-			$newSeq = substr( $seq->seq, $start, $end - $start ); #unless $type =~ /\.rna/;
-#			$newSeq = $cur_hit[4] if $type =~ /\.rna/;
+			$newSeq = substr( $seq->seq, $start, $end - $start );    #unless $type =~ /\.rna/;
 
+			#			$newSeq = $cur_hit[4] if $type =~ /\.rna/;
 			#if we're working from DNA then need to translate to protein
 			if ( $self->{"dna"} && $type !~ /\.rna/ ) {
 
@@ -923,4 +926,5 @@ See http://dev.perl.org/licenses/ for more information.
 
 
 =cut
+
 1;    # End of Phylosift::blast.pm
