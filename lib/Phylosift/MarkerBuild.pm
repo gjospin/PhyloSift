@@ -117,18 +117,18 @@ sub hmmalign_to_model {
 	my $ref_ali       = $args{reference_alignment} // miss("reference_alignment");
 	my $seq_count     = $args{sequence_count} // miss("sequence_count");
 	my ( $core_name, $path, $ext ) = fileparse( $sequence_file, qr/\.[^.]*$/ );
-	open( ALNOUT, ">$target_dir/$core_name.aln" );
-	open( ALNIN,  "$Phylosift::Utilities::hmmalign --mapali $ref_ali --trim --outformat afa $hmm_profile $sequence_file |" );
+	my $ALNOUT = ps_open( ">$target_dir/$core_name.aln" );
+	my $ALNIN = ps_open( "$Phylosift::Utilities::hmmalign --mapali $ref_ali --trim --outformat afa $hmm_profile $sequence_file |" );
 	my $s = 0;
 
-	while ( my $line = <ALNIN> ) {
+	while ( my $line = <$ALNIN> ) {
 		if ( $line =~ /^>/ ) {
 			$s++;
 			last if $s > $seq_count;
 		}
-		print ALNOUT $line;
+		print $ALNOUT $line;
 	}
-	close ALNOUT;
+	close $ALNOUT;
 	return "$target_dir/$core_name.aln";
 }
 
@@ -145,10 +145,9 @@ sub mask_and_clean_alignment {
 	my $output_file = $args{output_file} // miss("output_file");
 	my %id_map;    # will store a map of unique IDs to sequence names
 
-	#    open(FILEIN,$aln_file) or carp("Couldn't open $aln_file for reading \n");
 	my $in = Phylosift::Utilities::open_SeqIO_object( file => $aln_file );
 	my %s = ();    #hash remembering the IDs already printed
-	open( FILEOUT, ">$output_file" ) or carp("Couldn't open $output_file for writing\n");
+	my $FILEOUT = ps_open( ">$output_file" );
 	my $seq_counter = 0;
 	while ( my $seq_object = $in->next_seq() ) {
 		my $seq       = $seq_object->seq;
@@ -158,11 +157,11 @@ sub mask_and_clean_alignment {
 		$id  =~ s/\(\)//g;     #removes ( and ) from the header lines
 		$seq =~ s/[a-z]//g;    # lowercase chars didnt align to model
 		$seq =~ s/\.//g;       # shouldnt be any dots
-		print FILEOUT ">" . $unique_id . "\n" . $seq . "\n";
+		print $FILEOUT ">" . $unique_id . "\n" . $seq . "\n";
 	}
 
 	#    close(FILEIN);
-	close(FILEOUT);
+	close($FILEOUT);
 	return %id_map;
 }
 
@@ -235,10 +234,10 @@ sub get_fasta_from_pda_representatives {
 	my ( $core, $path, $ext ) = fileparse( $pda_file, qr/\.[^.]*$/ );
 
 	#reading the pda file to get the representative IDs
-	open( REPSIN, $pda_file ) or carp("Could not open $pda_file\n");
+	my $REPSIN = open( $pda_file );
 	my $taxa_number   = 0;
 	my %selected_taxa = ();
-	while (<REPSIN>) {
+	while (<$REPSIN>) {
 		chomp($_);
 		if ( $_ =~ m/optimal PD set has (\d+) taxa:/ ) {
 			$taxa_number = $1;
@@ -249,7 +248,7 @@ sub get_fasta_from_pda_representatives {
 			$selected_taxa{$1} = 1;
 		}
 	}
-	close(REPSIN);
+	close($REPSIN);
 
 	#reading the reference sequences and printing the selected representatives using BioPerl
 	my $reference_seqs        = Phylosift::Utilities::open_SeqIO_object( file => $reference_fasta,         format => "FASTA" );
@@ -301,16 +300,16 @@ sub mask_aln {
 	}
 
 	# writing out a fasta
-	open( TRIMOUT, "> $outfile" ) || die "cannot output aligment after trimming\n";
+	my $TRIMOUT = open( "> $outfile" );
 	foreach my $key (@ori_order) {
-		print TRIMOUT ">" . $key . "\n";
+		print $TRIMOUT ">" . $key . "\n";
 		my $i;
 		for ( $i = 0 ; $i <= length( $trimseq{$key} ) ; $i += 80 ) {
 			my $substr = substr( $trimseq{$key}, $i, 80 );
-			print TRIMOUT $substr . "\n";
+			print $TRIMOUT $substr . "\n";
 		}
 	}
-	close TRIMOUT;
+	close $TRIMOUT;
 }
 
 sub martin_mask {
@@ -383,8 +382,8 @@ sub read_alignment {
 	my @order;
 	my $id;
 	my $input_file = $self->{inputfile};
-	open( MASKIN, $input_file ) || die "can't open $input_file\n";
-	while (<MASKIN>) {
+	my $MASKIN = ps_open( $input_file );
+	while (<$MASKIN>) {
 		chop;
 		if (/%([\S]+)/) {
 			$id = $1;
@@ -399,7 +398,7 @@ sub read_alignment {
 			$seq{$id} .= uc($_);
 		}
 	}
-	close(MASKIN);
+	close($MASKIN);
 	$self->{seq}   = \%seq;
 	$self->{order} = \@order;
 	return $self;

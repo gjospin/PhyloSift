@@ -46,12 +46,12 @@ sub readSeqSummary {
 	my $output_path = $args{output_path} // miss("output_path");
 	my $readSource  =$args{read_source} // miss("read_source");
 	my $targetDir   = $self->{"fileDir"};
-	open( fileIN, $targetDir . "/sequence_taxa.txt" );
+	my $FILE_IN = ps_open( $targetDir . "/sequence_taxa.txt" );
 	my %topReadScore   = ();
 	my %allPlacedScore = ();
 
 	#reading and storing information from the sequence_taxa.txt file
-	while (<fileIN>) {
+	while (<$FILE_IN>) {
 		if ( $_ =~ m/^(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)$/ ) {
 			my $read           = $1;
 			my $taxPlacement   = $4;
@@ -75,7 +75,7 @@ sub readSeqSummary {
 			$allPlacedScore{$read}{$taxPlacement} = \@array;
 		}
 	}
-	close(fileIN);
+	close($FILE_IN);
 
 	#comparing the sequence_taxa information with the Source taxons
 	#    my %overallScore;
@@ -166,16 +166,16 @@ sub report_timing {
 	my $output_path = $args{output_path} // miss("output_path");
 	my $timing_file = $output_path . "/timing.csv";
 	unless ( -f $timing_file ) {
-		open( TIMING, ">$timing_file" );
-		print TIMING "Date," . join( ",", keys(%$data) ) . "\n";
-		close TIMING;
+		my $TIMING = ps_open( ">$timing_file" );
+		print $TIMING "Date," . join( ",", keys(%$data) ) . "\n";
+		close $TIMING;
 	}
-	open( TIMING, ">>$timing_file" );
-	print TIMING Phylosift::Utilities::get_date_YYYYMMDD;
+	my $TIMING = ps_open( ">>$timing_file" );
+	print $TIMING Phylosift::Utilities::get_date_YYYYMMDD;
 	foreach my $time ( keys(%$data) ) {
-		print TIMING "," . $data->{$time};
+		print $TIMING "," . $data->{$time};
 	}
-	print TIMING "\n";
+	print $TIMING "\n";
 }
 
 sub as_percent {
@@ -204,26 +204,26 @@ sub report_csv {
 	my %rankTotalProb = %$rtpref;
 	my $tophitfile    = $report_dir . "/" . $self->{"readsFile"} . ".tophit.csv";
 	unless ( -f $tophitfile ) {
-		open( TOPHITS, ">$tophitfile" );
-		print TOPHITS "Date,Superkingdom,Phylum,Subphylum,Class,Order,Family,Genus,Species,Subspecies,No Rank\n";
-		close TOPHITS;
+		my $TOPHITS = ps_open( ">$tophitfile" );
+		print $TOPHITS "Date,Superkingdom,Phylum,Subphylum,Class,Order,Family,Genus,Species,Subspecies,No Rank\n";
+		close $TOPHITS;
 	}
 	my $date = Phylosift::Utilities::get_date_YYYYMMDD();
 
 	# append an entry to the tophits file
-	open( TOPHITS, ">>$tophitfile" );
-	print TOPHITS $date;
-	print TOPHITS "," . as_percent( num=>$matchTop{"superkingdom"}, denom=>$readNumber );
-	print TOPHITS "," . as_percent( num=>$matchTop{"phylum"},       denom=>$readNumber );
-	print TOPHITS "," . as_percent( num=>$matchTop{"subphylum"},    denom=>$readNumber );
-	print TOPHITS "," . as_percent( num=>$matchTop{"class"},        denom=>$readNumber );
-	print TOPHITS "," . as_percent( num=>$matchTop{"order"},        denom=>$readNumber );
-	print TOPHITS "," . as_percent( num=>$matchTop{"family"},       denom=>$readNumber );
-	print TOPHITS "," . as_percent( num=>$matchTop{"genus"},        denom=>$readNumber );
-	print TOPHITS "," . as_percent( num=>$matchTop{"species"},      denom=>$readNumber );
-	print TOPHITS "," . as_percent( num=>$matchTop{"subspecies"},   denom=>$readNumber );
-	print TOPHITS "," . as_percent( num=>$matchTop{"no rank"},      denom=>$readNumber );
-	print TOPHITS "\n";
+	my $TOPHITS = ps_open(">>$tophitfile" );
+	print $TOPHITS $date;
+	print $TOPHITS "," . as_percent( num=>$matchTop{"superkingdom"}, denom=>$readNumber );
+	print $TOPHITS "," . as_percent( num=>$matchTop{"phylum"},       denom=>$readNumber );
+	print $TOPHITS "," . as_percent( num=>$matchTop{"subphylum"},    denom=>$readNumber );
+	print $TOPHITS "," . as_percent( num=>$matchTop{"class"},        denom=>$readNumber );
+	print $TOPHITS "," . as_percent( num=>$matchTop{"order"},        denom=>$readNumber );
+	print $TOPHITS "," . as_percent( num=>$matchTop{"family"},       denom=>$readNumber );
+	print $TOPHITS "," . as_percent( num=>$matchTop{"genus"},        denom=>$readNumber );
+	print $TOPHITS "," . as_percent( num=>$matchTop{"species"},      denom=>$readNumber );
+	print $TOPHITS "," . as_percent( num=>$matchTop{"subspecies"},   denom=>$readNumber );
+	print $TOPHITS "," . as_percent( num=>$matchTop{"no rank"},      denom=>$readNumber );
+	print $TOPHITS "\n";
 }
 
 sub report_text {
@@ -304,8 +304,8 @@ sub getInputTaxa {
 	my $fileName         = $args{file_name} // miss("file_name");
 	my %sourceTaxa       = ();
 	my %sourceReadCounts = ();
-	open( fileIN, $fileName ) or carp( "Couldn't open " . $fileName . "\n" );
-	while (<fileIN>) {
+	my $FILE_IN = open( $fileName ) or carp( "Couldn't open " . $fileName . "\n" );
+	while (<$FILE_IN>) {
 		next unless $_ =~ m/^>/;
 		$_ =~ m/^>(\S+).*SOURCE_\d+="(.*)"/;
 
@@ -325,7 +325,7 @@ sub getInputTaxa {
 			}
 		}
 	}
-	close(fileIN);
+	close($FILE_IN);
 	foreach my $source ( keys %sourceReadCounts ) {
 		print $source. "\t" . $nameidmap{$source} . "\t" . $sourceReadCounts{$source} . "\n";
 	}

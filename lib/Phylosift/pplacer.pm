@@ -134,8 +134,8 @@ sub weight_placements {
 	my $place_file = $args{place_file} // miss("place_file");
 
 	# weight the placements
-	open( $INPLACE,  $place_file );
-	open( $OUTPLACE, ">$place_file.wt" );
+	my $INPLACE = ps_open(  $place_file );
+	my $OUTPLACE = ps_open( ">$place_file.wt" );
 	my $placeline = 0;
 	while ( my $line = <$INPLACE> ) {
 		$placeline = 1 if ( $line =~ /"placements"/ );
@@ -200,8 +200,8 @@ sub name_taxa_in_jplace {
 	# read in the taxon name map
 	my %namemap;
 	my $taxon_map_file = Phylosift::Utilities::get_marker_taxon_map( self => $self );
-	open( NAMETABLE, $taxon_map_file ) or die "Couldn't open $taxon_map_file\n";
-	while ( my $line = <NAMETABLE> ) {
+	my $NAMETABLE = ps_open( $taxon_map_file );
+	while ( my $line = <$NAMETABLE> ) {
 		chomp $line;
 		my @pair = split( /\t/, $line );
 		$namemap{ $pair[0] } = $pair[1];
@@ -210,9 +210,9 @@ sub name_taxa_in_jplace {
 
 	# parse the tree file to get leaf node names
 	# replace leaf node names with taxon labels
-	open( TREEFILE, $input );
-	my @treedata = <TREEFILE>;
-	close TREEFILE;
+	my $TREEFILE = ps_open( $input );
+	my @treedata = <$TREEFILE>;
+	close $TREEFILE;
 	my $tree_string = $treedata[1];
 	$tree_string =~ s/^\s+\"//g;
 	$tree_string =~ s/\{\d+?\}//g;
@@ -234,9 +234,9 @@ sub name_taxa_in_jplace {
 	}
 	my $new_string = "  \"" . unparse( '-phylo' => $tree, '-format' => 'newick' ) . "\",\n";
 	$treedata[1] = $new_string;
-	open( TREEFILE, ">$output" );
-	print TREEFILE @treedata;
-	close TREEFILE;
+	$TREEFILE = ps_open( ">$output" );
+	print $TREEFILE @treedata;
+	close $TREEFILE;
 }
 
 =head1 AUTHOR

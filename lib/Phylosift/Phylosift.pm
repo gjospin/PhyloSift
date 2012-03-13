@@ -290,18 +290,18 @@ sub prep_isolate_files {
 	my %args = @_;
 	my $self = $args{self} // miss("self");
 	my $file = $args{file} // miss("file");
-	open( OUTFILE, ">" . $self->{"fileDir"} . "/isolates.fasta" );
-	open( ISOLATEFILE, $file ) || croak("Unable to read $file\n");
+	my $OUTFILE = ps_open( ">" . $self->{"fileDir"} . "/isolates.fasta" );
+	my $ISOLATEFILE = ps_open( $file );
 	my $fname = $self->{"fileDir"} . "/" . basename($file);
 	debug "Operating on isolate file $fname\n";
-	print OUTFILE ">" . basename($file) . "\n";
+	print $OUTFILE ">" . basename($file) . "\n";
 
-	while ( my $line = <ISOLATEFILE> ) {
+	while ( my $line = <$ISOLATEFILE> ) {
 		next if $line =~ /^>/;
-		print OUTFILE $line;
+		print $OUTFILE $line;
 	}
-	close ISOLATEFILE;
-	close OUTFILE;
+	close $ISOLATEFILE;
+	close $OUTFILE;
 	$self->{"readsFile"} = "isolates.fasta";
 	return $self->{"fileDir"} . "/isolates.fasta";
 }

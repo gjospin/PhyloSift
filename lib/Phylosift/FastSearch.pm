@@ -180,14 +180,14 @@ sub launch_searches {
 			croak "couldn't fork: $!\n";
 		}
 	}
-	open( my $RAP_PIPE,        ">$rap_pipe" );
-	open( my $BLASTX_PIPE,     ">$blastx_pipe" );
-	open( my $BOWTIE2_R1_PIPE, ">$bowtie2_r1_pipe" );
+	my $RAP_PIPE = ps_open( ">$rap_pipe" );
+	my $BLASTX_PIPE = ps_open( ">$blastx_pipe" );
+	my $BOWTIE2_R1_PIPE = ps_open( ">$bowtie2_r1_pipe" );
 	my $BOWTIE2_R2_PIPE;
 	debug "TESTING" . $args{readtype}->{paired};
-	open( $BOWTIE2_R2_PIPE, ">$bowtie2_r2_pipe" ) if $args{readtype}->{paired};
-	open( my $BLASTP_PIPE,  ">$blastp_pipe" );
-	open( my $READS_PIPE,   "+>$reads_file" );
+	$BOWTIE2_R2_PIPE = ps_open( ">$bowtie2_r2_pipe" ) if $args{readtype}->{paired};
+	my $BLASTP_PIPE = ps_open( ">$blastp_pipe" );
+	my $READS_PIPE = ps_open( "+>$reads_file" );
 
 	# parent process streams out sequences to fifos
 	# child processes run the search on incoming sequences
@@ -335,8 +335,8 @@ sub lastal_table {
 	my $query_file = $args{query_file} // miss("query_file");
 	my $lastal_cmd = "$Phylosift::Utilities::lastal -F15 -e300 -f0 $Phylosift::Utilities::marker_dir/replast $query_file |";
 	debug "Running $lastal_cmd";
-	open( my $hitstream, $lastal_cmd );
-	return $hitstream;
+	my $HISTREAM = ps_open( $lastal_cmd );
+	return $HISTREAM;
 }
 
 =head2 lastal_table_rna
@@ -351,8 +351,8 @@ sub lastal_table_rna {
 	my $query_file = shift // miss("query_file");
 	my $lastal_cmd = "$Phylosift::Utilities::lastal -e300 -f0 $Phylosift::Utilities::marker_dir/rnadb $query_file |";
 	debug "Running $lastal_cmd";
-	open( my $hitstream, $lastal_cmd );
-	return $hitstream;
+	my $HISTREAM = ps_open( $lastal_cmd );
+	return $HISTREAM;
 }
 
 =head2 blastXoof_table
@@ -374,8 +374,8 @@ sub blastXoof_table {
 	  . $self->{"threads"}
 	  . " 2> /dev/null |";
 	debug "Running $blastxoof_cmd";
-	open( my $hitstream, $blastxoof_cmd );
-	return $hitstream;
+	my $HISTREAM = ps_open( $blastxoof_cmd );
+	return $HISTREAM;
 }
 
 =head2 blastXoof_full
@@ -393,8 +393,8 @@ sub blastXoof_full {
 	  . $self->{"threads"}
 	  . " 2> /dev/null |";
 	debug "Running $blastxoof_cmd";
-	open( my $hitstream, $blastxoof_cmd );
-	return $hitstream;
+	my $HISTREAM = ps_open( $blastxoof_cmd );
+	return $HISTREAM;
 }
 
 =head2 bowtie2
@@ -421,8 +421,8 @@ sub bowtie2 {
 	}
 	$bowtie2_cmd .= " |";
 	debug "Running $bowtie2_cmd";
-	open( my $hitstream, $bowtie2_cmd );
-	return $hitstream;
+	my $HISTREAM = ps_open( $bowtie2_cmd );
+	return $HISTREAM;
 }
 
 =head2 translate_frame
@@ -474,8 +474,8 @@ sub executeRap {
 	  . $self->{"threads"}
 	  . " < $query_file | ";
 	debug "Running $rapsearch_cmd\n";
-	open( my $HITSTREAM, $rapsearch_cmd );
-	return $HITSTREAM;
+	my $HISTREAM = ps_open( $rapsearch_cmd );
+	return $HISTREAM;
 }
 
 =head2 executeBlast
@@ -491,8 +491,8 @@ sub executeBlast {
 	my $db         = Phylosift::Utilities::get_blastp_db();
 	debug "INSIDE BLAST\n";
 	my $blast_cmd = "$Phylosift::Utilities::blastall $blastp_params -i $query_file -d $db -a " . $self->{"threads"} . " |";
-	open( my $BLAST_HITS, $blast_cmd );
-	return $BLAST_HITS;
+	my $HISTREAM = ps_open( $blast_cmd );
+	return $HISTREAM;
 }
 
 =head2 get_hits_contigs
@@ -819,16 +819,14 @@ sub writeCandidates {
 
 		#writing the hits to the candidate file
 		my $candidate_file = Phylosift::Utilities::get_candidate_file( self => $self, marker => $marker, type => $type );
-		open( fileOUT, ">$candidate_file" )
-		  or croak " Couldn't open $candidate_file for writing\n";
-		print fileOUT $markerHits{$marker};
-		close(fileOUT);
+		my $FILE_OUT = ps_open( ">$candidate_file" );
+		print $FILE_OUT $markerHits{$marker};
+		close($FILE_OUT);
 		if ( $self->{"dna"} && $type !~ /\.rna/ ) {
 			$candidate_file = Phylosift::Utilities::get_candidate_file( self => $self, marker => $marker, type => $type, dna => 1 );
-			open( fileOUT, ">$candidate_file" )
-			  or croak " Couldn't open $candidate_file for writing\n";
-			print fileOUT $markerNuc{$marker} if defined( $markerNuc{$marker} );
-			close(fileOUT);
+			my $FILE_OUT = ps_open(">$candidate_file" );
+			print $FILE_OUT $markerNuc{$marker} if defined( $markerNuc{$marker} );
+			close($FILE_OUT);
 		}
 	}
 }

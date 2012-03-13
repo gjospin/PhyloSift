@@ -130,30 +130,30 @@ sub writeXML {
 	my @metareadseqs    = @$metareadseqsref;
 	my @alignio         = @$alignioref;
 	my @metaalignio     = @$metaalignioref;
-	open( ALLXML, ">$xmlfile" );
-	print ALLXML "<beast>\n";
-	print ALLXML "\t<taxa id=\"taxa\">\n";
+	my $ALLXML = ps_open( ">$xmlfile" );
+	print $ALLXML "<beast>\n";
+	print $ALLXML "\t<taxa id=\"taxa\">\n";
 
 	foreach my $refseq ( keys(%refseqs) ) {
-		print ALLXML "\t\t<taxon id=\"$refseq\"/>\n";
+		print $ALLXML "\t\t<taxon id=\"$refseq\"/>\n";
 	}
 	foreach my $metaseq (@metareadseqs) {
-		print ALLXML "\t\t<taxon id=\"$metaseq\"/>\n";
+		print $ALLXML "\t\t<taxon id=\"$metaseq\"/>\n";
 	}
-	print ALLXML "\t</taxa>\n";
-	print ALLXML "\t<taxa id=\"referenceTaxa\">\n";
+	print $ALLXML "\t</taxa>\n";
+	print $ALLXML "\t<taxa id=\"referenceTaxa\">\n";
 	foreach my $refseq ( keys(%refseqs) ) {
-		print ALLXML "\t\t<taxon idref=\"$refseq\"/>\n";
+		print $ALLXML "\t\t<taxon idref=\"$refseq\"/>\n";
 	}
-	print ALLXML "\t</taxa>\n";
+	print $ALLXML "\t</taxa>\n";
 	my @genenames;
 	my @markers = @{$markRef};
 	for ( my $i = 0 ; $i < @markers ; $i++ ) {
 		my $genename = $markers[$i];
 		$genename =~ s/\..+//g;
 		push( @genenames, $genename );
-		print ALLXML "\t<alignment id=\"$genename.alignment\" dataType = \"amino acid\">\n" if $cmult == 1;
-		print ALLXML "\t<alignment id=\"$genename.alignment\" dataType = \"nucleotide\">\n" if $cmult == 3;
+		print $ALLXML "\t<alignment id=\"$genename.alignment\" dataType = \"amino acid\">\n" if $cmult == 1;
+		print $ALLXML "\t<alignment id=\"$genename.alignment\" dataType = \"nucleotide\">\n" if $cmult == 3;
 
 		# first print ref seq alignment
 		my $curlen = 0;
@@ -161,10 +161,10 @@ sub writeXML {
 		foreach my $seq ( $alignio[$i]->each_seq() ) {
 			my $taxon = $seq->id();
 			$taxon =~ s/.+\-//g;
-			print ALLXML "\t\t<sequence>\n";
-			print ALLXML "\t\t<taxon idref=\"$taxon\"/>\n";
-			print ALLXML "\t\t" . $seq->seq() . "\n";
-			print ALLXML "\t\t</sequence>\n";
+			print $ALLXML "\t\t<sequence>\n";
+			print $ALLXML "\t\t<taxon idref=\"$taxon\"/>\n";
+			print $ALLXML "\t\t" . $seq->seq() . "\n";
+			print $ALLXML "\t\t</sequence>\n";
 			$seentaxa{$taxon} = 1;
 			$curlen = length( $seq->seq() );
 		}
@@ -172,45 +172,45 @@ sub writeXML {
 			next if defined( $seentaxa{$taxon} );
 
 			#			print STDERR "Missing sequence for taxon $taxon in gene $genename.  Filling with gaps.\n";
-			print ALLXML "\t\t<sequence>\n";
-			print ALLXML "\t\t<taxon idref=\"$taxon\"/>\n";
-			print ALLXML "\t\t" . "-" x $curlen . "\n";
-			print ALLXML "\t\t</sequence>\n";
+			print $ALLXML "\t\t<sequence>\n";
+			print $ALLXML "\t\t<taxon idref=\"$taxon\"/>\n";
+			print $ALLXML "\t\t" . "-" x $curlen . "\n";
+			print $ALLXML "\t\t</sequence>\n";
 		}
 
 		# then read seq alignment
 		foreach my $seq ( $metaalignio[$i]->each_seq() ) {
-			print ALLXML "\t\t<sequence>\n";
+			print $ALLXML "\t\t<sequence>\n";
 			my $seqid = $seq->id();
-			print ALLXML "\t\t<taxon idref=\"$seqid\"/>\n";
-			print ALLXML "\t\t" . $seq->seq() . "\n";
-			print ALLXML "\t\t</sequence>\n";
+			print $ALLXML "\t\t<taxon idref=\"$seqid\"/>\n";
+			print $ALLXML "\t\t" . $seq->seq() . "\n";
+			print $ALLXML "\t\t</sequence>\n";
 		}
-		print ALLXML "\t</alignment>\n";
+		print $ALLXML "\t</alignment>\n";
 	}
 	my $alnsuffix = "alignment";
 	if ( $cmult == 3 ) {
 		foreach my $gene (@genenames) {
 			$alnsuffix = "codonAlignment";
-			print ALLXML qq(
+			print $ALLXML qq(
 			<convert id="$gene.codonAlignment" dataType="codon">
 			<alignment idref="$gene.alignment"/>
 			</convert>
 		);
 		}
-		print ALLXML qq(
+		print $ALLXML qq(
 	<mergePatterns id="allpatterns">
 	);
 		foreach my $gene (@genenames) {
-			print ALLXML qq(
+			print $ALLXML qq(
 			<alignment idref="$gene.codonAlignment"/>);
 		}
-		print ALLXML qq(
+		print $ALLXML qq(
 	</mergePatterns>
 	);
 	}
 	foreach my $gene (@genenames) {
-		print ALLXML qq(
+		print $ALLXML qq(
 		<metagenomeData id="$gene.metagenomeData">
 			<taxa idref="referenceTaxa"/>
 			<alignment idref="$gene.$alnsuffix"/>
@@ -223,7 +223,7 @@ sub writeXML {
 	}
 
 	# this has to get tailored to use one of the hiddenLinkageModels
-	print ALLXML qq(
+	print $ALLXML qq(
 		<!-- This is a simple constant population size coalescent model              -->
 		<!-- that is used to generate an initial tree for the chain.                 -->
 		<constantSize id="initialDemo" units="substitutions">
@@ -257,7 +257,7 @@ sub writeXML {
 	#foreach my $gene(@genenames)
 	{
 		my $gene = "allgenes";
-		print ALLXML qq(
+		print $ALLXML qq(
 		<!-- The uncorrelated relaxed clock (Drummond, Ho, Phillips & Rambaut, 2006) -->
 		<discretizedBranchRates id="$gene.branchRates">
 			<treeModel idref="treeModel"/>
@@ -289,7 +289,7 @@ sub writeXML {
 		</rateCovarianceStatistic>
 		);
 	}
-	print ALLXML qq(
+	print $ALLXML qq(
 
 		<yuleModel id="yule" units="substitutions">
 			<birthRate>
@@ -307,7 +307,7 @@ sub writeXML {
 		</speciationLikelihood>
 	);
 	if ( $cmult == 1 ) {
-		print ALLXML qq(
+		print $ALLXML qq(
 			<!-- The substitution model                                         -->
 			<aminoAcidModel id="aa" type="JTT"/>
 			<!-- site model                                                              -->
@@ -318,7 +318,7 @@ sub writeXML {
 			</siteModel>
 		);
 	} else {
-		print ALLXML qq(
+		print $ALLXML qq(
 		     <yangCodonModel id="yang" geneticCode="universal">
 			<omega>
 			    <parameter id="omega" value="1.414"/>
@@ -348,25 +348,25 @@ sub writeXML {
 
 	# each gene needs one of these
 	foreach my $gene (@genenames) {
-		print ALLXML qq(
+		print $ALLXML qq(
 		<treeLikelihood id="$gene.treeLikelihood" useAmbiguities="false">
 			<hiddenLinkageModel idref="$gene.hiddenStrains"/>
 			<treeModel idref="treeModel"/>
 			<siteModel idref="siteModel"/>
 		);
-		print ALLXML "	<discretizedBranchRates idref=\"allgenes.branchRates\"/>\n";
-		print ALLXML qq(
+		print $ALLXML "	<discretizedBranchRates idref=\"allgenes.branchRates\"/>\n";
+		print $ALLXML qq(
 		</treeLikelihood>
 		);
 	}
-	print ALLXML qq(	<!-- Define operators                                                        -->
+	print $ALLXML qq(	<!-- Define operators                                                        -->
 		<operators id="operators">
 	);
 
 	#foreach my $gene(@genenames)
 	{
 		my $gene = "allgenes";
-		print ALLXML qq(
+		print $ALLXML qq(
 			<scaleOperator scaleFactor="0.75" weight="3">
 				<parameter idref="$gene.ucld.mean"/>
 			</scaleOperator>
@@ -392,7 +392,7 @@ sub writeXML {
 			</uniformIntegerOperator>
 		);
 	}
-	print ALLXML qq(		<subtreeSlide size="0.08" gaussian="true" weight="15">
+	print $ALLXML qq(		<subtreeSlide size="0.08" gaussian="true" weight="15">
 				<treeModel idref="treeModel"/>
 			</subtreeSlide>
 			<narrowExchange weight="15">
@@ -415,7 +415,7 @@ sub writeXML {
 			</scaleOperator>
 	);
 	foreach my $gene (@genenames) {
-		print ALLXML qq(
+		print $ALLXML qq(
 			<moveLinkageGroup weight="15.0">
 			    <hiddenLinkageModel idref="$gene.hiddenStrains"/>
 			</moveLinkageGroup>
@@ -425,13 +425,13 @@ sub writeXML {
 		);
 	}
 	if ( $cmult == 3 ) {
-		print ALLXML qq(
+		print $ALLXML qq(
 			<scaleOperator scaleFactor="0.75" weight="1.0">
 				<parameter idref="siteModel1.mu"/>
 			</scaleOperator>
 		);
 	}
-	print ALLXML qq(	</operators>
+	print $ALLXML qq(	</operators>
 		<!-- Define MCMC                                                             -->
 		<mcmc id="mcmc" chainLength="10000000" autoOptimize="true">
 			<posterior id="posterior">
@@ -441,22 +441,22 @@ sub writeXML {
 	#foreach my $gene(@genenames)
 	{
 		my $gene = "allgenes";
-		print ALLXML qq(
+		print $ALLXML qq(
 					<gammaPrior shape="0.0010" scale="1000.0" offset="0.0">
 						<parameter idref="$gene.ucld.mean"/>
 					</gammaPrior>
 		);
 	}
-	print ALLXML qq(				<speciationLikelihood idref="speciation"/>
+	print $ALLXML qq(				<speciationLikelihood idref="speciation"/>
 				</prior>
 				<compoundLikelihood id="likelihood" threads="8">
 	);
 	foreach my $gene (@genenames) {
-		print ALLXML qq(
+		print $ALLXML qq(
 					<treeLikelihood idref="$gene.treeLikelihood"/>
 		);
 	}
-	print ALLXML qq(			</compoundLikelihood>
+	print $ALLXML qq(			</compoundLikelihood>
 			</posterior>
 			<operators idref="operators"/>
 			<!-- write log to screen                                                     -->
@@ -478,12 +478,12 @@ sub writeXML {
 	#foreach my $gene(@genenames)
 	{
 		my $gene = "allgenes";
-		print ALLXML qq(			<column label="$gene.ucld.mean" sf="6" width="12">
+		print $ALLXML qq(			<column label="$gene.ucld.mean" sf="6" width="12">
 					<parameter idref="$gene.ucld.mean"/>
 				</column>
 		);
 	}
-	print ALLXML qq(		</log>
+	print $ALLXML qq(		</log>
 			<!-- write log to file                                                       -->
 			<log id="fileLog" logEvery="1000" fileName="frr.hits.trim50.length100.dups.resolved.named.log">
 				<posterior idref="posterior"/>
@@ -496,7 +496,7 @@ sub writeXML {
 	#foreach my $gene(@genenames)
 	{
 		my $gene = "allgenes";
-		print ALLXML qq(			<parameter idref="$gene.ucld.mean"/>
+		print $ALLXML qq(			<parameter idref="$gene.ucld.mean"/>
 				<parameter idref="$gene.ucld.stdev"/>
 				<rateStatistic idref="$gene.meanRate"/>
 				<rateStatistic idref="$gene.coefficientOfVariation"/>
@@ -504,10 +504,10 @@ sub writeXML {
 		);
 	}
 	foreach my $gene (@genenames) {
-		print ALLXML qq(			<treeLikelihood idref="$gene.treeLikelihood"/>
+		print $ALLXML qq(			<treeLikelihood idref="$gene.treeLikelihood"/>
 		);
 	}
-	print ALLXML qq(			<speciationLikelihood idref="speciation"/>
+	print $ALLXML qq(			<speciationLikelihood idref="speciation"/>
 			</log>
 			<!-- write tree log to file                                                  -->
 			<logTree id="treeFileLog" logEvery="1000" nexusFormat="true" fileName="frr.hits.trim50.length100.dups.resolved.named.trees" sortTranslationTable="true">
@@ -517,14 +517,14 @@ sub writeXML {
 	#foreach my $gene(@genenames)
 	{
 		my $gene = "allgenes";
-		print ALLXML qq(			<discretizedBranchRates idref="$gene.branchRates"/>
+		print $ALLXML qq(			<discretizedBranchRates idref="$gene.branchRates"/>
 		);
 	}
-	print ALLXML qq(			<posterior idref="posterior"/>
+	print $ALLXML qq(			<posterior idref="posterior"/>
 			</logTree>
 	);
 	foreach my $gene (@genenames) {
-		print ALLXML qq(
+		print $ALLXML qq(
 			<logHiddenLinkage id="$gene.hiddenLinkageFileLog" logEvery="1000" fileName="linkageGroups.$gene">
 				<hiddenLinkageModel idref="$gene.hiddenStrains"/>
 			</logHiddenLinkage>
@@ -536,7 +536,7 @@ sub writeXML {
 			</logHiddenLinkageTree>
 		);
 	}
-	print ALLXML qq(
+	print $ALLXML qq(
 		</mcmc>
 		<report>
 			<property name="timer">
@@ -546,5 +546,5 @@ sub writeXML {
 	</beast>
 
 	);
-	close ALLXML;
+	close $ALLXML;
 }

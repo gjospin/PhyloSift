@@ -48,9 +48,9 @@ sub compare {
 	# 4. re-place reads from each sample
 	# 5. now do the above steps listed in "simple approach"
 	$parent_directory = $self->{"tempDir"};
-	open( JPLACES, "ls -1 $parent_directory/*/treeDir/concat.trim.jplace |" );
+	my $JPLACES = ps_open( "ls -1 $parent_directory/*/treeDir/concat.trim.jplace |" );
 	my @files;
-	while ( my $file = <JPLACES> ) {
+	while ( my $file = <$JPLACES> ) {
 		chomp $file;
 		push( @files, $file );
 	}
