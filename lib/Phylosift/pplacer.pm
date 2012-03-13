@@ -3,7 +3,7 @@ use Cwd;
 use Getopt::Long;
 use Bio::AlignIO;
 use Phylosift::Phylosift;
-use Phylosift::Utilities qw(debug);
+use Phylosift::Utilities qw(:all);
 use Phylosift::Summarize;
 use Bio::Phylo::IO qw(parse unparse);
 
