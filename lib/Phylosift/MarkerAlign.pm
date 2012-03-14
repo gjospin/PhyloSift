@@ -56,8 +56,8 @@ my $minAlignedResidues = 20;
 
 sub MarkerAlign {
 	my %args       = @_;
-	my $self       = $args{self} // miss("self");
-	my $markersRef = $args{marker_reference} // miss("marker_reference");
+	my $self       = $args{self} || miss("self");
+	my $markersRef = $args{marker_reference} || miss("marker_reference");
 	my @allmarkers = @{$markersRef};
 	debug "beforeDirprepClean @{$markersRef}\n";
 	directoryPrepAndClean( self => $self, marker_reference => $markersRef );
@@ -104,8 +104,8 @@ sub MarkerAlign {
 
 sub directoryPrepAndClean {
 	my %args    = @_;
-	my $self    = $args{self} // miss("self");
-	my $markRef = $args{marker_reference} // miss("marker_reference");
+	my $self    = $args{self} || miss("self");
+	my $markRef = $args{marker_reference} || miss("marker_reference");
 	`mkdir -p $self->{"tempDir"}`;
 
 	#create a directory for the Reads file being processed.
@@ -122,7 +122,7 @@ sub directoryPrepAndClean {
 	}
 	return $self;
 }
-my @search_types = ( "", ".blastx", ".blastp", ".rap", ".blast" );
+my @search_types = ( "", ".lastal", ".blast" );
 
 =cut
 
@@ -132,8 +132,8 @@ my @search_types = ( "", ".blastx", ".blastp", ".rap", ".blast" );
 
 sub markerPrepAndRun {
 	my %args    = @_;
-	my $self    = $args{self} // miss("self");
-	my $markRef = $args{marker_reference} // miss("marker_reference");
+	my $self    = $args{self} || miss("self");
+	my $markRef = $args{marker_reference} || miss("marker_reference");
 	debug "ALIGNDIR : " . $self->{"alignDir"} . "\n";
 	foreach my $marker ( @{$markRef} ) {
 		next unless Phylosift::Utilities::is_protein_marker( marker => $marker );
@@ -154,13 +154,16 @@ sub markerPrepAndRun {
 		unlink($new_candidate);
 		foreach my $type (@search_types) {
 			my $candidate = Phylosift::Utilities::get_candidate_file( self => $self, marker => $marker, type => $type );
-			next unless -e $candidate;
-			my $fifo_out = $self->{"alignDir"} . "/" . Phylosift::Utilities::get_marker_basename( marker => $marker ) . ".tmpout.fifo";
-			`mkfifo $fifo_out`;
-			system( "$Phylosift::Utilities::hmmsearch -E 10 --cpu " . $self->{"threads"} . " --max --tblout $fifo_out $hmm_file $candidate > /dev/null &" );
-			my $HMMSEARCH = ps_open( $fifo_out );
-			hmmsearch_parse( self => $self, marker => $marker, type => $type, HMMSEARCH => $HMMSEARCH );
-			unlink($fifo_out);
+			my @candidate_files = <$candidate.*>;
+			foreach my $cand_file (@candidate_files){
+				next unless -e $cand_file;
+				my $fifo_out = $self->{"alignDir"} . "/" . Phylosift::Utilities::get_marker_basename( marker => $marker ) . ".tmpout.fifo";
+				`mkfifo $fifo_out`;
+				system( "$Phylosift::Utilities::hmmsearch -E 10 --cpu " . $self->{"threads"} . " --max --tblout $fifo_out $hmm_file $cand_file > /dev/null &" );
+				my $HMMSEARCH = ps_open( $fifo_out );
+				hmmsearch_parse( self => $self, marker => $marker, type => $type, HMMSEARCH => $HMMSEARCH , fasta_file => $cand_file);
+				unlink($fifo_out);
+			}
 		}
 	}
 	return $self;
@@ -172,10 +175,11 @@ sub markerPrepAndRun {
 
 sub hmmsearch_parse {
 	my %args      = @_;
-	my $self      = $args{self} // miss("self");
-	my $marker    = $args{marker} // miss("marker");
-	my $type      = $args{type} // miss("type");
-	my $HMMSEARCH = $args{HMMSEARCH} // miss("HMMSEARCH");
+	my $self      = $args{self} || miss("self");
+	my $marker    = $args{marker} || miss("marker");
+	my $type      = $args{type} || miss("type");
+	my $HMMSEARCH = $args{HMMSEARCH} || miss("HMMSEARCH");
+	my $fasta_file = $args{fasta_file} || miss("fasta file");
 	my %hmmHits   = ();
 	my %hmmScores = ();
 	my $countHits = 0;
@@ -196,8 +200,7 @@ sub hmmsearch_parse {
 	$new_candidate = ">" . $new_candidate if -f $new_candidate;    # append if the file already exists
 	$new_candidate = ">" . $new_candidate;                         # otherwise make a new one
 	my $NEWCANDIDATE = ps_open( $new_candidate );
-	my $candidate = Phylosift::Utilities::get_candidate_file( self => $self, marker => $marker, type => $type );
-	my $seqin = Phylosift::Utilities::open_SeqIO_object( file => $candidate );
+	my $seqin = Phylosift::Utilities::open_SeqIO_object( file => $fasta_file );
 	while ( my $sequence = $seqin->next_seq ) {
 		my $baseid = $sequence->id;
 		if ( exists $hmmHits{$baseid} && $hmmHits{$baseid} eq $sequence->id ) {
@@ -213,16 +216,13 @@ sub hmmsearch_parse {
 
 sub writeAlignedSeq {
 	my %args        = @_;
-	my $self        = $args{self} // miss("self");
+	my $self        = $args{self} || miss("self");
 	my $OUTPUT      = $args{OUTPUT};
 	my $UNMASKEDOUT = $args{UNMASKED_OUT};
-	my $prev_name   = $args{prev_name} // miss("prev_name");
-	my $prev_seq    = $args{prev_seq} // miss("prev_seq");
-	my $seq_count   = $args{seq_count} // miss("seq_count");
+	my $prev_name   = $args{prev_name} || miss("prev_name");
+	my $prev_seq    = $args{prev_seq} || miss("prev_seq");
+	my $seq_count   = $args{seq_count};
 	my $orig_seq    = $prev_seq;
-	if ( !defined($prev_seq) ) {
-		print "abc";
-	}
 	$prev_seq =~ s/[a-z]//g;    # lowercase chars didnt align to model
 	$prev_seq =~ s/\.//g;       # shouldnt be any dots
 	                            #skip paralogs if we don't want them
@@ -310,8 +310,8 @@ sub aa_to_dna_aln {
 
 sub alignAndMask {
 	my %args    = @_;
-	my $self    = $args{self} // miss("self");
-	my $markRef = $args{marker_reference} // miss("marker_reference");
+	my $self    = $args{self} || miss("self");
+	my $markRef = $args{marker_reference} || miss("marker_reference");
 	for ( my $index = 0 ; $index < @{$markRef} ; $index++ ) {
 		my $marker         = ${$markRef}[$index];
 		my $refcount       = 0;
@@ -397,7 +397,7 @@ sub alignAndMask {
 									 UNMASKED_OUT => $UNMASKEDOUT,
 									 prev_name    => $prev_name,
 									 prev_seq     => $prev_seq,
-									 seq_count    => $seqCount
+									 seq_count    => $seqCount - 1
 					) if $seqCount > 0;
 				}
 				$seqCount++;
@@ -425,7 +425,7 @@ sub alignAndMask {
 							 UNMASKED_OUT => $UNMASKEDOUT,
 							 prev_name    => $prev_name,
 							 prev_seq     => $prev_seq,
-							 seq_count    => $seqCount
+							 seq_count    => $seqCount - 1
 			) if $seqCount > 0;
 		}
 		$seqCount -= $refcount;
@@ -461,7 +461,7 @@ sub alignAndMask {
 						print $ALITRANSOUT ">" . $seq->id . "\n" . $cleanseq . "\n";
 					}
 				}
-				close(ALITRANSOUT);
+				close($ALITRANSOUT);
 			}
 		}
 
@@ -477,8 +477,8 @@ sub alignAndMask {
 
 sub getPMPROKMarkerAlignmentFiles {
 	my %args             = @_;
-	my $self             = $args{self} // miss("self");
-	my $markRef          = $args{marker_reference} // miss("marker_reference");
+	my $self             = $args{self} || miss("self");
+	my $markRef          = $args{marker_reference} || miss("marker_reference");
 	my @markeralignments = ();
 	foreach my $marker ( @{$markRef} ) {
 		next unless $marker =~ /PMPROK/;
