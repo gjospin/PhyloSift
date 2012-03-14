@@ -175,7 +175,7 @@ sub programChecks {
 		#program not found return;
 		carp("HMMER3 not found");
 		return 1;
-	} elsif ( `$hmmalign -h` !~ m/HMMER 3.0rc1/ ) {
+	} elsif ( `$hmmalign -h` !~ m/HMMER 3.0/ ) {
 
 		# pplacer was found but the version doens't match the one tested with Phylosift
 		carp "Warning : a different version of HMMER was found. PhyloSift was tested with HMMER 3.0rc1\n";
