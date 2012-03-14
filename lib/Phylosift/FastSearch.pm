@@ -110,18 +110,23 @@ sub launch_searches {
 	my %args            = @_;
 	my $self            = $args{self};
 	my $dir             = $args{dir} // miss("dir");
-	my $last_pipe       = $args{dir} . "last.pipe";
 	my $bowtie2_r1_pipe = $args{dir} . "/bowtie2_r1.pipe";
 	my $reads_file      = $args{dir} . "/reads.fasta";
 	my $bowtie2_r2_pipe;
 	$bowtie2_r2_pipe = $args{dir} . "/bowtie2_r2.pipe" if $args{readtype}->{paired};
 	debug "Making fifos\n";
+	
+	my @last_pipe_array       = ();
+	for(my $i =0 ; $i <= $self->{"threads"}-1;$i++){
+		push(@last_pipe_array,$args{dir} . "/last_$i.pipe");
+		`mkfifo "$args{dir}/last_$i.pipe"`;
+	}
+	
 	`mkfifo $bowtie2_r1_pipe`;
 	`mkfifo $bowtie2_r2_pipe` if $args{readtype}->{paired};
-	`mkfifo $last_pipe`;
 	my @children;
 
-	for ( my $count = 1 ; $count <= 2 ; $count++ ) {
+	for ( my $count = 1 ; $count <= $self->{"threads"} + 1; $count++ ) {
 		my $pid = fork();
 		if ($pid) {
 
@@ -133,19 +138,19 @@ sub launch_searches {
 			# child processes will search sequences
 			my $hitstream;
 			my $candidate_type = ".$count";
-			if ( $count == 1 ) {
-				$hitstream = lastal_table( self => $self, query_file => $last_pipe );
+			if ( $count <= $self->{"threads"} ) {
+				$hitstream = lastal_table( self => $self, query_file => $last_pipe_array[$count-1] );
 				$candidate_type = ".lastal";
-			} elsif ( $count == 2 ) {
+			} elsif ( $count > $self->{"threads"} ) {
 
 				#$hitstream = lastal_table_rna( $self, $bowtie2_r1_pipe );
 				$hitstream = bowtie2( self => $self, readtype => $args{readtype}, reads1 => $bowtie2_r1_pipe, reads2 => $bowtie2_r2_pipe );
 				$candidate_type = ".rna";
 			}
 			my $hitsref;
-			if ( $count == 1 ) {
+			if ( $count <= $self->{"threads"} ) {
 				$hitsref = get_hits_contigs( self => $self, HITSTREAM => $hitstream, searchtype => "lastal" );
-			} elsif ( $count == 2 ) {
+			} elsif ( $count > $self->{"threads"} ) {
 				$hitsref = get_hits_sam( self => $self, HITSTREAM => $hitstream );
 
 				#$hitsref = get_hits_contigs( self => $self, HITSTREAM => $hitstream, searchtype => "lastal" );
@@ -159,7 +164,10 @@ sub launch_searches {
 			croak "couldn't fork: $!\n";
 		}
 	}
-	my $LAST_PIPE = ps_open( ">$last_pipe" );
+	my @LAST_PIPE_ARRAY = ();
+	foreach my $last_pipe (@last_pipe_array){
+		push(@LAST_PIPE_ARRAY, ps_open( ">$last_pipe" ));
+	}
 	my $BOWTIE2_R1_PIPE = ps_open( ">$bowtie2_r1_pipe" );
 	my $BOWTIE2_R2_PIPE;
 	debug "TESTING" . $args{readtype}->{paired};
@@ -172,7 +180,7 @@ sub launch_searches {
 	demux_sequences(
 					 bowtie2_pipe1 => $BOWTIE2_R1_PIPE,
 					 bowtie2_pipe2 => $BOWTIE2_R2_PIPE,
-					 lastal_pipe   => $LAST_PIPE,
+					 lastal_pipes   => \@LAST_PIPE_ARRAY,
 					 dna           => $self->{"dna"},
 					 file1         => $self->{"readsFile"},
 					 file2         => $self->{"readsFile_2"},
@@ -185,8 +193,11 @@ sub launch_searches {
 	}
 
 	# clean up
-	`rm -f $last_pipe $bowtie2_r1_pipe $reads_file`;
+	`rm -f $bowtie2_r1_pipe $reads_file`;
 	`rm -f $bowtie2_r2_pipe` if defined($bowtie2_r2_pipe);
+	foreach my $last_pipe(@last_pipe_array){
+		`rm -f $last_pipe`;
+	}
 }
 
 =head2 demux_sequences
@@ -200,7 +211,8 @@ sub demux_sequences {
 	my $BOWTIE2_PIPE1  = $args{bowtie2_pipe1} // miss("bowtie2_pipe1");
 	my $BOWTIE2_PIPE2  = $args{bowtie2_pipe2};
 	my $READS_PIPE     = $args{reads_pipe} // miss("reads_pipe");
-	my $LAST_PIPE     = $args{lastal_pipe} // miss("lastal_pipe");
+	my $last_array_reference     = $args{lastal_pipes} // miss("lastal_pipes");
+	my @LAST_PIPE_ARRAY = @{$last_array_reference};
 	my $F1IN           = Phylosift::Utilities::open_sequence_file( file => $args{file1} );
 	my $F2IN;
 	$F2IN = Phylosift::Utilities::open_sequence_file( file => $args{file2} ) if length( $args{file2} ) > 0;
@@ -208,8 +220,10 @@ sub demux_sequences {
 	my @lines2;
 	$lines1[0] = <$F1IN>;
 	$lines2[0] = <$F2IN> if defined($F2IN);
-
+	my $lastal_index=0;
+	my $lastal_threads = scalar(@LAST_PIPE_ARRAY);
 	while ( defined( $lines1[0] ) ) {
+		my $last_pipe = $LAST_PIPE_ARRAY[$lastal_index];
 		if ( $lines1[0] =~ /^@/ ) {
 			for ( my $i = 1 ; $i < 4 ; $i++ ) {
 				$lines1[$i] = <$F1IN>;
@@ -224,9 +238,9 @@ sub demux_sequences {
 			# send the reads to RAPsearch2 (convert to fasta)
 			$lines1[0] =~ s/^@/>/g;
 			$lines2[0] =~ s/^@/>/g if defined($F2IN);
-			print $LAST_PIPE $lines1[0] . $lines1[1];
-			print $LAST_PIPE $lines2[0] . $lines2[1] if defined($F2IN);
-
+			print $last_pipe $lines1[0] . $lines1[1] ;
+			print $last_pipe $lines2[0] . $lines2[1] if defined($F2IN);
+			
 			#
 			# send the reads to the reads file in fasta format to write candidates later
 			print $READS_PIPE $lines1[0] . $lines1[1];
@@ -250,13 +264,15 @@ sub demux_sequences {
 				}
 			}
 
-			# send the reads to bowtie
-			print $BOWTIE2_PIPE1 @lines1;
-			print $BOWTIE2_PIPE2 @lines2 if defined($F2IN);
+			if ( length( $lines1[1] ) > 2000 || ( defined($F2IN) && length( $lines2[1] ) > 2000 ) ) {
+				# send the reads to bowtie
+				print $BOWTIE2_PIPE1 @lines1;
+				print $BOWTIE2_PIPE2 @lines2 if defined($F2IN);
+			}
 
 			# send the reads to last
-			print $LAST_PIPE $lines1[0] . $lines1[1];
-			print $LAST_PIPE $lines2[0] . $lines2[1] if defined($F2IN);
+			print $last_pipe $lines1[0] . $lines1[1] ;
+			print $last_pipe $lines2[0] . $lines2[1] if defined($F2IN);
 
 			#
 			# send the reads to the reads file to write candidates later
@@ -265,8 +281,13 @@ sub demux_sequences {
 			@lines1 = ( $newline1, "" );
 			@lines2 = ( $newline2, "" );
 		}
+		$lastal_index++;
+		$lastal_index = $lastal_index % $lastal_threads;
 	}
-	close($LAST_PIPE);
+	
+	foreach my $LAST_PIPE (@LAST_PIPE_ARRAY){
+		close($LAST_PIPE);
+	}
 	close($BOWTIE2_PIPE1);
 	close($BOWTIE2_PIPE2) if defined($F2IN);
 	close($READS_PIPE);

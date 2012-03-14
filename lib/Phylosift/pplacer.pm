@@ -42,7 +42,6 @@ sub pplacer {
 	my $self    = $args{self} // miss("self");
 	my $markRef = $args{marker_reference} // miss("marker_reference");
 	directoryPrepAndClean( self => $self );
-
 	# if we have a coverage map then weight the placements
 	my $covref;
 	if ( defined( $self->{"coverage"} ) ) {
