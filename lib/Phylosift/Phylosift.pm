@@ -143,9 +143,9 @@ sub run {
 	start_timer( name => "START" );
 	read_phylosift_config( self => $self );
 	run_program_check( self => $self );
-	Phylosift::Utilities::data_checks( self => $self );
-	file_check( self => $self ) unless $self->{"mode"} eq 'index';
-	directory_prep( self => $self, force => $force ) unless $self->{"mode"} eq 'index';
+	Phylosift::Utilities::data_checks( self => $self ) unless $self->{"mode"} eq 'build_marker';
+	file_check( self => $self ) unless $self->{"mode"} eq 'index' ;
+	directory_prep( self => $self, force => $force ) unless $self->{"mode"} eq 'index' ;
 	$self->{"readsFile"} = prep_isolate_files( self => $self, file => $self->{"readsFile"} ) if $self->{"isolate"} == 1;
 
 	# Forcing usage of updated markers

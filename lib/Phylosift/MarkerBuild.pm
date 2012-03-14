@@ -36,9 +36,9 @@ sub build_marker {
 	my $self     = $args{self} || miss("self");
 	my $aln_file = $args{alignment} || miss("alignment");
 	my $cutoff   = $args{cutoff} || miss("cutoff");
-	my $force    = $args{force} || miss("force");
+	my $force    = $args{force} ; #force is not a required option
 	my ( $core, $path, $ext ) = fileparse( $aln_file, qr/\.[^.]*$/ );
-	my $marker_dir = $Phylosift::Utilities::marker_dir;
+	my $marker_dir = Phylosift::Utilities::get_data_path( data_name => "markers", data_path => $Phylosift::Settings::marker_path );
 	my $target_dir = $marker_dir . "/$core";
 	if ( -e $target_dir && !$force ) {
 		croak
@@ -300,7 +300,7 @@ sub mask_aln {
 	}
 
 	# writing out a fasta
-	my $TRIMOUT = open( "> $outfile" );
+	my $TRIMOUT = ps_open( ">$outfile" );
 	foreach my $key (@ori_order) {
 		print $TRIMOUT ">" . $key . "\n";
 		my $i;
