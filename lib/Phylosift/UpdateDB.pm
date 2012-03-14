@@ -246,7 +246,6 @@ sub qsub_updates {
 	my @jobids;
 	my $PHYLOSIFTSCRIPT = ps_open( ">/tmp/pssge.sh" );
 	print $PHYLOSIFTSCRIPT qq{#!/bin/sh
-#\$ -cwd
 #\$ -V
 #\$ -S /bin/bash
 #\$ -q eisen.q -q all.q
@@ -278,7 +277,7 @@ rm -rf \$WORKDIR
 
 		# check whether we've hit the limit for queued jobs, and rest if needed
 		if ( $job_count == MAX_SGE_JOBS ) {
-			wait_for_jobs(@jobids);
+			wait_for_jobs(job_ids=>@jobids);
 			@jobids    = ();
 			$job_count = 0;
 		}
