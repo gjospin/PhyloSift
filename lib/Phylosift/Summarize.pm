@@ -454,7 +454,7 @@ sub get_taxon_info {
 
 sub tree_name {
 	my %args   = @_;
-	my $inName = $args{name} || miss("name");
+	my $inName = $args{name} || return;
 	$inName =~ s/\s+/_/g;
 	$inName =~ s/'//g;
 	$inName =~ s/[\(\)]//g;
