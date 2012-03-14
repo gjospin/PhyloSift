@@ -39,8 +39,8 @@ if you don't export anything, such as for a purely object-oriented module.
 
 sub pplacer {
 	my %args    = @_;
-	my $self    = $args{self} // miss("self");
-	my $markRef = $args{marker_reference} // miss("marker_reference");
+	my $self    = $args{self} || miss("self");
+	my $markRef = $args{marker_reference} || miss("marker_reference");
 	directoryPrepAndClean( self => $self );
 
 	# if we have a coverage map then weight the placements
@@ -130,8 +130,8 @@ sub pplacer {
 
 sub weight_placements {
 	my %args       = @_;
-	my $coverage   = $args{coverage} // miss("coverage");
-	my $place_file = $args{place_file} // miss("place_file");
+	my $coverage   = $args{coverage} || miss("coverage");
+	my $place_file = $args{place_file} || miss("place_file");
 
 	# weight the placements
 	my $INPLACE = ps_open(  $place_file );
@@ -177,7 +177,7 @@ sub weight_placements {
 
 sub directoryPrepAndClean {
 	my %args = @_;
-	my $self = $args{self} // miss("self");
+	my $self = $args{self} || miss("self");
 	`mkdir $self->{"tempDir"}` unless ( -e $self->{"tempDir"} );
 
 	#create a directory for the Reads file being processed.
@@ -193,9 +193,9 @@ sub directoryPrepAndClean {
 
 sub name_taxa_in_jplace {
 	my %args   = @_;
-	my $self   = $args{self} // miss("self");
-	my $input  = $args{input} // miss("input");
-	my $output = $args{output} // miss("output");
+	my $self   = $args{self} || miss("self");
+	my $input  = $args{input} || miss("input");
+	my $output = $args{output} || miss("output");
 
 	# read in the taxon name map
 	my %namemap;

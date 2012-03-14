@@ -1,6 +1,5 @@
 package Phylosift::Utilities;
 
-#use 5.006;
 use strict;
 use warnings;
 use FindBin qw($Bin);
@@ -650,7 +649,7 @@ sub get_marker_rep_file {
 	my %args        = @_;
 	my $self        = $args{self};
 	my $marker      = $args{marker};
-	my $updated     = $args{updated} || $self->{"updated"};
+	my $updated     = $args{updated} || 0;
 	my $marker_path = get_marker_path( self => $self, marker => $marker );
 	my $bname       = get_marker_basename( marker => $marker );
 	if ( $updated == 0 ) {
@@ -1125,14 +1124,14 @@ Returns an open filehandle
 
 sub open_sequence_file {
 	my %args = @_;
-	my $file = $args{file} // miss("file");
+	my $file = $args{file} || miss("file");
 	my $F1IN;
-	if ( $args{file} =~ /\.gz$/ ) {
+	if ( $file =~ /\.gz$/ ) {
 		$F1IN = ps_open( "zcat $file |" );
-	} elsif ( $args{file} =~ /\.bz2$/ ) {
+	} elsif ( $file =~ /\.bz2$/ ) {
 		$F1IN = ps_open( "bzcat $file |" );
 	} else {
-		$F1IN = ps_open( $args{file} );
+		$F1IN = ps_open( $file );
 	}
 	return $F1IN;
 }
@@ -1235,6 +1234,7 @@ sub index_marker_db {
 	my $path    = $args{path};
 	my @markers = @{ $args{markers} };
 
+	debug "Indexing ".scalar(@markers)." in $path";
 	# use alignments to make an unaligned fasta database containing everything
 	# strip gaps from the alignments
 	my $bowtie2_db = get_bowtie2_db( path => $path );
@@ -1243,7 +1243,7 @@ sub index_marker_db {
 	my $RNADBOUT = ps_open( ">" . $bowtie2_db_fasta );
 	foreach my $marker (@markers) {
 		my $marker_rep = get_marker_rep_file( self => $args{self}, marker => $marker, updated => 1 );
-		$marker_rep = get_marker_rep_file( self => $args{self}, marker => $marker ) unless -e $marker_rep;
+		$marker_rep = get_marker_rep_file( self => $args{self}, marker => $marker, updated=>0 ) unless -e $marker_rep;
 		debug "marker $marker is protein\n" if is_protein_marker( marker => $marker );
 		debug "marker rep file $marker_rep\n";
 		my $DBOUT = $RNADBOUT;
@@ -1282,7 +1282,7 @@ sub index_marker_db {
 	unlink("$path/rep.dbfasta");    # don't need this anymore!
 
 	# make a bowtie2 database
-	if ( -e "$bowtie2_db_fasta" ) {
+	if ( -e $bowtie2_db_fasta && -s $bowtie2_db_fasta > 100 ) {
 		`cd $path ; $Phylosift::Utilities::lastdb -c $bowtie2_db $bowtie2_db_fasta`;
 		`cd $path ; $Phylosift::Utilities::bowtie2build $bowtie2_db_fasta $bowtie2_db`;
 	}
@@ -1294,7 +1294,6 @@ sub index_marker_db {
 		next if -e $hmm_file;
 		my $cm_file = get_marker_cm_file( self => $args{self}, marker => $marker );
 		next if -e $cm_file;
-		next if is_protein_marker( marker => $marker );
 		my $stk_file = get_marker_stockholm_file( self => $args{self}, marker => $marker );
 		`$hmmbuild $hmm_file $stk_file`;
 	}
@@ -1316,6 +1315,7 @@ sub index_marker_db {
 sub gather_markers {
 	my %args        = @_;
 	my $marker_file = $args{marker_file};
+	my $missing_hmm = $args{allow_missing_hmm} || 0;
 	my $path        = $args{path} || $marker_dir;
 	my @marks       = ();
 
@@ -1353,7 +1353,9 @@ sub gather_markers {
 			# all markers need to have an hmm or a cm else they are not usable
 			my $baseline = $line;
 			$baseline =~ s/.+\///g;
-			next unless ( -e "$path/$line/$line.cm" || -e "$path/$line/$baseline.hmm" );
+			if(!$missing_hmm){
+				next unless ( -e "$path/$line/$line.cm" || -e "$path/$line/$baseline.hmm" );
+			}
 			push( @marks, $line );
 		}
 	}

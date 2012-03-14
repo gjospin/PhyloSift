@@ -64,9 +64,9 @@ my %markerLength;
 
 sub RunSearch {
 	my %args       = @_;
-	my $self       = $args{self} // miss("self");
+	my $self       = $args{self} || miss("self");
 	my $custom     = $args{custom};
-	my $markersRef = $args{marker_reference} // miss("marker_reference");
+	my $markersRef = $args{marker_reference} || miss("marker_reference");
 	@markers = @{$markersRef};
 	my $position = rindex( $self->{"readsFile"}, "/" );
 	$self->{"readsFile"} =~ m/(\w+)\.?(\w*)$/;
@@ -111,7 +111,7 @@ the parent process writes sequence data to files, child processes launch a simil
 sub launch_searches {
 	my %args            = @_;
 	my $self            = $args{self};
-	my $dir             = $args{dir} // miss("dir");
+	my $dir             = $args{dir} || miss("dir");
 	my $rap_pipe        = $args{dir} . "/rap.pipe";
 	my $blastx_pipe     = $args{dir} . "/blastx.pipe";
 	my $blastp_pipe     = $args{dir} . "/blastp.pipe";
@@ -222,12 +222,12 @@ reads a sequence file and streams it out to named pipes
 
 sub demux_sequences {
 	my %args           = @_;
-	my $BOWTIE2_PIPE1  = $args{bowtie2_pipe1} // miss("bowtie2_pipe1");
+	my $BOWTIE2_PIPE1  = $args{bowtie2_pipe1} || miss("bowtie2_pipe1");
 	my $BOWTIE2_PIPE2  = $args{bowtie2_pipe2};
-	my $RAPSEARCH_PIPE = $args{rapsearch_pipe} // miss("rapsearch_pipe");
-	my $BLASTX_PIPE    = $args{blastx_pipe} // miss("blastx_pipe");
-	my $BLASTP_PIPE    = $args{blastp_pipe} // miss("blastp_pipe");
-	my $READS_PIPE     = $args{reads_pipe} // miss("reads_pipe");
+	my $RAPSEARCH_PIPE = $args{rapsearch_pipe} || miss("rapsearch_pipe");
+	my $BLASTX_PIPE    = $args{blastx_pipe} || miss("blastx_pipe");
+	my $BLASTP_PIPE    = $args{blastp_pipe} || miss("blastp_pipe");
+	my $READS_PIPE     = $args{reads_pipe} || miss("reads_pipe");
 	my $F1IN           = Phylosift::Utilities::open_sequence_file( file => $args{file1} );
 	my $F2IN;
 	$F2IN = Phylosift::Utilities::open_sequence_file( file => $args{file2} ) if length( $args{file2} ) > 0;
@@ -331,8 +331,8 @@ returns a stream file handle
 
 sub lastal_table {
 	my %args       = @_;
-	my $self       = $args{self} // miss("self");
-	my $query_file = $args{query_file} // miss("query_file");
+	my $self       = $args{self} || miss("self");
+	my $query_file = $args{query_file} || miss("query_file");
 	my $lastal_cmd = "$Phylosift::Utilities::lastal -F15 -e300 -f0 $Phylosift::Utilities::marker_dir/replast $query_file |";
 	debug "Running $lastal_cmd";
 	my $HISTREAM = ps_open( $lastal_cmd );
@@ -347,8 +347,8 @@ returns a stream file handle
 =cut
 
 sub lastal_table_rna {
-	my $self       = shift // miss("self");
-	my $query_file = shift // miss("query_file");
+	my $self       = shift || miss("self");
+	my $query_file = shift || miss("query_file");
 	my $lastal_cmd = "$Phylosift::Utilities::lastal -e300 -f0 $Phylosift::Utilities::marker_dir/rnadb $query_file |";
 	debug "Running $lastal_cmd";
 	my $HISTREAM = ps_open( $lastal_cmd );
@@ -364,8 +364,8 @@ returns a stream file handle
 
 sub blastXoof_table {
 	my %args       = @_;
-	my $self       = $args{self} // miss("self");
-	my $query_file = $args{query_file} // miss("query_file");
+	my $self       = $args{self} || miss("self");
+	my $query_file = $args{query_file} || miss("query_file");
 	debug "INSIDE tabular OOF blastx\n";
 	my $blastxoof_cmd =
 	    "$Phylosift::Utilities::blastall -p blastx -i $query_file -e 0.1 -w 20 -b 50000 -v 50000 -d "
@@ -384,8 +384,8 @@ sub blastXoof_table {
 
 sub blastXoof_full {
 	my %args       = @_;
-	my $self       = $args{self} // miss("self");
-	my $query_file = $args{query} // miss("query_file");
+	my $self       = $args{self} || miss("self");
+	my $query_file = $args{query} || miss("query_file");
 	debug "INSIDE full OOF blastx\n";
 	my $blastxoof_cmd =
 	    "$Phylosift::Utilities::blastall -p blastx -i $query_file -e 0.1 -w 20 -b 50 -v 50 -d "
@@ -406,8 +406,8 @@ returns a stream file handle
 
 sub bowtie2 {
 	my %args     = @_;
-	my $self     = $args{self} // miss("self");
-	my $readtype = $args{readtype} // miss("readtype");
+	my $self     = $args{self} || miss("self");
+	my $readtype = $args{readtype} || miss("readtype");
 	debug "INSIDE bowtie2\n";
 	my $bowtie2_cmd =
 	    "$Phylosift::Utilities::bowtie2align -x "
@@ -431,13 +431,13 @@ sub bowtie2 {
 
 sub translate_frame {
 	my %args              = @_;
-	my $id                = $args{id} // miss("id");
-	my $seq               = $args{seq} // miss("seq");
-	my $start             = $args{start} // miss("start");
-	my $end               = $args{end} // miss("end");
-	my $frame             = $args{frame} // miss("frame");
-	my $marker            = $args{marker} // miss("marker");
-	my $reverse_translate = $args{reverse_translate} // miss("reverse_translate");
+	my $id                = $args{id} || miss("id");
+	my $seq               = $args{seq} || miss("seq");
+	my $start             = $args{start} || miss("start");
+	my $end               = $args{end} || miss("end");
+	my $frame             = $args{frame} || miss("frame");
+	my $marker            = $args{marker} || miss("marker");
+	my $reverse_translate = $args{reverse_translate} || miss("reverse_translate");
 	my $return_seq        = "";
 	my $local_seq         = substr( $seq, $start - 1, $end - $start + 1 );
 	my $new_seq           = Bio::LocatableSeq->new( -seq => $local_seq, -id => 'temp' );
@@ -463,8 +463,8 @@ Launches rapsearch2, returns a stream
 
 sub executeRap {
 	my %args          = @_;
-	my $self          = $args{self} // miss("self");
-	my $query_file    = $args{query_file} // miss("query_file");
+	my $self          = $args{self} || miss("self");
+	my $query_file    = $args{query_file} || miss("query_file");
 	my $out_file      = $self->{"blastDir"} . "/$readsCore.rapSearch";
 	my $rapsearch_cmd = "cd "
 	  . $self->{"blastDir"}
@@ -486,8 +486,8 @@ Launches blastp, returns a stream
 
 sub executeBlast {
 	my %args       = @_;
-	my $self       = $args{self} // miss("self");
-	my $query_file = $args{query_file} // miss("query_file");
+	my $self       = $args{self} || miss("self");
+	my $query_file = $args{query_file} || miss("query_file");
 	my $db         = Phylosift::Utilities::get_blastp_db();
 	debug "INSIDE BLAST\n";
 	my $blast_cmd = "$Phylosift::Utilities::blastall $blastp_params -i $query_file -d $db -a " . $self->{"threads"} . " |";
@@ -503,9 +503,9 @@ parse the blast file
 
 sub get_hits_contigs {
 	my %args       = @_;
-	my $self       = $args{self} // miss("self");
-	my $HITSTREAM  = $args{HITSTREAM} // miss("HITSTREAM");
-	my $searchtype = $args{searchtype} // miss("searchtype");    # can be blastx or lastal
+	my $self       = $args{self} || miss("self");
+	my $HITSTREAM  = $args{HITSTREAM} || miss("HITSTREAM");
+	my $searchtype = $args{searchtype} || miss("searchtype");    # can be blastx or lastal
 
 	# key is a contig name
 	# value is an array of arrays, each one has [marker,bit_score,left-end,right-end]
@@ -601,9 +601,9 @@ parse the blast file, return a hash containing hits to reads
 
 sub get_hits {
 	my %args       = @_;
-	my $self       = $args{self} // miss("self");
-	my $HITSTREAM  = $args{HITSTREAM} // miss("HISTREAM");
-	my $searchtype = $args{searchtype} // miss("searchtype");
+	my $self       = $args{self} || miss("self");
+	my $HITSTREAM  = $args{HITSTREAM} || miss("HISTREAM");
+	my $searchtype = $args{searchtype} || miss("searchtype");
 	my %markerTopScores;
 	my %topScore = ();
 	my %contig_hits;
@@ -651,8 +651,8 @@ sub get_hits {
 
 sub get_hits_sam {
 	my %args      = @_;
-	my $self      = $args{self} // miss("self");
-	my $HITSTREAM = $args{HITSTREAM} // miss("HISTREAM");
+	my $self      = $args{self} || miss("self");
+	my $HITSTREAM = $args{HITSTREAM} || miss("HISTREAM");
 	my %markerTopScores;
 	my %topScore = ();
 	my %contig_hits;
@@ -718,8 +718,8 @@ Extracts a marker gene name from a blast or rapsearch subject sequence name
 
 sub get_marker_name {
 	my %args        = @_;
-	my $subject     = $args{subject} // miss("subject");
-	my $search_type = $args{search_type} // miss("search_type");
+	my $subject     = $args{subject} || miss("subject");
+	my $search_type = $args{search_type} || miss("search_type");
 	my $marker_name = "";
 	if ( $search_type eq "blast" ) {
 		my @marker = split( /\_/, $subject );
@@ -741,10 +741,10 @@ write out results
 
 sub writeCandidates {
 	my %args          = @_;
-	my $self          = $args{self} // miss("self");
-	my $contigHitsRef = $args{hitsref} // miss("hitsref");
+	my $self          = $args{self} || miss("self");
+	my $contigHitsRef = $args{hitsref} || miss("hitsref");
 	my $type       = $args{searchtype} || ""; # search type -- candidate filenames will have this name embedded, enables parallel output from different programs
-	my $reads_file = $args{reads} // miss("reads");
+	my $reads_file = $args{reads} || miss("reads");
 	my %contig_hits = %$contigHitsRef;
 	my %markerHits;
 	debug "ReadsFile:  $self->{\"readsFile\"}" . "\n";
@@ -845,7 +845,7 @@ Generates the blastable database using the marker representatives
 
 sub prep_and_clean {
 	my %args = @_;
-	my $self = $args{self} // miss("self");
+	my $self = $args{self} || miss("self");
 	debug "prepclean MARKERS @markers\nTESTING\n ";
 	`mkdir $self->{"tempDir"}` unless ( -e $self->{"tempDir"} );
 
