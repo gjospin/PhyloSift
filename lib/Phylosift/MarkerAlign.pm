@@ -220,9 +220,6 @@ sub writeAlignedSeq {
 	my $prev_seq    = $args{prev_seq} || miss("prev_seq");
 	my $seq_count   = $args{seq_count};
 	my $orig_seq    = $prev_seq;
-	if ( !defined($prev_seq) ) {
-		print "abc";
-	}
 	$prev_seq =~ s/[a-z]//g;    # lowercase chars didnt align to model
 	$prev_seq =~ s/\.//g;       # shouldnt be any dots
 	                            #skip paralogs if we don't want them
@@ -397,7 +394,7 @@ sub alignAndMask {
 									 UNMASKED_OUT => $UNMASKEDOUT,
 									 prev_name    => $prev_name,
 									 prev_seq     => $prev_seq,
-									 seq_count    => $seqCount
+									 seq_count    => $seqCount - 1
 					) if $seqCount > 0;
 				}
 				$seqCount++;
@@ -425,7 +422,7 @@ sub alignAndMask {
 							 UNMASKED_OUT => $UNMASKEDOUT,
 							 prev_name    => $prev_name,
 							 prev_seq     => $prev_seq,
-							 seq_count    => $seqCount
+							 seq_count    => $seqCount - 1
 			) if $seqCount > 0;
 		}
 		$seqCount -= $refcount;
