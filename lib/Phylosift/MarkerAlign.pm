@@ -122,7 +122,7 @@ sub directoryPrepAndClean {
 	}
 	return $self;
 }
-my @search_types = ( "", ".blastx", ".blastp", ".rap", ".blast" );
+my @search_types = ( "", ".lastal", ".blast" );
 
 =cut
 
@@ -154,13 +154,16 @@ sub markerPrepAndRun {
 		unlink($new_candidate);
 		foreach my $type (@search_types) {
 			my $candidate = Phylosift::Utilities::get_candidate_file( self => $self, marker => $marker, type => $type );
-			next unless -e $candidate;
-			my $fifo_out = $self->{"alignDir"} . "/" . Phylosift::Utilities::get_marker_basename( marker => $marker ) . ".tmpout.fifo";
-			`mkfifo $fifo_out`;
-			system( "$Phylosift::Utilities::hmmsearch -E 10 --cpu " . $self->{"threads"} . " --max --tblout $fifo_out $hmm_file $candidate > /dev/null &" );
-			my $HMMSEARCH = ps_open( $fifo_out );
-			hmmsearch_parse( self => $self, marker => $marker, type => $type, HMMSEARCH => $HMMSEARCH );
-			unlink($fifo_out);
+			my @candidate_files = <$candidate.*>;
+			foreach my $cand_file (@candidate_files){
+				next unless -e $cand_file;
+				my $fifo_out = $self->{"alignDir"} . "/" . Phylosift::Utilities::get_marker_basename( marker => $marker ) . ".tmpout.fifo";
+				`mkfifo $fifo_out`;
+				system( "$Phylosift::Utilities::hmmsearch -E 10 --cpu " . $self->{"threads"} . " --max --tblout $fifo_out $hmm_file $cand_file > /dev/null &" );
+				my $HMMSEARCH = ps_open( $fifo_out );
+				hmmsearch_parse( self => $self, marker => $marker, type => $type, HMMSEARCH => $HMMSEARCH , fasta_file => $cand_file);
+				unlink($fifo_out);
+			}
 		}
 	}
 	return $self;
@@ -176,6 +179,7 @@ sub hmmsearch_parse {
 	my $marker    = $args{marker} || miss("marker");
 	my $type      = $args{type} || miss("type");
 	my $HMMSEARCH = $args{HMMSEARCH} || miss("HMMSEARCH");
+	my $fasta_file = $args{fasta_file} || miss("fasta file");
 	my %hmmHits   = ();
 	my %hmmScores = ();
 	my $countHits = 0;
@@ -196,8 +200,7 @@ sub hmmsearch_parse {
 	$new_candidate = ">" . $new_candidate if -f $new_candidate;    # append if the file already exists
 	$new_candidate = ">" . $new_candidate;                         # otherwise make a new one
 	my $NEWCANDIDATE = ps_open( $new_candidate );
-	my $candidate = Phylosift::Utilities::get_candidate_file( self => $self, marker => $marker, type => $type );
-	my $seqin = Phylosift::Utilities::open_SeqIO_object( file => $candidate );
+	my $seqin = Phylosift::Utilities::open_SeqIO_object( file => $fasta_file );
 	while ( my $sequence = $seqin->next_seq ) {
 		my $baseid = $sequence->id;
 		if ( exists $hmmHits{$baseid} && $hmmHits{$baseid} eq $sequence->id ) {

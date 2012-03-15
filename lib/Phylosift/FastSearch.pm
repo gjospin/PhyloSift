@@ -22,7 +22,6 @@ Currently uses either BLAST or RAPsearch.
 Version 0.01
 
 =cut
-
 our $VERSION = '0.01';
 
 =head1 SYNOPSIS
@@ -49,7 +48,6 @@ if you don't export anything, such as for a purely object-oriented module.
 =head2 RunBlast
 
 =cut
-
 my $bestHitsBitScoreRange  = 30;     # all hits with a bit score within this amount of the best will be used
 my $align_fraction         = 0.3;    # at least this amount of min[length(query),length(marker)] must align to be considered a hit
 my $align_fraction_isolate = 0.8;    # use this align_fraction when in isolate mode on long sequences
@@ -112,22 +110,23 @@ sub launch_searches {
 	my %args            = @_;
 	my $self            = $args{self};
 	my $dir             = $args{dir} || miss("dir");
-	my $rap_pipe        = $args{dir} . "/rap.pipe";
-	my $blastx_pipe     = $args{dir} . "/blastx.pipe";
-	my $blastp_pipe     = $args{dir} . "/blastp.pipe";
 	my $bowtie2_r1_pipe = $args{dir} . "/bowtie2_r1.pipe";
 	my $reads_file      = $args{dir} . "/reads.fasta";
 	my $bowtie2_r2_pipe;
 	$bowtie2_r2_pipe = $args{dir} . "/bowtie2_r2.pipe" if $args{readtype}->{paired};
 	debug "Making fifos\n";
-	`mkfifo $blastx_pipe`;
+	
+	my @last_pipe_array       = ();
+	for(my $i =0 ; $i <= $self->{"threads"}-1;$i++){
+		push(@last_pipe_array,$args{dir} . "/last_$i.pipe");
+		`mkfifo "$args{dir}/last_$i.pipe"`;
+	}
+	
 	`mkfifo $bowtie2_r1_pipe`;
 	`mkfifo $bowtie2_r2_pipe` if $args{readtype}->{paired};
-	`mkfifo $blastp_pipe`;
-	`mkfifo $rap_pipe`;
 	my @children;
 
-	for ( my $count = 1 ; $count <= 4 ; $count++ ) {
+	for ( my $count = 1 ; $count <= $self->{"threads"} + 1; $count++ ) {
 		my $pid = fork();
 		if ($pid) {
 
@@ -139,69 +138,53 @@ sub launch_searches {
 			# child processes will search sequences
 			my $hitstream;
 			my $candidate_type = ".$count";
-			if ( $count == 1 ) {
-				$hitstream = lastal_table( self => $self, query_file => $blastx_pipe );
-				$candidate_type = ".blastx";
-			} elsif ( $count == 2 ) {
-				$hitstream = lastal_table_rna( $self, $bowtie2_r1_pipe );
+			if ( $count <= $self->{"threads"} ) {
+				$hitstream = lastal_table( self => $self, query_file => $last_pipe_array[$count-1] );
+				$candidate_type = ".lastal";
+			} elsif ( $count > $self->{"threads"} ) {
 
-				#				$hitstream = bowtie2( self => $self, readtype => $args{readtype}, reads1 => $bowtie2_r1_pipe, reads2 => $bowtie2_r2_pipe );
+				#$hitstream = lastal_table_rna( $self, $bowtie2_r1_pipe );
+				$hitstream = bowtie2( self => $self, readtype => $args{readtype}, reads1 => $bowtie2_r1_pipe, reads2 => $bowtie2_r2_pipe );
 				$candidate_type = ".rna";
-			} elsif ( $count == 3 ) {
-				$hitstream = executeBlast( self => $self, query_file => $blastp_pipe );
-				$candidate_type = ".blastp";
-			} elsif ( $count == 4 ) {
-
-				# rapsearch can't read from a pipe
-				$hitstream = executeRap( self => $self, query_file => $rap_pipe );
-				$candidate_type = ".rap";
 			}
 			my $hitsref;
-			if ( $count == 1 ) {
+			if ( $count <= $self->{"threads"} ) {
 				$hitsref = get_hits_contigs( self => $self, HITSTREAM => $hitstream, searchtype => "lastal" );
-			} elsif ( $count == 2 ) {
+			} elsif ( $count > $self->{"threads"} ) {
+				$hitsref = get_hits_sam( self => $self, HITSTREAM => $hitstream );
 
-				#				$hitsref = get_hits_sam( self => $self, HITSTREAM => $hitstream );
-				$hitsref = get_hits_contigs( self => $self, HITSTREAM => $hitstream, searchtype => "lastal" );
-			} elsif ( $count == 4 ) {
-				$hitsref = get_hits( self => $self, HITSTREAM => $hitstream, searchtype => "rap" );
-				unlink( $self->{"blastDir"} . "/rapjunk.aln" );    # rap leaves some trash lying about
-			} elsif ( $args{contigs} ) {
-				$hitsref = get_hits_contigs( self => $self, HITSTREAM => $hitstream, searchtype => "lastal" );
-			} else {
-				$hitsref = get_hits( self => $self, HITSTREAM => $hitstream, searchtype => "blast" );
+				#$hitsref = get_hits_contigs( self => $self, HITSTREAM => $hitstream, searchtype => "lastal" );
 			}
 
 			# write out sequence regions hitting marker genes to candidate files
 			debug "Writing candidates from process $count\n";
-			writeCandidates( self => $self, hitsref => $hitsref, searchtype => "$candidate_type", reads => $reads_file );
+			write_candidates( self => $self, hitsref => $hitsref, searchtype => "$candidate_type", reads => $reads_file, process_id => $count );
 			exit 0;
 		} else {
 			croak "couldn't fork: $!\n";
 		}
 	}
-	my $RAP_PIPE = ps_open( ">$rap_pipe" );
-	my $BLASTX_PIPE = ps_open( ">$blastx_pipe" );
+	my @LAST_PIPE_ARRAY = ();
+	foreach my $last_pipe (@last_pipe_array){
+		push(@LAST_PIPE_ARRAY, ps_open( ">$last_pipe" ));
+	}
 	my $BOWTIE2_R1_PIPE = ps_open( ">$bowtie2_r1_pipe" );
 	my $BOWTIE2_R2_PIPE;
 	debug "TESTING" . $args{readtype}->{paired};
 	$BOWTIE2_R2_PIPE = ps_open( ">$bowtie2_r2_pipe" ) if $args{readtype}->{paired};
-	my $BLASTP_PIPE = ps_open( ">$blastp_pipe" );
 	my $READS_PIPE = ps_open( "+>$reads_file" );
 
 	# parent process streams out sequences to fifos
 	# child processes run the search on incoming sequences
 	debug "Demuxing sequences\n";
 	demux_sequences(
-					 bowtie2_pipe1  => $BOWTIE2_R1_PIPE,
-					 bowtie2_pipe2  => $BOWTIE2_R2_PIPE,
-					 rapsearch_pipe => $RAP_PIPE,
-					 blastx_pipe    => $BLASTX_PIPE,
-					 blastp_pipe    => $BLASTP_PIPE,
-					 dna            => $self->{"dna"},
-					 file1          => $self->{"readsFile"},
-					 file2          => $self->{"readsFile_2"},
-					 reads_pipe     => $READS_PIPE,
+					 bowtie2_pipe1 => $BOWTIE2_R1_PIPE,
+					 bowtie2_pipe2 => $BOWTIE2_R2_PIPE,
+					 lastal_pipes   => \@LAST_PIPE_ARRAY,
+					 dna           => $self->{"dna"},
+					 file1         => $self->{"readsFile"},
+					 file2         => $self->{"readsFile_2"},
+					 reads_pipe    => $READS_PIPE,
 	);
 
 	# join with children when the searches are done
@@ -210,8 +193,11 @@ sub launch_searches {
 	}
 
 	# clean up
-	`rm -f $blastx_pipe $blastp_pipe $rap_pipe $bowtie2_r1_pipe $reads_file`;
+	`rm -f $bowtie2_r1_pipe $reads_file`;
 	`rm -f $bowtie2_r2_pipe` if defined($bowtie2_r2_pipe);
+	foreach my $last_pipe(@last_pipe_array){
+		`rm -f $last_pipe`;
+	}
 }
 
 =head2 demux_sequences
@@ -224,10 +210,9 @@ sub demux_sequences {
 	my %args           = @_;
 	my $BOWTIE2_PIPE1  = $args{bowtie2_pipe1} || miss("bowtie2_pipe1");
 	my $BOWTIE2_PIPE2  = $args{bowtie2_pipe2};
-	my $RAPSEARCH_PIPE = $args{rapsearch_pipe} || miss("rapsearch_pipe");
-	my $BLASTX_PIPE    = $args{blastx_pipe} || miss("blastx_pipe");
-	my $BLASTP_PIPE    = $args{blastp_pipe} || miss("blastp_pipe");
 	my $READS_PIPE     = $args{reads_pipe} || miss("reads_pipe");
+	my $last_array_reference     = $args{lastal_pipes} || miss("lastal_pipes");
+	my @LAST_PIPE_ARRAY = @{$last_array_reference};
 	my $F1IN           = Phylosift::Utilities::open_sequence_file( file => $args{file1} );
 	my $F2IN;
 	$F2IN = Phylosift::Utilities::open_sequence_file( file => $args{file2} ) if length( $args{file2} ) > 0;
@@ -235,8 +220,10 @@ sub demux_sequences {
 	my @lines2;
 	$lines1[0] = <$F1IN>;
 	$lines2[0] = <$F2IN> if defined($F2IN);
-
+	my $lastal_index=0;
+	my $lastal_threads = scalar(@LAST_PIPE_ARRAY);
 	while ( defined( $lines1[0] ) ) {
+		my $last_pipe = $LAST_PIPE_ARRAY[$lastal_index];
 		if ( $lines1[0] =~ /^@/ ) {
 			for ( my $i = 1 ; $i < 4 ; $i++ ) {
 				$lines1[$i] = <$F1IN>;
@@ -251,9 +238,9 @@ sub demux_sequences {
 			# send the reads to RAPsearch2 (convert to fasta)
 			$lines1[0] =~ s/^@/>/g;
 			$lines2[0] =~ s/^@/>/g if defined($F2IN);
-			print $RAPSEARCH_PIPE $lines1[0] . $lines1[1];
-			print $RAPSEARCH_PIPE $lines2[0] . $lines2[1] if defined($F2IN);
-
+			print $last_pipe $lines1[0] . $lines1[1] ;
+			print $last_pipe $lines2[0] . $lines2[1] if defined($F2IN);
+			
 			#
 			# send the reads to the reads file in fasta format to write candidates later
 			print $READS_PIPE $lines1[0] . $lines1[1];
@@ -277,25 +264,15 @@ sub demux_sequences {
 				}
 			}
 
-			# send the reads to bowtie
-			print $BOWTIE2_PIPE1 @lines1;
-			print $BOWTIE2_PIPE2 @lines2 if defined($F2IN);
-
-			# if either read is long, send both to blast
 			if ( length( $lines1[1] ) > 2000 || ( defined($F2IN) && length( $lines2[1] ) > 2000 ) ) {
-				if ( $args{dna} ) {
-					print $BLASTX_PIPE @lines1;
-					print $BLASTX_PIPE @lines2 if defined($F2IN);
-				} else {
-					print $BLASTP_PIPE @lines1;
-					print $BLASTP_PIPE @lines2 if defined($F2IN);
-				}
-			} else {
-
-				# otherwise send to rap
-				print $RAPSEARCH_PIPE $lines1[0] . $lines1[1];
-				print $RAPSEARCH_PIPE $lines2[0] . $lines2[1] if defined($F2IN);
+				# send the reads to bowtie
+				print $BOWTIE2_PIPE1 @lines1;
+				print $BOWTIE2_PIPE2 @lines2 if defined($F2IN);
 			}
+
+			# send the reads to last
+			print $last_pipe $lines1[0] . $lines1[1] ;
+			print $last_pipe $lines2[0] . $lines2[1] if defined($F2IN);
 
 			#
 			# send the reads to the reads file to write candidates later
@@ -304,13 +281,15 @@ sub demux_sequences {
 			@lines1 = ( $newline1, "" );
 			@lines2 = ( $newline2, "" );
 		}
+		$lastal_index++;
+		$lastal_index = $lastal_index % $lastal_threads;
 	}
-	close($RAPSEARCH_PIPE);
+	
+	foreach my $LAST_PIPE (@LAST_PIPE_ARRAY){
+		close($LAST_PIPE);
+	}
 	close($BOWTIE2_PIPE1);
 	close($BOWTIE2_PIPE2) if defined($F2IN);
-	close($BLASTX_PIPE);
-	close($BLASTP_PIPE);
-	close($RAPSEARCH_PIPE);
 	close($READS_PIPE);
 }
 
@@ -333,7 +312,7 @@ sub lastal_table {
 	my %args       = @_;
 	my $self       = $args{self} || miss("self");
 	my $query_file = $args{query_file} || miss("query_file");
-	my $lastal_cmd = "$Phylosift::Utilities::lastal -F15 -e300 -f0 $Phylosift::Utilities::marker_dir/replast $query_file |";
+	my $lastal_cmd = "$Phylosift::Utilities::lastal -F15 -e75 -f0 $Phylosift::Utilities::marker_dir/replast $query_file |";
 	debug "Running $lastal_cmd";
 	my $HISTREAM = ps_open( $lastal_cmd );
 	return $HISTREAM;
@@ -352,48 +331,6 @@ sub lastal_table_rna {
 	my $lastal_cmd = "$Phylosift::Utilities::lastal -e300 -f0 $Phylosift::Utilities::marker_dir/rnadb $query_file |";
 	debug "Running $lastal_cmd";
 	my $HISTREAM = ps_open( $lastal_cmd );
-	return $HISTREAM;
-}
-
-=head2 blastXoof_table
-
-runs blastx with out-of-frame (OOF) detection on a query file (or named pipe)
-returns a stream file handle
-
-=cut
-
-sub blastXoof_table {
-	my %args       = @_;
-	my $self       = $args{self} || miss("self");
-	my $query_file = $args{query_file} || miss("query_file");
-	debug "INSIDE tabular OOF blastx\n";
-	my $blastxoof_cmd =
-	    "$Phylosift::Utilities::blastall -p blastx -i $query_file -e 0.1 -w 20 -b 50000 -v 50000 -d "
-	  . Phylosift::Utilities::get_blastp_db( self => $self )
-	  . " -m 8 -a "
-	  . $self->{"threads"}
-	  . " 2> /dev/null |";
-	debug "Running $blastxoof_cmd";
-	my $HISTREAM = ps_open( $blastxoof_cmd );
-	return $HISTREAM;
-}
-
-=head2 blastXoof_full
-
-=cut
-
-sub blastXoof_full {
-	my %args       = @_;
-	my $self       = $args{self} || miss("self");
-	my $query_file = $args{query} || miss("query_file");
-	debug "INSIDE full OOF blastx\n";
-	my $blastxoof_cmd =
-	    "$Phylosift::Utilities::blastall -p blastx -i $query_file -e 0.1 -w 20 -b 50 -v 50 -d "
-	  . Phylosift::Utilities::get_blastp_db( self => $self ) . " -a "
-	  . $self->{"threads"}
-	  . " 2> /dev/null |";
-	debug "Running $blastxoof_cmd";
-	my $HISTREAM = ps_open( $blastxoof_cmd );
 	return $HISTREAM;
 }
 
@@ -453,46 +390,6 @@ sub translate_frame {
 	}
 	$return_seq = $new_seq->translate();
 	return $return_seq->seq();
-}
-
-=head2 executeRap
-
-Launches rapsearch2, returns a stream
-
-=cut
-
-sub executeRap {
-	my %args          = @_;
-	my $self          = $args{self} || miss("self");
-	my $query_file    = $args{query_file} || miss("query_file");
-	my $out_file      = $self->{"blastDir"} . "/$readsCore.rapSearch";
-	my $rapsearch_cmd = "cd "
-	  . $self->{"blastDir"}
-	  . "; $Phylosift::Utilities::rapSearch -d "
-	  . Phylosift::Utilities::get_rapsearch_db( self => $self )
-	  . " -o rapjunk -v 20 -b 20 -e -1 -z "
-	  . $self->{"threads"}
-	  . " < $query_file | ";
-	debug "Running $rapsearch_cmd\n";
-	my $HISTREAM = ps_open( $rapsearch_cmd );
-	return $HISTREAM;
-}
-
-=head2 executeBlast
-
-Launches blastp, returns a stream
-
-=cut
-
-sub executeBlast {
-	my %args       = @_;
-	my $self       = $args{self} || miss("self");
-	my $query_file = $args{query_file} || miss("query_file");
-	my $db         = Phylosift::Utilities::get_blastp_db();
-	debug "INSIDE BLAST\n";
-	my $blast_cmd = "$Phylosift::Utilities::blastall $blastp_params -i $query_file -d $db -a " . $self->{"threads"} . " |";
-	my $HISTREAM = ps_open( $blast_cmd );
-	return $HISTREAM;
 }
 
 =head2 get_hits_contigs
@@ -733,18 +630,19 @@ sub get_marker_name {
 	return $marker_name;
 }
 
-=head2 writeCandidates
+=head2 write_candidates
 
 write out results
 
 =cut
 
-sub writeCandidates {
+sub write_candidates {
 	my %args          = @_;
 	my $self          = $args{self} || miss("self");
 	my $contigHitsRef = $args{hitsref} || miss("hitsref");
 	my $type       = $args{searchtype} || ""; # search type -- candidate filenames will have this name embedded, enables parallel output from different programs
 	my $reads_file = $args{reads} || miss("reads");
+	my $process_id = $args{process_id} || miss("process id");
 	my %contig_hits = %$contigHitsRef;
 	my %markerHits;
 	debug "ReadsFile:  $self->{\"readsFile\"}" . "\n";
@@ -805,7 +703,7 @@ sub writeCandidates {
 					);
 					$newSeq =~ s/\*/X/g;    # bioperl uses * for stop codons but we want to give X to hmmer later
 				} else {
-					warn "Search type : $type, alignment length not multiple of 3!  FIXME: need to pull frameshift from full blastx\n";
+					warn "Search type : $type, alignment length not multiple of 3!  FIXME: need to pull frameshift from full lastal output\n";
 					next;
 				}
 			}
@@ -819,12 +717,12 @@ sub writeCandidates {
 
 		#writing the hits to the candidate file
 		my $candidate_file = Phylosift::Utilities::get_candidate_file( self => $self, marker => $marker, type => $type );
-		my $FILE_OUT = ps_open( ">$candidate_file" );
+		my $FILE_OUT = ps_open( ">$candidate_file".".".$process_id );
 		print $FILE_OUT $markerHits{$marker};
 		close($FILE_OUT);
 		if ( $self->{"dna"} && $type !~ /\.rna/ ) {
 			$candidate_file = Phylosift::Utilities::get_candidate_file( self => $self, marker => $marker, type => $type, dna => 1 );
-			my $FILE_OUT = ps_open(">$candidate_file" );
+			my $FILE_OUT = ps_open(">$candidate_file".".".$process_id );
 			print $FILE_OUT $markerNuc{$marker} if defined( $markerNuc{$marker} );
 			close($FILE_OUT);
 		}
@@ -914,5 +812,4 @@ See http://dev.perl.org/licenses/ for more information.
 
 
 =cut
-
 1;    # End of Phylosift::blast.pm
