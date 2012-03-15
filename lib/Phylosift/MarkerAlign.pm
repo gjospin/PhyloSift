@@ -297,7 +297,8 @@ sub aa_to_dna_aln {
 											 -end           => $j,
 											 -strand        => 1,
 											 -seq           => $nt_seqstr,
-											 -nowarnonempty => 1
+											 -nowarnonempty => 1,
+											 -verbose =>0
 		);
 		$dnaalign->add_seq($newdna);
 	}

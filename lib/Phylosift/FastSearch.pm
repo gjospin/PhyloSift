@@ -312,7 +312,7 @@ sub lastal_table {
 	my %args       = @_;
 	my $self       = $args{self} || miss("self");
 	my $query_file = $args{query_file} || miss("query_file");
-	my $lastal_cmd = "$Phylosift::Utilities::lastal -F15 -e75 -f0 $Phylosift::Utilities::marker_dir/replast $query_file |";
+	my $lastal_cmd = "$Phylosift::Utilities::lastal -F15 -e50 -f0 $Phylosift::Utilities::marker_dir/replast $query_file |";
 	debug "Running $lastal_cmd";
 	my $HISTREAM = ps_open( $lastal_cmd );
 	return $HISTREAM;
@@ -377,7 +377,7 @@ sub translate_frame {
 	my $reverse_translate = $args{reverse_translate} || miss("reverse_translate");
 	my $return_seq        = "";
 	my $local_seq         = substr( $seq, $start - 1, $end - $start + 1 );
-	my $new_seq           = Bio::LocatableSeq->new( -seq => $local_seq, -id => 'temp' );
+	my $new_seq           = Bio::LocatableSeq->new( -seq => $local_seq, -id => 'temp', -verbose => 0 );
 	$new_seq = $new_seq->revcom() if ( $frame < 0 );
 
 	if ($reverse_translate) {
