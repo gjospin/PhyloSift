@@ -303,7 +303,7 @@ sub getInputTaxa {
 	my $fileName         = $args{file_name} || miss("file_name");
 	my %sourceTaxa       = ();
 	my %sourceReadCounts = ();
-	my $FILE_IN = open( $fileName ) or carp( "Couldn't open " . $fileName . "\n" );
+	my $FILE_IN = ps_open( $fileName );
 	while (<$FILE_IN>) {
 		next unless $_ =~ m/^>/;
 		$_ =~ m/^>(\S+).*SOURCE_\d+="(.*)"/;
