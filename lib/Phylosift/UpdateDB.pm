@@ -218,12 +218,12 @@ sub find_new_genomes {
 		chomp $genome;
 		next unless $genome =~ /\.fasta/;
 		my $gbase = basename $genome;
+		print STDERR "Looking for $gbase\n";
 		if ( -e "$results_dir/$gbase/alignDir/concat.trim.fasta" ) {
 			my $ctime = ( stat("$results_dir/$gbase/alignDir/concat.trim.fasta") )[9];
 			my $mtime = ( stat($genome) )[9];
 			push( @{$files}, $genome ) if ( $ctime < $mtime );
-
-			#			push( @{$files}, $genome );
+			print STDERR "Found up-to-date $gbase\n" if ( $ctime >= $mtime );
 		} else {
 			push( @{$files}, $genome );
 		}
@@ -277,20 +277,20 @@ rm -rf \$WORKDIR
 
 		# check whether we've hit the limit for queued jobs, and rest if needed
 		if ( $job_count == MAX_SGE_JOBS ) {
-			wait_for_jobs(job_ids=>@jobids);
+			wait_for_jobs(job_ids=>\@jobids);
 			@jobids    = ();
 			$job_count = 0;
 		}
 	}
-	wait_for_jobs( job_ids => @jobids );
+	wait_for_jobs( job_ids => \@jobids );
 }
 
 sub wait_for_jobs {
 	my %args = @_;
-	my $job_ids = $args{job_ids} || miss("job_ids");
+	my @job_ids = @{$args{job_ids}} || miss("job_ids");
 
 	# wait for all jobs to complete
-	while ( my $jobid = $job_ids ) {
+	foreach my $jobid ( @job_ids ) {
 		while (1) {
 			my $output = `qstat -j $jobid 2>&1`;
 			last if $output =~ /Following jobs do not exist/;
@@ -316,6 +316,7 @@ sub collate_markers {
 	print STDERR "Listing all files in results dir\n";
 	my @alldata = `find $local_directory -name "*.trim.fasta"`;
 	print STDERR "Found " . scalar(@alldata) . " files\n";
+	unshift( @markerlist, "concat" );
 	foreach my $marker (@markerlist) {
 		my $cat_ch = ">";    # first time through ensures that existing files get clobbered
 
@@ -330,16 +331,19 @@ sub collate_markers {
 			# cat the files into the alignment in batches
 			# this cuts down on process spawning and file I/O
 			# can't do more than about 4k at once because argument lists get too long
-			if ( @catfiles > 200 ) {
+			my $batch_size = 1000;
+			if ( @catfiles > $batch_size ) {
 				my $catline = join( " ", @catfiles );
-				print STDERR "Found 200 files for marker $marker\n";
-				`cat $catline $cat_ch $marker_dir/$marker.updated.fasta`;
+				print STDERR "Found $batch_size files for marker $marker\n";
+				`cat $catline $cat_ch $local_directory/$marker.updated.fasta`;
 				$catline =~ s/\.trim\.fasta/\.trim\.fna\.fasta/g;
 				if ( Phylosift::Utilities::is_protein_marker( marker => $marker ) ) {
-					`cat $catline $cat_ch $marker_dir/$marker.codon.updated.fasta`;
+					`cat $catline $cat_ch $local_directory/$marker.codon.updated.fasta`;
 				}
-				$catline =~ s/\.trim\.fna\.fasta/\.unmasked/g;
-				`cat $catline $cat_ch $marker_dir/$marker.updated.reps`;
+				unless($marker eq "concat"){
+					$catline =~ s/\.trim\.fna\.fasta/\.unmasked/g;
+					`cat $catline $cat_ch $local_directory/$marker.updated.reps`;
+				}
 				@catfiles = ();
 				$cat_ch   = ">>";    # now add to existing files
 			}
@@ -347,23 +351,29 @@ sub collate_markers {
 		if ( @catfiles > 0 ) {
 			my $catline = join( " ", @catfiles );
 			print STDERR "Last cat for marker $marker\n";
-			`cat $catline $cat_ch $marker_dir/$marker.updated.fasta`;
+			`cat $catline $cat_ch $local_directory/$marker.updated.fasta`;
 			$catline =~ s/\.trim\.fasta/\.trim\.fna\.fasta/g;
 			if ( Phylosift::Utilities::is_protein_marker( marker => $marker ) ) {
-				`cat $catline $cat_ch $marker_dir/$marker.codon.updated.fasta`;
+				`cat $catline $cat_ch $local_directory/$marker.codon.updated.fasta`;
 			}
 			$catline =~ s/\.trim\.fna\.fasta/\.unmasked/g;
-			`cat $catline $cat_ch $marker_dir/$marker.updated.reps`;
+			`cat $catline $cat_ch $local_directory/$marker.updated.reps`;
 		}
-		fix_names_in_alignment( alignment => "$marker_dir/$marker.updated.fasta" );
-		fix_names_in_alignment( alignment => "$marker_dir/$marker.codon.updated.fasta" );
+		next unless -e "$local_directory/$marker.updated.fasta";
+		fix_names_in_alignment( alignment => "$local_directory/$marker.updated.fasta" );
+		`mv $local_directory/$marker.updated.fasta $marker_dir/$marker.updated.fasta`;
+		next unless -e "$local_directory/$marker.codon.updated.fasta";
+		fix_names_in_alignment( alignment => "$local_directory/$marker.codon.updated.fasta" );
+		`mv $local_directory/$marker.codon.updated.fasta $marker_dir/$marker.codon.updated.fasta`;
 	}
-	`rm -f $marker_dir/concat.updated.fasta`;
-	`rm -f $marker_dir/concat.codon.updated.fasta`;
-	`cat $local_directory/*/alignDir/concat.fasta >> $marker_dir/concat.updated.fasta`;
-	`cat $local_directory/*/alignDir/concat-dna.fasta >> $marker_dir/concat.codon.updated.fasta`;
-	fix_names_in_alignment( alignment => "$marker_dir/concat.updated.fasta" );
-	fix_names_in_alignment( alignment => "$marker_dir/concat.codon.updated.fasta" );
+#	`rm -f $local_directory/concat.updated.fasta`;
+#	`rm -f $local_directory/concat.codon.updated.fasta`;
+#	`cat $local_directory/*/alignDir/concat.fasta >> $local_directory/concat.updated.fasta`;
+#	`cat $local_directory/*/alignDir/concat-dna.fasta >> $local_directory/concat.codon.updated.fasta`;
+#	fix_names_in_alignment( alignment => "$local_directory/concat.updated.fasta" );
+#	fix_names_in_alignment( alignment => "$local_directory/concat.codon.updated.fasta" );
+#	`mv $local_directory/concat.updated.fasta $marker_dir/concat.updated.fasta`;
+#	`mv $local_directory/concat.codon.updated.fasta $marker_dir/concat.codon.updated.fasta`;
 }
 
 sub clean_representatives {
@@ -440,8 +450,8 @@ sub assign_seqids_for_marker {
 	my %args         = @_;
 	my $marker       = $args{marker} || miss("marker");
 	my $alignment    = $args{alignment} || miss("alignment");
-	my $IDTABLE      = $args{IDTABLE} || miss("IDTABLE");
-	my $counter      = $args{counter} || miss("counter");
+	my $IDTABLE      = $args{IDTABLE};
+	my $counter      = $args{counter} || 0;
 	my $existing_ids = $args{existing_ids} || miss("existing_ids");
 	my $INALN = ps_open( $alignment );
 	my $OUTALN = ps_open( ">$alignment.seqids" );
@@ -467,7 +477,7 @@ sub assign_seqids_for_marker {
 			} else {
 
 				# record the new ID in the table
-				print $IDTABLE "$marker\t$header\t$countstring\n";
+				print $IDTABLE "$marker\t$header\t$countstring\n" if defined($IDTABLE);
 			}
 			$mapped_ids{$header} = $countstring;
 			$line = ">$countstring";
@@ -720,7 +730,7 @@ sub build_marker_trees_fasttree {
 		}
 			
 	}
-	wait_for_jobs( job_ids => @jobids );
+	wait_for_jobs( job_ids => \@jobids );
 	`rm ps_tree.sh.*`;
 }
 
@@ -773,7 +783,7 @@ rm RAxML*.\$1*
 		$job =~ /Your job (\d+) /;
 		push( @jobids, $1 );
 	}
-	wait_for_jobs( job_ids => @jobids );
+	wait_for_jobs( job_ids => \@jobids );
 	`rm ps_tree.sh.*`;
 }
 
@@ -942,7 +952,7 @@ EOF
 		$job =~ /Your job (\d+) /;
 		push( @jobids, $1 );
 	}
-	wait_for_jobs( job_ids => @jobids );
+	wait_for_jobs( job_ids => \@jobids );
 	`rm ps_reconcile.sh.o*`;
 	`rm ps_reconcile.sh.e*`;
 }
