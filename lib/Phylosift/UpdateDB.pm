@@ -1103,7 +1103,9 @@ sub make_constrained_tree {
 	my $target_marker     = $args{target_marker} || miss("target_marker");
 	my $marker_dir        = $args{marker_dir} || miss("marker_dir");
 	my $pruned            = $args{pruned} || 0;
-	my ( %id_to_taxon, %marker_taxon_to_id ) = read_gene_ids(file=>"$marker_dir/gene_ids.aa.txt");
+	my ($idtref,$mtiref) = read_gene_ids(file=>"$marker_dir/gene_ids.aa.txt");
+	my %id_to_taxon = %$idtref;
+	my %marker_taxon_to_id = %$mtiref;
 	my $constraint_tree = get_fasttree_tre_filename( marker => $constraint_marker, dna => 0, updated => 1, pruned => $pruned );
 
 	croak("$constraint_tree does not exist") unless -e $constraint_tree;
@@ -1116,7 +1118,7 @@ sub make_constrained_tree {
 	my @missing_taxa;    # gene IDs for taxa missing in the 16s
 	foreach my $node ( @{ $tree->get_entities } ) {
 		# skip this one if it is not a leaf
-		next if ( scalar( $node->get_children() ) > 0 );
+		next if ( scalar( @{ $node->get_children() } ) > 1 );
 		my $name = $node->get_name;
 		print STDERR "Node $name\n";
 		croak "Unable to find taxon for gene $name in marker $constraint_marker" unless defined $id_to_taxon{$name};
@@ -1125,7 +1127,7 @@ sub make_constrained_tree {
 		# now find the taxon in the target data, if it exists
 		my $rename;
 		if ( defined( $marker_taxon_to_id{$target_marker}{$taxon_id} ) ) {
-			my @tids = $marker_taxon_to_id{$target_marker}{$taxon_id};
+			my @tids = @{ $marker_taxon_to_id{$target_marker}{$taxon_id} };
 			$rename = $tids[0];
 			print STDERR "Changing $name to $rename\n";
 		} else {
