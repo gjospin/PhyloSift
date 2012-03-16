@@ -60,7 +60,7 @@ my $blastp_params = "-p blastp -e 0.1 -b 50000 -v 50000 -m 8";
 my $blastn_params = "-p blastn -e 0.1 -b 50000 -v 50000 -m 8";
 my %markerLength;
 
-sub RunSearch {
+sub run_search {
 	my %args       = @_;
 	my $self       = $args{self} || miss("self");
 	my $custom     = $args{custom};
@@ -94,7 +94,6 @@ sub RunSearch {
 
 	# launch the searches
 	launch_searches( self => $self, readtype => $type, dir => $self->{"blastDir"}, contigs => $contigs );
-
 	return $self;
 }
 
@@ -115,18 +114,16 @@ sub launch_searches {
 	my $bowtie2_r2_pipe;
 	$bowtie2_r2_pipe = $args{dir} . "/bowtie2_r2.pipe" if $args{readtype}->{paired};
 	debug "Making fifos\n";
-	
-	my @last_pipe_array       = ();
-	for(my $i =0 ; $i <= $self->{"threads"}-1;$i++){
-		push(@last_pipe_array,$args{dir} . "/last_$i.pipe");
+	my @last_pipe_array = ();
+
+	for ( my $i = 0 ; $i <= $self->{"threads"} - 1 ; $i++ ) {
+		push( @last_pipe_array, $args{dir} . "/last_$i.pipe" );
 		`mkfifo "$args{dir}/last_$i.pipe"`;
 	}
-	
 	`mkfifo $bowtie2_r1_pipe`;
 	`mkfifo $bowtie2_r2_pipe` if $args{readtype}->{paired};
 	my @children;
-
-	for ( my $count = 1 ; $count <= $self->{"threads"} + 1; $count++ ) {
+	for ( my $count = 1 ; $count <= $self->{"threads"} + 1 ; $count++ ) {
 		my $pid = fork();
 		if ($pid) {
 
@@ -139,13 +136,19 @@ sub launch_searches {
 			my $hitstream;
 			my $candidate_type = ".$count";
 			if ( $count <= $self->{"threads"} ) {
-				$hitstream = lastal_table( self => $self, query_file => $last_pipe_array[$count-1] );
+				$hitstream = lastal_table( self => $self, query_file => $last_pipe_array[ $count - 1 ] );
 				$candidate_type = ".lastal";
 			} elsif ( $count > $self->{"threads"} ) {
 
 				#exit the thread if the bowtie DB does not exist
-				exit 0 unless -e Phylosift::Utilities::get_bowtie2_db();
-				$hitstream = bowtie2( self => $self, readtype => $args{readtype}, reads1 => $bowtie2_r1_pipe, reads2 => $bowtie2_r2_pipe );
+				if ( !-e Phylosift::Utilities::get_bowtie2_db() ) {
+					debug "Exiting process $count \n";
+					`rm -f $bowtie2_r1_pipe`;
+					`rm -f $bowtie2_r2_pipe` if defined($bowtie2_r2_pipe);	
+					exit 0;
+				} else {
+					$hitstream = bowtie2( self => $self, readtype => $args{readtype}, reads1 => $bowtie2_r1_pipe, reads2 => $bowtie2_r2_pipe );
+				}
 				$candidate_type = ".rna";
 			}
 			my $hitsref;
@@ -166,14 +169,14 @@ sub launch_searches {
 		}
 	}
 	my @LAST_PIPE_ARRAY = ();
-	foreach my $last_pipe (@last_pipe_array){
-		push(@LAST_PIPE_ARRAY, ps_open( ">$last_pipe" ));
+	foreach my $last_pipe (@last_pipe_array) {
+		push( @LAST_PIPE_ARRAY, ps_open(">$last_pipe") );
 	}
-	my $BOWTIE2_R1_PIPE = ps_open( ">$bowtie2_r1_pipe" );
+	my $BOWTIE2_R1_PIPE = ps_open(">$bowtie2_r1_pipe");
 	my $BOWTIE2_R2_PIPE;
 	debug "TESTING" . $args{readtype}->{paired};
-	$BOWTIE2_R2_PIPE = ps_open( ">$bowtie2_r2_pipe" ) if $args{readtype}->{paired};
-	my $READS_PIPE = ps_open( "+>$reads_file" );
+	$BOWTIE2_R2_PIPE = ps_open(">$bowtie2_r2_pipe") if $args{readtype}->{paired};
+	my $READS_PIPE = ps_open("+>$reads_file");
 
 	# parent process streams out sequences to fifos
 	# child processes run the search on incoming sequences
@@ -181,7 +184,7 @@ sub launch_searches {
 	demux_sequences(
 					 bowtie2_pipe1 => $BOWTIE2_R1_PIPE,
 					 bowtie2_pipe2 => $BOWTIE2_R2_PIPE,
-					 lastal_pipes   => \@LAST_PIPE_ARRAY,
+					 lastal_pipes  => \@LAST_PIPE_ARRAY,
 					 dna           => $self->{"dna"},
 					 file1         => $self->{"readsFile"},
 					 file2         => $self->{"readsFile_2"},
@@ -196,7 +199,7 @@ sub launch_searches {
 	# clean up
 	`rm -f $bowtie2_r1_pipe $reads_file`;
 	`rm -f $bowtie2_r2_pipe` if defined($bowtie2_r2_pipe);
-	foreach my $last_pipe(@last_pipe_array){
+	foreach my $last_pipe (@last_pipe_array) {
 		`rm -f $last_pipe`;
 	}
 }
@@ -208,21 +211,22 @@ reads a sequence file and streams it out to named pipes
 =cut
 
 sub demux_sequences {
-	my %args           = @_;
-	my $BOWTIE2_PIPE1  = $args{bowtie2_pipe1} || miss("bowtie2_pipe1");
-	my $BOWTIE2_PIPE2  = $args{bowtie2_pipe2};
-	my $READS_PIPE     = $args{reads_pipe} || miss("reads_pipe");
-	my $last_array_reference     = $args{lastal_pipes} || miss("lastal_pipes");
-	my @LAST_PIPE_ARRAY = @{$last_array_reference};
-	my $F1IN           = Phylosift::Utilities::open_sequence_file( file => $args{file1} );
+	my %args                 = @_;
+	my $BOWTIE2_PIPE1        = $args{bowtie2_pipe1} || miss("bowtie2_pipe1");
+	my $BOWTIE2_PIPE2        = $args{bowtie2_pipe2};
+	my $READS_PIPE           = $args{reads_pipe} || miss("reads_pipe");
+	my $last_array_reference = $args{lastal_pipes} || miss("lastal_pipes");
+	my @LAST_PIPE_ARRAY      = @{$last_array_reference};
+	my $F1IN                 = Phylosift::Utilities::open_sequence_file( file => $args{file1} );
 	my $F2IN;
 	$F2IN = Phylosift::Utilities::open_sequence_file( file => $args{file2} ) if length( $args{file2} ) > 0;
 	my @lines1;
 	my @lines2;
 	$lines1[0] = <$F1IN>;
 	$lines2[0] = <$F2IN> if defined($F2IN);
-	my $lastal_index=0;
+	my $lastal_index   = 0;
 	my $lastal_threads = scalar(@LAST_PIPE_ARRAY);
+
 	while ( defined( $lines1[0] ) ) {
 		my $last_pipe = $LAST_PIPE_ARRAY[$lastal_index];
 		if ( $lines1[0] =~ /^@/ ) {
@@ -239,9 +243,9 @@ sub demux_sequences {
 			# send the reads to RAPsearch2 (convert to fasta)
 			$lines1[0] =~ s/^@/>/g;
 			$lines2[0] =~ s/^@/>/g if defined($F2IN);
-			print $last_pipe $lines1[0] . $lines1[1] ;
+			print $last_pipe $lines1[0] . $lines1[1];
 			print $last_pipe $lines2[0] . $lines2[1] if defined($F2IN);
-			
+
 			#
 			# send the reads to the reads file in fasta format to write candidates later
 			print $READS_PIPE $lines1[0] . $lines1[1];
@@ -264,15 +268,15 @@ sub demux_sequences {
 					$lines2[1] .= $newline2;
 				}
 			}
-
 			if ( length( $lines1[1] ) > 2000 || ( defined($F2IN) && length( $lines2[1] ) > 2000 ) ) {
+
 				# send the reads to bowtie
 				print $BOWTIE2_PIPE1 @lines1;
 				print $BOWTIE2_PIPE2 @lines2 if defined($F2IN);
 			}
 
 			# send the reads to last
-			print $last_pipe $lines1[0] . $lines1[1] ;
+			print $last_pipe $lines1[0] . $lines1[1];
 			print $last_pipe $lines2[0] . $lines2[1] if defined($F2IN);
 
 			#
@@ -285,8 +289,7 @@ sub demux_sequences {
 		$lastal_index++;
 		$lastal_index = $lastal_index % $lastal_threads;
 	}
-	
-	foreach my $LAST_PIPE (@LAST_PIPE_ARRAY){
+	foreach my $LAST_PIPE (@LAST_PIPE_ARRAY) {
 		close($LAST_PIPE);
 	}
 	close($BOWTIE2_PIPE1);
@@ -315,7 +318,7 @@ sub lastal_table {
 	my $query_file = $args{query_file} || miss("query_file");
 	my $lastal_cmd = "$Phylosift::Utilities::lastal -F15 -e75 -f0 $Phylosift::Utilities::marker_dir/replast $query_file |";
 	debug "Running $lastal_cmd";
-	my $HISTREAM = ps_open( $lastal_cmd );
+	my $HISTREAM = ps_open($lastal_cmd);
 	return $HISTREAM;
 }
 
@@ -331,7 +334,7 @@ sub lastal_table_rna {
 	my $query_file = shift || miss("query_file");
 	my $lastal_cmd = "$Phylosift::Utilities::lastal -e300 -f0 $Phylosift::Utilities::marker_dir/rnadb $query_file |";
 	debug "Running $lastal_cmd";
-	my $HISTREAM = ps_open( $lastal_cmd );
+	my $HISTREAM = ps_open($lastal_cmd);
 	return $HISTREAM;
 }
 
@@ -359,7 +362,7 @@ sub bowtie2 {
 	}
 	$bowtie2_cmd .= " |";
 	debug "Running $bowtie2_cmd";
-	my $HISTREAM = ps_open( $bowtie2_cmd );
+	my $HISTREAM = ps_open($bowtie2_cmd);
 	return $HISTREAM;
 }
 
@@ -639,9 +642,9 @@ sub write_candidates {
 	my %args          = @_;
 	my $self          = $args{self} || miss("self");
 	my $contigHitsRef = $args{hitsref} || miss("hitsref");
-	my $type       = $args{searchtype} || ""; # search type -- candidate filenames will have this name embedded, enables parallel output from different programs
-	my $reads_file = $args{reads} || miss("reads");
-	my $process_id = $args{process_id} || miss("process id");
+	my $type = $args{searchtype} || "";    # search type -- candidate filenames will have this name embedded, enables parallel output from different programs
+	my $reads_file  = $args{reads} || miss("reads");
+	my $process_id  = $args{process_id} || miss("process id");
 	my %contig_hits = %$contigHitsRef;
 	my %markerHits;
 	debug "ReadsFile:  $self->{\"readsFile\"}" . "\n";
@@ -676,45 +679,47 @@ sub write_candidates {
 
 			#if we're working from DNA then need to translate to protein
 			if ( $self->{"dna"} && $type !~ /\.rna/ ) {
+
 				# check for frameshifts
 				# frameshift from lastal is a string of <block>,<gaps>,<block>
 				# where blocks are aligned chunks and gaps are of the form X:Y
 				# listing number of gaps in ref and query seq, respectively
 				my $frameshift = $cur_hit[4];
-#				debug $seq->id ." Frameshift $frameshift, start $start, end $end, seqlen ".$seq->length."\n";
-				my @frames = split(/,/, $frameshift);
-				
+
+				#				debug $seq->id ." Frameshift $frameshift, start $start, end $end, seqlen ".$seq->length."\n";
+				my @frames = split( /,/, $frameshift );
+
 				# compute alignment length across all frames
 				my $aln_len = 0;
-				foreach my $frame(@frames){
-					next if $frame =~ /:/;	# ignore gap regions
+				foreach my $frame (@frames) {
+					next if $frame =~ /:/;    # ignore gap regions
 					$aln_len += $frame;
 				}
+
 				# check length again in AA units
 				$min_len = $markerLength{$markerHit} < $seq->length / 3 ? $markerLength{$markerHit} : $seq->length / 3;
 				next unless ( $aln_len / $min_len >= $align_fraction );
-				
+
 				# construct the DNA sequence to translate
 				my $dna_seq = "";
-				my $cs = $start;
-				my $fstart = $cur_hit[2] > $cur_hit[3] ? scalar(@frames)-1 : 0;
-				my $fdiff = $cur_hit[2] > $cur_hit[3] ? -1 : 1;
-				for(my $fI=$fstart; $fI >= 0 && $fI < @frames; $fI += $fdiff){
+				my $cs      = $start;
+				my $fstart  = $cur_hit[2] > $cur_hit[3] ? scalar(@frames) - 1 : 0;
+				my $fdiff   = $cur_hit[2] > $cur_hit[3] ? -1 : 1;
+				for ( my $fI = $fstart ; $fI >= 0 && $fI < @frames ; $fI += $fdiff ) {
 					my $frame = $frames[$fI];
-					if($frame =~ /(\d+):-*(\d+)/){
+					if ( $frame =~ /(\d+):-*(\d+)/ ) {
 						my $fs = $2;
 						$fs *= -1 if $frame =~ /:-/;
 						$cs += $fs;
-#						debug "Found frameshift, $fs bases\n";
-					}else{
-						$dna_seq .= $seq->subseq($cs, $cs+($frame*3)-1);
-						$cs += $frame*3;
+
+						#						debug "Found frameshift, $fs bases\n";
+					} else {
+						$dna_seq .= $seq->subseq( $cs, $cs + ( $frame * 3 ) - 1 );
+						$cs += $frame * 3;
 					}
 				}
-
-				my $strand = 1;	# forward or reverse strand?
+				my $strand = 1;    # forward or reverse strand?
 				$strand *= -1 if ( $cur_hit[2] > $cur_hit[3] );
-
 				$newSeq = translate_frame(
 										   id                => $seq->id,
 										   seq               => $dna_seq,
@@ -734,12 +739,12 @@ sub write_candidates {
 
 		#writing the hits to the candidate file
 		my $candidate_file = Phylosift::Utilities::get_candidate_file( self => $self, marker => $marker, type => $type );
-		my $FILE_OUT = ps_open( ">$candidate_file".".".$process_id );
+		my $FILE_OUT = ps_open( ">$candidate_file" . "." . $process_id );
 		print $FILE_OUT $markerHits{$marker};
 		close($FILE_OUT);
 		if ( $self->{"dna"} && $type !~ /\.rna/ ) {
 			$candidate_file = Phylosift::Utilities::get_candidate_file( self => $self, marker => $marker, type => $type, dna => 1 );
-			my $FILE_OUT = ps_open(">$candidate_file".".".$process_id );
+			my $FILE_OUT = ps_open( ">$candidate_file" . "." . $process_id );
 			print $FILE_OUT $markerNuc{$marker} if defined( $markerNuc{$marker} );
 			close($FILE_OUT);
 		}

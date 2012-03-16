@@ -458,7 +458,7 @@ sub run_search {
 	`rm $self->{"blastDir"}/*` if (<$blastDir/*>);
 
 	#run Searches
-	Phylosift::FastSearch::RunSearch( self => $self, custom => $custom, marker_reference => $markerListRef );
+	Phylosift::FastSearch::run_search( self => $self, custom => $custom, marker_reference => $markerListRef );
 	Phylosift::Utilities::end_timer( name => "runBlast" );
 	if ( $continue != 0 ) {
 		$self->{"mode"} = 'align';
