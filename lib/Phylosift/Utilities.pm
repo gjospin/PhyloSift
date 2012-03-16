@@ -1248,6 +1248,9 @@ sub index_marker_db {
 	close $PDBOUT;    # be sure to flush I/O
 	close $RNADBOUT;
 
+	my $blastp_db = get_blastp_db( path => $path);
+	`mv $blastp_db $path/rep.dbfasta`;
+
 	# make a last database
 	`cd $path ; $Phylosift::Utilities::lastdb -p -c replast rep.dbfasta`;
 	unlink("$path/rep.dbfasta");    # don't need this anymore!
