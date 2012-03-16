@@ -4,6 +4,7 @@ use strict;
 use Carp;
 use Bio::Phylo;
 use Phylosift::Summarize;
+use Phylosift::Utilities;
 
 =head1 SUBROUTINES/METHODS
 
@@ -26,9 +27,11 @@ sub runBenchmark {
     my %args = @_;
     my $self        = $args{self} || miss("self");
     my $output_path = $args{output_path} || miss("output_path");
-	my ( %nameidmap, %idnamemap ) = Phylosift::Summarize::read_ncbi_taxon_name_map();
-	my %parent  = Phylosift::Summarize::read_ncbi_taxonomy_structure();
-	my %refTaxa = getInputTaxa( file_name=>$self->{"readsFile"} );
+	my ($nimref, $inmref) = Phylosift::Summarize::read_ncbi_taxon_name_map();
+	my %nameidmap = %$nimref; 
+	my %idnamemap  = %$inmref;
+	%parent  = Phylosift::Summarize::read_ncbi_taxonomy_structure();
+	%refTaxa = getInputTaxa( file_name=>$self->{"readsFile"} );
 	readSeqSummary( self=>$self, output_path=>$output_path,read_source=> \%readSource );
 }
 
@@ -114,6 +117,8 @@ sub readSeqSummary {
 			foreach my $id (@ancArrayRead) {
 				my @currTaxon = Phylosift::Summarize::get_taxon_info(taxon=>$id);
 				my $currRank  = $currTaxon[1];
+				next unless defined($currRank); # could be a taxon missing from the NCBI database.
+
 				if ( exists $sourceIDs{$id} ) {
 					if ( exists $matchAll{$currRank} ) {
 						$matchAll{$currRank} += $allPlacedScore{$readID}{$tax}->[0];
@@ -143,7 +148,7 @@ sub readSeqSummary {
 sub init_taxonomy_levels {
     my %args = @_;
 	my $ncbihash = $args{ncbi_hash} || miss("ncbi_hash");
-	my $initval  = $args{initial_value} || miss("initial_value");
+	my $initval  = $args{initial_value};
 	$initval = 0 unless defined $initval;
 	$ncbihash->{"superkingdom"} = $initval;
 	$ncbihash->{"phylum"}       = $initval;
@@ -179,7 +184,7 @@ sub report_timing {
 
 sub as_percent {
     my %args = @_;
-	my $num   = $args{num} || miss("num");
+	my $num   = $args{num};
 	my $denom =$args{denom} || miss("denom");
 	if ( defined $num && defined $denom && $denom > 0 ) {
 		my $pretty = sprintf( "%.2f", 100 * $num / $denom );
@@ -303,7 +308,7 @@ sub getInputTaxa {
 	my $fileName         = $args{file_name} || miss("file_name");
 	my %sourceTaxa       = ();
 	my %sourceReadCounts = ();
-	my $FILE_IN = open( $fileName ) or carp( "Couldn't open " . $fileName . "\n" );
+	my $FILE_IN = ps_open( $fileName );
 	while (<$FILE_IN>) {
 		next unless $_ =~ m/^>/;
 		$_ =~ m/^>(\S+).*SOURCE_\d+="(.*)"/;
@@ -311,6 +316,7 @@ sub getInputTaxa {
 		#push(@sourceTaxa,$1);
 		$readSource{$1} = $2;
 		my @ancestors = get_ancestor_array(tax_id=>$2);
+		debug "Read $_ gave 4095\n" if($2 eq "4095");
 		foreach my $id (@ancestors) {
 			$sourceIDs{$id} = 1;
 		}
