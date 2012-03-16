@@ -131,10 +131,6 @@ our $taxit        = "";
 our $hmmalign     = "";
 our $hmmsearch    = "";
 our $hmmbuild     = "";
-our $blastall     = "";
-our $formatdb     = "";
-our $rapSearch    = "";
-our $preRapSearch = "";
 our $raxml        = "";
 our $readconciler = "";
 our $bowtie2align = "";
@@ -182,18 +178,6 @@ sub programChecks {
 	}
 	$hmmsearch = get_program_path( prog_name => "hmmsearch", prog_path => $Phylosift::Settings::hmmer3_path );
 	$hmmbuild  = get_program_path( prog_name => "hmmbuild",  prog_path => $Phylosift::Settings::hmmer3_path );
-	$rapSearch = get_program_path( prog_name => "rapsearch", prog_path => $Phylosift::Settings::ps_path );
-	if ( $rapSearch eq "" ) {
-		carp("rapsearch was not found\n");
-		return 1;
-	}
-	$preRapSearch = get_program_path( prog_name => "prerapsearch", prog_path => $Phylosift::Settings::ps_path );
-	$blastall     = get_program_path( prog_name => "blastall",     prog_path => $Phylosift::Settings::ps_path );
-	if ( $blastall eq "" ) {
-		carp("blastall was not found\n");
-		return 1;
-	}
-	$formatdb = get_program_path( prog_name => "formatdb", prog_path => $Phylosift::Settings::ps_path );
 	$raxml    = get_program_path( prog_name => "raxmlHPC", prog_path => $Phylosift::Settings::ps_path );
 	if ( $raxml eq "" ) {
 		carp("raxmlHPC was not found\n");
@@ -567,8 +551,7 @@ Determines the filesystem path to a marker. Searches for the marker in the base 
 
 sub get_marker_path {
 	my %args   = @_;
-	my $self   = $args{self};
-	my $marker = $args{marker};
+	my $marker = $args{marker} || miss("marker");
 
 	# check for old-style marker first
 	return "$marker_dir" if ( -e "$marker_dir/$marker.faa" );
@@ -635,7 +618,8 @@ sub get_marker_aln_file {
 		return "$marker_path/$marker/$bname.aln" if ( -e "$marker_path/$marker/$bname.aln" );
 		return "$marker_path/$marker/$bname.masked";
 	} else {
-		return "$marker_path/$marker.updated/$bname.ali";
+		return "$marker_path/$marker.updated/$bname.aln" if ( -e "$marker_path/$marker.updated/$bname.aln" );
+		return "$marker_path/$marker.updated/$bname.masked";
 	}
 }
 
@@ -1503,10 +1487,6 @@ sub print_citations {
 		pplacer: linear time maximum-likelihood and Bayesian phylogenetic placement of sequences onto a fixed reference tree.
 		Frederick A Matsen, Robin B Kodner, and E Virginia Armbrust
 		BMC Bioinformatics 2010, 11:538
-		
-		RAPSearch2: a fast and memory-efficient protein similarity search tool for next generation sequencing data.
-		Yongan Zhao, Haixu Tang, and Yuzhen Ye
-		Bioinformatics (2011)
 		
 		Adaptive seeds tame genomic sequence comparison.
 		SM Kielbasa, R Wan, K Sato, P Horton, MC Frith
