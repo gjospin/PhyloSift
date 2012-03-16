@@ -60,7 +60,7 @@ sub read_ncbi_taxon_name_map {
 			$idnamemap{ $vals[0] } = homogenize_name_ala_dongying( name => $vals[1] ) if ( $line =~ /scientific name/ );
 		}
 	}
-	return ( %nameidmap, %idnamemap );
+	return ( \%nameidmap, \%idnamemap );
 }
 
 # now read the NCBI taxonomy structure
