@@ -49,7 +49,7 @@ if you don't export anything, such as for a purely object-oriented module.
 
 =cut
 my $bestHitsBitScoreRange  = 30;     # all hits with a bit score within this amount of the best will be used
-my $align_fraction         = 0.3;    # at least this amount of min[length(query),length(marker)] must align to be considered a hit
+my $align_fraction         = 0.5;    # at least this amount of min[length(query),length(marker)] must align to be considered a hit
 my $align_fraction_isolate = 0.8;    # use this align_fraction when in isolate mode on long sequences
 my $pair                   = 0;      #used if using paired FastQ files
 my @markers;
@@ -312,7 +312,7 @@ sub lastal_table {
 	my %args       = @_;
 	my $self       = $args{self} || miss("self");
 	my $query_file = $args{query_file} || miss("query_file");
-	my $lastal_cmd = "$Phylosift::Utilities::lastal -F15 -e50 -f0 $Phylosift::Utilities::marker_dir/replast $query_file |";
+	my $lastal_cmd = "$Phylosift::Utilities::lastal -F15 -e75 -f0 $Phylosift::Utilities::marker_dir/replast $query_file |";
 	debug "Running $lastal_cmd";
 	my $HISTREAM = ps_open( $lastal_cmd );
 	return $HISTREAM;
@@ -370,14 +370,11 @@ sub translate_frame {
 	my %args              = @_;
 	my $id                = $args{id} || miss("id");
 	my $seq               = $args{seq} || miss("seq");
-	my $start             = $args{start} || miss("start");
-	my $end               = $args{end} || miss("end");
 	my $frame             = $args{frame} || miss("frame");
 	my $marker            = $args{marker} || miss("marker");
 	my $reverse_translate = $args{reverse_translate} || miss("reverse_translate");
 	my $return_seq        = "";
-	my $local_seq         = substr( $seq, $start - 1, $end - $start + 1 );
-	my $new_seq           = Bio::LocatableSeq->new( -seq => $local_seq, -id => 'temp', -verbose => 0 );
+	my $new_seq           = Bio::LocatableSeq->new( -seq => $seq, -id => 'temp', -verbose => 0 );
 	$new_seq = $new_seq->revcom() if ( $frame < 0 );
 
 	if ($reverse_translate) {
@@ -417,7 +414,7 @@ sub get_hits_contigs {
 		# read a blast line
 		next if ( $_ =~ /^#/ );
 		chomp($_);
-		my ( $query, $subject, $two, $three, $four, $five, $query_start, $query_end, $eight, $nine, $ten, $bitScore );
+		my ( $query, $subject, $two, $three, $four, $five, $query_start, $query_end, $eight, $nine, $ten, $bitScore, $frameshift );
 		if ( $searchtype eq "blastx" ) {
 			( $query, $subject, $two, $three, $four, $five, $query_start, $query_end, $eight, $nine, $ten, $bitScore ) = split( /\t/, $_ );
 		} else {
@@ -435,6 +432,7 @@ sub get_hits_contigs {
 				$query_start = $dat[10] - $dat[7];
 				$query_end   = $query_start - $dat[8] + 1;
 			}
+			$frameshift = $dat[11];
 		}
 
 		# get the marker name
@@ -458,8 +456,8 @@ sub get_hits_contigs {
 					 && $query_start + $max_hit_overlap < $prevhit[3] )
 				{
 
-					# print STDERR "Found overlap $query and $markerName, $query_start:$query_end\n";
-					$contig_hits{$query}->[$i] = [ $markerName, $bitScore, $query_start, $query_end ] if ( $bitScore > $prevhit[1] );
+					# debug "Found overlap $query and $markerName, $query_start:$query_end\n";
+					$contig_hits{$query}->[$i] = [ $markerName, $bitScore, $query_start, $query_end, $frameshift ] if ( $bitScore > $prevhit[1] );
 					last;
 				}
 
@@ -470,19 +468,19 @@ sub get_hits_contigs {
 					 && $query_end + $max_hit_overlap < $prevhit[2] )
 				{
 
-					# print STDERR "Found overlap $query and $markerName, $query_start:$query_end\n";
-					$contig_hits{$query}->[$i] = [ $markerName, $bitScore, $query_start, $query_end ] if ( $bitScore > $prevhit[1] );
+					# debug "Found overlap $query and $markerName, $query_start:$query_end\n";
+					$contig_hits{$query}->[$i] = [ $markerName, $bitScore, $query_start, $query_end, $frameshift ] if ( $bitScore > $prevhit[1] );
 					last;
 				}
 			}
 			if ( $i == @{ $contig_hits{$query} } ) {
 
 				# no overlap was found, include this hit
-				my @hitdata = [ $markerName, $bitScore, $query_start, $query_end ];
+				my @hitdata = [ $markerName, $bitScore, $query_start, $query_end, $frameshift ];
 				push( @{ $contig_hits{$query} }, @hitdata );
 			}
 		} elsif ( !defined( $contig_top_bitscore{$query} ) ) {
-			my @hitdata = [ $markerName, $bitScore, $query_start, $query_end ];
+			my @hitdata = [ $markerName, $bitScore, $query_start, $query_end, $frameshift ];
 			push( @{ $contig_hits{$query} }, @hitdata );
 			$contig_top_bitscore{$query}{$markerName} = $bitScore;
 		}
@@ -669,43 +667,61 @@ sub write_candidates {
 			}
 			my $min_len = $markerLength{$markerHit} < $seq->length ? $markerLength{$markerHit} : $seq->length;
 			next unless ( ( $end - $start ) / $min_len >= $align_fraction );
-			$start -= FLANKING_LENGTH;
-			$end += FLANKING_LENGTH;
 
 			# ensure flanking region is a multiple of 3 to avoid breaking frame in DNA
-			$start = abs($start) % 3 + 1 if ( $start < 0 );
 			my $seqLength = length( $seq->seq );
-			$end = $end - ceil( ( $end - $seqLength ) / 3 ) * 3 if ( $end >= $seqLength );
 			my $newSeq;
-			$newSeq = substr( $seq->seq, $start, $end - $start );    #unless $type =~ /\.rna/;
+			$newSeq = substr( $seq->seq, $start, $end - $start );
 
-			#			$newSeq = $cur_hit[4] if $type =~ /\.rna/;
 			#if we're working from DNA then need to translate to protein
 			if ( $self->{"dna"} && $type !~ /\.rna/ ) {
-
-				# compute the frame as modulo 3 of start site, reverse strand if end < start
-				my $frame = $cur_hit[2] % 3 + 1;
-				$frame *= -1 if ( $cur_hit[2] > $cur_hit[3] );
-				my $seqlen = abs( $cur_hit[2] - $cur_hit[3] ) + 1;
-
+				# check for frameshifts
+				# frameshift from lastal is a string of <block>,<gaps>,<block>
+				# where blocks are aligned chunks and gaps are of the form X:Y
+				# listing number of gaps in ref and query seq, respectively
+				my $frameshift = $cur_hit[4];
+#				debug $seq->id ." Frameshift $frameshift, start $start, end $end, seqlen ".$seq->length."\n";
+				my @frames = split(/,/, $frameshift);
+				
+				# compute alignment length across all frames
+				my $aln_len = 0;
+				foreach my $frame(@frames){
+					next if $frame =~ /:/;	# ignore gap regions
+					$aln_len += $frame;
+				}
 				# check length again in AA units
 				$min_len = $markerLength{$markerHit} < $seq->length / 3 ? $markerLength{$markerHit} : $seq->length / 3;
-				next unless ( ( $seqlen / 3 ) / $min_len >= $align_fraction );
-				if ( $seqlen % 3 == 0 ) {
-					$newSeq = translate_frame(
-											   id                => $seq->id,
-											   seq               => $seq->seq,
-											   start             => $start,
-											   end               => $end,
-											   frame             => $frame,
-											   marker            => $markerHit,
-											   reverse_translate => $self->{"dna"}
-					);
-					$newSeq =~ s/\*/X/g;    # bioperl uses * for stop codons but we want to give X to hmmer later
-				} else {
-					warn "Search type : $type, alignment length not multiple of 3!  FIXME: need to pull frameshift from full lastal output\n";
-					next;
+				next unless ( $aln_len / $min_len >= $align_fraction );
+				
+				# construct the DNA sequence to translate
+				my $dna_seq = "";
+				my $cs = $start;
+				my $fstart = $cur_hit[2] > $cur_hit[3] ? scalar(@frames)-1 : 0;
+				my $fdiff = $cur_hit[2] > $cur_hit[3] ? -1 : 1;
+				for(my $fI=$fstart; $fI >= 0 && $fI < @frames; $fI += $fdiff){
+					my $frame = $frames[$fI];
+					if($frame =~ /(\d+):-*(\d+)/){
+						my $fs = $2;
+						$fs *= -1 if $frame =~ /:-/;
+						$cs += $fs;
+#						debug "Found frameshift, $fs bases\n";
+					}else{
+						$dna_seq .= $seq->subseq($cs, $cs+($frame*3)-1);
+						$cs += $frame*3;
+					}
 				}
+
+				my $strand = 1;	# forward or reverse strand?
+				$strand *= -1 if ( $cur_hit[2] > $cur_hit[3] );
+
+				$newSeq = translate_frame(
+										   id                => $seq->id,
+										   seq               => $dna_seq,
+										   frame             => $strand,
+										   marker            => $markerHit,
+										   reverse_translate => $self->{"dna"}
+				);
+				$newSeq =~ s/\*/X/g;    # bioperl uses * for stop codons but we want to give X to hmmer later
 			}
 			$markerHits{$markerHit} = "" unless defined( $markerHits{$markerHit} );
 			$markerHits{$markerHit} .= ">" . $seq->id . "\n" . $newSeq . "\n";
