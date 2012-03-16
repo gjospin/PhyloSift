@@ -1,5 +1,4 @@
 package Phylosift::Utilities;
-
 use strict;
 use warnings;
 use FindBin qw($Bin);
@@ -46,7 +45,6 @@ Phylosift::Utilities - Implements miscellaneous accessory functions for Phylosif
 Version 0.01
 
 =cut
-
 our $VERSION = '0.01';
 
 =head1 SYNOPSIS
@@ -77,20 +75,20 @@ returns 1 or 0 depending on success of failure.
 
 sub miss {
 	my $arg_name = shift;
-	$Carp::Verbose=1;
+	$Carp::Verbose = 1;
 	croak("Missing required argument $arg_name");
 }
 
 sub ps_open {
 	my $open_string = shift;
-	my $result = open(my $FH, $open_string );
-	unless($result){
+	my $result = open( my $FH, $open_string );
+	unless ($result) {
 		my $type = "read from";
-		$type = "write to" if $open_string =~ /^>/;
+		$type = "write to"  if $open_string =~ /^>/;
 		$type = "append to" if $open_string =~ /^>>/;
 		$type = "append to" if $open_string =~ /^\+>/;
-		$type = "pipe" if $open_string =~ /\|$/;
-		$Carp::Verbose=1;
+		$type = "pipe"      if $open_string =~ /\|$/;
+		$Carp::Verbose = 1;
 		croak("Unable to $type $open_string");
 	}
 	return $FH;
@@ -220,7 +218,6 @@ sub programChecks {
 Check for requisite PhyloSift marker datasets
 
 =cut
-
 our $marker_dir           = "";
 our $markers_extended_dir = "";
 our $ncbi_dir             = "";
@@ -369,17 +366,17 @@ See https://github.com/ihh/dart/ for the original source code
 =cut
 
 sub fasta2stockholm {
-	my %args   = @_;
-	my $fasta  = $args{fasta};
-	my $output = $args{output};
-	my $STOCKOUT = ps_open( ">$output" );
+	my %args     = @_;
+	my $fasta    = $args{fasta};
+	my $output   = $args{output};
+	my $STOCKOUT = ps_open(">$output");
 
 	# read FASTA file
 	my @seq;
 	my @name;
 	my $name;
 	my $curseq = "";
-	my $FASTA = ps_open ("<$fasta");
+	my $FASTA  = ps_open("<$fasta");
 	while (<$FASTA>) {
 		if (/^\s*>\s*(\S+)/) {
 			if ( length($curseq) > 0 ) {
@@ -490,7 +487,7 @@ sub read_name_table {
 	my %args      = @_;
 	my $markerDir = $args{marker_directory};
 	my %result;
-	my $ALINAMES = ps_open( "grep \">\" $markerDir/*.ali |" );
+	my $ALINAMES = ps_open("grep \">\" $markerDir/*.ali |");
 	while ( my $line = <$ALINAMES> ) {
 		$line =~ s/.+\:\>//g;
 		my $commonName;
@@ -518,7 +515,7 @@ sub get_marker_length {
 	my $length = 0;
 	if ( is_protein_marker( marker => $marker ) ) {
 		my $hmm_file = get_marker_hmm_file( self => $self, marker => $marker );
-		my $HMM = ps_open( $hmm_file );
+		my $HMM = ps_open($hmm_file);
 		while ( my $line = <$HMM> ) {
 			if ( $line =~ /LENG\s+(\d+)/ ) {
 				$length = $1;
@@ -527,7 +524,7 @@ sub get_marker_length {
 		}
 	} else {
 		my $cm_file = get_marker_cm_file( self => $self, marker => $marker );
-		my $CM = ps_open( $cm_file );
+		my $CM = ps_open($cm_file);
 		while ( my $line = <$CM> ) {
 			if ( $line =~ /CLEN\s+(\d+)/ ) {
 				$length = $1;
@@ -967,18 +964,17 @@ sub concatenate_alignments {
 	my $self          = $args{self};
 	my $outputFasta   = $args{output_fasta};
 	my $outputMrBayes = $args{output_bayes};
-	my $gapmultiplier = $args{gap_multiplier};    # 1 for protein, 3 for reverse-translated DNA
+	my $gapmultiplier = $args{gap_multiplier};                               # 1 for protein, 3 for reverse-translated DNA
 	my $aln_ref       = $args{alignments};
 	my @alignments    = @$aln_ref;
 	my $catobj        = 0;
-	my $MRBAYES = ps_open( ">$outputMrBayes" );
-	my $partlist = "partition genes = " . scalar(@alignments) . ": ";
-	my $prevlen  = 0;
-
+	my $MRBAYES       = ps_open(">$outputMrBayes");
+	my $partlist      = "partition genes = " . scalar(@alignments) . ": ";
+	my $prevlen       = 0;
 	foreach my $file (@alignments) {
 		my $aln;
 		my $marker = basename($file);
-		$marker =~ s/\..+//g;                     # FIXME: this should really come from a list of markers
+		$marker =~ s/\..+//g;                                                # FIXME: this should really come from a list of markers
 		unless ( -e $file ) {
 
 			# this marker doesn't exist, need to create a dummy with the right number of gap columns
@@ -1127,11 +1123,11 @@ sub open_sequence_file {
 	my $file = $args{file} || miss("file");
 	my $F1IN;
 	if ( $file =~ /\.gz$/ ) {
-		$F1IN = ps_open( "zcat $file |" );
+		$F1IN = ps_open("zcat $file |");
 	} elsif ( $file =~ /\.bz2$/ ) {
-		$F1IN = ps_open( "bzcat $file |" );
+		$F1IN = ps_open("bzcat $file |");
 	} else {
-		$F1IN = ps_open( $file );
+		$F1IN = ps_open($file);
 	}
 	return $F1IN;
 }
@@ -1233,17 +1229,17 @@ sub index_marker_db {
 	my $self    = $args{self};
 	my $path    = $args{path};
 	my @markers = @{ $args{markers} };
+	debug "Indexing " . scalar(@markers) . " in $path";
 
-	debug "Indexing ".scalar(@markers)." in $path";
 	# use alignments to make an unaligned fasta database containing everything
 	# strip gaps from the alignments
-	my $bowtie2_db = get_bowtie2_db( path => $path );
+	my $bowtie2_db       = get_bowtie2_db( path => $path );
 	my $bowtie2_db_fasta = "$bowtie2_db.fasta";
-	my $PDBOUT = ps_open( ">" . get_blastp_db( path => $path ) );
-	my $RNADBOUT = ps_open( ">" . $bowtie2_db_fasta );
+	my $PDBOUT           = ps_open( ">" . get_blastp_db( path => $path ) );
+	my $RNADBOUT         = ps_open( ">" . $bowtie2_db_fasta );
 	foreach my $marker (@markers) {
 		my $marker_rep = get_marker_rep_file( self => $args{self}, marker => $marker, updated => 1 );
-		$marker_rep = get_marker_rep_file( self => $args{self}, marker => $marker, updated=>0 ) unless -e $marker_rep;
+		$marker_rep = get_marker_rep_file( self => $args{self}, marker => $marker, updated => 0 ) unless -e $marker_rep;
 		debug "marker $marker is protein\n" if is_protein_marker( marker => $marker );
 		debug "marker rep file $marker_rep\n";
 		my $DBOUT = $RNADBOUT;
@@ -1252,7 +1248,7 @@ sub index_marker_db {
 			warn "Warning: marker $marker appears to be missing data\n";
 			next;
 		}
-		my $INALN = ps_open( $marker_rep );
+		my $INALN = ps_open($marker_rep);
 		while ( my $line = <$INALN> ) {
 			if ( $line =~ /^>(.+)/ ) {
 				print $DBOUT "\n>$marker" . "__$1\n";
@@ -1323,7 +1319,7 @@ sub gather_markers {
 	if ( defined($marker_file) && -f $marker_file && $marker_file ne "" ) {
 
 		#gather a custom list of makers, list convention is 1 marker per line
-		my $MARKERS_IN = ps_open( $marker_file );
+		my $MARKERS_IN = ps_open($marker_file);
 		while (<$MARKERS_IN>) {
 			chomp($_);
 			push( @marks, $_ );
@@ -1341,7 +1337,7 @@ sub gather_markers {
 
 		# now gather directory packaged markers (new style)
 		# use maxdepth 2 for two-directory-level markers in the extended marker set
-		my $MLIST = ps_open( "find $path -maxdepth 2 -mindepth 1 -type d |" );
+		my $MLIST = ps_open("find $path -maxdepth 2 -mindepth 1 -type d |");
 		while ( my $line = <$MLIST> ) {
 			chomp $line;
 			next if $line =~ /PMPROK/;
@@ -1353,7 +1349,7 @@ sub gather_markers {
 			# all markers need to have an hmm or a cm else they are not usable
 			my $baseline = $line;
 			$baseline =~ s/.+\///g;
-			if(!$missing_hmm){
+			if ( !$missing_hmm ) {
 				next unless ( -e "$path/$line/$line.cm" || -e "$path/$line/$baseline.hmm" );
 			}
 			push( @marks, $line );
@@ -1430,21 +1426,21 @@ without reading the whole file.
 sub get_sequence_input_type_quickndirty {
 	my $file         = shift;
 	my $maxshortread = 500;
-	my $FILE = ps_open( $file );
-	my $filesize = -s "$file";
-	my $counter  = 0;
-	my $maxfound = 0;
-	my $allcount = 0;
-	my $dnacount = 0;
-	my $seqtype  = "dna";
-	my $length   = "long";
-	my $format   = "unknown";
+	my $FILE         = ps_open($file);
+	my $filesize     = -s "$file";
+	my $counter      = 0;
+	my $maxfound     = 0;
+	my $allcount     = 0;
+	my $dnacount     = 0;
+	my $seqtype      = "dna";
+	my $length       = "long";
+	my $format       = "unknown";
 	for ( my $i = 0 ; $i < 200 ; $i++ ) {
 		my $seekpos = int( rand( $filesize - 100 ) );
 		$seekpos = 0 if ( $i == 0 );    # always start with the first line in case the sequence is on a single line!
 		seek( $FILE, $seekpos, 0 );
 		$counter = 0;
-		my $line = <$FILE>;              # burn a line to be sure we get to sequence
+		my $line = <$FILE>;             # burn a line to be sure we get to sequence
 		while ( $line = <$FILE> ) {
 			if ( $line =~ /^>/ ) {
 				$format = "fasta";
@@ -1546,7 +1542,7 @@ sub alignment_to_fasta {
 	while ( my $seq_object = $in->next_seq() ) {
 		my $seq = $seq_object->seq;
 		my $id  = $seq_object->id;
-		$seq =~ s/-\.//g; # shouldnt be any gaps
+		$seq =~ s/-\.//g;    # shouldnt be any gaps
 		print $FILEOUT ">" . $id . "\n" . $seq . "\n";
 	}
 	close($FILEOUT);
@@ -1604,9 +1600,9 @@ sub unalign_sequences {
 	my $aln_file    = $args{aln};
 	my $output_path = $args{output_path};
 	my ( $core, $path, $ext ) = fileparse( $aln_file, qr/\.[^.]*$/ );
-	my $in = open_SeqIO_object( file => $aln_file );
+	my $in        = open_SeqIO_object( file => $aln_file );
 	my $seq_count = 0;
-	my $FILEOUT = ps_open( ">$output_path" );
+	my $FILEOUT   = ps_open(">$output_path");
 	while ( my $seq_object = $in->next_seq() ) {
 		my $seq = $seq_object->seq;
 		my $id  = $seq_object->id;
@@ -1675,5 +1671,4 @@ See http://dev.perl.org/licenses/ for more information.
 
 
 =cut
-
 1;    # End of Phylosift::Utilities
