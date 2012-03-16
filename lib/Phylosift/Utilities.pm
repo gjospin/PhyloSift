@@ -537,7 +537,7 @@ sub make_dummy_file {
 	my $glen;
 	$glen = "P" x $len x $gapmultiplier if $gapmultiplier == 1;
 	$glen = "A" x $len x $gapmultiplier if $gapmultiplier == 3;
-	my $newseq = Bio::LocatableSeq->new( -seq => $glen, -id => "dummydummydummy", start => 1, end => ( $len * $gapmultiplier ) );
+	my $newseq = Bio::LocatableSeq->new( -seq => $glen, -alphabet => 'dna', -id => "dummydummydummy", start => 1, end => ( $len * $gapmultiplier ) );
 	my $aln = Bio::SimpleAlign->new();
 	$aln->add_seq($newseq);
 	return $aln;
@@ -1195,7 +1195,7 @@ sub get_candidate_file {
 	my $type   = $args{type};
 	my $dna    = $args{dna};
 	my $new    = $args{new};
-	my $ffn    = "";
+	my $ffn    = ".aa";
 	$ffn = ".ffn" if ( defined( $args{dna} ) && $dna );
 	my $candidate = ".candidate";
 	$candidate = ".newCandidate" if defined( $args{new} ) && $new;
