@@ -27,7 +27,9 @@ sub runBenchmark {
     my %args = @_;
     my $self        = $args{self} || miss("self");
     my $output_path = $args{output_path} || miss("output_path");
-	( %nameidmap, %idnamemap ) = Phylosift::Summarize::read_ncbi_taxon_name_map();
+	my ($nimref, $inmref) = Phylosift::Summarize::read_ncbi_taxon_name_map();
+	my %nameidmap = %$nimref; 
+	my %idnamemap  = %$inmref;
 	%parent  = Phylosift::Summarize::read_ncbi_taxonomy_structure();
 	%refTaxa = getInputTaxa( file_name=>$self->{"readsFile"} );
 	readSeqSummary( self=>$self, output_path=>$output_path,read_source=> \%readSource );
