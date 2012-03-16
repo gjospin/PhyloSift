@@ -143,7 +143,8 @@ sub launch_searches {
 				$candidate_type = ".lastal";
 			} elsif ( $count > $self->{"threads"} ) {
 
-				#$hitstream = lastal_table_rna( $self, $bowtie2_r1_pipe );
+				#exit the thread if the bowtie DB does not exist
+				exit 0 unless -e Phylosift::Utilities::get_bowtie2_db();
 				$hitstream = bowtie2( self => $self, readtype => $args{readtype}, reads1 => $bowtie2_r1_pipe, reads2 => $bowtie2_r2_pipe );
 				$candidate_type = ".rna";
 			}

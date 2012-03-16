@@ -1251,11 +1251,11 @@ sub index_marker_db {
 	#print $path."\n";
 	# make a blast database
 	my $blastp_db = get_blastp_db( path => $path );
-	system("$Phylosift::Utilities::formatdb -i $blastp_db -o F -p T -t RepDB");
+	#system("$Phylosift::Utilities::formatdb -i $blastp_db -o F -p T -t RepDB");
 	`mv $blastp_db $path/rep.dbfasta`;
 
 	# make a rapsearch database
-	`cd $path ; $Phylosift::Utilities::preRapSearch -d rep.dbfasta -n rep`;
+	#`cd $path ; $Phylosift::Utilities::preRapSearch -d rep.dbfasta -n rep`;
 
 	# make a last database
 	`cd $path ; $Phylosift::Utilities::lastdb -p -c replast rep.dbfasta`;
