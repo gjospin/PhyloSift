@@ -287,7 +287,8 @@ rm -rf \$WORKDIR
 
 sub wait_for_jobs {
 	my %args = @_;
-	my @job_ids = @{$args{job_ids}} || miss("job_ids");
+	my $jobref = $args{job_ids} || miss("job_ids");
+	my @job_ids = @$jobref;
 
 	# wait for all jobs to complete
 	foreach my $jobid ( @job_ids ) {
@@ -362,6 +363,9 @@ sub collate_markers {
 		next unless -e "$local_directory/$marker.updated.fasta";
 		fix_names_in_alignment( alignment => "$local_directory/$marker.updated.fasta" );
 		`mv $local_directory/$marker.updated.fasta $marker_dir/$marker.updated.fasta`;
+		clean_representatives(infile=>"$local_directory/$marker.updated.reps", outfile=>"$local_directory/$marker.updated.reps.clean" );
+		`mv $local_directory/$marker.updated.reps.clean $marker_dir/$marker.updated.reps.clean`;
+		
 		next unless -e "$local_directory/$marker.codon.updated.fasta";
 		fix_names_in_alignment( alignment => "$local_directory/$marker.codon.updated.fasta" );
 		`mv $local_directory/$marker.codon.updated.fasta $marker_dir/$marker.codon.updated.fasta`;
@@ -381,7 +385,7 @@ sub clean_representatives {
 	my $file    = $args{infile} || miss("infile");
 	my $outfile = $args{outfile} || miss("outfile");
 	my $INALN = ps_open(  $file );
-	my $OUTALN = open( ">$outfile" );
+	my $OUTALN = ps_open( ">$outfile" );
 	while ( my $line = <$INALN> ) {
 		unless ( $line =~ /^>/ ) {
 			my $first_lower;
@@ -422,27 +426,29 @@ sub assign_seqids {
 	foreach my $marker (@markerlist) {
 		my %id_mapping       = ();
 		my %id_mapping_codon = ();
+		my $fasta = get_fasta_filename(marker=>$marker, updated=>1);
+		next unless -e $fasta;
 		$aa_counter = assign_seqids_for_marker(
 												marker       => $marker,
-												alignment    => "$marker.updated.fasta",
+												alignment    => $fasta,
 												IDTABLE      => $AA_IDTABLE,
 												counter      => $aa_counter,
 												existing_ids => \%id_mapping
 		);
+		# now put the IDs in the reps file
+		my $clean_reps = get_reps_filename( marker => $marker, updated => 1, clean => 1 );
+		assign_seqids_for_marker( marker => $marker, alignment => $clean_reps, counter => 0, existing_ids => \%id_mapping );
+
+		my $codon_fasta = get_fasta_filename(marker=>$marker, updated=>1, dna=>1);
+		next unless -e $codon_fasta;
 		$codon_counter = assign_seqids_for_marker(
 												   marker       => $marker,
-												   alignment    => "$marker.codon.updated.fasta",
+												   alignment    => $codon_fasta,
 												   IDTABLE      => $CODON_IDTABLE,
 												   counter      => $codon_counter,
 												   existing_ids => \%id_mapping_codon
 		);
 
-		# now put the IDs in the reps file
-		my $no_counter = 0;
-		my $NO_TABLE;
-		my $clean_reps = get_reps_filename( marker => $marker, updated => 1, clean => 1 );
-		$no_counter =
-		  assign_seqids_for_marker( marker => $marker, alignment => $clean_reps, IDTABLE => $NO_TABLE, counter => $no_counter, existing_ids => \%id_mapping );
 	}
 }
 
@@ -497,7 +503,7 @@ sub assign_seqids_for_marker {
 sub read_gene_ids {
 	my %args = @_;
 	my $file = $args{file} || miss("file");
-	my $IDS = open( $file );
+	my $IDS = ps_open( $file );
 	my %id_to_taxon;
 	my %marker_taxon_to_id;
 	while ( my $line = <$IDS> ) {
@@ -526,9 +532,6 @@ sub update_ncbi_taxonomy {
 	unlink("$repository/ncbi/gencode.dmp");
 	unlink("$repository/ncbi/readme.txt");
 	system("cd $repository/; tar czf ncbi.tar.gz ncbi");
-
-	# force use of the new NCBI data
-	$Phylosift::Utilities::ncbi_dir = "$repository/ncbi/";
 }
 
 sub read_merged_nodes {
@@ -545,12 +548,17 @@ sub read_merged_nodes {
 sub make_ncbi_tree_from_update {
 	my %args        = @_;
 	my $self        = $args{self} || miss("self");
+	my $repository  = $args{repository} || miss("repository");
 	my $markerdir   = $args{marker_dir} || miss("marker_dir");
-	my ( %nameidmap, %idnamemap ) = Phylosift::Summarize::readNcbiTaxonNameMap();
-	my %parent = Phylosift::Summarize::readNcbiTaxonomyStructure();
+
+	# force use of the new NCBI data
+	$Phylosift::Utilities::ncbi_dir = "$repository/ncbi/";
+
+	my ( %nameidmap, %idnamemap ) = Phylosift::Summarize::read_ncbi_taxon_name_map();
+	my %parent = Phylosift::Summarize::read_ncbi_taxonomy_structure();
 	print STDERR "ncbi tree has " . scalar( keys(%parent) ) . " nodes\n";
-	my $AAIDS = open( "$markerdir/gene_ids.aa.txt" );
-	my $MARKERTAXONMAP = open( ">$markerdir/marker_taxon_map.updated.txt" );
+	my $AAIDS = ps_open( "$markerdir/gene_ids.aa.txt" );
+	my $MARKERTAXONMAP = ps_open( ">$markerdir/marker_taxon_map.updated.txt" );
 	my @taxonids;
 	my %merged = read_merged_nodes();
 	print "Read " . scalar( keys(%merged) ) . " merged nodes\n";
@@ -606,7 +614,7 @@ sub make_ncbi_tree_from_update {
 			@children = @new_children;
 		}
 	}
-	my $TREEOUT = open( ">ncbi_tree.updated.tre" );
+	my $TREEOUT = ps_open( ">ncbi_tree.updated.tre" );
 	print $TREEOUT $phylotree->to_newick( "-nodelabels" => 1 );
 	close $TREEOUT;
 }
@@ -667,7 +675,7 @@ sub get_fasttree_tre_filename {
 sub build_marker_trees_fasttree {
 	my %args        = @_;
 	my $marker_dir  = $args{directory} || miss("directory");
-	my $pruned      = $args{pruned} || miss("pruned");
+	my $pruned      = $args{pruned} || 0;
 	my $codon_fasta = get_fasta_filename( marker => '$1', dna => 1, updated => 1, pruned => 0, sub_marker => '$2' );
 	my $aa_fasta    = get_fasta_filename( marker => '$1', dna => 0, updated => 1, pruned => $pruned );
 	my $codon_tre   = get_fasttree_tre_filename( marker => '$1', dna => 1, updated => 1, pruned => 0, sub_marker => '$2' );
@@ -707,7 +715,6 @@ sub build_marker_trees_fasttree {
 
 	foreach my $marker (@markerlist) {
 		my $marker_fasta = get_fasta_filename( marker => $marker, dna => 0, updated => 1, pruned => $pruned );
-		print "Looking for $marker_fasta\n";
 		next unless ( -e $marker_fasta );
 		my $tree_script = "/tmp/ps_tree.sh";
 		$tree_script = "/tmp/ps_tree_rna.sh" unless Phylosift::Utilities::is_protein_marker( marker => $marker );
@@ -971,7 +978,7 @@ sub update_rna {
 	my @marker_list = Phylosift::Utilities::gather_markers();
 	foreach my $marker (@marker_list) {
 		next if Phylosift::Utilities::is_protein_marker( marker => $marker );
-		my $base_alignment = Phylosift::Utilities::get_marker_aln_file( $self, $marker );
+		my $base_alignment = Phylosift::Utilities::get_marker_aln_file( self=> $self, marker=>$marker );
 
 		#		my $base_alignment = Phylosift::Utilities::get_marker_aln_file(self=>$self, marker=>$marker);
 		my $updated_alignment = "$marker.updated.fasta";
@@ -1038,7 +1045,7 @@ sub make_codon_submarkers {
 		next unless Phylosift::Utilities::is_protein_marker( marker => $marker );
 		my $aa_tree = get_fasttree_tre_filename( marker => $marker, dna => 0, updated => 1, pruned => 0 );
 		my $codon_alignment = get_fasta_filename( marker => $marker, dna => 1, updated => 1, pruned => 0 );
-		my $alnio = Phylosift::Utilities::open_SeqIO_object( file => $codon_alignment );
+		my $alnio = Bio::AlignIO->new(-file => $codon_alignment );
 		my $aln = $alnio->next_aln();
 
 		# get groups of taxa that are close
