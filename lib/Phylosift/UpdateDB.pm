@@ -428,6 +428,7 @@ sub assign_seqids {
 		my %id_mapping_codon = ();
 		my $fasta = get_fasta_filename(marker=>$marker, updated=>1);
 		next unless -e $fasta;
+		print STDERR "marker $marker seqids\n";
 		$aa_counter = assign_seqids_for_marker(
 												marker       => $marker,
 												alignment    => $fasta,
@@ -436,6 +437,7 @@ sub assign_seqids {
 												existing_ids => \%id_mapping
 		);
 		# now put the IDs in the reps file
+		print STDERR "marker $marker rep seqids\n";
 		my $clean_reps = get_reps_filename( marker => $marker, updated => 1, clean => 1 );
 		assign_seqids_for_marker( marker => $marker, alignment => $clean_reps, counter => 0, existing_ids => \%id_mapping );
 
@@ -456,7 +458,7 @@ sub assign_seqids_for_marker {
 	my %args         = @_;
 	my $marker       = $args{marker} || miss("marker");
 	my $alignment    = $args{alignment} || miss("alignment");
-	my $IDTABLE      = $args{IDTABLE};
+	my $IDTABLE      = $args{IDTABLE} || 0;
 	my $counter      = $args{counter} || 0;
 	my $existing_ids = $args{existing_ids} || miss("existing_ids");
 	my $INALN = ps_open( $alignment );
@@ -483,7 +485,7 @@ sub assign_seqids_for_marker {
 			} else {
 
 				# record the new ID in the table
-				print $IDTABLE "$marker\t$header\t$countstring\n" if defined($IDTABLE);
+				print $IDTABLE "$marker\t$header\t$countstring\n" if fileno $IDTABLE;
 			}
 			$mapped_ids{$header} = $countstring;
 			$line = ">$countstring";
@@ -507,9 +509,9 @@ sub read_gene_ids {
 	my %id_to_taxon;
 	my %marker_taxon_to_id;
 	while ( my $line = <$IDS> ) {
+		chomp $line;
 		my ( $marker, $taxon, $uniqueid ) = split( /\t/, $line );
 		$id_to_taxon{$uniqueid} = $taxon;
-		$marker_taxon_to_id{$marker}{$taxon} = [] unless defined( $marker_taxon_to_id{$marker}{$taxon} );
 		push( @{ $marker_taxon_to_id{$marker}{$taxon} }, $uniqueid );
 	}
 	return ( \%id_to_taxon, \%marker_taxon_to_id );
@@ -554,7 +556,9 @@ sub make_ncbi_tree_from_update {
 	# force use of the new NCBI data
 	$Phylosift::Utilities::ncbi_dir = "$repository/ncbi/";
 
-	my ( %nameidmap, %idnamemap ) = Phylosift::Summarize::read_ncbi_taxon_name_map();
+	my ($nimref, $inmref) = Phylosift::Summarize::read_ncbi_taxon_name_map();
+	my %nameidmap = %$nimref; 
+	my %idnamemap  = %$inmref;
 	my %parent = Phylosift::Summarize::read_ncbi_taxonomy_structure();
 	print STDERR "ncbi tree has " . scalar( keys(%parent) ) . " nodes\n";
 	my $AAIDS = ps_open( "$markerdir/gene_ids.aa.txt" );
@@ -920,6 +924,7 @@ sub reconcile_with_ncbi {
 	my $aa_tre      = get_fasttree_tre_filename( marker => '\\$1', dna => 0, updated => 1, pruned => $pruned );
 	my $codon_log   = get_fasttree_log_filename( marker => '\\$1', dna => 1, updated => 1, pruned => $pruned );
 	my $aa_log      = get_fasttree_log_filename( marker => '\\$1', dna => 0, updated => 1, pruned => $pruned );
+#	my $aa_ids      = get_geneid_filename( marker => '\\$1', dna => 0, updated => 1, pruned => $pruned );
 	my $RECONCILESCRIPT = ps_open( ">/tmp/ps_reconcile.sh" );
 	print $RECONCILESCRIPT <<EOF;
 #!/bin/sh
@@ -983,7 +988,7 @@ sub update_rna {
 		#		my $base_alignment = Phylosift::Utilities::get_marker_aln_file(self=>$self, marker=>$marker);
 		my $updated_alignment = "$marker.updated.fasta";
 
-		# need to add to gene_ids_aa.txt
+		# need to add to gene_ids.aa.txt
 		# use greengenes id for taxon ID
 		my $aaid_file = "$marker_dir/gene_ids.aa.txt";
 		my $max_id    = -1;
@@ -1034,9 +1039,11 @@ sub make_codon_submarkers {
 	# on any branch of the tree relating members of a group
 	# TODO: tune this value
 	my $max_aa_branch_distance = 0.2;
-	my ( %id_to_taxon, %marker_taxon_to_id ) = read_gene_ids( file => "$marker_dir/gene_ids_aa.txt" );
+	my ($idtref, $mtiref) = read_gene_ids( file => "$marker_dir/gene_ids.aa.txt" );
+	my %id_to_taxon = %$idtref;
+	my %marker_taxon_to_id = %$mtiref;
 	my @subalignments;    # list of subalignments created that will later need marker packages made
-
+	
 	# the following file will provide a mapping of AA gene ID to submarker
 	my $SUBTABLE = ps_open( ">submarkers.txt" );
 	my @marker_list = Phylosift::Utilities::gather_markers();
@@ -1045,14 +1052,15 @@ sub make_codon_submarkers {
 		next unless Phylosift::Utilities::is_protein_marker( marker => $marker );
 		my $aa_tree = get_fasttree_tre_filename( marker => $marker, dna => 0, updated => 1, pruned => 0 );
 		my $codon_alignment = get_fasta_filename( marker => $marker, dna => 1, updated => 1, pruned => 0 );
+		next unless -e $codon_alignment;
 		my $alnio = Bio::AlignIO->new(-file => $codon_alignment );
 		my $aln = $alnio->next_aln();
 
 		# get groups of taxa that are close
-		my @group_table = `segment_tree $aa_tree $max_aa_branch_distance`;
+		my $GROUP_TABLE = ps_open("segment_tree $aa_tree $max_aa_branch_distance |");
 		my %gene_groups;
 		my $group_id = 1;
-		foreach my $group_line (@group_table) {
+		while( my $group_line = <$GROUP_TABLE>) {			
 			chomp($group_line);
 			my @gene_ids = split( /\t/, $group_line );
 
@@ -1063,7 +1071,7 @@ sub make_codon_submarkers {
 			# map the gene ID from aa tree into the corresponding ID in the codon data
 			foreach my $gene (@gene_ids) {
 				my $taxon     = $id_to_taxon{$gene};
-				my @codon_ids = $marker_taxon_to_id{$marker}{$taxon};
+				my @codon_ids = @{ $marker_taxon_to_id{$marker}{$taxon} };
 
 				# write each sequence into the subalignment
 				foreach my $id (@codon_ids) {
@@ -1094,20 +1102,23 @@ sub make_constrained_tree {
 	my $constraint_marker = $args{constraint_marker} || miss("constraint_marker");
 	my $target_marker     = $args{target_marker} || miss("target_marker");
 	my $marker_dir        = $args{marker_dir} || miss("marker_dir");
-	my ( %id_to_taxon, %marker_taxon_to_id ) = read_gene_ids("$marker_dir/gene_ids_aa.txt");
-	my $constraint_tree = get_fasttree_tre_filename( marker => $constraint_marker, dna => 0, updated => 1, pruned => 1 );
+	my $pruned            = $args{pruned} || 0;
+	my ( %id_to_taxon, %marker_taxon_to_id ) = read_gene_ids(file=>"$marker_dir/gene_ids.aa.txt");
+	my $constraint_tree = get_fasttree_tre_filename( marker => $constraint_marker, dna => 0, updated => 1, pruned => $pruned );
 
+	croak("$constraint_tree does not exist") unless -e $constraint_tree;
 	# first convert the concat tree leaf names to match the 16s
 	my $tree = Bio::Phylo::IO->parse(
 									  '-file'   => $constraint_tree,
 									  '-format' => 'newick',
 	)->first;
+	print STDERR "Tree has ".scalar(@{ $tree->get_entities })." nodes\n";
 	my @missing_taxa;    # gene IDs for taxa missing in the 16s
 	foreach my $node ( @{ $tree->get_entities } ) {
-
 		# skip this one if it is not a leaf
 		next if ( scalar( $node->get_children() ) > 0 );
 		my $name = $node->get_name;
+		print STDERR "Node $name\n";
 		croak "Unable to find taxon for gene $name in marker $constraint_marker" unless defined $id_to_taxon{$name};
 		my $taxon_id = $id_to_taxon{$name};
 
@@ -1116,7 +1127,9 @@ sub make_constrained_tree {
 		if ( defined( $marker_taxon_to_id{$target_marker}{$taxon_id} ) ) {
 			my @tids = $marker_taxon_to_id{$target_marker}{$taxon_id};
 			$rename = $tids[0];
+			print STDERR "Changing $name to $rename\n";
 		} else {
+			print STDERR "Adding $name taxon $taxon_id to missing\n";
 			push( @missing_taxa, $name );
 		}
 		$node->set_name($rename);
@@ -1129,13 +1142,13 @@ sub make_constrained_tree {
 	#
 	# enumerate the splits in the tree
 	my $constraint_splits = "$renamed_tree.splits";
-	my $constraint_cl     = "printsplits $renamed_tree $constraint_splits";
+	my $constraint_cl     = "print_splits $renamed_tree $constraint_splits";
 	system($constraint_cl);
 
 	#
 	# create an amended alignment with any taxa missing from the target data
-	my $target_alignment         = get_fasta_filename( marker => $target_marker, dna => 0, updated => 1, pruned => 1 );
-	my $target_alignment_amended = get_fasta_filename( marker => $target_marker, dna => 0, updated => 1, pruned => 1 ) . ".amended";
+	my $target_alignment         = get_fasta_filename( marker => $target_marker, dna => 0, updated => 1, pruned => $pruned );
+	my $target_alignment_amended = get_fasta_filename( marker => $target_marker, dna => 0, updated => 1, pruned => $pruned ) . ".amended";
 	my $column_count             = 0;
 	`cp $target_alignment $target_alignment_amended`;
 	my $AMENDALN = ps_open( ">>$target_alignment_amended" );
@@ -1146,10 +1159,11 @@ sub make_constrained_tree {
 
 	#
 	# now make a target tree that respects protein tree constraints
-	my $target_constrained_tree = get_fasttree_tre_filename( marker => $target_marker, dna => 0, updated => 1, pruned => 1 ) . ".constrained";
-	my $target_constrained_log = get_fasttree_log_filename( marker => $target_marker, dna => 0, updated => 1, pruned => 1 ) . ".constrained";
+	my $target_constrained_tree = get_fasttree_tre_filename( marker => $target_marker, dna => 0, updated => 1, pruned => $pruned ) . ".constrained";
+	my $target_constrained_log = get_fasttree_log_filename( marker => $target_marker, dna => 0, updated => 1, pruned => $pruned ) . ".constrained";
 	my $tree_build_cl =
-"$Phylosift::Utilities::fasttree -nt -gtr -constraints $constraint_splits -constraintWeight 100 -log $target_constrained_log  $target_alignment > $target_constrained_tree";
+#"$Phylosift::Utilities::fasttree -nt -gtr -constraints $constraint_splits -constraintWeight 100 -log $target_constrained_log  $target_alignment > $target_constrained_tree";
+"FastTree -nt -gtr -constraints $constraint_splits -constraintWeight 100 -log $target_constrained_log  $target_alignment > $target_constrained_tree";
 	system($tree_build_cl);
 
 	# finally, make a pplacer package with the constrained tree
@@ -1170,10 +1184,10 @@ sub join_trees {
 
 	# first apply protein constraints to 16s
 	# then apply 16s constraints to protein
-	make_constrained_tree( constraint_marker => "concat",       target_marker => "16s_bac_reps", marker_dir => $marker_dir );
-	make_constrained_tree( constraint_marker => "16s_bac_reps", target_marker => "concat",       marker_dir => $marker_dir );
+	make_constrained_tree( constraint_marker => "concat",       target_marker => "16s_reps_bac", marker_dir => $marker_dir );
+	make_constrained_tree( constraint_marker => "16s_reps_bac", target_marker => "concat",       marker_dir => $marker_dir );
 
-	# with a little luck we can now
+	# with a little luck we can now??? do what?
 }
 
 sub get_gene_id_file {
