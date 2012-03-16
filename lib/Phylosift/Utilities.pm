@@ -117,8 +117,8 @@ sub get_program_path {
 
 	# check the OS and use Mac binaries if needed
 	if ( $^O =~ /arwin/ ) {
-		$progcheck = $Bin . "/osx/" . $progname unless ( $progcheck =~ /$progname/ && !( -x $Bin . "/" . $progname ) );
-		$progcheck = $Bin . "/osx/" . $progname if ( $progcheck =~ /$Bin\/bin/ );    # don't use the linux binary!
+		$progcheck = $Bin . "../osx/" . $progname unless ( $progcheck =~ /$progname/ && !( -x $Bin . "/" . $progname ) );
+		$progcheck = $Bin . "../osx/" . $progname if ( $progcheck =~ /$Bin\/bin/ );    # don't use the linux binary!
 	}
 	return $progcheck;
 }
@@ -1251,15 +1251,6 @@ sub index_marker_db {
 	print $RNADBOUT "\n";
 	close $PDBOUT;    # be sure to flush I/O
 	close $RNADBOUT;
-
-	#print $path."\n";
-	# make a blast database
-	my $blastp_db = get_blastp_db( path => $path );
-	system("$Phylosift::Utilities::formatdb -i $blastp_db -o F -p T -t RepDB");
-	`mv $blastp_db $path/rep.dbfasta`;
-
-	# make a rapsearch database
-	`cd $path ; $Phylosift::Utilities::preRapSearch -d rep.dbfasta -n rep`;
 
 	# make a last database
 	`cd $path ; $Phylosift::Utilities::lastdb -p -c replast rep.dbfasta`;
