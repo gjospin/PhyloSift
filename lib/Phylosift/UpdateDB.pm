@@ -885,7 +885,6 @@ sub qsub_job {
 	my $script = $args{script} || miss("script");
 	my $saref = $args{script_args};
 	my $jobsref = $args{job_ids};
-	my @script_args = @$saref;
 	
 	my $qsub_cmd = "qsub -q all.q -q eisen.q $script ";
 	$qsub_cmd .= join(" ", @$saref ) if defined($saref);
@@ -1046,6 +1045,11 @@ sub make_codon_submarkers {
 	my ($idtref, $mtiref) = read_gene_ids( file => "$marker_dir/".get_gene_id_file(dna=>0) );
 	my %id_to_taxon = %$idtref;
 	my %marker_taxon_to_id = %$mtiref;
+
+	($idtref, $mtiref) = read_gene_ids( file => "$marker_dir/".get_gene_id_file(dna=>1) );
+	my %codon_id_to_taxon = %$idtref;
+	my %codon_marker_taxon_to_id = %$mtiref;
+
 	my @subalignments;    # list of subalignments created that will later need marker packages made
 	
 	# the following file will provide a mapping of AA gene ID to submarker
@@ -1075,7 +1079,10 @@ sub make_codon_submarkers {
 			# map the gene ID from aa tree into the corresponding ID in the codon data
 			foreach my $gene (@gene_ids) {
 				my $taxon     = $id_to_taxon{$gene};
-				my @codon_ids = @{ $marker_taxon_to_id{$marker}{$taxon} };
+				if(!defined($codon_marker_taxon_to_id{$marker}{$taxon})){
+					croak("Error: codon table missing taxon $taxon in marker $marker");
+				}
+				my @codon_ids = @{ $codon_marker_taxon_to_id{$marker}{$taxon} };
 
 				# write each sequence into the subalignment
 				foreach my $id (@codon_ids) {
@@ -1083,7 +1090,12 @@ sub make_codon_submarkers {
 						print $SUBALN ">$id\n";
 						print $SUBALN $seq->seq() . "\n";
 					}
+					my $codon_taxon     = $codon_id_to_taxon{$id};
+					if($codon_taxon ne $taxon){
+						croak("Error: inconsistent taxa in AA and Codon data. AA: $taxon, Codon: $codon_taxon, aa gene: $gene, codon gene: $id, marker: $marker");
+					}
 				}
+				
 
 				# add the mapping from gene ID to submarker to the table
 				print $SUBTABLE "$gene\t$marker\t$taxon\t$group_id\n";
@@ -1175,7 +1187,7 @@ sub make_constrained_tree {
 	# now make a target tree that respects protein tree constraints
 	my $target_constrained_tree = get_fasttree_tre_filename( marker => $target_marker, dna => 0, updated => 1, pruned => $target_pruned ) . ".constrained";
 	my $target_constrained_log = get_fasttree_log_filename( marker => $target_marker, dna => 0, updated => 1, pruned => $target_pruned ) . ".constrained";
-	my $TREESCRIPT = ps_open("/tmp/constrained_tre.sh");
+	my $TREESCRIPT = ps_open(">/tmp/constrained_tre.sh");
 	print $TREESCRIPT <<EOF;
 #!/bin/sh
 #\$ -cwd
