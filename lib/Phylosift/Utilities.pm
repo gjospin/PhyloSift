@@ -1031,6 +1031,17 @@ sub concatenate_alignments {
 		$catobj->remove_seq($dummyseq);
 	}
 	$out->write_aln($catobj);
+	
+	# get rid of the trailing /1-blahblah that BioPerl insists on adding to sequence names
+	# (naughty BioPerl! time out for you!!)
+	my $FA = ps_open($outputFasta);
+	my @fa_lines = <$FA>;
+	my $FA_REOUT = ps_open(">".$outputFasta);
+	foreach my $line(@fa_lines){
+		$line =~ s/\/\d-\d+//g;
+		print $FA_REOUT $line;
+	}
+	close $FA_REOUT;
 }
 my %timers;
 
