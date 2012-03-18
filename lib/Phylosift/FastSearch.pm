@@ -110,6 +110,7 @@ sub launch_searches {
 	my $self            = $args{self};
 	my $dir             = $args{dir} || miss("dir");
 	my $bowtie2_r1_pipe = $args{dir} . "/bowtie2_r1.pipe";
+	my $last_rna_pipe = $args{dir} . "/last_rna.pipe";
 	my $reads_file      = $args{dir} . "/reads.fasta";
 	my $bowtie2_r2_pipe;
 	$bowtie2_r2_pipe = $args{dir} . "/bowtie2_r2.pipe" if $args{readtype}->{paired};
@@ -122,8 +123,9 @@ sub launch_searches {
 	}
 	`mkfifo $bowtie2_r1_pipe`;
 	`mkfifo $bowtie2_r2_pipe` if $args{readtype}->{paired};
+	`mkfifo $last_rna_pipe`;
 	my @children;
-	for ( my $count = 1 ; $count <= $self->{"threads"} + 1 ; $count++ ) {
+	for ( my $count = 1 ; $count <= $self->{"threads"} + 2 ; $count++ ) {
 		my $pid = fork();
 		if ($pid) {
 
@@ -138,7 +140,10 @@ sub launch_searches {
 			if ( $count <= $self->{"threads"} ) {
 				$hitstream = lastal_table( self => $self, query_file => $last_pipe_array[ $count - 1 ] );
 				$candidate_type = ".lastal";
-			} elsif ( $count > $self->{"threads"} ) {
+			} elsif ( $count == $self->{"threads"} + 1 ) {
+				$hitstream = lastal_table_rna( self => $self, query_file => $last_rna_pipe );
+				$candidate_type = ".lastal.rna";
+			} elsif ( $count == $self->{"threads"} + 2 ) {
 
 				#exit the thread if the bowtie DB does not exist
 				if ( !-e Phylosift::Utilities::get_bowtie2_db() ) {
@@ -152,13 +157,12 @@ sub launch_searches {
 				$candidate_type = ".rna";
 			}
 			my $hitsref;
-			if ( $count <= $self->{"threads"} ) {
-				$hitsref = get_hits_contigs( self => $self, HITSTREAM => $hitstream, searchtype => "lastal" );
-			} elsif ( $count > $self->{"threads"} ) {
+			if ( $count == $self->{"threads"} + 2 ) {
 				$hitsref = get_hits_sam( self => $self, HITSTREAM => $hitstream );
-
 				#$hitsref = get_hits_contigs( self => $self, HITSTREAM => $hitstream, searchtype => "lastal" );
-			}
+			} else {
+				$hitsref = get_hits_contigs( self => $self, HITSTREAM => $hitstream, searchtype => "lastal" );
+			} 
 
 			# write out sequence regions hitting marker genes to candidate files
 			debug "Writing candidates from process $count\n";
@@ -177,6 +181,7 @@ sub launch_searches {
 	debug "TESTING" . $args{readtype}->{paired};
 	$BOWTIE2_R2_PIPE = ps_open(">$bowtie2_r2_pipe") if $args{readtype}->{paired};
 	my $READS_PIPE = ps_open("+>$reads_file");
+	my $LAST_RNA_PIPE = ps_open(">$last_rna_pipe");
 
 	# parent process streams out sequences to fifos
 	# child processes run the search on incoming sequences
@@ -185,6 +190,7 @@ sub launch_searches {
 					 bowtie2_pipe1 => $BOWTIE2_R1_PIPE,
 					 bowtie2_pipe2 => $BOWTIE2_R2_PIPE,
 					 lastal_pipes  => \@LAST_PIPE_ARRAY,
+					 LAST_RNA_PIPE => $LAST_RNA_PIPE,
 					 dna           => $self->{"dna"},
 					 file1         => $self->{"readsFile"},
 					 file2         => $self->{"readsFile_2"},
@@ -216,6 +222,7 @@ sub demux_sequences {
 	my $BOWTIE2_PIPE2        = $args{bowtie2_pipe2};
 	my $READS_PIPE           = $args{reads_pipe} || miss("reads_pipe");
 	my $last_array_reference = $args{lastal_pipes} || miss("lastal_pipes");
+	my $LAST_RNA_PIPE        = $args{LAST_RNA_PIPE};
 	my @LAST_PIPE_ARRAY      = @{$last_array_reference};
 	my $F1IN                 = Phylosift::Utilities::open_sequence_file( file => $args{file1} );
 	my $F2IN;
@@ -230,17 +237,20 @@ sub demux_sequences {
 	while ( defined( $lines1[0] ) ) {
 		my $last_pipe = $LAST_PIPE_ARRAY[$lastal_index];
 		if ( $lines1[0] =~ /^@/ ) {
+			#
+			# FASTQ format
 			for ( my $i = 1 ; $i < 4 ; $i++ ) {
 				$lines1[$i] = <$F1IN>;
 				$lines2[$i] = <$F2IN> if defined($F2IN);
 			}
 
 			# send the reads to bowtie
+			debug "Lookout bowtie\n";
 			print $BOWTIE2_PIPE1 @lines1;
 			print $BOWTIE2_PIPE2 @lines2 if defined($F2IN);
 
 			#
-			# send the reads to RAPsearch2 (convert to fasta)
+			# send the reads to lastal (convert to fasta)
 			$lines1[0] =~ s/^@/>/g;
 			$lines2[0] =~ s/^@/>/g if defined($F2IN);
 			print $last_pipe $lines1[0] . $lines1[1];
@@ -256,6 +266,8 @@ sub demux_sequences {
 			$lines1[0] = <$F1IN>;
 			$lines2[0] = <$F2IN> if defined($F2IN);
 		} elsif ( $lines1[0] =~ /^>/ ) {
+			#
+			# FASTA format
 			my $newline1;
 			while ( $newline1 = <$F1IN> ) {
 				last if $newline1 =~ /^>/;
@@ -268,9 +280,12 @@ sub demux_sequences {
 					$lines2[1] .= $newline2;
 				}
 			}
-			if ( length( $lines1[1] ) > 2000 || ( defined($F2IN) && length( $lines2[1] ) > 2000 ) ) {
-
-				# send the reads to bowtie
+			if ( length( $lines1[1] ) > 1000 || ( defined($F2IN) && length( $lines2[1] ) > 1000 ) ) {
+				# if reads are long, do RNA search with lastal
+				print $LAST_RNA_PIPE $lines1[0] . $lines1[1];
+				print $LAST_RNA_PIPE $lines2[0] . $lines2[1] if defined($F2IN);
+			}else{
+				# if they are short, send the reads to bowtie
 				print $BOWTIE2_PIPE1 @lines1;
 				print $BOWTIE2_PIPE2 @lines2 if defined($F2IN);
 			}
@@ -294,6 +309,7 @@ sub demux_sequences {
 	}
 	close($BOWTIE2_PIPE1);
 	close($BOWTIE2_PIPE2) if defined($F2IN);
+	close($LAST_RNA_PIPE);
 	close($READS_PIPE);
 }
 
@@ -330,8 +346,9 @@ returns a stream file handle
 =cut
 
 sub lastal_table_rna {
-	my $self       = shift || miss("self");
-	my $query_file = shift || miss("query_file");
+	my %args       = @_;
+	my $self       = $args{self} || miss("self");
+	my $query_file = $args{query_file} || miss("query_file");
 	my $lastal_cmd = "$Phylosift::Utilities::lastal -e300 -f0 $Phylosift::Utilities::marker_dir/rnadb $query_file |";
 	debug "Running $lastal_cmd";
 	my $HISTREAM = ps_open($lastal_cmd);
