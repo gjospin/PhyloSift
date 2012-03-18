@@ -85,7 +85,6 @@ sub MarkerAlign {
 		# now concatenate any DNA alignments
 		for ( my $i = 0 ; $i < @markeralignments ; $i++ ) {
 			$markeralignments[$i] =~ s/trim.fasta/trim.fna.fasta/g;
-			splice @markeralignments, $i--, 1 unless ( -f $markeralignments[$i] );
 		}
 		my $outputFastaDNA = $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta_DNA( marker => "concat" );
 		Phylosift::Utilities::concatenate_alignments(
