@@ -371,9 +371,11 @@ sub collate_markers {
 		`mv $local_directory/$fasta $marker_dir/$fasta`;
 		my $reps = get_reps_filename( marker => $marker, updated => 1 );
 		my $clean_reps = get_reps_filename( marker => $marker, updated => 1, clean => 1 );
-		clean_representatives(infile=>"$local_directory/$reps", outfile=>"$local_directory/$clean_reps" );
-		fix_names_in_alignment( alignment => "$local_directory/$clean_reps" );
-		`mv $local_directory/$clean_reps $marker_dir/$clean_reps`;
+		if(-e "$local_directory/$reps" ){
+			clean_representatives(infile=>"$local_directory/$reps", outfile=>"$local_directory/$clean_reps" );
+			fix_names_in_alignment( alignment => "$local_directory/$clean_reps" );
+			`mv $local_directory/$clean_reps $marker_dir/$clean_reps`;
+		}
 		
 		my $codon_fasta = get_fasta_filename(marker=>$marker, updated=>1,dna=>1);
 		next unless -e "$local_directory/$codon_fasta";
@@ -386,7 +388,7 @@ sub clean_representatives {
 	my %args    = @_;
 	my $file    = $args{infile} || miss("infile");
 	my $outfile = $args{outfile} || miss("outfile");
-	my $INALN = ps_open(  $file );
+	my $INALN = ps_open( $file );
 	my $OUTALN = ps_open( ">$outfile" );
 	while ( my $line = <$INALN> ) {
 		unless ( $line =~ /^>/ ) {
@@ -1198,7 +1200,7 @@ export OMP_NUM_THREADS=3
 FastTree-nonuni -nt -gtr -constraints $constraint_splits -constraintWeight 100 -log $target_constrained_log  $target_alignment_amended > $target_constrained_tree
 
 EOF
-	my @job_ids = [];
+	my @job_ids = ();
 	qsub_job(script=>"/tmp/constrained_tre.sh", job_ids=>\@job_ids);
 	wait_for_jobs(job_ids=>\@job_ids);
 
