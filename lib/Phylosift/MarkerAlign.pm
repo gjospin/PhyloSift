@@ -123,7 +123,8 @@ sub directoryPrepAndClean {
 	}
 	return $self;
 }
-my @search_types = ( "", ".lastal", ".blast" );
+my @search_types = ( "", ".lastal" );
+my @search_types_rna = ( "", ".lastal.rna", ".rna" );
 
 =cut
 
@@ -137,7 +138,20 @@ sub markerPrepAndRun {
 	my $markRef = $args{marker_reference} || miss("marker_reference");
 	debug "ALIGNDIR : " . $self->{"alignDir"} . "\n";
 	foreach my $marker ( @{$markRef} ) {
-		next unless Phylosift::Utilities::is_protein_marker( marker => $marker );
+		unless (Phylosift::Utilities::is_protein_marker( marker => $marker )){
+			# concat all RNA candidates to a single file
+			foreach my $type (@search_types_rna) {
+				my $candidate = Phylosift::Utilities::get_candidate_file( self => $self, marker => $marker, type => $type );
+				my $candidate_base = Phylosift::Utilities::get_candidate_file( self => $self, marker => $marker, type => ".rna" );
+				unlink($candidate_base);
+				my @candidate_files = <$candidate.*>;
+				foreach my $cand_file (@candidate_files) {
+					debug "Running cat $cand_file >> $candidate_base";
+					`cat $cand_file >> $candidate_base`;
+				}
+			}
+			next;
+		}
 		my $hmm_file = Phylosift::Utilities::get_marker_hmm_file( self => $self, marker => $marker, loc => 1 );
 		my $stockholm_file = Phylosift::Utilities::get_marker_stockholm_file( self => $self, marker => $marker );
 		unless ( -e $hmm_file && -e $stockholm_file ) {
@@ -338,7 +352,8 @@ sub alignAndMask {
 		} else {
 			debug "Setting up cmalign for marker $marker\n";
 			my $candidate = Phylosift::Utilities::get_candidate_file( self => $self, marker => $marker, type => ".rna" );
-			next unless ( -e $candidate );
+			next unless -e $candidate;
+
 			$refcount = Phylosift::Utilities::get_count_from_reps( self => $self, marker => $marker );
 
 			#if the marker is rna, use infernal instead of hmmalign
