@@ -28,8 +28,9 @@ sub runBenchmark {
     my $self        = $args{self} || miss("self");
     my $output_path = $args{output_path} || miss("output_path");
 	my ($nimref, $inmref) = Phylosift::Summarize::read_ncbi_taxon_name_map();
-	my %nameidmap = %$nimref; 
-	my %idnamemap  = %$inmref;
+	debug "NIMREF : $nimref\nINMREF : $inmref\n";
+	%nameidmap = %$nimref;
+	%idnamemap  = %$inmref;
 	%parent  = Phylosift::Summarize::read_ncbi_taxonomy_structure();
 	%refTaxa = getInputTaxa( file_name=>$self->{"readsFile"} );
 	readSeqSummary( self=>$self, output_path=>$output_path,read_source=> \%readSource );
@@ -332,7 +333,14 @@ sub getInputTaxa {
 	}
 	close($FILE_IN);
 	foreach my $source ( keys %sourceReadCounts ) {
-		print $source. "\t" . $nameidmap{$source} . "\t" . $sourceReadCounts{$source} . "\n";
+		print $source . "\t";
+		if(exists $nameidmap{$source} ){
+			print $nameidmap{$source} . "\t";
+		}
+		if(exists $idnamemap{$source}){
+			print $idnamemap{$source} . "\t";
+		}
+		print "\t" . $sourceReadCounts{$source} . "\n";
 	}
 	return %sourceTaxa;
 }
