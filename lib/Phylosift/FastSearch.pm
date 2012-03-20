@@ -203,7 +203,7 @@ sub launch_searches {
 	}
 
 	# clean up
-	`rm -f $bowtie2_r1_pipe $reads_file`;
+	`rm -f $bowtie2_r1_pipe $last_rna_pipe $reads_file`;
 	`rm -f $bowtie2_r2_pipe` if defined($bowtie2_r2_pipe);
 	foreach my $last_pipe (@last_pipe_array) {
 		`rm -f $last_pipe`;
@@ -422,8 +422,11 @@ sub get_hits_contigs {
 	my $HITSTREAM  = $args{HITSTREAM} || miss("HITSTREAM");
 	my $searchtype = $args{searchtype} || miss("searchtype");    # can be blastx or lastal
 
+	my $prev_hit="";
+	my $suff = 1;
+
 	# key is a contig name
-	# value is an array of arrays, each one has [marker,bit_score,left-end,right-end]
+	# value is an array of arrays, each one has [marker,bit_score,left-end,right-end,suffix]
 	my %contig_hits;
 	my %contig_top_bitscore;
 	my $max_hit_overlap = 10;
@@ -460,6 +463,13 @@ sub get_hits_contigs {
 		my @marker = split( /\_\_/, $subject );    # this is soooo ugly
 		my $markerName = $marker[0];
 
+		#increment the suffix if the previous subject was the same
+		if(	$prev_hit eq $query){
+			$suff++;
+		}else{
+			$suff=1;
+		}
+
 		# running on long reads or an assembly
 		# allow each region of a sequence to have a top hit
 		# do not allow overlap
@@ -478,7 +488,7 @@ sub get_hits_contigs {
 				{
 
 					# debug "Found overlap $query and $markerName, $query_start:$query_end\n";
-					$contig_hits{$query}->[$i] = [ $markerName, $bitScore, $query_start, $query_end, $frameshift ] if ( $bitScore > $prevhit[1] );
+					$contig_hits{$query}->[$i] = [ $markerName, $bitScore, $query_start, $query_end, $frameshift, $suff ] if ( $bitScore > $prevhit[1] );
 					last;
 				}
 
@@ -490,21 +500,22 @@ sub get_hits_contigs {
 				{
 
 					# debug "Found overlap $query and $markerName, $query_start:$query_end\n";
-					$contig_hits{$query}->[$i] = [ $markerName, $bitScore, $query_start, $query_end, $frameshift ] if ( $bitScore > $prevhit[1] );
+					$contig_hits{$query}->[$i] = [ $markerName, $bitScore, $query_start, $query_end, $frameshift, $suff ] if ( $bitScore > $prevhit[1] );
 					last;
 				}
 			}
 			if ( $i == @{ $contig_hits{$query} } ) {
 
 				# no overlap was found, include this hit
-				my @hitdata = [ $markerName, $bitScore, $query_start, $query_end, $frameshift ];
+				my @hitdata = [ $markerName, $bitScore, $query_start, $query_end, $frameshift, $suff ];
 				push( @{ $contig_hits{$query} }, @hitdata );
 			}
 		} elsif ( !defined( $contig_top_bitscore{$query} ) ) {
-			my @hitdata = [ $markerName, $bitScore, $query_start, $query_end, $frameshift ];
+			my @hitdata = [ $markerName, $bitScore, $query_start, $query_end, $frameshift , $suff];
 			push( @{ $contig_hits{$query} }, @hitdata );
 			$contig_top_bitscore{$query}{$markerName} = $bitScore;
 		}
+		$prev_hit = $query;
 	}
 	return \%contig_hits;
 }
@@ -523,7 +534,7 @@ sub get_hits {
 	my %markerTopScores;
 	my %topScore = ();
 	my %contig_hits;
-
+	
 	# return empty if there is no data
 	return \%contig_hits unless defined( fileno $HITSTREAM );
 	while (<$HITSTREAM>) {
@@ -677,6 +688,7 @@ sub write_candidates {
 			my $markerHit   = $cur_hit[0];
 			my $start       = $cur_hit[2];
 			my $end         = $cur_hit[3];
+			my $suff = $cur_hit[5];
 			( $start, $end ) = ( $end, $start ) if ( $start > $end );    # swap if start bigger than end
 
 			# check to ensure hit covers enough of the marker
@@ -691,9 +703,10 @@ sub write_candidates {
 
 			# ensure flanking region is a multiple of 3 to avoid breaking frame in DNA
 			my $seqLength = length( $seq->seq );
-			my $newSeq;
-			$newSeq = substr( $seq->seq, $start, $end - $start );
-
+			my $new_seq;
+			$new_seq = substr( $seq->seq, $start, $end - $start );
+			my $new_id = $seq->id;
+			my $new_if .= "_p$suff\n" if ($self->{"isolate"} && !$self->{"besthit"});
 			#if we're working from DNA then need to translate to protein
 			if ( $self->{"dna"} && $type !~ /\.rna/ ) {
 
@@ -703,7 +716,7 @@ sub write_candidates {
 				# listing number of gaps in ref and query seq, respectively
 				my $frameshift = $cur_hit[4];
 
-				#				debug $seq->id ." Frameshift $frameshift, start $start, end $end, seqlen ".$seq->length."\n";
+				# debug $seq->id ." Frameshift $frameshift, start $start, end $end, seqlen ".$seq->length."\n";
 				my @frames = split( /,/, $frameshift );
 
 				# compute alignment length across all frames
@@ -737,17 +750,17 @@ sub write_candidates {
 				}
 				my $strand = 1;    # forward or reverse strand?
 				$strand *= -1 if ( $cur_hit[2] > $cur_hit[3] );
-				$newSeq = translate_frame(
-										   id                => $seq->id,
+				$new_seq = translate_frame(
+										   id                => $new_id,
 										   seq               => $dna_seq,
 										   frame             => $strand,
 										   marker            => $markerHit,
 										   reverse_translate => $self->{"dna"}
 				);
-				$newSeq =~ s/\*/X/g;    # bioperl uses * for stop codons but we want to give X to hmmer later
+				$new_seq =~ s/\*/X/g;    # bioperl uses * for stop codons but we want to give X to hmmer later
 			}
 			$markerHits{$markerHit} = "" unless defined( $markerHits{$markerHit} );
-			$markerHits{$markerHit} .= ">" . $seq->id . "\n" . $newSeq . "\n";
+			$markerHits{$markerHit} .= ">" . $new_id . "\n" . $new_seq . "\n";
 		}
 	}
 
@@ -783,7 +796,7 @@ Generates the blastable database using the marker representatives
 sub prep_and_clean {
 	my %args = @_;
 	my $self = $args{self} || miss("self");
-	debug "prepclean MARKERS @markers\nTESTING\n ";
+	debug "prepclean MARKERS @markers\n";
 	`mkdir $self->{"tempDir"}` unless ( -e $self->{"tempDir"} );
 
 	#create a directory for the Reads file being processed.
