@@ -148,6 +148,9 @@ sub launch_searches {
 				#exit the thread if the bowtie DB does not exist
 				if ( !-e Phylosift::Utilities::get_bowtie2_db() ) {
 					debug "Exiting process $count \n";
+					# still need to open/close pipes for parent process
+					my $btp1 = ps_open($bowtie2_r1_pipe);
+					my $btp2 = ps_open($bowtie2_r2_pipe) if defined($bowtie2_r2_pipe);
 					`rm -f $bowtie2_r1_pipe`;
 					`rm -f $bowtie2_r2_pipe` if defined($bowtie2_r2_pipe);	
 					exit 0;
@@ -203,7 +206,7 @@ sub launch_searches {
 	}
 
 	# clean up
-	`rm -f $bowtie2_r1_pipe $reads_file`;
+	`rm -f $bowtie2_r1_pipe $last_rna_pipe $reads_file`;
 	`rm -f $bowtie2_r2_pipe` if defined($bowtie2_r2_pipe);
 	foreach my $last_pipe (@last_pipe_array) {
 		`rm -f $last_pipe`;
