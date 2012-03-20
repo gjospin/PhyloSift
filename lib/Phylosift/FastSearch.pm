@@ -758,6 +758,10 @@ sub write_candidates {
 										   reverse_translate => $self->{"dna"}
 				);
 				$new_seq =~ s/\*/X/g;    # bioperl uses * for stop codons but we want to give X to hmmer later
+			}elsif( $type =~ /\.rna/ && $cur_hit[2] > $cur_hit[3] ){
+				# check if we need to reverse complement this one
+				$new_seq =~ tr/ACGTacgt/TGCAtgca/;
+				$new_seq = reverse($new_seq);
 			}
 			$markerHits{$markerHit} = "" unless defined( $markerHits{$markerHit} );
 			$markerHits{$markerHit} .= ">" . $new_id . "\n" . $new_seq . "\n";
