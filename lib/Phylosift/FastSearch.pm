@@ -85,7 +85,7 @@ sub run_search {
 	# ensure databases and sequences are prepared for search
 	debug "before rapPrepandclean\n";
 	prep_and_clean( self => $self );
-	read_marker_lengths( self => $self );
+	#read_marker_lengths( self => $self );
 
 	# search reads/contigs against marker database
 	my $searchtype = "blast";
@@ -332,7 +332,8 @@ sub lastal_table {
 	my %args       = @_;
 	my $self       = $args{self} || miss("self");
 	my $query_file = $args{query_file} || miss("query_file");
-	my $lastal_cmd = "$Phylosift::Utilities::lastal -F15 -e75 -f0 $Phylosift::Utilities::marker_dir/replast $query_file |";
+	my $db = Phylosift::Utilities::get_lastal_db( self => $self );
+	my $lastal_cmd = "$Phylosift::Utilities::lastal -F15 -e75 -f0 $db $query_file |";
 	debug "Running $lastal_cmd";
 	my $HISTREAM = ps_open($lastal_cmd);
 	return $HISTREAM;
@@ -349,7 +350,8 @@ sub lastal_table_rna {
 	my %args       = @_;
 	my $self       = $args{self} || miss("self");
 	my $query_file = $args{query_file} || miss("query_file");
-	my $lastal_cmd = "$Phylosift::Utilities::lastal -e300 -f0 $Phylosift::Utilities::marker_dir/rnadb $query_file |";
+	my $db_rna = Phylosift::Utilities::get_bowtie2_db( self => $self );
+	my $lastal_cmd = "$Phylosift::Utilities::lastal -e300 -f0 $db_rna $query_file |";
 	debug "Running $lastal_cmd";
 	my $HISTREAM = ps_open($lastal_cmd);
 	return $HISTREAM;
@@ -694,6 +696,7 @@ sub write_candidates {
 			# check to ensure hit covers enough of the marker
 			# TODO: make this smarter about boundaries, e.g. allow a smaller fraction to hit
 			# if it looks like the query seq goes off the marker boundary
+			$markerLength{$markerHit} = Phylosift::Utilities::get_marker_length( self => $self , marker => $markerHit ) unless exists $markerLength{$markerHit};
 			if ( !defined($markerHit) || !defined( $markerLength{$markerHit} ) ) {
 				debug "markerHit is $markerHit\n";
 				debug $markerLength{$markerHit} . "\n";

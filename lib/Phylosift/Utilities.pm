@@ -1195,6 +1195,18 @@ sub get_bowtie2_db {
 	return get_db(%args);
 }
 
+=head2 get_lastal_db
+
+returns the name and path of the lastal DB
+
+=cut
+
+sub get_lastal_db {
+	my %args = @_;
+	$args{db_name} = "replast";
+	return get_db(%args);
+}
+
 sub get_candidate_file {
 	my %args   = @_;
 	my $self   = $args{self};

@@ -20,7 +20,6 @@ Phylosift::MarkerAlign - Subroutines to align reads to marker HMMs
 Version 0.01
 
 =cut
-
 our $VERSION = '0.01';
 
 =head1 SYNOPSIS
@@ -53,7 +52,6 @@ if you don't export anything, such as for a purely object-oriented module.
 =head2 MarkerAlign
 
 =cut
-
 my $minAlignedResidues = 20;
 
 sub MarkerAlign {
@@ -126,8 +124,6 @@ sub directoryPrepAndClean {
 my @search_types = ( "", ".lastal" );
 my @search_types_rna = ( "", ".lastal.rna", ".rna" );
 
-=cut
-
 =head2 markerPrepAndRun
 
 =cut
@@ -138,7 +134,8 @@ sub markerPrepAndRun {
 	my $markRef = $args{marker_reference} || miss("marker_reference");
 	debug "ALIGNDIR : " . $self->{"alignDir"} . "\n";
 	foreach my $marker ( @{$markRef} ) {
-		unless (Phylosift::Utilities::is_protein_marker( marker => $marker )){
+		unless ( Phylosift::Utilities::is_protein_marker( marker => $marker ) ) {
+
 			# concat all RNA candidates to a single file
 			my $candidate_base = Phylosift::Utilities::get_candidate_file( self => $self, marker => $marker, type => ".rna" );
 			unlink($candidate_base);
@@ -312,7 +309,7 @@ sub aa_to_dna_aln {
 											 -strand        => 1,
 											 -seq           => $nt_seqstr,
 											 -verbose       => -1,
-											 -nowarnonempty => 1											 
+											 -nowarnonempty => 1
 		);
 		$dnaalign->add_seq($newdna);
 	}
@@ -352,7 +349,6 @@ sub alignAndMask {
 			debug "Setting up cmalign for marker $marker\n";
 			my $candidate = Phylosift::Utilities::get_candidate_file( self => $self, marker => $marker, type => ".rna" );
 			next unless -e $candidate;
-
 			$refcount = Phylosift::Utilities::get_count_from_reps( self => $self, marker => $marker );
 
 			#if the marker is rna, use infernal instead of hmmalign
@@ -388,11 +384,13 @@ sub alignAndMask {
 			if ( $line =~ /^>(.+)/ ) {
 				my $new_name = $1;
 				writeAlignedSeq(
-								 self         => $self,
-								 prev_name    => $prev_name,
-								 prev_seq     => $prev_seq,
-								 seq_count    => 0
-				) if $seqCount <= $refcount && $seqCount > 0;
+								 self      => $self,
+								 prev_name => $prev_name,
+								 prev_seq  => $prev_seq,
+								 seq_count => 0
+				  )
+				  if $seqCount <= $refcount
+					  && $seqCount > 0;
 				writeAlignedSeq(
 								 self         => $self,
 								 OUTPUT       => $ALIOUT,
@@ -420,16 +418,17 @@ sub alignAndMask {
 		) if $seqCount > $refcount;
 		$seqCount -= $refcount;
 		close $UNMASKEDOUT;
+		close $ALIOUT;
 
 		# do we need to output a nucleotide alignment in addition to the AA alignment?
 		foreach my $type (@search_types) {
+
 			#if it exists read the reference nucleotide sequences for the candidates
 			my %referenceNuc    = ();
-			my $core_file_name  = Phylosift::Utilities::get_candidate_file( self => $self, marker => $marker, type => $type , dna => 1 );
+			my $core_file_name  = Phylosift::Utilities::get_candidate_file( self => $self, marker => $marker, type => $type, dna => 1 );
 			my @candidate_files = <$core_file_name.*>;
-			foreach my $cand_file ( @candidate_files ) {
+			foreach my $cand_file (@candidate_files) {
 				if ( -e $cand_file && -e $outputFastaAA ) {
-		
 					my $REFSEQSIN = ps_open($cand_file);
 					my $currID    = "";
 					my $currSeq   = "";
@@ -445,7 +444,6 @@ sub alignAndMask {
 					close($REFSEQSIN);
 				}
 				my $ALITRANSOUT = ps_open( ">>" . $outputFastaDNA );
-				
 				my $aa_ali = new Bio::AlignIO( -file => $self->{"alignDir"} . "/$marker.unmasked", -format => 'fasta' );
 				if ( my $aln = $aa_ali->next_aln() ) {
 					my $dna_ali = &aa_to_dna_aln( aln => $aln, dna_seqs => \%referenceNuc );
@@ -467,7 +465,65 @@ sub alignAndMask {
 			warn "Masking or hmmsearch thresholds failed, removing $marker from the list\n";
 			splice @{$markRef}, $index--, 1;
 		}
+
+		# check alignments so it merges sequences in case of paired end reads
+		if ( $self->{"readsFile_2"} ne "" ) {
+			merge_alignment( alignment_file => $self->{"alignDir"} . "/$mbname.unmasked", type => 'AA' );
+			merge_alignment( alignment_file => $outputFastaAA,                            type => 'AA' );
+			merge_alignment( alignment_file => $outputFastaDNA,                           type => 'DNA' );
+		}
 	}
+}
+
+=head2 merge_alignment
+
+merge alignments by combining sequences from paired end reads.
+If aligned columns do not match an X will be used for amino acids and a N will be used for nucleotides
+if a residue will always win over a gap
+=cut
+
+sub merge_alignment {
+	my %args     = @_;
+	my $ali_file = $args{alignment_file};
+	my $type     = $args{type};
+	my %seqs     = ();
+	my $seq_IO   = Phylosift::Utilities::open_SeqIO_object( file => $ali_file );
+	while ( my $seq = $seq_IO->next_seq() ) {
+		$seq->id =~ m/^(\S+)(\d+)$/;
+		my $core = $1;
+
+		#debug "Comparing " . $seq->id . " with " . $core . "\n";
+		if ( exists $seqs{$core} ) {
+			my @seq1 = split( //, $seqs{$core} );
+			my @seq2 = split( //, $seq->seq );
+			my $result_seq = "";
+			for ( my $i = 0 ; $i < length( $seqs{$core} ) ; $i++ ) {
+				if ( $seq1[$i] eq $seq2[$i] ) {
+					$result_seq .= $seq1[$i];
+				} elsif ( $seq1[$i] =~ /[a-z]/ && $seq2[$i] =~ m/[a-z]/ && $seq1[$i] ne $seq2[$i] ) {
+					$result_seq .= $type eq 'AA' ? 'x' : 'n';
+				} elsif ( $seq1[$i] =~ /[A-Z]/ && $seq2[$i] =~ m/[A-Z]/ && $seq1[$i] ne $seq2[$i] ) {
+					$result_seq .= $type eq 'AA' ? 'X' : 'N';
+				} elsif ( $seq1[$i] =~ /[-\.]/ && $seq2[$i] =~ m/[A-Za-z]/ ) {
+					$result_seq .= $seq2[$i];
+				} elsif ( $seq1[$i] =~ m/[A-Za-z]/ && $seq2[$i] =~ /[-\.]/ ) {
+					$result_seq .= $seq1[$i];
+				} else {
+					debug "FOUND A SPECIAL CASE $seq1[$i] $seq2[$i]\n";
+				}
+			}
+			$seqs{$core} = $result_seq;
+		} else {
+			$seqs{$core} = $seq->seq;
+		}
+	}
+
+	#print to the alignment file
+	my $FH = ps_open( ">" . $ali_file );
+	foreach my $core ( keys %seqs ) {
+		print $FH ">" . $core . "\n" . $seqs{$core} . "\n";
+	}
+	close($FH);
 }
 
 sub getPMPROKMarkerAlignmentFiles {
@@ -541,5 +597,4 @@ See http://dev.perl.org/licenses/ for more information.
 
 
 =cut
-
 1;    # End of Phylosift::MarkerAlign.pm
