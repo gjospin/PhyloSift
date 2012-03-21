@@ -144,23 +144,22 @@ sub run {
 	read_phylosift_config( self => $self );
 	run_program_check( self => $self );
 	Phylosift::Utilities::data_checks( self => $self ) unless $self->{"mode"} eq 'build_marker';
-	file_check( self => $self ) unless $self->{"mode"} eq 'index' ;
-	directory_prep( self => $self, force => $force ) unless $self->{"mode"} eq 'index' ;
+	file_check( self => $self ) unless $self->{"mode"} eq 'index';
+	directory_prep( self => $self, force => $force ) unless $self->{"mode"} eq 'index';
 	$self->{"readsFile"} = prep_isolate_files( self => $self, file => $self->{"readsFile"} ) if $self->{"isolate"} == 1;
 
 	# Forcing usage of updated markers
 	$self->{"updated"} = 1;
 	debug "Using updated markers\n" if $self->{"updated"};
-
-	#create a file with a list of markers called markers.list
-	debug "CUSTOM = " . $custom . "\n";
 	my @markers = Phylosift::Utilities::gather_markers( self => $self, marker_file => $custom );
 	if ( $self->{"extended"} ) {
 		@markers = Phylosift::Utilities::gather_markers( self => $self, path => $Phylosift::Utilities::markers_extended_dir );
 	}
-	debug "@markers\n";
+	     #create a file with a list of markers called markers.list
+	debug "CUSTOM = " . $custom . "\n";
 	debug "MODE :: " . $self->{"mode"} . "\n";
 	if ( $self->{"mode"} eq 'search' || $self->{"mode"} eq 'all' ) {
+		debug "@markers\n";
 		$self = run_search( self => $self, cont => $continue, custom => $custom, marker => \@markers );
 		debug "MODE :: " . $self->{"mode"} . "\n";
 	}
@@ -183,10 +182,11 @@ sub run {
 		$self = compare( self => $self );
 	}
 	if ( $self->{"mode"} eq 'index' ) {
-		@markers = Phylosift::Utilities::gather_markers( self => $self, path => $Phylosift::Utilities::marker_dir, allow_missing_hmm=>1 );
+		@markers = Phylosift::Utilities::gather_markers( self => $self, path => $Phylosift::Utilities::marker_dir, allow_missing_hmm => 1 );
 		Phylosift::Utilities::index_marker_db( self => $self, markers => \@markers, path => $Phylosift::Utilities::marker_dir );
-		my @extended_markers = Phylosift::Utilities::gather_markers( self => $self, path => $Phylosift::Utilities::markers_extended_dir, allow_missing_hmm=>1 )
-		  if -d $Phylosift::Utilities::markers_extended_dir && $self->{"extended"};;
+		my @extended_markers =
+		  Phylosift::Utilities::gather_markers( self => $self, path => $Phylosift::Utilities::markers_extended_dir, allow_missing_hmm => 1 )
+		  if -d $Phylosift::Utilities::markers_extended_dir && $self->{"extended"};
 		Phylosift::Utilities::index_marker_db( self => $self, markers => \@extended_markers, path => $Phylosift::Utilities::markers_extended_dir )
 		  if -d $Phylosift::Utilities::markers_extended_dir && $self->{"extended"};
 	}
@@ -290,12 +290,12 @@ and isolate names in memory and using that at later stages of the pipeline
 =cut
 
 sub prep_isolate_files {
-	my %args = @_;
-	my $self = $args{self} || miss("self");
-	my $file = $args{file} || miss("file");
-	my $OUTFILE = ps_open( ">" . $self->{"fileDir"} . "/isolates.fasta" );
-	my $ISOLATEFILE = ps_open( $file );
-	my $fname = $self->{"fileDir"} . "/" . basename($file);
+	my %args        = @_;
+	my $self        = $args{self} || miss("self");
+	my $file        = $args{file} || miss("file");
+	my $OUTFILE     = ps_open( ">" . $self->{"fileDir"} . "/isolates.fasta" );
+	my $ISOLATEFILE = ps_open($file);
+	my $fname       = $self->{"fileDir"} . "/" . basename($file);
 	debug "Operating on isolate file $fname\n";
 	print $OUTFILE ">" . basename($file) . "\n";
 
@@ -370,7 +370,7 @@ sub benchmark {
 	my %args = @_;
 	my $self = $args{self} || miss("self");
 	debug "RUNNING Benchmark\n";
-	Phylosift::Benchmark::runBenchmark( self=>$self, output_path=>"./" );
+	Phylosift::Benchmark::runBenchmark( self => $self, output_path => "./" );
 }
 
 =head2 compare

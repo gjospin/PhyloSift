@@ -246,7 +246,7 @@ sub writeAlignedSeq {
 	$prev_name = Phylosift::Summarize::tree_name( name => $prev_name );
 
 	#add a paralog ID if we're running in isolate mode and more than one good hit
-	$prev_name .= "_p$seq_count" if $seq_count > 0 && $self->{"isolate"};
+	#$prev_name .= "_p$seq_count" if $seq_count > 0 && $self->{"isolate"};
 
 	#print the new trimmed alignment
 	print $OUTPUT ">$prev_name\n$prev_seq\n"      if defined($OUTPUT);
@@ -444,6 +444,11 @@ sub alignAndMask {
 					close($REFSEQSIN);
 				}
 				my $ALITRANSOUT = ps_open( ">>" . $outputFastaDNA );
+
+				if( $self->{"extended"} ){
+				    $marker =~ s/^\d+\///g;
+				}
+				debug "MARKER : $marker\n";
 				my $aa_ali = new Bio::AlignIO( -file => $self->{"alignDir"} . "/$marker.unmasked", -format => 'fasta' );
 				if ( my $aln = $aa_ali->next_aln() ) {
 					my $dna_ali = &aa_to_dna_aln( aln => $aln, dna_seqs => \%referenceNuc );

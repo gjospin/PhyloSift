@@ -59,7 +59,7 @@ my $blastdb_name  = "blastrep.faa";
 my $blastp_params = "-p blastp -e 0.1 -b 50000 -v 50000 -m 8";
 my $blastn_params = "-p blastn -e 0.1 -b 50000 -v 50000 -m 8";
 my %markerLength;
-
+my $suff = 1;
 sub run_search {
 	my %args       = @_;
 	my $self       = $args{self} || miss("self");
@@ -141,8 +141,13 @@ sub launch_searches {
 				$hitstream = lastal_table( self => $self, query_file => $last_pipe_array[ $count - 1 ] );
 				$candidate_type = ".lastal";
 			} elsif ( $count == $self->{"threads"} + 1 ) {
+			    if (-e Phylosift::Utilities::get_bowtie2_db(self=>$self)){
 				$hitstream = lastal_table_rna( self => $self, query_file => $last_rna_pipe );
 				$candidate_type = ".lastal.rna";
+			    }else{
+				`rm $last_rna_pipe` if -e $last_rna_pipe;
+				exit 0;
+			    }
 			} elsif ( $count == $self->{"threads"} + 2 ) {
 
 				#exit the thread if the bowtie DB does not exist
@@ -161,7 +166,7 @@ sub launch_searches {
 				$hitsref = get_hits_sam( self => $self, HITSTREAM => $hitstream );
 				#$hitsref = get_hits_contigs( self => $self, HITSTREAM => $hitstream, searchtype => "lastal" );
 			} else {
-				$hitsref = get_hits_contigs( self => $self, HITSTREAM => $hitstream, searchtype => "lastal" );
+				$hitsref = get_hits_contigs( self => $self, HITSTREAM => $hitstream, searchtype => "lastal" , pid=>$count);
 			} 
 
 			# write out sequence regions hitting marker genes to candidate files
@@ -399,7 +404,6 @@ sub translate_frame {
 	my $return_seq        = "";
 	my $new_seq           = Bio::LocatableSeq->new( -seq => $seq, -id => 'temp', -verbose => 0 );
 	$new_seq = $new_seq->revcom() if ( $frame < 0 );
-
 	if ($reverse_translate) {
 		$id = Phylosift::Summarize::tree_name( name => $id );
 		if ( exists $markerNuc{$marker} ) {
@@ -423,9 +427,8 @@ sub get_hits_contigs {
 	my $self       = $args{self} || miss("self");
 	my $HITSTREAM  = $args{HITSTREAM} || miss("HITSTREAM");
 	my $searchtype = $args{searchtype} || miss("searchtype");    # can be blastx or lastal
-
+	my $pid = $args{pid} || miss("pid");
 	my $prev_hit="";
-	my $suff = 1;
 
 	# key is a contig name
 	# value is an array of arrays, each one has [marker,bit_score,left-end,right-end,suffix]
@@ -469,7 +472,7 @@ sub get_hits_contigs {
 		if(	$prev_hit eq $query){
 			$suff++;
 		}else{
-			$suff=1;
+			#$suff=1;
 		}
 
 		# running on long reads or an assembly
@@ -490,7 +493,7 @@ sub get_hits_contigs {
 				{
 
 					# debug "Found overlap $query and $markerName, $query_start:$query_end\n";
-					$contig_hits{$query}->[$i] = [ $markerName, $bitScore, $query_start, $query_end, $frameshift, $suff ] if ( $bitScore > $prevhit[1] );
+					$contig_hits{$query}->[$i] = [ $markerName, $bitScore, $query_start, $query_end, $frameshift, $pid."_".$suff ] if ( $bitScore > $prevhit[1] );
 					last;
 				}
 
@@ -502,18 +505,18 @@ sub get_hits_contigs {
 				{
 
 					# debug "Found overlap $query and $markerName, $query_start:$query_end\n";
-					$contig_hits{$query}->[$i] = [ $markerName, $bitScore, $query_start, $query_end, $frameshift, $suff ] if ( $bitScore > $prevhit[1] );
+					$contig_hits{$query}->[$i] = [ $markerName, $bitScore, $query_start, $query_end, $frameshift, $pid."_".$suff ] if ( $bitScore > $prevhit[1] );
 					last;
 				}
 			}
 			if ( $i == @{ $contig_hits{$query} } ) {
 
 				# no overlap was found, include this hit
-				my @hitdata = [ $markerName, $bitScore, $query_start, $query_end, $frameshift, $suff ];
+				my @hitdata = [ $markerName, $bitScore, $query_start, $query_end, $frameshift, $pid."_".$suff ];
 				push( @{ $contig_hits{$query} }, @hitdata );
 			}
 		} elsif ( !defined( $contig_top_bitscore{$query} ) ) {
-			my @hitdata = [ $markerName, $bitScore, $query_start, $query_end, $frameshift , $suff];
+			my @hitdata = [ $markerName, $bitScore, $query_start, $query_end, $frameshift , $pid."_".$suff];
 			push( @{ $contig_hits{$query} }, @hitdata );
 			$contig_top_bitscore{$query}{$markerName} = $bitScore;
 		}
@@ -709,7 +712,7 @@ sub write_candidates {
 			my $new_seq;
 			$new_seq = substr( $seq->seq, $start, $end - $start );
 			my $new_id = $seq->id;
-			my $new_if .= "_p$suff\n" if ($self->{"isolate"} && !$self->{"besthit"});
+			$new_id .= "_p$suff" if ($self->{"isolate"} && !$self->{"besthit"});
 			#if we're working from DNA then need to translate to protein
 			if ( $self->{"dna"} && $type !~ /\.rna/ ) {
 
