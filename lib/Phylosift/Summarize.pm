@@ -6,6 +6,7 @@ use Phylosift::Utilities qw(:all);
 use Carp;
 use Bio::Phylo;
 use Bio::Phylo::Forest::Tree;
+use JSON;
 
 if ( $^O =~ /arwin/ ) {
 	use lib "$FindBin::Bin/osx/darwin-thread-multi-2level/";
@@ -260,49 +261,41 @@ sub summarize {
 		}
 
 		# then read & map the placement
-		my $PLACEFILE = ps_open( $placeFile );
-		my $placeline = 0;
-		my %curplaces;
-		while ( my $line = <$PLACEFILE> ) {
-			print $PP_COVFILE $line if ( defined $self->{"coverage"} );
-			$placeline = 1 if ( $line =~ /"placements"/ );
-			next if ( $line =~ /^\>/ );
-			next if ( $line =~ /^\s*\#/ );
-			if ( $placeline == 1 && $line =~ /\[(\d+),\s.\d+\.?\d+,\s(\d+\.?\d*),/ ) {
-				$curplaces{$1} = $2;
-			}
+		my $JPLACEFILE = ps_open( $placeFile );
+		my @treedata = <$JPLACEFILE>;	
+		close $JPLACEFILE;
+		my $json_data = decode_json( join("", @treedata) );
 
-			# have we reached the end of a placement entry?
-			if ( $placeline == 1 && $line =~ /\"nm\"\:\s+\[\[\"(.+?)\",\s+\d+\]\]/ ) {
-				my $qname = $1;
+		# for each placement record
+		for(my $i=0; $i< @{$json_data->{placements}}; $i++){
+			my $place = $json_data->{placements}->[$i];
+			my $qname = $place->{nm}->[0]->[0];
+			my $qweight = $place->{nm}->[0]->[1];
+			# for each placement edge in the placement record
+			for( my $j=0; $j < @{$place->{p}}; $j++){
+				my $edge = $place->{p}->[$j]->[0];
 
-				# tally up the probabilities on different NCBI groups
-				foreach my $edge ( keys(%curplaces) ) {
-					my $weightRatio = $curplaces{$edge};
-					$weightRatio *= $coverage{$qname} if defined( $coverage{$qname} );
-					print STDERR "Marker $marker missing mapping from phylogeny edge $edge to taxonomy\n" unless defined( $markerncbimap{$edge} );
-					next unless defined( $markerncbimap{$edge} );
-					my $mapcount = scalar( @{ $markerncbimap{$edge} } );
-					print STDERR "Found 0 taxa for edge $edge\n" if ( scalar( @{ $markerncbimap{$edge} } ) == 0 );
-					foreach my $taxon ( @{ $markerncbimap{$edge} } ) {
-						my ( $taxon_name, $taxon_level, $taxon_id ) = get_taxon_info( taxon => $taxon );
+				croak( "Marker $marker missing mapping from phylogeny edge $edge to taxonomy" ) unless defined( $markerncbimap{$edge} );
+				next unless defined( $markerncbimap{$edge} );
+				my $mapcount = scalar( @{ $markerncbimap{$edge} } );
+				croak( "Found 0 taxa for edge $edge\n" ) if ( scalar( @{ $markerncbimap{$edge} } ) == 0 );
+				# for each taxon to which the current phylogeny edge could map
+				foreach my $taxon ( @{ $markerncbimap{$edge} } ) {
+					my ( $taxon_name, $taxon_level, $taxon_id ) = get_taxon_info( taxon => $taxon );
+					# for each query seq in the current placement record
+					for(my $k=0; $k < @{$place->{nm}}; $k++){
+						my $qname = $place->{nm}->[$k]->[0];
+						my $qweight = $place->{nm}->[$k]->[1];
 						$placements{$qname} = () unless defined( $placements{$qname} );
 						$placements{$qname}{$taxon_id} = 0 unless defined( $placements{$qname}{$taxon_id} );
-						$placements{$qname}{$taxon_id} += $curplaces{$edge} / $mapcount;
+						$placements{$qname}{$taxon_id} += $qweight / $mapcount;
 						$ncbireads{$taxon} = 0 unless defined $ncbireads{$taxon};
-						$ncbireads{$taxon} += $weightRatio / $mapcount;    # split the p.p. across the possible edge mappings
+						$ncbireads{$taxon} += $qweight / $mapcount;    # split the p.p. across the possible edge mappings
 					}
-
-					# if we have read coverage information, add it to an updated placement file
-					my $mass = 1;
-					$mass = $coverage{$qname} if defined( $coverage{$qname} );
-					my $massline = ", \"m\": \"$mass\"\n";
-					print $PP_COVFILE $line if ( defined $self->{"coverage"} );
 				}
-				%curplaces = ();
 			}
+
 		}
-		close $PP_COVFILE if ( defined $self->{"coverage"} );
 	}
 
 	# also write out the taxon assignments for sequences
