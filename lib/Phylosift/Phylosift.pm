@@ -159,7 +159,7 @@ sub run {
 	debug "CUSTOM = " . $custom . "\n";
 	debug "MODE :: " . $self->{"mode"} . "\n";
 	if ( $self->{"mode"} eq 'search' || $self->{"mode"} eq 'all' ) {
-		debug "@markers\n";
+		#debug "@markers\n";
 		$self = run_search( self => $self, cont => $continue, custom => $custom, marker => \@markers );
 		debug "MODE :: " . $self->{"mode"} . "\n";
 	}

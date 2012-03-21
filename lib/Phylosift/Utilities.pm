@@ -1092,6 +1092,7 @@ returns a SeqIO object
 sub open_SeqIO_object {
 	my %args = @_;
 	my $format = $args{format} || "FASTA";    #default
+	my $file = $args{file} || miss("file");
 	my $io_object;
 	if ( exists $args{format} ) {
 		$format = $args{format};
