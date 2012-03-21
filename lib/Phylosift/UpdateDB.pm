@@ -708,6 +708,7 @@ sub build_marker_trees_fasttree {
 #\$ -cwd
 #\$ -V
 #\$ -S /bin/bash
+export OMP_NUM_THREADS=3
 /home/koadman/bin/FastTree -log $aa_log $aa_fasta > $aa_tre
 };
 	`chmod 755 /tmp/ps_tree.sh`;
@@ -726,6 +727,8 @@ sub build_marker_trees_fasttree {
 #\$ -cwd
 #\$ -V
 #\$ -S /bin/bash
+#\$ -pe threaded 3
+export OMP_NUM_THREADS=3
 /home/koadman/bin/FastTree -nt -gtr -log $aa_log $aa_fasta > $aa_tre
 };
 	`chmod 755 /tmp/ps_tree_rna.sh`;
@@ -741,8 +744,13 @@ sub build_marker_trees_fasttree {
 		$tree_script = "/tmp/ps_tree_rna.sh" unless Phylosift::Utilities::is_protein_marker( marker => $marker );
 
 		# run fasttree on them
-		qsub_job(script=>$tree_script, job_ids=>\@jobids, script_args=>[$marker] );
+		my $qsub_args;
+		$qsub_args = "-pe threaded 3" if $marker eq "concat";
+		qsub_job(script=>$tree_script, job_ids=>\@jobids, qsub_args => $qsub_args, script_args=>[$marker] );
 		next unless Phylosift::Utilities::is_protein_marker( marker => $marker );
+
+		# only do codon markers once aa marker trees have already been pruned
+		next unless $pruned;
 
 		# run fasttree on codons
 		for(my $group_id=1; ; $group_id++){
@@ -859,7 +867,8 @@ sub pd_prune_markers {
 	my $REPS_DISTANCE  = 0.05;                                  # reps can be further diverged since we care only about similarity search and not read placement
 	my @markerlist     = Phylosift::Utilities::gather_markers();
 	unshift( @markerlist, "concat" );
-	for ( my $dna = 0 ; $dna < 2 ; $dna++ ) {                   # zero for aa, one for dna
+	my $dna = 0;
+#	for ( my $dna = 0 ; $dna < 2 ; $dna++ ) {                   # zero for aa, one for dna
 		foreach my $marker (@markerlist) {
 			next unless Phylosift::Utilities::is_protein_marker( marker => $marker );
 			my $tre = get_fasttree_tre_filename( marker => $marker, dna => $dna, updated => 1, pruned => 0 );
@@ -879,16 +888,17 @@ sub pd_prune_markers {
 				prune_marker( distance => $REPS_DISTANCE, tre => $tre, fasta => $clean_reps, pruned_fasta => $pruned_reps );
 			}
 		}
-	}
+#	}
 }
 
 sub qsub_job {
 	my %args = @_;
 	my $script = $args{script} || miss("script");
 	my $saref = $args{script_args};
+	my $qsub_args = $args{qsub_args} || "";
 	my $jobsref = $args{job_ids};
 	
-	my $qsub_cmd = "qsub -q all.q -q eisen.q $script ";
+	my $qsub_cmd = "qsub -q all.q -q eisen.q $qsub_args $script ";
 	$qsub_cmd .= join(" ", @$saref ) if defined($saref);
 	my $job      = `$qsub_cmd`;
 	$job =~ /Your job (\d+) /;
@@ -1032,7 +1042,7 @@ sub update_rna {
 
 =head2 make_codon_submarkers
 
-Find groups of closely related taxa that can would be better analyzed with DNA sequence rather than protein
+Find groups of closely related taxa that would be better analyzed with DNA sequence rather than protein
 
 =cut
 
