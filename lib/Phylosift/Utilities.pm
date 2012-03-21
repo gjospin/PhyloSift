@@ -1296,6 +1296,49 @@ sub index_marker_db {
 	}
 }
 
+=head2 gather_module_markers
+
+	ARGS: Phylosift Object, type needed "Summary" OR "Align" OR "Placer"
+	Return: Array of marker names
+	Gathers the marker names from the treeDir that will be used in the Summary module
+	** For FastSearch use gather_markers instead 
+
+=cut
+
+sub gather_module_markers{
+	my %args = @_;
+	my $self = $args{self} || miss("PhyloSift object");
+	my $type = $args{type} || miss("type");
+	my $extended = $args{extended} || 0;
+	my @marker_names = ();
+	my $dir = $self->{"blastDir"};
+	if( $type eq "Placer"){
+		#look in the alignDir
+		my @files = <$dir/*.*.candidate.aa.*>;
+		my %marker_hash = ();
+		foreach my $file (@files){
+			$file =~ m/^([^\.])\.(rna|lastal.rna|lastal)\.candidate\.aa/;
+			if($extended){
+				
+			}else{
+				$marker_hash{$1}=1;
+			}
+		}
+		@marker_names = keys(%marker_hash);
+	}elsif($type eq "Summary"){
+		#look in the treeDir
+	}elsif($type eq "Align"){
+		#look in the blastDir
+	}else{
+		$Carp::Verbose = 1;
+		croak("Type not recognized in Phylosift::Utilities::gather_module_markers");
+	}
+	
+	
+	return(@marker_names);
+}
+
+
 =head2 gather_markers
 
 =item *
