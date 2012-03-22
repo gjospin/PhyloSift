@@ -31,6 +31,18 @@ Usage
 
    sequence_file_1 and _2 need to be in fastq format
 
+Examples
+==========================================
+> phylosift all --output=my_results illumina_reads.fastq
+This command analyzes FastQ format sequence reads and stores the results in a directory called my_results.
+
+> phylosift all --output=genome genome_assembly.fasta
+This command will analyze the fasta format genome assembly in genome_assembly.fasta and store the results in a directory called genome.
+
+> phylosift all proteins.fa
+This example searches a set of protein sequences. When --output is not given, the results go to a directory called PS_temp/<filename>
+
+
 Creating a PhyloSift Marker (Does not allow for taxonomic summaries, only searching, aligning and placement steps)
 ===========================================
 
@@ -69,6 +81,7 @@ my $ps = new Phylosift::Phylosift();
 $ps->{"threads"} = 1;
 
 GetOptions(
+	"output=s"   => \$ps->{"fileDir"}, # directory for output
 	"clean"      => \$clean,
 	"paired"     => \$pair,        # used for paired fastQ input split in 2 different files
 	"custom=s"   => \$custom,      #need a file containing the marker names to use without extensions ** marker names shouldn't contain '_'

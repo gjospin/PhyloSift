@@ -107,7 +107,6 @@ sub directoryPrepAndClean {
 	my %args    = @_;
 	my $self    = $args{self} || miss("self");
 	my $markRef = $args{marker_reference} || miss("marker_reference");
-	`mkdir -p $self->{"tempDir"}`;
 
 	#create a directory for the Reads file being processed.
 	`mkdir -p $self->{"fileDir"}`;

@@ -33,7 +33,6 @@ sub new {
 	$self->{"mode"}        = undef;
 	$self->{"readsFile"}   = undef;
 	$self->{"readsFile_2"} = undef;
-	$self->{"tempDir"}     = undef;
 	$self->{"fileDir"}     = undef;
 	$self->{"blastDir"}    = undef;
 	$self->{"alignDir"}    = undef;
@@ -67,8 +66,9 @@ sub initialize {
 	$self->{"mode"}        = $mode;
 	$self->{"readsFile"}   = $readsFile;
 	$self->{"readsFile_2"} = $readsFile_2;
-	$self->{"tempDir"}     = $self->{"workingDir"} . "/PS_temp";
-	$self->{"fileDir"}     = $self->{"tempDir"} . "/" . $self->{"fileName"};
+	unless(defined($self->{"fileDir"})){
+		$self->{"fileDir"}     = $self->{"workingDir"} . "/PS_temp/" . $self->{"fileName"};
+	}
 	$self->{"blastDir"}    = $self->{"fileDir"} . "/blastDir";
 	$self->{"alignDir"}    = $self->{"fileDir"} . "/alignDir";
 	$self->{"treeDir"}     = $self->{"fileDir"} . "/treeDir";
@@ -127,7 +127,7 @@ if you don't export anything, such as for a purely object-oriented module.
 
 =cut
 my $continue = 0;
-my ( $mode, $readsFile, $readsFile_2, $fileName, $tempDir, $fileDir, $blastDir, $alignDir, $treeDir ) = "";
+my ( $mode, $readsFile, $readsFile_2, $fileName, $fileDir, $blastDir, $alignDir, $treeDir ) = "";
 my ( $sec,  $min,       $hour,        $mday,     $mon,     $year,    $wday,     $yday,     $isdst )   = 0;
 my $workingDir = getcwd;
 
@@ -334,14 +334,11 @@ sub directory_prep {
 			   . ", or force overwrite with the -f command-line option\n" );
 	}
 
-	#check if the temporary directory exists, if it doesn't create it.
-	`mkdir $self->{"tempDir"}` unless ( -e $self->{"tempDir"} );
-
 	#create a directory for the Reads file being processed.
-	`mkdir $self->{"fileDir"}`  unless ( -e $self->{"fileDir"} );
-	`mkdir $self->{"blastDir"}` unless ( -e $self->{"blastDir"} );
-	`mkdir $self->{"alignDir"}` unless ( -e $self->{"alignDir"} );
-	`mkdir $self->{"treeDir"}`  unless ( -e $self->{"treeDir"} );
+	`mkdir -p $self->{"fileDir"}`  unless ( -e $self->{"fileDir"} );
+	`mkdir -p $self->{"blastDir"}` unless ( -e $self->{"blastDir"} );
+	`mkdir -p $self->{"alignDir"}` unless ( -e $self->{"alignDir"} );
+	`mkdir -p $self->{"treeDir"}`  unless ( -e $self->{"treeDir"} );
 	return $self;
 }
 

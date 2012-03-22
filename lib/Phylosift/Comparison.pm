@@ -47,7 +47,6 @@ sub compare {
 	# 3. create a new concat package with the rppr voronoi taxa
 	# 4. re-place reads from each sample
 	# 5. now do the above steps listed in "simple approach"
-	$parent_directory = $self->{"tempDir"};
 	my $JPLACES = ps_open( "ls -1 $parent_directory/*/treeDir/concat.trim.jplace |" );
 	my @files;
 	while ( my $file = <$JPLACES> ) {

@@ -804,7 +804,6 @@ sub prep_and_clean {
 	my %args = @_;
 	my $self = $args{self} || miss("self");
 	debug "prepclean MARKERS @markers\n";
-	`mkdir $self->{"tempDir"}` unless ( -e $self->{"tempDir"} );
 
 	#create a directory for the Reads file being processed.
 	`mkdir $self->{"fileDir"}`  unless ( -e $self->{"fileDir"} );

@@ -308,8 +308,7 @@ sub weight_placements {
 sub directoryPrepAndClean {
 	my %args = @_;
 	my $self = $args{self} || miss("self");
-	`mkdir $self->{"tempDir"}` unless ( -e $self->{"tempDir"} );
-
+	
 	#create a directory for the Reads file being processed.
 	`mkdir $self->{"fileDir"}` unless ( -e $self->{"fileDir"} );
 	`mkdir $self->{"treeDir"}` unless ( -e $self->{"treeDir"} );
