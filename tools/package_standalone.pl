@@ -6,8 +6,11 @@ use strict;
 use warnings;
 `rm -rf PhyloSift`;
 
+my $branch = $ARGV[0] || "master";
+
 #`rm -rf bioperl-live`;
 `git clone git://github.com/gjospin/PhyloSift.git`;
+`cd PhyloSift ; git checkout $branch`;
 `rm -rf PhyloSift/.git`;
 `rm PhyloSift/Makefile.PL`;
 `rm PhyloSift/ignore.txt`;
@@ -48,6 +51,24 @@ chdir("Locale-Maketext-1.19");
 `perl Makefile.PL`;
 `make`;
 `mv blib/lib/Locale/ ../PhyloSift/lib/`;
+chdir("..");
+
+# XML::Writer
+`wget http://search.cpan.org/CPAN/authors/id/J/JO/JOSEPHW/XML-Writer-0.615.tar.gz`;
+`tar xzf XML-Writer-0.615.tar.gz`;
+chdir("XML-Writer-0.615");
+`perl Makefile.PL`;
+`make`;
+`mv blib/lib/XML/ ../PhyloSift/lib/`;
+chdir("..");
+
+# libwww-perl (for LWP::Simple)
+`wget http://search.cpan.org/CPAN/authors/id/G/GA/GAAS/libwww-perl-6.04.tar.gz`;
+`tar xzf libwww-perl-6.04.tar.gz`;
+chdir("libwww-perl-6.04");
+`perl Makefile.PL`;
+`make`;
+`mv blib/lib/LWP/ ../PhyloSift/lib/`;
 chdir("..");
 
 # add Version.pm

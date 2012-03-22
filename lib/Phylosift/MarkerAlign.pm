@@ -20,6 +20,7 @@ Phylosift::MarkerAlign - Subroutines to align reads to marker HMMs
 Version 0.01
 
 =cut
+
 our $VERSION = '0.01';
 
 =head1 SYNOPSIS
@@ -52,6 +53,7 @@ if you don't export anything, such as for a purely object-oriented module.
 =head2 MarkerAlign
 
 =cut
+
 my $minAlignedResidues = 20;
 
 sub MarkerAlign {
@@ -105,7 +107,6 @@ sub directoryPrepAndClean {
 	my %args    = @_;
 	my $self    = $args{self} || miss("self");
 	my $markRef = $args{marker_reference} || miss("marker_reference");
-	`mkdir -p $self->{"tempDir"}`;
 
 	#create a directory for the Reads file being processed.
 	`mkdir -p $self->{"fileDir"}`;
@@ -125,24 +126,23 @@ my @search_types = ( "", ".lastal" );
 my @search_types_rna = ( "", ".lastal.rna", ".rna" );
 
 sub split_rna_on_size {
-	my %args    = @_;
-	my $in_fasta = $args{in_file} || miss("in_file");
+	my %args      = @_;
+	my $in_fasta  = $args{in_file} || miss("in_file");
 	my $short_out = $args{short_out} || miss("short_out");
-	my $long_out = $args{long_out} || miss("long_out");
-
+	my $long_out  = $args{long_out} || miss("long_out");
 	my $LONG_OUT;
 	my $SHORT_OUT;
-	my $seq_in = Phylosift::Utilities::open_SeqIO_object(file=>$in_fasta);
-	while(my $seq = $seq_in->next_seq){
+	my $seq_in = Phylosift::Utilities::open_SeqIO_object( file => $in_fasta );
+	while ( my $seq = $seq_in->next_seq ) {
 		my $OUT;
-		if($seq->length>500){
-			$LONG_OUT = ps_open(">>".$long_out) unless defined $LONG_OUT && fileno $LONG_OUT;
+		if ( $seq->length > 500 ) {
+			$LONG_OUT = ps_open( ">>" . $long_out ) unless defined $LONG_OUT && fileno $LONG_OUT;
 			$OUT = $LONG_OUT;
-		}else{
-			$SHORT_OUT = ps_open(">>".$short_out) unless defined $SHORT_OUT && fileno $SHORT_OUT;
+		} else {
+			$SHORT_OUT = ps_open( ">>" . $short_out ) unless defined $SHORT_OUT && fileno $SHORT_OUT;
 			$OUT = $SHORT_OUT;
 		}
-		print $OUT ">".$seq->id."\n".$seq->seq."\n";
+		print $OUT ">" . $seq->id . "\n" . $seq->seq . "\n";
 	}
 }
 
@@ -158,9 +158,10 @@ sub markerPrepAndRun {
 	my $markRef = $args{marker_reference} || miss("marker_reference");
 	debug "ALIGNDIR : " . $self->{"alignDir"} . "\n";
 	foreach my $marker ( @{$markRef} ) {
-		unless (Phylosift::Utilities::is_protein_marker( marker => $marker )){
+		unless ( Phylosift::Utilities::is_protein_marker( marker => $marker ) ) {
+
 			# separate RNA candidates by size
-			my $candidate_long = Phylosift::Utilities::get_candidate_file( self => $self, marker => $marker, type => ".rna.long" );
+			my $candidate_long  = Phylosift::Utilities::get_candidate_file( self => $self, marker => $marker, type => ".rna.long" );
 			my $candidate_short = Phylosift::Utilities::get_candidate_file( self => $self, marker => $marker, type => ".rna.short" );
 			unlink($candidate_long);
 			unlink($candidate_short);
@@ -168,7 +169,7 @@ sub markerPrepAndRun {
 				my $candidate = Phylosift::Utilities::get_candidate_file( self => $self, marker => $marker, type => $type );
 				my @candidate_files = <$candidate.*>;
 				foreach my $cand_file (@candidate_files) {
-					split_rna_on_size(in_file=>$cand_file, short_out =>$candidate_short, long_out=>$candidate_long);
+					split_rna_on_size( in_file => $cand_file, short_out => $candidate_short, long_out => $candidate_long );
 				}
 			}
 			next;
@@ -272,7 +273,6 @@ sub writeAlignedSeq {
 
 	#add a paralog ID if we're running in isolate mode and more than one good hit
 	#$prev_name .= "_p$seq_count" if $seq_count > 0 && $self->{"isolate"};
-
 	#print the new trimmed alignment
 	print $OUTPUT ">$prev_name\n$prev_seq\n"      if defined($OUTPUT);
 	print $UNMASKEDOUT ">$prev_name\n$orig_seq\n" if defined($UNMASKEDOUT);
@@ -375,28 +375,26 @@ sub alignAndMask {
 			@lines = <$HMMALIGN>;
 		} else {
 			debug "Setting up cmalign for marker $marker\n";
-			my $candidate_long = Phylosift::Utilities::get_candidate_file( self => $self, marker => $marker, type => ".rna.long" );
+			my $candidate_long  = Phylosift::Utilities::get_candidate_file( self => $self, marker => $marker, type => ".rna.long" );
 			my $candidate_short = Phylosift::Utilities::get_candidate_file( self => $self, marker => $marker, type => ".rna.short" );
 
 			#if the marker is rna, use infernal instead of hmmalign
 			# use tau=1e-6 instead of default 1e-7 to reduce memory consumption to under 4GB
 			my $fasta = "";
-			if(-e $candidate_long){
+			if ( -e $candidate_long ) {
 				my $cmalign =
 				    "$Phylosift::Utilities::cmalign -q --dna --tau 1e-6 "
 				  . Phylosift::Utilities::get_marker_cm_file( self => $self, marker => $marker )
 				  . " $candidate_long | ";
-	
 				debug "Running $cmalign\n";
 				my $CMALIGN = ps_open($cmalign);
 				$fasta .= Phylosift::Utilities::stockholm2fasta( in => $CMALIGN );
 			}
-			if(-e $candidate_short){
+			if ( -e $candidate_short ) {
 				my $cmalign =
 				    "$Phylosift::Utilities::cmalign -q -l --dna --tau 1e-6 "
 				  . Phylosift::Utilities::get_marker_cm_file( self => $self, marker => $marker )
 				  . " $candidate_short | ";
-	
 				debug "Running $cmalign\n";
 				my $CMALIGN = ps_open($cmalign);
 				$fasta .= Phylosift::Utilities::stockholm2fasta( in => $CMALIGN );
@@ -410,9 +408,9 @@ sub alignAndMask {
 		my $ALIOUT = ps_open( ">" . $outputFastaAA );
 		my $prev_seq;
 		my $prev_name;
-		my $seqCount = 0;
-
+		my $seqCount    = 0;
 		my $UNMASKEDOUT = ps_open( ">" . $self->{"alignDir"} . "/$mbname.unmasked" );
+
 		foreach my $line (@lines) {
 			chomp $line;
 			if ( $line =~ /^>(.+)/ ) {
@@ -478,9 +476,8 @@ sub alignAndMask {
 					close($REFSEQSIN);
 				}
 				my $ALITRANSOUT = ps_open( ">>" . $outputFastaDNA );
-
-				if( $self->{"extended"} ){
-				    $marker =~ s/^\d+\///g;
+				if ( $self->{"extended"} ) {
+					$marker =~ s/^\d+\///g;
 				}
 				debug "MARKER : $marker\n";
 				my $aa_ali = new Bio::AlignIO( -file => $self->{"alignDir"} . "/$marker.unmasked", -format => 'fasta' );
@@ -636,4 +633,5 @@ See http://dev.perl.org/licenses/ for more information.
 
 
 =cut
+
 1;    # End of Phylosift::MarkerAlign.pm

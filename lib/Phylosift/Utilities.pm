@@ -45,6 +45,7 @@ Phylosift::Utilities - Implements miscellaneous accessory functions for Phylosif
 Version 0.01
 
 =cut
+
 our $VERSION = '0.01';
 
 =head1 SYNOPSIS
@@ -176,7 +177,7 @@ sub programChecks {
 	}
 	$hmmsearch = get_program_path( prog_name => "hmmsearch", prog_path => $Phylosift::Settings::hmmer3_path );
 	$hmmbuild  = get_program_path( prog_name => "hmmbuild",  prog_path => $Phylosift::Settings::hmmer3_path );
-	$raxml    = get_program_path( prog_name => "raxmlHPC", prog_path => $Phylosift::Settings::ps_path );
+	$raxml     = get_program_path( prog_name => "raxmlHPC",  prog_path => $Phylosift::Settings::ps_path );
 	if ( $raxml eq "" ) {
 		carp("raxmlHPC was not found\n");
 		return 1;
@@ -202,6 +203,7 @@ sub programChecks {
 Check for requisite PhyloSift marker datasets
 
 =cut
+
 our $marker_dir           = "";
 our $markers_extended_dir = "";
 our $ncbi_dir             = "";
@@ -547,7 +549,7 @@ Determines the filesystem path to a marker. Searches for the marker in the base 
 =cut
 
 sub get_marker_path {
-	my %args   = @_;
+	my %args = @_;
 	my $marker = $args{marker} || miss("marker");
 
 	# check for old-style marker first
@@ -1031,13 +1033,13 @@ sub concatenate_alignments {
 		$catobj->remove_seq($dummyseq);
 	}
 	$out->write_aln($catobj);
-	
+
 	# get rid of the trailing /1-blahblah that BioPerl insists on adding to sequence names
 	# (naughty BioPerl! time out for you!!)
-	my $FA = ps_open($outputFasta);
+	my $FA       = ps_open($outputFasta);
 	my @fa_lines = <$FA>;
-	my $FA_REOUT = ps_open(">".$outputFasta);
-	foreach my $line(@fa_lines){
+	my $FA_REOUT = ps_open( ">" . $outputFasta );
+	foreach my $line (@fa_lines) {
 		$line =~ s/\/\d-\d+//g;
 		print $FA_REOUT $line;
 	}
@@ -1090,9 +1092,9 @@ returns a SeqIO object
 =cut
 
 sub open_SeqIO_object {
-	my %args = @_;
-	my $format = $args{format} || "FASTA";    #default
-	my $file = $args{file} || miss("file");
+	my %args   = @_;
+	my $format = $args{format} || "FASTA";      #default
+	my $file   = $args{file} || miss("file");
 	my $io_object;
 	if ( exists $args{format} ) {
 		$format = $args{format};
@@ -1271,8 +1273,7 @@ sub index_marker_db {
 	print $RNADBOUT "\n";
 	close $PDBOUT;    # be sure to flush I/O
 	close $RNADBOUT;
-
-	my $blastp_db = get_blastp_db( path => $path);
+	my $blastp_db = get_blastp_db( path => $path );
 	`mv $blastp_db $path/rep.dbfasta`;
 
 	# make a last database
@@ -1297,49 +1298,6 @@ sub index_marker_db {
 	}
 }
 
-=head2 gather_module_markers
-
-	ARGS: Phylosift Object, type needed "Summary" OR "Align" OR "Placer"
-	Return: Array of marker names
-	Gathers the marker names from the treeDir that will be used in the Summary module
-	** For FastSearch use gather_markers instead 
-
-=cut
-
-sub gather_module_markers{
-	my %args = @_;
-	my $self = $args{self} || miss("PhyloSift object");
-	my $type = $args{type} || miss("type");
-	my $extended = $args{extended} || 0;
-	my @marker_names = ();
-	my $dir = $self->{"blastDir"};
-	if( $type eq "Placer"){
-		#look in the alignDir
-		my @files = <$dir/*.*.candidate.aa.*>;
-		my %marker_hash = ();
-		foreach my $file (@files){
-			$file =~ m/^([^\.])\.(rna|lastal.rna|lastal)\.candidate\.aa/;
-			if($extended){
-				
-			}else{
-				$marker_hash{$1}=1;
-			}
-		}
-		@marker_names = keys(%marker_hash);
-	}elsif($type eq "Summary"){
-		#look in the treeDir
-	}elsif($type eq "Align"){
-		#look in the blastDir
-	}else{
-		$Carp::Verbose = 1;
-		croak("Type not recognized in Phylosift::Utilities::gather_module_markers");
-	}
-	
-	
-	return(@marker_names);
-}
-
-
 =head2 gather_markers
 
 =item *
@@ -1352,7 +1310,6 @@ sub gather_module_markers{
 =back
 
 =cut
-
 sub gather_markers {
 	my %args        = @_;
 	my $marker_file = $args{marker_file};
@@ -1712,4 +1669,5 @@ See http://dev.perl.org/licenses/ for more information.
 
 
 =cut
+
 1;    # End of Phylosift::Utilities

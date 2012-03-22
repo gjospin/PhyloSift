@@ -708,6 +708,7 @@ sub build_marker_trees_fasttree {
 #\$ -cwd
 #\$ -V
 #\$ -S /bin/bash
+export OMP_NUM_THREADS=3
 /home/koadman/bin/FastTree -log $aa_log $aa_fasta > $aa_tre
 };
 	`chmod 755 /tmp/ps_tree.sh`;
@@ -726,6 +727,8 @@ sub build_marker_trees_fasttree {
 #\$ -cwd
 #\$ -V
 #\$ -S /bin/bash
+#\$ -pe threaded 3
+export OMP_NUM_THREADS=3
 /home/koadman/bin/FastTree -nt -gtr -log $aa_log $aa_fasta > $aa_tre
 };
 	`chmod 755 /tmp/ps_tree_rna.sh`;
@@ -741,8 +744,13 @@ sub build_marker_trees_fasttree {
 		$tree_script = "/tmp/ps_tree_rna.sh" unless Phylosift::Utilities::is_protein_marker( marker => $marker );
 
 		# run fasttree on them
-		qsub_job(script=>$tree_script, job_ids=>\@jobids, script_args=>[$marker] );
+		my $qsub_args;
+		$qsub_args = "-pe threaded 3" if $marker eq "concat";
+		qsub_job(script=>$tree_script, job_ids=>\@jobids, qsub_args => $qsub_args, script_args=>[$marker] );
 		next unless Phylosift::Utilities::is_protein_marker( marker => $marker );
+
+		# only do codon markers once aa marker trees have already been pruned
+		next unless $pruned;
 
 		# run fasttree on codons
 		for(my $group_id=1; ; $group_id++){
@@ -859,7 +867,8 @@ sub pd_prune_markers {
 	my $REPS_DISTANCE  = 0.05;                                  # reps can be further diverged since we care only about similarity search and not read placement
 	my @markerlist     = Phylosift::Utilities::gather_markers();
 	unshift( @markerlist, "concat" );
-	for ( my $dna = 0 ; $dna < 2 ; $dna++ ) {                   # zero for aa, one for dna
+	my $dna = 0;
+#	for ( my $dna = 0 ; $dna < 2 ; $dna++ ) {                   # zero for aa, one for dna
 		foreach my $marker (@markerlist) {
 			next unless Phylosift::Utilities::is_protein_marker( marker => $marker );
 			my $tre = get_fasttree_tre_filename( marker => $marker, dna => $dna, updated => 1, pruned => 0 );
@@ -879,16 +888,17 @@ sub pd_prune_markers {
 				prune_marker( distance => $REPS_DISTANCE, tre => $tre, fasta => $clean_reps, pruned_fasta => $pruned_reps );
 			}
 		}
-	}
+#	}
 }
 
 sub qsub_job {
 	my %args = @_;
 	my $script = $args{script} || miss("script");
 	my $saref = $args{script_args};
+	my $qsub_args = $args{qsub_args} || "";
 	my $jobsref = $args{job_ids};
 	
-	my $qsub_cmd = "qsub -q all.q -q eisen.q $script ";
+	my $qsub_cmd = "qsub -q all.q -q eisen.q $qsub_args $script ";
 	$qsub_cmd .= join(" ", @$saref ) if defined($saref);
 	my $job      = `$qsub_cmd`;
 	$job =~ /Your job (\d+) /;
@@ -1032,7 +1042,7 @@ sub update_rna {
 
 =head2 make_codon_submarkers
 
-Find groups of closely related taxa that can would be better analyzed with DNA sequence rather than protein
+Find groups of closely related taxa that would be better analyzed with DNA sequence rather than protein
 
 =cut
 
@@ -1128,13 +1138,31 @@ sub make_constrained_tree {
 	my $constraint_tree = get_fasttree_tre_filename( marker => $constraint_marker, dna => 0, updated => 1, pruned => $constraint_pruned );
 
 	croak("$constraint_tree does not exist") unless -e $constraint_tree;
-	# first convert the concat tree leaf names to match the 16s
+	# first convert the constraint tree leaf names to match the target
 	my $tree = Bio::Phylo::IO->parse(
 									  '-file'   => $constraint_tree,
 									  '-format' => 'newick',
 	)->first;
 	print STDERR "Tree has ".scalar(@{ $tree->get_entities })." nodes\n";
-	my @missing_taxa;    # gene IDs for taxa missing in the 16s
+	
+	# collect all the sequence IDs present in the target alignment
+	my %target_ids;
+	my $target_alignment         = get_fasta_filename( marker => $target_marker, dna => 0, updated => 1, pruned => $target_pruned );
+	my $target_alignment_amended = get_fasta_filename( marker => $target_marker, dna => 0, updated => 1, pruned => $target_pruned ) . ".amended";
+	my $column_count             = 0;
+	my $TALN = ps_open($target_alignment);
+	my $dat = "";
+	while(my $line = <$TALN>){
+		chomp $line;
+		if($line =~ /^>(.+)/){
+			$target_ids{$1}=1;
+			$column_count = length($dat) if($column_count == 0);
+		}elsif($column_count==0){
+			$dat .= $line;
+		}
+	}
+	
+	my @missing_taxa;    # gene IDs for taxa missing in the target
 	foreach my $node ( @{ $tree->get_entities } ) {
 		# skip this one if it is not a leaf
 		next if ( scalar( @{ $node->get_children() } ) > 1 );
@@ -1147,6 +1175,8 @@ sub make_constrained_tree {
 		if ( defined( $marker_taxon_to_id{$target_marker}{$taxon_id} ) ) {
 			my @tids = @{ $marker_taxon_to_id{$target_marker}{$taxon_id} };
 			$rename = $tids[0];
+			# if it does exist, and the target is pruned, check whether it was pruned out
+			push( @missing_taxa, $rename ) unless defined($target_ids{$rename});
 		} else {
 			push( @missing_taxa, $name );
 		}
@@ -1163,21 +1193,9 @@ sub make_constrained_tree {
 	my $constraint_cl     = "print_splits $renamed_tree $constraint_splits";
 	system($constraint_cl);
 
+	
 	#
 	# create an amended alignment with any taxa missing from the target data
-	my $target_alignment         = get_fasta_filename( marker => $target_marker, dna => 0, updated => 1, pruned => $target_pruned );
-	my $target_alignment_amended = get_fasta_filename( marker => $target_marker, dna => 0, updated => 1, pruned => $target_pruned ) . ".amended";
-	my $column_count             = 0;
-	my $TALN = ps_open($target_alignment);
-	my $dat = "";
-	while(my $line = <$TALN>){
-		last if $line =~ /^>/ && length($dat) > 0;
-		next if $line =~ /^>/;
-		chomp $line;
-		$dat .= $line;
-	}
-	$column_count = length($dat);
-	
 	`cp $target_alignment $target_alignment_amended`;
 	my $AMENDALN = ps_open( ">>$target_alignment_amended" );
 	foreach my $missing (@missing_taxa) {
@@ -1189,6 +1207,10 @@ sub make_constrained_tree {
 	# now make a target tree that respects protein tree constraints
 	my $target_constrained_tree = get_fasttree_tre_filename( marker => $target_marker, dna => 0, updated => 1, pruned => $target_pruned ) . ".constrained";
 	my $target_constrained_log = get_fasttree_log_filename( marker => $target_marker, dna => 0, updated => 1, pruned => $target_pruned ) . ".constrained";
+	
+	my $data_type_args = "";
+	$data_type_args = "-nt -gtr" unless(Phylosift::Utilities::is_protein_marker(marker=>$target_marker));
+	
 	my $TREESCRIPT = ps_open(">/tmp/constrained_tre.sh");
 	print $TREESCRIPT <<EOF;
 #!/bin/sh
@@ -1197,11 +1219,11 @@ sub make_constrained_tree {
 #\$ -S /bin/bash
 #\$ -pe threaded 3
 export OMP_NUM_THREADS=3
-FastTree-nonuni -nt -gtr -constraints $constraint_splits -constraintWeight 100 -log $target_constrained_log  $target_alignment_amended > $target_constrained_tree
+FastTree-nonuni $data_type_args -constraints $constraint_splits -constraintWeight 100 -log $target_constrained_log  $target_alignment_amended > $target_constrained_tree
 
 EOF
 	my @job_ids = ();
-	qsub_job(script=>"/tmp/constrained_tre.sh", job_ids=>\@job_ids);
+	qsub_job(script=>"/tmp/constrained_tre.sh", job_ids=>\@job_ids, qsub_args=>"-l mem_free=12G");
 	wait_for_jobs(job_ids=>\@job_ids);
 
 	# finally, make a pplacer package with the constrained tree

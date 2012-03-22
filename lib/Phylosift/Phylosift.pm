@@ -33,7 +33,6 @@ sub new {
 	$self->{"mode"}        = undef;
 	$self->{"readsFile"}   = undef;
 	$self->{"readsFile_2"} = undef;
-	$self->{"tempDir"}     = undef;
 	$self->{"fileDir"}     = undef;
 	$self->{"blastDir"}    = undef;
 	$self->{"alignDir"}    = undef;
@@ -67,12 +66,14 @@ sub initialize {
 	$self->{"mode"}        = $mode;
 	$self->{"readsFile"}   = $readsFile;
 	$self->{"readsFile_2"} = $readsFile_2;
-	$self->{"tempDir"}     = $self->{"workingDir"} . "/PS_temp";
-	$self->{"fileDir"}     = $self->{"tempDir"} . "/" . $self->{"fileName"};
-	$self->{"blastDir"}    = $self->{"fileDir"} . "/blastDir";
-	$self->{"alignDir"}    = $self->{"fileDir"} . "/alignDir";
-	$self->{"treeDir"}     = $self->{"fileDir"} . "/treeDir";
-	$self->{"dna"}         = 0;
+
+	unless ( defined( $self->{"fileDir"} ) ) {
+		$self->{"fileDir"} = $self->{"workingDir"} . "/PS_temp/" . $self->{"fileName"};
+	}
+	$self->{"blastDir"} = $self->{"fileDir"} . "/blastDir";
+	$self->{"alignDir"} = $self->{"fileDir"} . "/alignDir";
+	$self->{"treeDir"}  = $self->{"fileDir"} . "/treeDir";
+	$self->{"dna"}      = 0;
 	return $self;
 }
 
@@ -96,6 +97,7 @@ Phylosift::Phylosift - Implements core functionality for Phylosift
 Version 0.01
 
 =cut
+
 our $VERSION = '0.01';
 
 =head1 SYNOPSIS
@@ -126,9 +128,10 @@ if you don't export anything, such as for a purely object-oriented module.
     Runs the PhyloSift pipeline according to the functions passed as arguments
 
 =cut
+
 my $continue = 0;
-my ( $mode, $readsFile, $readsFile_2, $fileName, $tempDir, $fileDir, $blastDir, $alignDir, $treeDir ) = "";
-my ( $sec,  $min,       $hour,        $mday,     $mon,     $year,    $wday,     $yday,     $isdst )   = 0;
+my ( $mode, $readsFile, $readsFile_2, $fileName, $fileDir, $blastDir, $alignDir, $treeDir ) = "";
+my ( $sec, $min, $hour, $mday, $mon, $year, $wday, $yday, $isdst ) = 0;
 my $workingDir = getcwd;
 
 #where everything will be written when PhyloSift is running
@@ -155,6 +158,7 @@ sub run {
 	if ( $self->{"extended"} ) {
 		@markers = Phylosift::Utilities::gather_markers( self => $self, path => $Phylosift::Utilities::markers_extended_dir );
 	}
+
 	#create a file with a list of markers called markers.list
 	debug "CUSTOM = " . $custom . "\n";
 	debug "MODE :: " . $self->{"mode"} . "\n";
@@ -296,7 +300,6 @@ sub prep_isolate_files {
 	my $ISOLATEFILE = ps_open($file);
 	debug "Operating on isolate file $file\n";
 	print $OUTFILE ">" . basename($file) . "\n";
-
 	while ( my $line = <$ISOLATEFILE> ) {
 		next if $line =~ /^>/;
 		print $OUTFILE $line;
@@ -332,14 +335,11 @@ sub directory_prep {
 			   . ", or force overwrite with the -f command-line option\n" );
 	}
 
-	#check if the temporary directory exists, if it doesn't create it.
-	`mkdir $self->{"tempDir"}` unless ( -e $self->{"tempDir"} );
-
 	#create a directory for the Reads file being processed.
-	`mkdir $self->{"fileDir"}`  unless ( -e $self->{"fileDir"} );
-	`mkdir $self->{"blastDir"}` unless ( -e $self->{"blastDir"} );
-	`mkdir $self->{"alignDir"}` unless ( -e $self->{"alignDir"} );
-	`mkdir $self->{"treeDir"}`  unless ( -e $self->{"treeDir"} );
+	`mkdir -p $self->{"fileDir"}`  unless ( -e $self->{"fileDir"} );
+	`mkdir -p $self->{"blastDir"}` unless ( -e $self->{"blastDir"} );
+	`mkdir -p $self->{"alignDir"}` unless ( -e $self->{"alignDir"} );
+	`mkdir -p $self->{"treeDir"}`  unless ( -e $self->{"treeDir"} );
 	return $self;
 }
 
@@ -368,7 +368,7 @@ sub benchmark {
 	my %args = @_;
 	my $self = $args{self} || miss("self");
 	debug "RUNNING Benchmark\n";
-	Phylosift::Benchmark::runBenchmark( self => $self, output_path => "./" );
+	Phylosift::Benchmark::run_benchmark( self => $self, output_path => "./" );
 }
 
 =head2 compare
@@ -522,4 +522,5 @@ See http://dev.perl.org/licenses/ for more information.
 
 
 =cut
+
 1;    # End of Phylosift::Phylosift

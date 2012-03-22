@@ -23,7 +23,7 @@ my %readSource           = ();
 my %correctReadPlacement = ();
 my %refTaxa              = ();
 
-sub runBenchmark {
+sub run_benchmark {
     my %args = @_;
     my $self        = $args{self} || miss("self");
     my $output_path = $args{output_path} || miss("output_path");
@@ -32,21 +32,35 @@ sub runBenchmark {
 	%nameidmap = %$nimref;
 	%idnamemap  = %$inmref;
 	%parent  = Phylosift::Summarize::read_ncbi_taxonomy_structure();
-	%refTaxa = getInputTaxa( file_name=>$self->{"readsFile"} );
-	readSeqSummary( self=>$self, output_path=>$output_path,read_source=> \%readSource );
+	my ($refTaxa_ref, $taxon_read_counts) = getInputTaxa( file_name=>$self->{"readsFile"} );
+	%refTaxa = %$refTaxa_ref;
+	my ($top_place,$all_place) = read_seq_summary( self=>$self, output_path=>$output_path,read_source=> \%readSource );
+	
+	$taxon_read_counts->{""}=0;	# define this to process all taxa at once
+	foreach my $taxon(keys(%$taxon_read_counts)){
+		$taxon = undef if $taxon eq "";
+		my ($tp_acc, $read_count) = compute_top_place_accuracy(self=>$self, top_place=>$top_place, target_taxon=>$taxon);
+		my ($mass_acc, $mass_reads) = compute_mass_accuracy(self=>$self, all_place=>$all_place, target_taxon=>$taxon);
+	
+		$taxon = ".$taxon" if defined($taxon);
+		my $report_file    = $output_path . "/" . $self->{"readsFile"} . "$taxon.tophit.csv";
+		report_csv( self=>$self, report_file=>$report_file, mtref=>$tp_acc, read_number=>$read_count );
+	
+		my $allmass_report_file    = $output_path . "/" . $self->{"readsFile"} . "$taxon.mass.csv";
+		report_csv( self=>$self, report_file=>$allmass_report_file, mtref=>$mass_acc, read_number=>$mass_reads );
+	}
 }
 
-=head2 readSeqSummary
+=head2 read_seq_summary
 Takes a Directory name for input
 Reads the sequence_taxa.txt file and compares the read placements to their true source
 prints the percentage of all reads that have the correct taxanomic ID
 prints the percentage of all PLACED reads that have the correct taxonmic ID
 =cut
 
-sub readSeqSummary {
+sub read_seq_summary {
     my %args = @_;
     my $self        = $args{self} || miss("self");
-	my $output_path = $args{output_path} || miss("output_path");
 	my $readSource  =$args{read_source} || miss("read_source");
 	my $targetDir   = $self->{"fileDir"};
 	my $FILE_IN = ps_open( $targetDir . "/sequence_taxa.txt" );
@@ -79,21 +93,33 @@ sub readSeqSummary {
 		}
 	}
 	close($FILE_IN);
+	
+	return (\%topReadScore, \%allPlacedScore);
+}
 
-	#comparing the sequence_taxa information with the Source taxons
-	#    my %overallScore;
+sub compute_top_place_accuracy {
+    my %args = @_;
+    my $self        = $args{self} || miss("self");
+    my $thref = $args{top_place} || miss("top_place");    
+    my $target_taxon = $args{target_taxon};
+    my %topReadScore = %$thref;
+    	
 	my %matchTop = ();
 	init_taxonomy_levels( ncbi_hash => \%matchTop );
+	my $read_count = 0;
 	foreach my $readID ( keys %topReadScore ) {
-
-		#look at each taxonomic level for each Read
-		my $trueTaxon    = $readSource{$readID};
+		#look at each taxonomic level for each read
+		my $true_taxon    = $readSource{$readID};
+		# only evaluate this read if it came from the target organism
+		next if(defined($target_taxon) && $true_taxon ne $target_taxon);
+		$read_count++;
+		
 		my @ancArrayRead = get_ancestor_array( tax_id=>$topReadScore{$readID}->[1] );
-		my @tt           = Phylosift::Summarize::get_taxon_info(taxon=>$trueTaxon);
+		my @tt           = Phylosift::Summarize::get_taxon_info(taxon=>$true_taxon);
 		my @firstTaxon   = Phylosift::Summarize::get_taxon_info( taxon=>$ancArrayRead[0] );
 		print "Read $readID assigned to $firstTaxon[0], true $tt[0]\n";
 		foreach my $id (@ancArrayRead) {
-			if ( exists $refTaxa{$trueTaxon}{$id} ) {
+			if ( exists $refTaxa{$true_taxon}{$id} ) {
 				my @currTaxon = Phylosift::Summarize::get_taxon_info(taxon=>$id);
 				my $currRank  = $currTaxon[1];
 				$matchTop{$currRank} = 0 unless exists( $matchTop{$currRank} );
@@ -101,7 +127,16 @@ sub readSeqSummary {
 			}
 		}
 	}
-	my $readNumber    = scalar( keys(%topReadScore) );
+	return (\%matchTop, $read_count);
+}
+
+sub compute_mass_accuracy {	
+    my %args = @_;
+    my $self        = $args{self} || miss("self");
+    my $apref = $args{all_place} || miss("all_place");    
+    my $target_taxon = $args{target_taxon};
+    my %allPlacedScore = %$apref;
+
 	my $allReadNumber = 0;
 	my $totalProb     = 0;
 	my %rankTotalProb = ();
@@ -110,8 +145,11 @@ sub readSeqSummary {
 	init_taxonomy_levels( ncbi_hash => \%rankTotalProb, initial_value => 0.0000000000000001 );    # avoid divide by zero
 
 	foreach my $readID ( keys %allPlacedScore ) {
+		my $true_taxon    = $readSource{$readID};
+		# only evaluate this read if it came from the target organism
+		next if(defined($target_taxon) && $true_taxon ne $target_taxon);
+		$allReadNumber++;
 		foreach my $tax ( keys %{ $allPlacedScore{$readID} } ) {
-			$allReadNumber++;
 			my @ancArrayRead = get_ancestor_array( tax_id=>$allPlacedScore{$readID}{$tax}->[1] );
 			pop(@ancArrayRead);
 			push( @ancArrayRead, $allPlacedScore{$readID}{$tax}->[1] );
@@ -136,9 +174,7 @@ sub readSeqSummary {
 			}
 		}
 	}
-
-	#	report_text(self=>$self, output_file=>"accuracy.txt", mtref=>\%matchTop, maref=>\%matchAll, read_number=>$readNumber, all_read_number=>$allReadNumber, total_prob=>$totalProb, rtpref=>\%rankTotalProb);
-	report_csv( self=>$self, report_dir=>$output_path, mtref=>\%matchTop,maref=> \%matchAll, read_number=>$readNumber, all_read_number=>$allReadNumber, total_prob=>$totalProb, rtpref=>\%rankTotalProb );
+	return (\%matchAll, $allReadNumber);
 }
 
 #    foreach my $m (keys %matchTop){
@@ -186,7 +222,7 @@ sub report_timing {
 sub as_percent {
     my %args = @_;
 	my $num   = $args{num};
-	my $denom =$args{denom} || miss("denom");
+	my $denom =$args{denom};
 	if ( defined $num && defined $denom && $denom > 0 ) {
 		my $pretty = sprintf( "%.2f", 100 * $num / $denom );
 		return $pretty;
@@ -197,26 +233,20 @@ sub as_percent {
 sub report_csv {
     my %args = @_;
 	my $self          = $args{self} || miss("self");
-	my $report_dir    = $args{report_dir} || miss("report_dir");
+	my $report_file   = $args{report_file} || miss("report_file");
 	my $mtref         = $args{mtref} || miss("mtref");
-	my $maref         = $args{maref} || miss("maref");
-	my $readNumber    = $args{read_number} || miss("read_number");
-	my $allReadNumber = $args{all_read_number} || miss("all_read_number");
-	my $totalProb     = $args{total_prob} || miss("total_prob");
-	my $rtpref        = $args{rtpref} || miss("rtpref");
+	my $readNumber    = $args{read_number};
 	my %matchTop      = %$mtref;
-	my %matchAll      = %$maref;
-	my %rankTotalProb = %$rtpref;
-	my $tophitfile    = $report_dir . "/" . $self->{"readsFile"} . ".tophit.csv";
-	unless ( -f $tophitfile ) {
-		my $TOPHITS = ps_open( ">$tophitfile" );
+
+	unless ( -f $report_file ) {
+		my $TOPHITS = ps_open( ">$report_file" );
 		print $TOPHITS "Date,Superkingdom,Phylum,Subphylum,Class,Order,Family,Genus,Species,Subspecies,No Rank\n";
 		close $TOPHITS;
 	}
 	my $date = Phylosift::Utilities::get_date_YYYYMMDD();
 
 	# append an entry to the tophits file
-	my $TOPHITS = ps_open(">>$tophitfile" );
+	my $TOPHITS = ps_open(">>$report_file" );
 	print $TOPHITS $date;
 	print $TOPHITS "," . as_percent( num=>$matchTop{"superkingdom"}, denom=>$readNumber );
 	print $TOPHITS "," . as_percent( num=>$matchTop{"phylum"},       denom=>$readNumber );
@@ -317,7 +347,6 @@ sub getInputTaxa {
 		#push(@sourceTaxa,$1);
 		$readSource{$1} = $2;
 		my @ancestors = get_ancestor_array(tax_id=>$2);
-		debug "Read $_ gave 4095\n" if($2 eq "4095");
 		foreach my $id (@ancestors) {
 			$sourceIDs{$id} = 1;
 		}
@@ -342,7 +371,7 @@ sub getInputTaxa {
 		}
 		print "\t" . $sourceReadCounts{$source} . "\n";
 	}
-	return %sourceTaxa;
+	return (\%sourceTaxa, \%sourceReadCounts);
 }
 
 =head2 get_ancestor_array
