@@ -370,7 +370,7 @@ sub benchmark {
 	my %args = @_;
 	my $self = $args{self} || miss("self");
 	debug "RUNNING Benchmark\n";
-	Phylosift::Benchmark::runBenchmark( self=>$self, output_path=>"./" );
+	Phylosift::Benchmark::run_benchmark( self=>$self, output_path=>"./" );
 }
 
 =head2 compare
