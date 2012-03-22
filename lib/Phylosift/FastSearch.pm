@@ -156,9 +156,9 @@ sub launch_searches {
 				$candidate_type = ".lastal.rna";
 			} elsif ( $count == $self->{"threads"} + 2 ) {
 
-				#exit the thread if the bowtie DB does not exist
-				if ( !-e Phylosift::Utilities::get_bowtie2_db() ) {
-					debug "Exiting process $count \n";
+				#exit the thread if the bowtie DB does not exit
+				if ( !-e Phylosift::Utilities::get_bowtie2_db() . ".prj" ) {
+					debug "Exiting process $count because the rnaDB does not exist\n";
 
 					# still need to open/close pipes for parent process
 					my $btp1 = ps_open($bowtie2_r1_pipe);
@@ -262,7 +262,6 @@ sub demux_sequences {
 			}
 
 			# send the reads to bowtie
-			debug "Lookout bowtie\n";
 			print $BOWTIE2_PIPE1 @lines1;
 			print $BOWTIE2_PIPE2 @lines2 if defined($F2IN);
 
