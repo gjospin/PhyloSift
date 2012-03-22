@@ -731,7 +731,7 @@ sub write_candidates {
 			my $new_seq;
 			$new_seq = substr( $seq->seq, $start, $end - $start );
 			my $new_id = $seq->id;
-			$new_id .= "_p$suff" if ( $self->{"isolate"} && !$self->{"besthit"} );
+			$new_id .= "_p$suff" if ( $self->{"isolate"} );
 
 			#if we're working from DNA then need to translate to protein
 			if ( $self->{"dna"} && $type !~ /\.rna/ ) {
