@@ -6,6 +6,8 @@ use Phylosift::Utilities qw(:all);
 use Carp;
 use Bio::Phylo;
 use Bio::Phylo::Forest::Tree;
+use IO::File;
+use XML::Writer;
 use JSON;
 
 if ( $^O =~ /arwin/ ) {
@@ -150,7 +152,7 @@ sub make_ncbi_tree {
 		$namemap{$key} = homogenize_name_ala_dongying( name => $namemap{$key} );
 		my ( $tid, $name ) = donying_find_name_in_taxa_db( name => $namemap{$key} );
 		if ( $tid eq "ERROR" ) {
-			print STDERR "Error! Could not find $namemap{$key} in name map\n" if length($key) > 12;
+			carp("Error! Could not find $namemap{$key} in name map\n") if length($key) > 12;
 			next;
 		}
 
@@ -212,7 +214,10 @@ sub read_coverage {
 Reads the .place files containing Pplacer read placements and maps them onto the
 NCBI taxonomy
 =cut
-
+# keep a hash counting up all the read placements
+# make this File-scope so anonymous functions below can see it
+my %ncbireads;
+my %ncbi_summary;
 sub summarize {
 	my %args    = @_;
 	my $self    = $args{self} || miss("self");
@@ -224,9 +229,6 @@ sub summarize {
 	foreach my $key ( keys(%namemap) ) {
 		$namemap{$key} = homogenize_name_ala_dongying( name => $namemap{$key} );
 	}
-
-	# keep a hash counting up all the read placements
-	my %ncbireads;
 
 	# try to read a contig coverage file if it exists
 	my %coverage;
@@ -297,6 +299,16 @@ sub summarize {
 
 		}
 	}
+	
+	# make a summary of total reads at each taxonomic level
+	# this gets used later in krona output
+	foreach my $qname ( keys(%placements) ) {
+		my $readsummary = sum_taxon_levels( placements => $placements{$qname} );
+		foreach my $taxon_id( keys(%$readsummary) ){
+			$ncbi_summary{$taxon_id} = 0 unless defined( $ncbi_summary{$taxon_id} );
+			$ncbi_summary{$taxon_id} += $readsummary->{$taxon_id};
+		}
+	}
 
 	# also write out the taxon assignments for sequences
 	my $SEQUENCETAXA = ps_open( ">" . $self->{"fileDir"} . "/sequence_taxa.txt" );
@@ -356,6 +368,86 @@ sub summarize {
 		last if $taxasum >= $totalreads * 0.9;
 	}
 	close($TAXAHPDOUT);
+	
+	debug "Generating krona\n";
+	krona_report(self=>$self);
+}
+
+my $xml;
+my $KRONA_THRESHOLD = 0.75;
+sub krona_report {
+	my %args = @_;
+	my $self = $args{self} || miss("self");
+	
+	my $OUTPUT = IO::File->new(">".$self->{"fileDir"}."/krona.html");
+	print $OUTPUT <<EOF
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+ <head>
+  <meta charset="utf-8"/>
+  <base href="http://krona.sourceforge.net/" target="_blank"/>
+  <link rel="shortcut icon" href="img/favicon.ico"/>
+  <script id="notfound">window.onload=function(){document.body.innerHTML="Could not get resources from \"http://krona.sourceforge.net\"."}</script>
+  <script src="src/krona-2.0.js"></script>
+ </head>
+ <body>
+  <img id="hiddenImage" src="img/hidden.png" style="display:none"/>
+  <noscript>Javascript must be enabled to view this page.</noscript>
+  <div style="display:none">	
+
+EOF
+;
+	debug "init xml\n";
+	$xml = new XML::Writer(OUTPUT=>$OUTPUT);
+	$xml->startTag("krona", "collapse"=>"false", "key"=>"true");
+	$xml->startTag("attributes", "magnitude"=>"abundance");
+	$xml->startTag("attribute", "display"=>"reads");
+	$xml->characters("abundance");
+	$xml->endTag("attribute");
+	$xml->endTag("attributes");
+	$xml->startTag("datasets");
+	$xml->startTag("dataset");
+	$xml->characters($self->{"readsFile"});
+	$xml->endTag("dataset");
+	$xml->endTag("datasets");
+
+	debug "parse ncbi\n";
+	# FIXME: work with other taxonomy trees
+	my $taxonomy = Bio::Phylo::IO->parse(
+									  '-file'   => "$Phylosift::Utilities::marker_dir/ncbi_tree.updated.tre",
+									  '-format' => 'newick',
+	)->first;
+	
+	debug "visitor\n";
+	my $root = $taxonomy->get_root;
+	debug "Root node id ".$root->get_name."\n";
+	# write out abundance for nodes that have > $KRONA_THRESHOLD probability mass
+	$root->visit_depth_first(
+		-pre => sub {
+			my $node = shift;
+			my $name = $node->get_name;
+			return unless(defined($ncbi_summary{$name}) && $ncbi_summary{$name} > $KRONA_THRESHOLD);
+			my ( $taxon_name, $taxon_level, $taxon_id ) = get_taxon_info( taxon => $name );
+			$xml->startTag("node", "name"=>$taxon_name, "href"=>"http://www.ncbi.nlm.nih.gov/Taxonomy/Browser/wwwtax.cgi?id=$name");
+			$xml->startTag("abundance");
+			$xml->startTag("val");
+			$xml->characters($ncbi_summary{$name});
+			$xml->endTag("val");
+			$xml->endTag("abundance");
+		},
+		-post => sub {
+			my $node = shift;
+			my $name = $node->get_name;
+			return unless(defined($ncbi_summary{$name}) && $ncbi_summary{$name} > $KRONA_THRESHOLD);
+			$xml->endTag("node");
+		}
+	);
+	debug "done visiting!\n";
+	
+	$xml->endTag("krona");
+	$xml->end();
+	print $OUTPUT "\n</div></body></html>\n";
+	$OUTPUT->close();
 }
 
 #
