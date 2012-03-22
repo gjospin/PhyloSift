@@ -22,7 +22,6 @@ Currently uses either BLAST or RAPsearch.
 Version 0.01
 
 =cut
-
 our $VERSION = '0.01';
 
 =head1 SYNOPSIS
@@ -49,7 +48,6 @@ if you don't export anything, such as for a purely object-oriented module.
 =head2 RunBlast
 
 =cut
-
 my $bestHitsBitScoreRange  = 30;     # all hits with a bit score within this amount of the best will be used
 my $align_fraction         = 0.5;    # at least this amount of min[length(query),length(marker)] must align to be considered a hit
 my $align_fraction_isolate = 0.8;    # use this align_fraction when in isolate mode on long sequences
@@ -61,7 +59,6 @@ my $blastdb_name  = "blastrep.faa";
 my $blastp_params = "-p blastp -e 0.1 -b 50000 -v 50000 -m 8";
 my $blastn_params = "-p blastn -e 0.1 -b 50000 -v 50000 -m 8";
 my %markerLength;
-my $suff = 1;
 
 sub run_search {
 	my %args       = @_;
@@ -88,8 +85,8 @@ sub run_search {
 	# ensure databases and sequences are prepared for search
 	debug "before rapPrepandclean\n";
 	prep_and_clean( self => $self );
-
 	#read_marker_lengths( self => $self );
+
 	# search reads/contigs against marker database
 	my $searchtype = "blast";
 	my $contigs    = 0;
@@ -113,7 +110,7 @@ sub launch_searches {
 	my $self            = $args{self};
 	my $dir             = $args{dir} || miss("dir");
 	my $bowtie2_r1_pipe = $args{dir} . "/bowtie2_r1.pipe";
-	my $last_rna_pipe   = $args{dir} . "/last_rna.pipe";
+	my $last_rna_pipe = $args{dir} . "/last_rna.pipe";
 	my $reads_file      = $args{dir} . "/reads.fasta";
 	my $bowtie2_r2_pipe;
 	$bowtie2_r2_pipe = $args{dir} . "/bowtie2_r2.pipe" if $args{readtype}->{paired};
@@ -144,26 +141,25 @@ sub launch_searches {
 				$hitstream = lastal_table( self => $self, query_file => $last_pipe_array[ $count - 1 ] );
 				$candidate_type = ".lastal";
 			} elsif ( $count == $self->{"threads"} + 1 ) {
-				if ( -e Phylosift::Utilities::get_bowtie2_db() ) {
+				#if(!-e Phylosift::Utilities::get_bowtie2_db()){
+				#	debug "Existing process $count bowtie2 db not found\n";
+				#	my $lrp1 = ps_open($last_rna_pipe);
+				#	`rm -f $last_rna_pipe`;
+				#	exit 0;
+				#}else{
 					$hitstream = lastal_table_rna( self => $self, query_file => $last_rna_pipe );
-				} else {
-					debug "Exiting process $count \n";
-					my $btp1 = ps_open($last_rna_pipe);
-					#`rm $last_rna_pipe` if -e $last_rna_pipe;
-					exit 0;
-				}
+				#}
 				$candidate_type = ".lastal.rna";
 			} elsif ( $count == $self->{"threads"} + 2 ) {
 
 				#exit the thread if the bowtie DB does not exist
 				if ( !-e Phylosift::Utilities::get_bowtie2_db() ) {
 					debug "Exiting process $count \n";
-
 					# still need to open/close pipes for parent process
 					my $btp1 = ps_open($bowtie2_r1_pipe);
 					my $btp2 = ps_open($bowtie2_r2_pipe) if defined($bowtie2_r2_pipe);
-					#`rm -f $bowtie2_r1_pipe`;
-					#`rm -f $bowtie2_r2_pipe` if defined($bowtie2_r2_pipe);
+					`rm -f $bowtie2_r1_pipe`;
+					`rm -f $bowtie2_r2_pipe` if defined($bowtie2_r2_pipe);	
 					exit 0;
 				} else {
 					$hitstream = bowtie2( self => $self, readtype => $args{readtype}, reads1 => $bowtie2_r1_pipe, reads2 => $bowtie2_r2_pipe );
@@ -173,11 +169,10 @@ sub launch_searches {
 			my $hitsref;
 			if ( $count == $self->{"threads"} + 2 ) {
 				$hitsref = get_hits_sam( self => $self, HITSTREAM => $hitstream );
-
 				#$hitsref = get_hits_contigs( self => $self, HITSTREAM => $hitstream, searchtype => "lastal" );
 			} else {
 				$hitsref = get_hits_contigs( self => $self, HITSTREAM => $hitstream, searchtype => "lastal", pid => $count );
-			}
+			} 
 
 			# write out sequence regions hitting marker genes to candidate files
 			debug "Writing candidates from process $count\n";
@@ -191,12 +186,12 @@ sub launch_searches {
 	foreach my $last_pipe (@last_pipe_array) {
 		push( @LAST_PIPE_ARRAY, ps_open(">$last_pipe") );
 	}
-	my $BOWTIE2_R1_PIPE = ps_open(">$bowtie2_r1_pipe") if -e $bowtie2_r1_pipe;
+	my $BOWTIE2_R1_PIPE = ps_open(">$bowtie2_r1_pipe");
 	my $BOWTIE2_R2_PIPE;
 	debug "TESTING" . $args{readtype}->{paired};
 	$BOWTIE2_R2_PIPE = ps_open(">$bowtie2_r2_pipe") if $args{readtype}->{paired};
 	my $READS_PIPE = ps_open("+>$reads_file");
-	my $LAST_RNA_PIPE = ps_open(">$last_rna_pipe") if -e $last_rna_pipe;
+	my $LAST_RNA_PIPE = ps_open(">$last_rna_pipe");
 
 	# parent process streams out sequences to fifos
 	# child processes run the search on incoming sequences
@@ -252,7 +247,6 @@ sub demux_sequences {
 	while ( defined( $lines1[0] ) ) {
 		my $last_pipe = $LAST_PIPE_ARRAY[$lastal_index];
 		if ( $lines1[0] =~ /^@/ ) {
-
 			#
 			# FASTQ format
 			for ( my $i = 1 ; $i < 4 ; $i++ ) {
@@ -271,7 +265,7 @@ sub demux_sequences {
 			$lines2[0] =~ s/^@/>/g if defined($F2IN);
 			print $last_pipe $lines1[0] . $lines1[1];
 			print $last_pipe $lines2[0] . $lines2[1] if defined($F2IN);
-		
+
 			#
 			# send the reads to the reads file in fasta format to write candidates later
 			print $READS_PIPE $lines1[0] . $lines1[1];
@@ -282,7 +276,6 @@ sub demux_sequences {
 			$lines1[0] = <$F1IN>;
 			$lines2[0] = <$F2IN> if defined($F2IN);
 		} elsif ( $lines1[0] =~ /^>/ ) {
-
 			#
 			# FASTA format
 			my $newline1;
@@ -298,12 +291,10 @@ sub demux_sequences {
 				}
 			}
 			if ( length( $lines1[1] ) > 1000 || ( defined($F2IN) && length( $lines2[1] ) > 1000 ) ) {
-
 				# if reads are long, do RNA search with lastal
-				print $LAST_RNA_PIPE $lines1[0] . $lines1[1] if defined($LAST_RNA_PIPE);
-				print $LAST_RNA_PIPE $lines2[0] . $lines2[1] if defined($F2IN) && defined($LAST_RNA_PIPE);
-			} else {
-
+				print $LAST_RNA_PIPE $lines1[0] . $lines1[1];
+				print $LAST_RNA_PIPE $lines2[0] . $lines2[1] if defined($F2IN);
+			}else{
 				# if they are short, send the reads to bowtie
 				print $BOWTIE2_PIPE1 @lines1;
 				print $BOWTIE2_PIPE2 @lines2 if defined($F2IN);
@@ -328,7 +319,7 @@ sub demux_sequences {
 	}
 	close($BOWTIE2_PIPE1);
 	close($BOWTIE2_PIPE2) if defined($F2IN);
-	close($LAST_RNA_PIPE) if defined($LAST_RNA_PIPE);
+	close($LAST_RNA_PIPE);
 	close($READS_PIPE);
 }
 
@@ -351,7 +342,7 @@ sub lastal_table {
 	my %args       = @_;
 	my $self       = $args{self} || miss("self");
 	my $query_file = $args{query_file} || miss("query_file");
-	my $db         = Phylosift::Utilities::get_lastal_db( self => $self );
+	my $db = Phylosift::Utilities::get_lastal_db(self=>$self);
 	my $lastal_cmd = "$Phylosift::Utilities::lastal -F15 -e75 -f0 $db $query_file |";
 	debug "Running $lastal_cmd";
 	my $HISTREAM = ps_open($lastal_cmd);
@@ -369,8 +360,8 @@ sub lastal_table_rna {
 	my %args       = @_;
 	my $self       = $args{self} || miss("self");
 	my $query_file = $args{query_file} || miss("query_file");
-	my $db_rna     = Phylosift::Utilities::get_bowtie2_db( self => $self );
-	my $lastal_cmd = "$Phylosift::Utilities::lastal -e300 -f0 $db_rna $query_file |";
+	my $db = Phylosift::Utilities::get_bowtie2_db(self=>$self);
+	my $lastal_cmd = "$Phylosift::Utilities::lastal -e300 -f0 $db $query_file |";
 	debug "Running $lastal_cmd";
 	my $HISTREAM = ps_open($lastal_cmd);
 	return $HISTREAM;
@@ -442,9 +433,9 @@ sub get_hits_contigs {
 	my $self       = $args{self} || miss("self");
 	my $HITSTREAM  = $args{HITSTREAM} || miss("HITSTREAM");
 	my $searchtype = $args{searchtype} || miss("searchtype");    # can be blastx or lastal
-	my $pid        = $args{pid} || miss("pid");
-	my $prev_hit   = "";
-
+	my $pid = $args{pid} || miss("pid");
+	my $prev_hit="";
+	my $suff = 0;
 	# key is a contig name
 	# value is an array of arrays, each one has [marker,bit_score,left-end,right-end,suffix]
 	my %contig_hits;
@@ -483,13 +474,7 @@ sub get_hits_contigs {
 		my @marker = split( /\_\_/, $subject );    # this is soooo ugly
 		my $markerName = $marker[0];
 
-		#increment the suffix if the previous subject was the same
-		if ( $prev_hit eq $query ) {
-			$suff++;
-		} else {
-
-			#$suff=1;
-		}
+		
 
 		# running on long reads or an assembly
 		# allow each region of a sequence to have a top hit
@@ -509,8 +494,8 @@ sub get_hits_contigs {
 				{
 
 					# debug "Found overlap $query and $markerName, $query_start:$query_end\n";
-					$contig_hits{$query}->[$i] = [ $markerName, $bitScore, $query_start, $query_end, $frameshift, $pid . "_" . $suff ]
-					  if ( $bitScore > $prevhit[1] );
+					$suff++;	
+					$contig_hits{$query}->[$i] = [ $markerName, $bitScore, $query_start, $query_end, $frameshift, $pid."_".$suff ] if ( $bitScore > $prevhit[1] );
 					last;
 				}
 
@@ -520,21 +505,23 @@ sub get_hits_contigs {
 					 && $prevhit[3] < $query_start - $max_hit_overlap
 					 && $query_end + $max_hit_overlap < $prevhit[2] )
 				{
-
+					$suff++;
 					# debug "Found overlap $query and $markerName, $query_start:$query_end\n";
-					$contig_hits{$query}->[$i] = [ $markerName, $bitScore, $query_start, $query_end, $frameshift, $pid . "_" . $suff ]
-					  if ( $bitScore > $prevhit[1] );
+					$contig_hits{$query}->[$i] = [ $markerName, $bitScore, $query_start, $query_end, $frameshift, $pid."_".$suff ] if ( $bitScore > $prevhit[1] );
 					last;
 				}
 			}
 			if ( $i == @{ $contig_hits{$query} } ) {
-
+				#increment the suffix
+				$suff++;
 				# no overlap was found, include this hit
-				my @hitdata = [ $markerName, $bitScore, $query_start, $query_end, $frameshift, $pid . "_" . $suff ];
+				my @hitdata = [ $markerName, $bitScore, $query_start, $query_end, $frameshift, $pid."_".$suff ];
 				push( @{ $contig_hits{$query} }, @hitdata );
 			}
 		} elsif ( !defined( $contig_top_bitscore{$query} ) ) {
-			my @hitdata = [ $markerName, $bitScore, $query_start, $query_end, $frameshift, $pid . "_" . $suff ];
+			#increment the suffix
+			$suff++;
+			my @hitdata = [ $markerName, $bitScore, $query_start, $query_end, $frameshift , $pid."_".$suff];
 			push( @{ $contig_hits{$query} }, @hitdata );
 			$contig_top_bitscore{$query}{$markerName} = $bitScore;
 		}
@@ -711,13 +698,16 @@ sub write_candidates {
 			my $markerHit   = $cur_hit[0];
 			my $start       = $cur_hit[2];
 			my $end         = $cur_hit[3];
-			my $suff        = $cur_hit[5];
+			my $suff = $cur_hit[5];
 			( $start, $end ) = ( $end, $start ) if ( $start > $end );    # swap if start bigger than end
 
 			# check to ensure hit covers enough of the marker
 			# TODO: make this smarter about boundaries, e.g. allow a smaller fraction to hit
 			# if it looks like the query seq goes off the marker boundary
-			$markerLength{$markerHit} = Phylosift::Utilities::get_marker_length( self => $self, marker => $markerHit ) unless exists $markerLength{$markerHit};
+			
+			
+			$markerLength{$markerHit} = Phylosift::Utilities::get_marker_length( self=>$self, marker => $markerHit ) unless exists $markerLength{$markerHit};
+			
 			if ( !defined($markerHit) || !defined( $markerLength{$markerHit} ) ) {
 				debug "markerHit is $markerHit\n";
 				debug $markerLength{$markerHit} . "\n";
@@ -730,8 +720,7 @@ sub write_candidates {
 			my $new_seq;
 			$new_seq = substr( $seq->seq, $start, $end - $start );
 			my $new_id = $seq->id;
-			$new_id .= "_p$suff" if ( $self->{"isolate"} && !$self->{"besthit"} );
-
+			$new_id .= "_p$suff" if ($self->{"isolate"} && !$self->{"besthit"});
 			#if we're working from DNA then need to translate to protein
 			if ( $self->{"dna"} && $type !~ /\.rna/ ) {
 
@@ -776,15 +765,14 @@ sub write_candidates {
 				my $strand = 1;    # forward or reverse strand?
 				$strand *= -1 if ( $cur_hit[2] > $cur_hit[3] );
 				$new_seq = translate_frame(
-											id                => $new_id,
-											seq               => $dna_seq,
-											frame             => $strand,
-											marker            => $markerHit,
-											reverse_translate => $self->{"dna"}
+										   id                => $new_id,
+										   seq               => $dna_seq,
+										   frame             => $strand,
+										   marker            => $markerHit,
+										   reverse_translate => $self->{"dna"}
 				);
 				$new_seq =~ s/\*/X/g;    # bioperl uses * for stop codons but we want to give X to hmmer later
-			} elsif ( $type =~ /\.rna/ && $cur_hit[2] > $cur_hit[3] ) {
-
+			}elsif( $type =~ /\.rna/ && $cur_hit[2] > $cur_hit[3] ){
 				# check if we need to reverse complement this one
 				$new_seq =~ tr/ACGTacgt/TGCAtgca/;
 				$new_seq = reverse($new_seq);
@@ -826,7 +814,7 @@ Generates the blastable database using the marker representatives
 sub prep_and_clean {
 	my %args = @_;
 	my $self = $args{self} || miss("self");
-	debug "prepclean MARKERS @markers\n";
+	#debug "prepclean MARKERS @markers\n";
 	`mkdir $self->{"tempDir"}` unless ( -e $self->{"tempDir"} );
 
 	#create a directory for the Reads file being processed.
@@ -894,5 +882,4 @@ See http://dev.perl.org/licenses/ for more information.
 
 
 =cut
-
 1;    # End of Phylosift::blast.pm

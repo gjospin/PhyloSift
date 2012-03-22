@@ -1134,7 +1134,7 @@ sub get_db {
 	my $self    = $args{self};                  # optional argument;
 	my $db_name = $args{db_name};
 	if ( defined($self) && !defined( $args{path} ) ) {
-		return $markers_extended_dir . "/$db_name" if defined( $self->{"extended"} && $self->{"extended"} );
+		return $markers_extended_dir . "/$db_name" if defined( $self->{"extended"} );
 		return $marker_dir . "/$db_name";
 	}
 	return "$path/$db_name";

@@ -155,11 +155,10 @@ sub run {
 	if ( $self->{"extended"} ) {
 		@markers = Phylosift::Utilities::gather_markers( self => $self, path => $Phylosift::Utilities::markers_extended_dir );
 	}
-	     #create a file with a list of markers called markers.list
+	#create a file with a list of markers called markers.list
 	debug "CUSTOM = " . $custom . "\n";
 	debug "MODE :: " . $self->{"mode"} . "\n";
 	if ( $self->{"mode"} eq 'search' || $self->{"mode"} eq 'all' ) {
-		#debug "@markers\n";
 		$self = run_search( self => $self, cont => $continue, custom => $custom, marker => \@markers );
 		debug "MODE :: " . $self->{"mode"} . "\n";
 	}
@@ -295,8 +294,7 @@ sub prep_isolate_files {
 	my $file        = $args{file} || miss("file");
 	my $OUTFILE     = ps_open( ">" . $self->{"fileDir"} . "/isolates.fasta" );
 	my $ISOLATEFILE = ps_open($file);
-	my $fname       = $self->{"fileDir"} . "/" . basename($file);
-	debug "Operating on isolate file $fname\n";
+	debug "Operating on isolate file $file\n";
 	print $OUTFILE ">" . basename($file) . "\n";
 
 	while ( my $line = <$ISOLATEFILE> ) {
