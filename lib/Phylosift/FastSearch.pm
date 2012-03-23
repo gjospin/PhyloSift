@@ -194,8 +194,8 @@ sub launch_searches {
 	}
 	my $BOWTIE2_R1_PIPE = ps_open(">$bowtie2_r1_pipe");
 	my $BOWTIE2_R2_PIPE;
-	debug "TESTING" . $args{readtype}->{paired};
-	$BOWTIE2_R2_PIPE = ps_open(">$bowtie2_r2_pipe") if $args{readtype}->{paired};
+#	debug "TESTING" . $args{readtype}->{paired};
+#	$BOWTIE2_R2_PIPE = ps_open(">$bowtie2_r2_pipe") if $args{readtype}->{paired};
 	my $READS_PIPE    = ps_open("+>$reads_file");
 	my $LAST_RNA_PIPE = ps_open(">$last_rna_pipe");
 
@@ -263,12 +263,16 @@ sub demux_sequences {
 
 			# send the reads to bowtie
 			print $BOWTIE2_PIPE1 @lines1;
-			print $BOWTIE2_PIPE2 @lines2 if defined($F2IN);
+			print $BOWTIE2_PIPE1 @lines2 if defined($F2IN);
+#			print $BOWTIE2_PIPE2 @lines2 if defined($F2IN);
 
 			#
 			# send the reads to lastal (convert to fasta)
 			$lines1[0] =~ s/^@/>/g;
 			$lines2[0] =~ s/^@/>/g if defined($F2IN);
+			# some FastQ use . instead of N (wtf?)
+			$lines1[1] =~ s/\./N/g;
+			$lines2[1] =~ s/\./N/g if defined($F2IN);
 			print $last_pipe $lines1[0] . $lines1[1];
 			print $last_pipe $lines2[0] . $lines2[1] if defined($F2IN);
 
@@ -306,7 +310,8 @@ sub demux_sequences {
 
 				# if they are short, send the reads to bowtie
 				print $BOWTIE2_PIPE1 @lines1;
-				print $BOWTIE2_PIPE2 @lines2 if defined($F2IN);
+				print $BOWTIE2_PIPE1 @lines2 if defined($F2IN);
+#				print $BOWTIE2_PIPE2 @lines2 if defined($F2IN);
 			}
 
 			# send the reads to last
@@ -327,7 +332,7 @@ sub demux_sequences {
 		close($LAST_PIPE);
 	}
 	close($BOWTIE2_PIPE1);
-	close($BOWTIE2_PIPE2) if defined($F2IN);
+#	close($BOWTIE2_PIPE2) if defined($F2IN);
 	close($LAST_RNA_PIPE);
 	close($READS_PIPE);
 }
@@ -393,11 +398,11 @@ sub bowtie2 {
 	  . Phylosift::Utilities::get_bowtie2_db( self => $self )
 	  . " --quiet --sam-nohead --sam-nosq --maxins 1000 --local ";
 	$bowtie2_cmd .= " -f " if $args{readtype}->{format} eq "fasta";
-	if ( $args{readtype}->{paired} ) {
-		$bowtie2_cmd .= " -1 $args{reads1} -2 $args{reads2} ";
-	} else {
+#	if ( $args{readtype}->{paired} ) {
+#		$bowtie2_cmd .= " -1 $args{reads1} -2 $args{reads2} ";
+#	} else {
 		$bowtie2_cmd .= " -U $args{reads1} ";
-	}
+#	}
 	$bowtie2_cmd .= " |";
 	debug "Running $bowtie2_cmd";
 	my $HISTREAM = ps_open($bowtie2_cmd);
