@@ -421,6 +421,7 @@ EOF
 	debug "visitor\n";
 	my $root = $taxonomy->get_root;
 	debug "Root node id ".$root->get_name."\n";
+	debug "Root node read count ".$ncbi_summary{$root->get_name}."\n";
 	# write out abundance for nodes that have > $KRONA_THRESHOLD probability mass
 	$root->visit_depth_first(
 		-pre => sub {
@@ -435,7 +436,13 @@ EOF
 			$xml->endTag("val");
 			$xml->endTag("abundance");
 		},
-		-post => sub {
+		-pre_sister => sub {
+			my $node = shift;
+			my $name = $node->get_name;
+			return unless(defined($ncbi_summary{$name}) && $ncbi_summary{$name} > $KRONA_THRESHOLD);
+			$xml->endTag("node");
+		},
+		-no_sister => sub {
 			my $node = shift;
 			my $name = $node->get_name;
 			return unless(defined($ncbi_summary{$name}) && $ncbi_summary{$name} > $KRONA_THRESHOLD);
@@ -506,9 +513,10 @@ sub sum_taxon_levels {
 	my %summarized = ();
 	foreach my $taxon_id ( keys %$placements ) {
 		my $cur_tid = $taxon_id;
-		while ( defined($cur_tid) && $cur_tid != 1 ) {
+		while ( defined($cur_tid) ) {
 			$summarized{$cur_tid} = 0 unless defined( $summarized{$cur_tid} );
 			$summarized{$cur_tid} += $placements->{$taxon_id};
+			last if defined($parent{$cur_tid}[0]) && $parent{$cur_tid}[0] == $cur_tid;
 			$cur_tid = $parent{$cur_tid}[0];
 		}
 	}
