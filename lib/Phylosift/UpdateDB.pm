@@ -223,6 +223,7 @@ sub find_new_genomes {
 			my $ctime = ( stat("$results_dir/$gbase/alignDir/concat.trim.fasta") )[9];
 			my $mtime = ( stat($genome) )[9];
 			push( @{$files}, $genome ) if ( $ctime < $mtime );
+#			push( @{$files}, $genome );
 			print STDERR "Found up-to-date $gbase\n" if ( $ctime >= $mtime );
 		} else {
 			push( @{$files}, $genome );
@@ -584,7 +585,7 @@ sub make_ncbi_tree_from_update {
 	foreach my $tid (@taxonids) {
 		next if ( $tid eq "" );
 		my @children;
-		while ( $tid != 1 ) {
+		while ( defined($tid) ) {
 
 			# check if we've already seen this one
 			last if ( defined( $tidnodes{$tid} ) );
@@ -598,16 +599,20 @@ sub make_ncbi_tree_from_update {
 			}
 
 			# create a new node & add to tree
-			my $parentid = $parent{$tid}->[0];
-			if ( !defined($parentid) ) {
+			my $parentid;
+			$parentid = $parent{$tid}->[0] unless $tid == 1;
+			if ( !defined($parentid) && $tid != 1) {
 				print STDERR "Could not find parent for $tid\n";
 				exit;
 			}
 			my $newnode;
 			my @new_children;
 			foreach my $mnode (@mtid) {
-				$newnode = Bio::Phylo::Forest::Node->new( -parent => $tidnodes{$parentid}, -name => $mnode ) if defined( $tidnodes{$parentid} );
-				$newnode = Bio::Phylo::Forest::Node->new( -name => $mnode ) if !defined( $tidnodes{$parentid} );
+				if ( defined( $parentid )  && defined( $tidnodes{$parentid} ) ){
+					$newnode = Bio::Phylo::Forest::Node->new( -parent => $tidnodes{$parentid}, -name => $mnode ) ;
+				}else{
+					$newnode = Bio::Phylo::Forest::Node->new( -name => $mnode );
+				}
 				$tidnodes{$mnode} = $newnode;
 
 				# add all children to the new node
@@ -1260,11 +1265,12 @@ sub get_gene_id_file {
 sub make_pplacer_package {
 	my %args = @_;
 	my $dna = $args{dna} || 0;
-	my %seq_ids = $args{seq_ids}; # optional
+	my $seq_ids = $args{seq_ids}; # optional
 	my $marker = $args{marker} || miss("marker");
 	my $pruned = $args{pruned} || 0;
 	my $sub_marker = $args{sub_marker};
 
+	print STDERR "packaging $marker sub $sub_marker dna $dna\n";
 	# create a taxon id list for this marker
 	my $gene_id_file = get_gene_id_file( dna => $dna );
 	my $AAIDS = ps_open(  $gene_id_file );
@@ -1274,8 +1280,9 @@ sub make_pplacer_package {
 		chomp $line;
 		my @dat = split( /\t/, $line );
 		next unless $dat[0] eq $marker;
-		if(%seq_ids){
-			next unless defined($seq_ids{$dat[2]});
+		print STDERR "found concat\n";
+		if(defined($seq_ids)){
+			next unless defined($seq_ids->{$dat[2]});
 		}
 		print $TAXIDS $dat[1] . "\n";
 		print $SEQINFO "$dat[2],$dat[0],$dat[1],\n";
@@ -1283,6 +1290,7 @@ sub make_pplacer_package {
 	close $TAXIDS;
 	close $SEQINFO;
 	my $taxtable_cl = "taxit taxtable -d taxonomy.db -t tax_ids.txt -o taxa.csv";
+	print STDERR "$taxtable_cl\n";
 	system($taxtable_cl);
 
 	# gather filenames to stuff into marker package
@@ -1292,6 +1300,7 @@ sub make_pplacer_package {
 	my $pack = get_marker_package( marker => $marker, dna => $dna, updated => 1, sub_marker=>$sub_marker );
 	my $taxit_cl =
 "taxit create -l $marker -P $pack --taxonomy taxa.csv --seq-info seq_info.csv --tree-stats $log --tree-file $tre --aln-fasta $fasta ";
+	print STDERR "$taxit_cl\n";
 	system($taxit_cl);
 }
 
@@ -1323,7 +1332,7 @@ sub make_pplacer_packages_with_taxonomy {
 					$seq_ids{$1}=1;
 				}
 			}
-			make_pplacer_package(dna=>1, marker=>$marker, seq_ids=>%seq_ids, pruned=>0, sub_marker => $group_id);
+			make_pplacer_package(dna=>1, marker=>$marker, seq_ids=>\%seq_ids, pruned=>0, sub_marker => $group_id);
 		}
 	}
 }
