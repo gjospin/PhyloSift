@@ -41,6 +41,14 @@ chdir("JSON-2.53");
 `mv blib/lib/JSON* ../PhyloSift/lib/`;
 chdir("..");
 
+# Encode::Locale
+`wget http://search.cpan.org/CPAN/authors/id/G/GA/GAAS/Encode-Locale-0.04.tar.gz`;
+`tar xzf Encode-Locale-0.04.tar.gz`;
+`chdir Encode-Locale-0.04`;
+`make`;
+`mv blib/lib/Encode ../PhyloSift/lib/`;
+chdir("..");
+
 # add Locale::Maketext
 `wget http://search.cpan.org/CPAN/authors/id/T/TO/TODDR/Locale-Maketext-1.19.tar.gz`;
 `tar xvzf Locale-Maketext-1.19.tar.gz`;
