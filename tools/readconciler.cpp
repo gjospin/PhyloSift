@@ -226,6 +226,7 @@ void reconcile( PhyloTree< TreeNode >& reftree, string treefile, unordered_multi
 	size_t rqpos = treestring.rfind("\"");
 	treestring = treestring.substr( qpos + 1, rqpos - qpos - 1);
 	stringstream treestr(treestring);
+//	cout << "Trying to read " << treestring << endl;
 
 	PhyloTree< TreeNode > tree;
 	tree.readTree( treestr );
@@ -243,10 +244,10 @@ void reconcile( PhyloTree< TreeNode >& reftree, string treefile, unordered_multi
 			edgenum = atoi(tree[i].name.c_str());
 		}else{
 			edgenum = atoi(tree[i].name.substr(atpos+1, ratpos - atpos - 1).c_str());
-			cerr << "node " << i << " edgenum is " << tree[i].name.substr(atpos+1, ratpos - atpos - 1) << " name is " << tree[i].name.substr(0, atpos) << endl;
+//			cerr << "node " << i << " edgenum is " << tree[i].name.substr(atpos+1, ratpos - atpos - 1) << " name is " << tree[i].name.substr(0, atpos) << endl;
 			tree[i].name = tree[i].name.substr(0, atpos);
 		}
-		cerr << "mapping " << i << " to " << edgenum << "\n";
+//		cerr << "mapping " << i << " to " << edgenum << "\n";
 		edgenum_map.insert(make_pair(i,edgenum));
 	}
 //	cerr << "Done removing edge numbers\n";
@@ -310,8 +311,8 @@ void reconcile( PhyloTree< TreeNode >& reftree, string treefile, unordered_multi
 			if( pg_vertex_map[ gtmap[iter.first->second] ] == -1 )
 				continue;
 			curmap.push_back( pg_vertex_map[ gtmap[iter.first->second] ] );
-			cout << "mapped ref " << reftree[i].name << "\t" << ref_vertex_map[i] << " to " << curmap.back() << endl;
-			cout << "reverse map to " << tree[gtmap[iter.first->second]].name << " and " << other_map[tree[gtmap[iter.first->second]].name] << endl;
+//			cout << "mapped ref " << reftree[i].name << "\t" << ref_vertex_map[i] << " to " << curmap.back() << endl;
+//			cout << "reverse map to " << tree[gtmap[iter.first->second]].name << " and " << other_map[tree[gtmap[iter.first->second]].name] << endl;
 		}
 		// add a list of gene vertices for this species
 		species_to_gene_map.push_back(curmap);
@@ -370,8 +371,8 @@ void reconcile( PhyloTree< TreeNode >& reftree, string treefile, unordered_multi
 			if(maxscores[j] < bestscore)
 				continue;
 			string refnodename = reftree[ refpg.edge_array[j].first ].name;
-			cout << "gene tree edge " << i << " linking " << other_map[tree[pg.edge_array[i].first].name] << " best reftree edge " << refnodename << endl; 
-			cout << "found edge " << pg.edge_array[i].first << "\n";
+//			cout << "gene tree edge " << i << " linking " << other_map[tree[pg.edge_array[i].first].name] << " best reftree edge " << refnodename << endl; 
+//			cout << "found edge " << pg.edge_array[i].first << "\n";
 			mapout << edgenum_map[pg.edge_array[i].first] << "\t" << refnodename << endl;
 		}
 //		if(pg_splitlist[i].count() == 1)
