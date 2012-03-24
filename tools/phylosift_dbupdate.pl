@@ -38,7 +38,7 @@ Phylosift::UpdateDB::update_ncbi_taxonomy( repository => $repository );
 #debug "Updating NCBI tree and taxon map...";
 Phylosift::UpdateDB::make_ncbi_tree_from_update( self => $newObject, marker_dir => $marker_dir, repository => $repository );
 #debug "done\n";
-Phylosift::UpdateDB::build_marker_trees_fasttree( directory => $marker_dir, pruned => 0 );
+Phylosift::UpdateDB::build_marker_trees_fasttree( marker_directory => $marker_dir, pruned => 0 );
 Phylosift::UpdateDB::make_codon_submarkers( marker_dir => $marker_dir );
 Phylosift::UpdateDB::pd_prune_markers( marker_directory => $marker_dir );
 Phylosift::UpdateDB::build_marker_trees_fasttree( marker_directory => $marker_dir, pruned => 1 );
