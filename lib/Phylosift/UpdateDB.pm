@@ -761,6 +761,8 @@ export OMP_NUM_THREADS=3
 		for(my $group_id=1; ; $group_id++){
 			my $subalignment = get_fasta_filename( marker => $marker, dna => 1, updated => 1, pruned => 0, sub_marker => $group_id );
 			last unless -e $subalignment;
+			my $mtime = ( stat($subalignment) )[9];
+			last unless $mtime > 1332510000;
 			my @sa = ($marker, $group_id);
 			qsub_job(script=>"/tmp/ps_tree_codon.sh", job_ids=>\@jobids, script_args=>\@sa );
 		}
@@ -798,9 +800,12 @@ sub fix_names_in_alignment {
 sub create_temp_read_fasta {
 	my %args = @_;
 	my $file = $args{file} || miss("file");
+	my $aln_file = $args{aln_file} || miss("aln_file");
 	my $TMPREAD = ps_open( ">$file.tmpread.fasta" );
+	print STDERR "creating tmpread $file.tmpread.fasta\n";
+	
 	print $TMPREAD ">blahblahblah\n";
-	my $ALNIN = ps_open( "$file.fasta" );
+	my $ALNIN = ps_open( "$aln_file" );
 	my $line = <$ALNIN>;
 	while ( $line = <$ALNIN> ) {
 		last if $line =~ /^>/;
@@ -918,6 +923,7 @@ sub filter_marker_gene_ids{
 	my $sub_marker = $args{sub_marker};
 	
 	my $ids = get_marker_geneids( marker => $marker, dna => $dna, updated => $updated, sub_marker=>$sub_marker );
+	print STDERR "ids are $ids\n";
 	my $MARKER_IDS = ps_open(">$ids");
 	my $IDS = ps_open(get_gene_id_file(dna => $dna));
 	while(my $line = <$IDS>){
@@ -952,12 +958,13 @@ sub reconcile_with_ncbi {
 #\$ -V
 #\$ -S /bin/bash
 
+rm -rf $aa_package
 taxit create -a "Aaron Darling" -d "simple package for reconciliation only" -l \$1 -f $aa_fasta -t $aa_tre -s $aa_log -Y FastTree -P $aa_package
 pplacer -c $aa_package -p $aa_package.tmpread.fasta
 # readconciler uses a pplacer tree from a .jplace file to parse out the branch numbers
 mangler.pl < $aa_package.tmpread.jplace > $aa_package.tmpread.jplace.mangled
 readconciler ncbi_tree.updated.tre $aa_package.tmpread.jplace.mangled $aa_ids $aa_taxonmap
-rm $aa_package.tmpread.jplace $aa_package.tmpread.jplace.mangled $aa_package.tmpread.fasta $aa_log $aa_ids
+rm $aa_package.tmpread.jplace $aa_package.tmpread.jplace.mangled $aa_package.tmpread.fasta
 EOF
 		close($RECONCILESCRIPT);
 		`chmod 755 $script`;
@@ -968,22 +975,27 @@ EOF
 	my @jobids;
 
 	foreach my $marker (@markerlist) {
+		my $marker_fasta = get_fasta_filename( marker => $marker, updated => 1);
+		next unless -e $marker_fasta;
 		filter_marker_gene_ids(marker=>$marker, updated=>1, dna=>0);
 		
 		# create some read files for pplacer to place so we can get its jplace
-		create_temp_read_fasta( file => get_marker_package( marker=>$marker, updated=>1) );
-		create_temp_read_fasta( file => get_marker_package( marker=>$marker, updated=>1, dna=>1) );
+		create_temp_read_fasta( file => get_marker_package( marker=>$marker, updated=>1), aln_file => $marker_fasta);
+		create_temp_read_fasta( file => get_marker_package( marker=>$marker, updated=>1, dna=>1), aln_file => get_fasta_filename( marker => $marker, updated => 1, dna => 1) );
 
 		# run reconciliation on them
-		qsub_job(script=>$aa_script, job_ids=>\@jobids, script_args=>[$marker] );
+		my @marray = ($marker);
+		qsub_job(script=>$aa_script, job_ids=>\@jobids, script_args=>\@marray );
 
 		for(my $group_id=1; ; $group_id++){
 			my $subalignment = get_fasta_filename( marker => $marker, dna => 1, updated => 1, pruned => 0, sub_marker => $group_id );
 			last unless -e $subalignment;
+			my $mtime = ( stat($subalignment) )[9];
+			last unless $mtime > 1332510000;
 			filter_marker_gene_ids(marker=>$marker, updated=>1, dna=>1, sub_marker=>$group_id);
-			qsub_job(script=>$codon_script, job_ids=>\@jobids, script_args=>[$marker,$group_id] );
+			my @marray = ($marker,$group_id);
+			qsub_job(script=>$codon_script, job_ids=>\@jobids, script_args=>\@marray );
 		}
-
 	}
 	wait_for_jobs( job_ids => \@jobids );
 	`rm ps_reconcile.sh.o* ps_reconcile.sh.e* ps_reconcile_codon.sh.o* ps_reconcile_codon.sh.e*`;
