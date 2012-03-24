@@ -14,7 +14,7 @@ use Carp;
 use Phylosift::Utilities qw(debug);
 use Phylosift::Benchmark;
 
-die "Usage: phylosift_benchmarks <path to phylosift> <path to report output>\n" if(@ARGV !=2);
+die "Usage: phylosift_benchmark <path to phylosift> <path to report output>\n" if(@ARGV !=2);
 
 my $ps = new Phylosift::Phylosift();
 Phylosift::Phylosift::read_phylosift_config(self=>$ps);
