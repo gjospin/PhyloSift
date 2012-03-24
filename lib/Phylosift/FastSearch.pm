@@ -114,6 +114,7 @@ sub launch_searches {
 	my $bowtie2_r1_pipe = $args{dir} . "/bowtie2_r1.pipe";
 	my $last_rna_pipe   = $args{dir} . "/last_rna.pipe";
 	my $reads_file      = $args{dir} . "/reads.fasta";
+	my $readtype        = $args{readtype} || miss("readtype");
 	my $bowtie2_r2_pipe;
 	$bowtie2_r2_pipe = $args{dir} . "/bowtie2_r2.pipe" if $args{readtype}->{paired};
 	debug "Making fifos\n";
@@ -123,11 +124,20 @@ sub launch_searches {
 		push( @last_pipe_array, $args{dir} . "/last_$i.pipe" );
 		`mkfifo "$args{dir}/last_$i.pipe"`;
 	}
-	`mkfifo $bowtie2_r1_pipe`;
-	`mkfifo $bowtie2_r2_pipe` if $args{readtype}->{paired};
-	`mkfifo $last_rna_pipe`;
+	my $rna_procs = 0;
+	if($readtype->{seqtype} eq "dna"){
+		`mkfifo $bowtie2_r1_pipe`;
+		`mkfifo $bowtie2_r2_pipe` if $readtype->{paired};
+		`mkfifo $last_rna_pipe`;
+		$rna_procs = 2;
+	}else{
+		# if we're searching protein, send these to the bitbucket
+		$bowtie2_r1_pipe = "/dev/null";
+		$bowtie2_r2_pipe = "/dev/null" if $readtype->{paired};
+		$last_rna_pipe = "/dev/null";
+	}
 	my @children;
-	for ( my $count = 1 ; $count <= $self->{"threads"} + 2 ; $count++ ) {
+	for ( my $count = 1 ; $count <= $self->{"threads"} + $rna_procs ; $count++ ) {
 		my $pid = fork();
 		if ($pid) {
 
@@ -140,7 +150,7 @@ sub launch_searches {
 			my $hitstream;
 			my $candidate_type = ".$count";
 			if ( $count <= $self->{"threads"} ) {
-				$hitstream = lastal_table( self => $self, query_file => $last_pipe_array[ $count - 1 ] );
+				$hitstream = lastal_table( self => $self, query_file => $last_pipe_array[ $count - 1 ], readtype => $readtype );
 				$candidate_type = ".lastal";
 			} elsif ( $count == $self->{"threads"} + 1 ) {
 
@@ -356,8 +366,11 @@ sub lastal_table {
 	my %args       = @_;
 	my $self       = $args{self} || miss("self");
 	my $query_file = $args{query_file} || miss("query_file");
+	my $readtype = $args{readtype} || miss("readtype");
+	my $last_opts = "";
+	$last_opts = "-F15" if $readtype->{seqtype} eq "dna";
 	my $db         = Phylosift::Utilities::get_lastal_db( self => $self );
-	my $lastal_cmd = "$Phylosift::Utilities::lastal -F15 -e75 -f0 $db $query_file |";
+	my $lastal_cmd = "$Phylosift::Utilities::lastal $last_opts -e75 -f0 $db $query_file |";
 	debug "Running $lastal_cmd";
 	my $HISTREAM = ps_open($lastal_cmd);
 	return $HISTREAM;
