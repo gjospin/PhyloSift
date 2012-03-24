@@ -374,7 +374,7 @@ sub summarize {
 }
 
 my $xml;
-my $KRONA_THRESHOLD = 0.75;
+my $KRONA_THRESHOLD = 0.01;
 sub krona_report {
 	my %args = @_;
 	my $self = $args{self} || miss("self");
@@ -427,7 +427,7 @@ EOF
 		-pre => sub {
 			my $node = shift;
 			my $name = $node->get_name;
-			return unless(defined($ncbi_summary{$name}) && $ncbi_summary{$name} > $KRONA_THRESHOLD);
+			return unless(defined($ncbi_summary{$name}) && $ncbi_summary{$name} / $ncbi_summary{1} > $KRONA_THRESHOLD);
 			my ( $taxon_name, $taxon_level, $taxon_id ) = get_taxon_info( taxon => $name );
 			$xml->startTag("node", "name"=>$taxon_name, "href"=>"http://www.ncbi.nlm.nih.gov/Taxonomy/Browser/wwwtax.cgi?id=$name");
 			$xml->startTag("abundance");
@@ -439,13 +439,13 @@ EOF
 		-pre_sister => sub {
 			my $node = shift;
 			my $name = $node->get_name;
-			return unless(defined($ncbi_summary{$name}) && $ncbi_summary{$name} > $KRONA_THRESHOLD);
+			return unless(defined($ncbi_summary{$name}) && $ncbi_summary{$name} / $ncbi_summary{1} > $KRONA_THRESHOLD);
 			$xml->endTag("node");
 		},
 		-no_sister => sub {
 			my $node = shift;
 			my $name = $node->get_name;
-			return unless(defined($ncbi_summary{$name}) && $ncbi_summary{$name} > $KRONA_THRESHOLD);
+			return unless(defined($ncbi_summary{$name}) && $ncbi_summary{$name} / $ncbi_summary{1} > $KRONA_THRESHOLD);
 			$xml->endTag("node");
 		}
 	);
