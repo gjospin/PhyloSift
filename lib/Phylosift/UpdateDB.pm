@@ -769,7 +769,7 @@ export OMP_NUM_THREADS=3
 			
 	}
 	wait_for_jobs( job_ids => \@jobids );
-	`rm ps_tree.sh.*`;
+	`rm ps_tree.sh.* ps_tree_codon.* ps_tree_rna.*`;
 }
 
 sub fix_names_in_alignment {
@@ -865,6 +865,7 @@ sub prune_marker {
 
 	# create a pruned alignment fasta
 	filter_fasta( input_fasta => $fasta, output_fasta => $pruned_fasta, keep_taxa => \%keep_taxa );
+	`rm $tre.pruning.log`;
 }
 
 sub pd_prune_markers {
@@ -945,12 +946,14 @@ sub reconcile_with_ncbi {
 		my $script = $dna == 0 ? $aa_script : $codon_script;
 		my $sub_marker;
 		$sub_marker = '$2' if $dna;
+		$pruned = 0 if $dna;
 		my $aa_fasta    = get_fasta_filename( marker => '$1', dna => $dna, updated => 1, pruned => $pruned, sub_marker=>$sub_marker );
 		my $aa_tre      = get_fasttree_tre_filename( marker => '$1', dna => $dna, updated => 1, pruned => $pruned, sub_marker=>$sub_marker );
 		my $aa_log      = get_fasttree_log_filename( marker => '$1', dna => $dna, updated => 1, pruned => $pruned, sub_marker=>$sub_marker );
 		my $aa_package  = get_marker_package( marker => '$1', dna => $dna, updated => 1, sub_marker=>$sub_marker );
 		my $aa_taxonmap = get_taxonmap_filename( marker => '$1', dna => $dna, updated => 1, sub_marker=>$sub_marker );
 		my $aa_ids      = get_marker_geneids( marker => '$1', dna => $dna, updated => 1, sub_marker=>$sub_marker );
+		my $aa_tmpread  = get_marker_package( marker => '$1', dna => $dna, updated => 1, sub_marker=>$sub_marker ).".tmpread";
 		my $RECONCILESCRIPT = ps_open( ">$script" );
 		print $RECONCILESCRIPT <<EOF;
 #!/bin/sh
@@ -960,11 +963,11 @@ sub reconcile_with_ncbi {
 
 rm -rf $aa_package
 taxit create -a "Aaron Darling" -d "simple package for reconciliation only" -l \$1 -f $aa_fasta -t $aa_tre -s $aa_log -Y FastTree -P $aa_package
-pplacer -c $aa_package -p $aa_package.tmpread.fasta
+pplacer -c $aa_package -p $aa_tmpread.fasta
 # readconciler uses a pplacer tree from a .jplace file to parse out the branch numbers
-mangler.pl < $aa_package.tmpread.jplace > $aa_package.tmpread.jplace.mangled
-readconciler ncbi_tree.updated.tre $aa_package.tmpread.jplace.mangled $aa_ids $aa_taxonmap
-rm $aa_package.tmpread.jplace $aa_package.tmpread.jplace.mangled $aa_package.tmpread.fasta
+mangler.pl < $aa_tmpread.jplace > $aa_tmpread.jplace.mangled
+readconciler ncbi_tree.updated.tre $aa_tmpread.jplace.mangled $aa_ids $aa_taxonmap
+rm $aa_tmpread.jplace $aa_tmpread.jplace.mangled $aa_tmpread.fasta
 EOF
 		close($RECONCILESCRIPT);
 		`chmod 755 $script`;
@@ -981,24 +984,24 @@ EOF
 		
 		# create some read files for pplacer to place so we can get its jplace
 		create_temp_read_fasta( file => get_marker_package( marker=>$marker, updated=>1), aln_file => $marker_fasta);
-		create_temp_read_fasta( file => get_marker_package( marker=>$marker, updated=>1, dna=>1), aln_file => get_fasta_filename( marker => $marker, updated => 1, dna => 1) );
 
 		# run reconciliation on them
 		my @marray = ($marker);
-		qsub_job(script=>$aa_script, job_ids=>\@jobids, script_args=>\@marray );
+#		qsub_job(script=>$aa_script, job_ids=>\@jobids, script_args=>\@marray );
 
 		for(my $group_id=1; ; $group_id++){
 			my $subalignment = get_fasta_filename( marker => $marker, dna => 1, updated => 1, pruned => 0, sub_marker => $group_id );
 			last unless -e $subalignment;
 			my $mtime = ( stat($subalignment) )[9];
 			last unless $mtime > 1332510000;
+			create_temp_read_fasta( file => get_marker_package( marker=>$marker, updated=>1, dna=>1, sub_marker=>$group_id), aln_file => get_fasta_filename( marker => $marker, updated => 1, dna => 1, sub_marker=>$group_id) );
 			filter_marker_gene_ids(marker=>$marker, updated=>1, dna=>1, sub_marker=>$group_id);
 			my @marray = ($marker,$group_id);
 			qsub_job(script=>$codon_script, job_ids=>\@jobids, script_args=>\@marray );
 		}
 	}
 	wait_for_jobs( job_ids => \@jobids );
-	`rm ps_reconcile.sh.o* ps_reconcile.sh.e* ps_reconcile_codon.sh.o* ps_reconcile_codon.sh.e*`;
+	`rm ps_reconcile.sh.o* ps_reconcile.sh.e* ps_reconcile_codon.sh.o* ps_reconcile_codon.sh.e* *.tmpread.fasta *.tmpread.jplace *.tmpread.jplace.mangled`;
 }
 
 =head2 update_rna
@@ -1070,7 +1073,7 @@ sub make_codon_submarkers {
 	# this is the maximum distance in amino acid substitutions per site that are allowed
 	# on any branch of the tree relating members of a group
 	# TODO: tune this value
-	my $max_aa_branch_distance = 0.2;
+	my $max_aa_branch_distance = 0.05;
 	my ($idtref, $mtiref) = read_gene_ids( file => "$marker_dir/".get_gene_id_file(dna=>0) );
 	my %id_to_taxon = %$idtref;
 	my %marker_taxon_to_id = %$mtiref;
@@ -1089,6 +1092,10 @@ sub make_codon_submarkers {
 		next unless Phylosift::Utilities::is_protein_marker( marker => $marker );
 		my $aa_tree = get_fasttree_tre_filename( marker => $marker, dna => 0, updated => 1, pruned => 0 );
 		my $codon_alignment = get_fasta_filename( marker => $marker, dna => 1, updated => 1, pruned => 0 );
+		# clean out any stale version of this marker
+		my $sub_pack = get_marker_package( marker => $marker, dna => 1, updated => 1, pruned => 0, sub_marker=>'*' );
+		print STDERR "removing $sub_pack*";
+		`rm -rf $sub_pack*`;
 		next unless -e $codon_alignment;
 		my $alnio = Bio::AlignIO->new(-file => $codon_alignment );
 		my $aln = $alnio->next_aln();
@@ -1350,25 +1357,29 @@ sub make_pplacer_packages_with_taxonomy {
 }
 
 sub package_markers {
-	my $marker_dir = shift || miss("marker_dir");
+	my $marker_dir = shift || miss("marker_directory");
 	my @markerlist = Phylosift::Utilities::gather_markers();
 	unshift( @markerlist, "concat" );
 	foreach my $marker (@markerlist) {
 
-		for ( my $dna = 0 ; $dna < 2 ; $dna++ ) {    # zero for aa, one for dna
-			my $pack = get_marker_package( marker => $marker, dna => $dna, updated => 1 );
-			# move in reps
-			my $pruned_reps = get_reps_filename( marker => $marker, updated => 1, clean => 1, pruned => 1 );
-			`mv $pruned_reps $pack/$marker.reps` if $dna==0;
+#		for ( my $dna = 0 ; $dna < 2 ; $dna++ ) {    # zero for aa, one for dna
+#			my $pack = get_marker_package( marker => $marker, dna => $dna, updated => 1 );
+#			# move in reps
+#			my $pruned_reps = get_reps_filename( marker => $marker, updated => 1, clean => 1, pruned => 1 );
+#			`mv $pruned_reps $pack/$marker.reps` if $dna==0;
 			# move in taxonmap
-			my $taxonmap = get_taxonmap_filename( marker => $marker, dna => $dna, updated => 1, pruned => 0 );
-			`mv $taxonmap $pack/$marker.taxonmap`;
-		}
+#			my $taxonmap = get_taxonmap_filename( marker => $marker, dna => $dna, updated => 1, pruned => 0 );
+#			`mv $taxonmap $pack/$marker.taxonmap`;
+#		}
 		# now do codon submarkers
 		for(my $group_id=1; ; $group_id++){
 			my $subalignment = get_fasta_filename( marker => $marker, dna => 1, updated => 1, pruned => 0, sub_marker => $group_id );
-			last unless -e $subalignment;
 			my $pack = get_marker_package( marker => $marker, dna => 1, updated => 1, sub_marker => $group_id );
+			if(-d $pack && !-f "$pack/$subalignment"){
+				print STDERR "Removing package $pack";
+				`rm -rf $pack*`;
+			}
+			last unless -e $subalignment;
 			# move in taxonmap
 			my $taxonmap = get_taxonmap_filename( marker => $marker, dna => 1, updated => 1, pruned => 0, sub_marker => $group_id );
 			`mv $taxonmap $pack/$marker.taxonmap`;
