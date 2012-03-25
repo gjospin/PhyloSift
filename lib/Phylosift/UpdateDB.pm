@@ -604,6 +604,7 @@ sub make_ncbi_subtree {
 	my %tidnodes;
 	my $phylotree = Bio::Phylo::Forest::Tree->new();
 	foreach my $tid (@taxonids) {
+		next unless(defined($merged{$tid}) || defined($idnamemap{$tid}));	# ensure the id actually exists in NCBI's db
 		next if ( $tid eq "" );
 		my @children;
 		while ( defined($tid) ) {
