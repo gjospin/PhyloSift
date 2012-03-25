@@ -262,8 +262,10 @@ sub place_reads{
 	`mv $jplace $self->{"treeDir"}` if ( -e $jplace );
 	
 	return unless -e $self->{"treeDir"} . "/$jplace";
+	debug "Naming taxa in marker $marker\n";
 	name_taxa_in_jplace( self => $self, input => $self->{"treeDir"} . "/$jplace", output => $self->{"treeDir"} . "/$jplace" );
 	return unless defined($covref);
+	debug "Weighting sequences in $marker\n";
 	weight_placements( self => $self, coverage => $covref, place_file => $self->{"treeDir"} . "/$jplace" );
 }
 
