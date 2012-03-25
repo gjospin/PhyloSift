@@ -542,9 +542,10 @@ sub update_ncbi_taxonomy {
 	system("cd $repository/; tar czf ncbi.tar.gz ncbi");
 }
 
+my %merged;
 sub read_merged_nodes {
+	return %merged if %merged;
 	my $MERGED = ps_open( "$Phylosift::Utilities::ncbi_dir/merged.dmp" );
-	my %merged;
 	while ( my $line = <$MERGED> ) {
 		chomp $line;
 		my @vals = split( /\s+\|\s*/, $line );
@@ -553,33 +554,53 @@ sub read_merged_nodes {
 	return %merged;
 }
 
+sub make_marker_taxon_map {
+	my %args        = @_;
+	my $self        = $args{self} || miss("self");
+	my $markerdir   = $args{marker_dir} || miss("marker_dir");
+
+	my $AAIDS = ps_open( "$markerdir/".get_gene_id_file(dna=>0) );
+	my $MARKERTAXONMAP = ps_open( ">$markerdir/marker_taxon_map.updated.txt" );
+
+	while ( my $line = <$AAIDS> ) {
+		chomp $line;
+		my ( $marker, $taxon, $uniqueid ) = split( /\t/, $line );
+		print $MARKERTAXONMAP "$uniqueid\t$taxon\n";
+	}
+	close $MARKERTAXONMAP;
+}
+
 sub make_ncbi_tree_from_update {
 	my %args        = @_;
 	my $self        = $args{self} || miss("self");
-	my $repository  = $args{repository} || miss("repository");
 	my $markerdir   = $args{marker_dir} || miss("marker_dir");
 
-	# force use of the new NCBI data
-	$Phylosift::Utilities::ncbi_dir = "$repository/ncbi/";
-
-	my ($nimref, $inmref) = Phylosift::Summarize::read_ncbi_taxon_name_map();
-	my %nameidmap = %$nimref; 
-	my %idnamemap  = %$inmref;
-	my %parent = Phylosift::Summarize::read_ncbi_taxonomy_structure();
-	print STDERR "ncbi tree has " . scalar( keys(%parent) ) . " nodes\n";
 	my $AAIDS = ps_open( "$markerdir/".get_gene_id_file(dna=>0) );
-	my $MARKERTAXONMAP = ps_open( ">$markerdir/marker_taxon_map.updated.txt" );
 	my @taxonids;
-	my %merged = read_merged_nodes();
-	print "Read " . scalar( keys(%merged) ) . " merged nodes\n";
 
 	while ( my $line = <$AAIDS> ) {
 		chomp $line;
 		my ( $marker, $taxon, $uniqueid ) = split( /\t/, $line );
 		push( @taxonids, $taxon ) if $taxon =~ /^\d+$/;
-		print $MARKERTAXONMAP "$uniqueid\t$taxon\n";
 	}
-	close $MARKERTAXONMAP;
+	make_ncbi_subtree(out_file=>"ncbi_tree.updated.tre", taxon_ids=>\@taxonids);
+}
+
+sub make_ncbi_subtree {
+	my %args        = @_;
+	my $out_file   = $args{out_file} || miss("out_file");
+	my $tidref      = $args{taxon_ids} || miss("taxon_ids");
+
+	my @taxonids = @$tidref;
+	
+	my ($nimref, $inmref) = Phylosift::Summarize::read_ncbi_taxon_name_map();
+	my %nameidmap = %$nimref; 
+	my %idnamemap  = %$inmref;
+	my %parent = Phylosift::Summarize::read_ncbi_taxonomy_structure();
+	print STDERR "ncbi tree has " . scalar( keys(%parent) ) . " nodes\n";
+	my %merged = read_merged_nodes();
+	print "Read " . scalar( keys(%merged) ) . " merged nodes\n";
+
 	my %tidnodes;
 	my $phylotree = Bio::Phylo::Forest::Tree->new();
 	foreach my $tid (@taxonids) {
@@ -628,7 +649,7 @@ sub make_ncbi_tree_from_update {
 			@children = @new_children;
 		}
 	}
-	my $TREEOUT = ps_open( ">ncbi_tree.updated.tre" );
+	my $TREEOUT = ps_open( ">$out_file" );
 	print $TREEOUT $phylotree->to_newick( "-nodelabels" => 1 );
 	close $TREEOUT;
 }
@@ -658,6 +679,13 @@ sub get_marker_geneids {
 	my %args = @_;
 	my $name = get_marker_name_base(%args);
 	$name .= ".geneids";
+	return $name;
+}
+
+sub get_marker_ncbi_subtree {
+	my %args = @_;
+	my $name = get_marker_name_base(%args);
+	$name .= ".ncbi_subtree";
 	return $name;
 }
 
@@ -921,17 +949,36 @@ sub filter_marker_gene_ids{
 	my $marker = $args{marker} || miss("marker");
 	my $updated = $args{updated} || 0;
 	my $dna = $args{dna} || 0;
+	my $pruned = $args{pruned} || 0;
 	my $sub_marker = $args{sub_marker};
+	
+	my @taxon_ids;
 	
 	my $ids = get_marker_geneids( marker => $marker, dna => $dna, updated => $updated, sub_marker=>$sub_marker );
 	print STDERR "ids are $ids\n";
 	my $MARKER_IDS = ps_open(">$ids");
+
+	# read the IDs present in the alignment so only those are included
+	my $alignment = get_fasta_filename( marker => $marker, dna => $dna, updated => 1, pruned => $pruned, sub_marker => $sub_marker );
+	my $ALN = ps_open($alignment);
+	my %aln_ids;
+	while(my $line = <$ALN>){
+		chomp $line;
+		$aln_ids{$1}=1 if $line =~ />(.+)/;
+	}
+	
+
 	my $IDS = ps_open(get_gene_id_file(dna => $dna));
 	while(my $line = <$IDS>){
 		next unless $line =~ /^$marker\t/;
-		print $MARKER_IDS $line;
+		chomp $line;
+		my ( $m, $taxon, $uniqueid ) = split( /\t/, $line );
+		next unless defined($aln_ids{$uniqueid});
+		push(@taxon_ids, $taxon);
+		print $MARKER_IDS $line."\n";
 	}
 	close($MARKER_IDS);	
+	return \@taxon_ids;
 }
 
 sub reconcile_with_ncbi {
@@ -954,6 +1001,7 @@ sub reconcile_with_ncbi {
 		my $aa_taxonmap = get_taxonmap_filename( marker => '$1', dna => $dna, updated => 1, sub_marker=>$sub_marker );
 		my $aa_ids      = get_marker_geneids( marker => '$1', dna => $dna, updated => 1, sub_marker=>$sub_marker );
 		my $aa_tmpread  = get_marker_package( marker => '$1', dna => $dna, updated => 1, sub_marker=>$sub_marker ).".tmpread";
+		my $aa_ncbi_tre = get_marker_ncbi_subtree( marker => '$1', dna => $dna, updated => 1, pruned=>$pruned, sub_marker=>$sub_marker );
 		my $RECONCILESCRIPT = ps_open( ">$script" );
 		print $RECONCILESCRIPT <<EOF;
 #!/bin/sh
@@ -980,10 +1028,14 @@ EOF
 	foreach my $marker (@markerlist) {
 		my $marker_fasta = get_fasta_filename( marker => $marker, updated => 1);
 		next unless -e $marker_fasta;
-		filter_marker_gene_ids(marker=>$marker, updated=>1, dna=>0);
+		my $taxa = filter_marker_gene_ids(marker=>$marker, updated=>1, pruned=>$pruned, dna=>0);
+		my $ncbi_tre = get_marker_ncbi_subtree( marker => $marker, dna => 0, updated => 1, pruned=>$pruned );
+		print STDERR "making ncbi subtree for $marker\n";
+		make_ncbi_subtree(out_file=>$ncbi_tre, taxon_ids=>$taxa);
 		
 		# create some read files for pplacer to place so we can get its jplace
 		create_temp_read_fasta( file => get_marker_package( marker=>$marker, updated=>1), aln_file => $marker_fasta);
+
 
 		# run reconciliation on them
 		my @marray = ($marker);
@@ -994,8 +1046,11 @@ EOF
 			last unless -e $subalignment;
 			my $mtime = ( stat($subalignment) )[9];
 			last unless $mtime > 1332510000;
+
 			create_temp_read_fasta( file => get_marker_package( marker=>$marker, updated=>1, dna=>1, sub_marker=>$group_id), aln_file => get_fasta_filename( marker => $marker, updated => 1, dna => 1, sub_marker=>$group_id) );
-			filter_marker_gene_ids(marker=>$marker, updated=>1, dna=>1, sub_marker=>$group_id);
+			my $taxa = filter_marker_gene_ids(marker=>$marker, updated=>1, dna=>1, pruned=>0, sub_marker=>$group_id);
+			my $ncbi_tre = get_marker_ncbi_subtree( marker => $marker, dna => 1, updated => 1, pruned=>0, sub_marker=>$group_id );
+			make_ncbi_subtree(out_file=>$ncbi_tre, taxon_ids=>$taxa);
 			my @marray = ($marker,$group_id);
 			qsub_job(script=>$codon_script, job_ids=>\@jobids, script_args=>\@marray );
 		}
@@ -1156,6 +1211,7 @@ sub make_constrained_tree {
 	my $marker_dir        = $args{marker_dir} || miss("marker_dir");
 	my $constraint_pruned = $args{constraint_pruned} || 0;
 	my $target_pruned     = $args{target_pruned} || 0;
+	my $copy_tree         = $args{copy_tree} || 0;
 	my ($idtref,$mtiref) = read_gene_ids(file=>"$marker_dir/".get_gene_id_file(dna=>0));
 	my %id_to_taxon = %$idtref;
 	my %marker_taxon_to_id = %$mtiref;
@@ -1211,12 +1267,6 @@ sub make_constrained_tree {
 	print $RENAMETREE unparse( '-phylo' => $tree, '-format' => 'newick' ) . "\n";
 	close $RENAMETREE;
 
-	#
-	# enumerate the splits in the tree
-	my $constraint_splits = "$renamed_tree.splits";
-	my $constraint_cl     = "print_splits $renamed_tree $constraint_splits";
-	system($constraint_cl);
-
 	
 	#
 	# create an amended alignment with any taxa missing from the target data
@@ -1227,16 +1277,22 @@ sub make_constrained_tree {
 	}
 	close $AMENDALN;
 
-	#
-	# now make a target tree that respects protein tree constraints
-	my $target_constrained_tree = get_fasttree_tre_filename( marker => $target_marker, dna => 0, updated => 1, pruned => $target_pruned ) . ".constrained";
-	my $target_constrained_log = get_fasttree_log_filename( marker => $target_marker, dna => 0, updated => 1, pruned => $target_pruned ) . ".constrained";
-	
-	my $data_type_args = "";
-	$data_type_args = "-nt -gtr" unless(Phylosift::Utilities::is_protein_marker(marker=>$target_marker));
-	
-	my $TREESCRIPT = ps_open(">/tmp/constrained_tre.sh");
-	print $TREESCRIPT <<EOF;
+	unless($copy_tree){
+		#
+		# enumerate the splits in the constraint tree
+		my $constraint_splits = "$renamed_tree.splits";
+		my $constraint_cl     = "print_splits $renamed_tree $constraint_splits";
+		system($constraint_cl);
+		#
+		# now infer a target tree that respects protein tree constraints
+		my $target_constrained_tree = get_fasttree_tre_filename( marker => $target_marker, dna => 0, updated => 1, pruned => $target_pruned ) . ".constrained";
+		my $target_constrained_log = get_fasttree_log_filename( marker => $target_marker, dna => 0, updated => 1, pruned => $target_pruned ) . ".constrained";
+		
+		my $data_type_args = "";
+		$data_type_args = "-nt -gtr" unless(Phylosift::Utilities::is_protein_marker(marker=>$target_marker));
+		
+		my $TREESCRIPT = ps_open(">/tmp/constrained_tre.sh");
+		print $TREESCRIPT <<EOF;
 #!/bin/sh
 #\$ -cwd
 #\$ -V
@@ -1244,16 +1300,24 @@ sub make_constrained_tree {
 #\$ -pe threaded 3
 export OMP_NUM_THREADS=3
 FastTree-nonuni $data_type_args -constraints $constraint_splits -constraintWeight 100 -log $target_constrained_log  $target_alignment_amended > $target_constrained_tree
-
+	
 EOF
-	my @job_ids = ();
-	qsub_job(script=>"/tmp/constrained_tre.sh", job_ids=>\@job_ids, qsub_args=>"-l mem_free=12G");
-	wait_for_jobs(job_ids=>\@job_ids);
+		my @job_ids = ();
+		qsub_job(script=>"/tmp/constrained_tre.sh", job_ids=>\@job_ids, qsub_args=>"-l mem_free=12G");
+		wait_for_jobs(job_ids=>\@job_ids);
 
-	# finally, make a pplacer package with the constrained tree
-	my $taxit_cl =
-"taxit create -a \"Aaron Darling\" -d \"topology-constrained marker $target_marker\" -l $target_marker -f $target_alignment_amended -t $target_constrained_tree -s $target_constrained_log -Y FastTree -P $target_marker.constrained";
-	system($taxit_cl);
+		# finally, make a pplacer package with the constrained tree
+		my $taxit_cl =
+	"taxit create -a \"Aaron Darling\" -d \"topology-constrained marker $target_marker\" -l $target_marker -f $target_alignment_amended -t $target_constrained_tree -s $target_constrained_log -Y FastTree -P $target_marker.constrained";
+		system($taxit_cl);
+	}else{
+
+		# make a pplacer package with the renamed tree
+		my $taxit_cl =
+	"taxit create -a \"Aaron Darling\" -d \"topology-constrained marker $target_marker\" -l $target_marker -f $target_alignment_amended -t $renamed_tree -Y FastTree -P $target_marker.constrained";
+		system($taxit_cl);		
+	}
+
 }
 
 =head2 join_trees
