@@ -48,6 +48,7 @@ chdir("..");
 `wget http://search.cpan.org/CPAN/authors/id/G/GA/GAAS/Encode-Locale-0.04.tar.gz`;
 `tar xzf Encode-Locale-0.04.tar.gz`;
 `chdir Encode-Locale-0.04`;
+`perl Makefile.PL`;
 `make`;
 `mv blib/lib/Encode ../PhyloSift/lib/`;
 chdir("..");
