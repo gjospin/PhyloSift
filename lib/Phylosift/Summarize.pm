@@ -71,6 +71,7 @@ sub read_ncbi_taxon_name_map {
 my %parent;
 
 sub read_ncbi_taxonomy_structure {
+	return %parent if %parent;
 	my $ncbidir = $Phylosift::Utilities::ncbi_dir;
 	my $TAXSTRUCTURE = ps_open( "$ncbidir/nodes.dmp" );
 	while ( my $line = <$TAXSTRUCTURE> ) {
