@@ -1277,12 +1277,12 @@ sub index_marker_db {
 	`mv $blastp_db $path/rep.dbfasta`;
 
 	# make a last database
-	`cd $path ; $Phylosift::Utilities::lastdb -p -c replast rep.dbfasta`;
+	`cd $path ; $Phylosift::Utilities::lastdb -p replast rep.dbfasta`;
 	unlink("$path/rep.dbfasta");    # don't need this anymore!
 
 	# make a bowtie2 database
 	if ( -e $bowtie2_db_fasta && -s $bowtie2_db_fasta > 100 ) {
-		`cd $path ; $Phylosift::Utilities::lastdb -c $bowtie2_db $bowtie2_db_fasta`;
+		`cd $path ; $Phylosift::Utilities::lastdb $bowtie2_db $bowtie2_db_fasta`;
 		`cd $path ; $Phylosift::Utilities::bowtie2build $bowtie2_db_fasta $bowtie2_db`;
 	}
 
