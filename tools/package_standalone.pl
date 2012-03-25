@@ -16,6 +16,9 @@ my $branch = $ARGV[0] || "master";
 `rm PhyloSift/ignore.txt`;
 `rm PhyloSift/MANIFEST`;
 `rm PhyloSift/Changes`;
+`rm PhyloSift/.gitignore`;
+`rm PhyloSift/.includepath`;
+`rm PhyloSift/.project`;
 `rm -rf PhyloSift/t`;
 `rm -rf PhyloSift/tools`;
 
