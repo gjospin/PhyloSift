@@ -55,7 +55,7 @@ sub pplacer {
 	}
 
 	if ( $self->{"updated"} ) {
-		place_reads(self=>$self, marker=>"concat", options=>"--groups 5", dna=>0, reads=>$self->{"alignDir"} . "/concat.trim.fasta");
+		place_reads(self=>$self, marker=>"concat", options=>"--groups 10", dna=>0, reads=>$self->{"alignDir"} . "/concat.trim.fasta");
 	}
 	foreach my $marker ( @{$markRef} ) {
 		# the PMPROK markers are contained in the concat above
