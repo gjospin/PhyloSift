@@ -31,7 +31,8 @@ sub run_benchmark {
 	debug "NIMREF : $nimref\nINMREF : $inmref\n";
 	%nameidmap = %$nimref;
 	%idnamemap  = %$inmref;
-	%parent  = Phylosift::Summarize::read_ncbi_taxonomy_structure();
+	my $rents  = Phylosift::Summarize::read_ncbi_taxonomy_structure();
+	%parent = %$rents;
 	my ($refTaxa_ref, $taxon_read_counts) = getInputTaxa( file_name=>$self->{"readsFile"} );
 	%refTaxa = %$refTaxa_ref;
 	my ($top_place,$all_place) = read_seq_summary( self=>$self, output_path=>$output_path,read_source=> \%readSource );

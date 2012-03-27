@@ -71,7 +71,8 @@ sub read_ncbi_taxon_name_map {
 my %parent;
 
 sub read_ncbi_taxonomy_structure {
-	return %parent if %parent;
+	return \%parent if %parent;
+	debug "Reading NCBI taxonomy\n";
 	my $ncbidir = $Phylosift::Utilities::ncbi_dir;
 	my $TAXSTRUCTURE = ps_open( "$ncbidir/nodes.dmp" );
 	while ( my $line = <$TAXSTRUCTURE> ) {
@@ -79,7 +80,7 @@ sub read_ncbi_taxonomy_structure {
 		my @vals = split( /\s+\|\s+/, $line );
 		$parent{ $vals[0] } = [ $vals[1], $vals[2] ];
 	}
-	return %parent;
+	return \%parent;
 }
 
 sub make_ncbi_tree_from_update {
@@ -300,7 +301,7 @@ sub summarize {
 
 		}
 	}
-	
+
 	# make a summary of total reads at each taxonomic level
 	# this gets used later in krona output
 	foreach my $qname ( keys(%placements) ) {
@@ -527,6 +528,7 @@ sub sum_taxon_levels {
 sub get_taxon_info {
 	my %args = @_;
 	my $in   = $args{taxon} || miss("taxon");
+	read_ncbi_taxonomy_structure();
 	if ( $in =~ /^\d+$/ ) {
 
 		#it's an ncbi taxon id.  look up its name and level.
