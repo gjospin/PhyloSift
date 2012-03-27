@@ -596,8 +596,8 @@ sub make_ncbi_subtree {
 	my ($nimref, $inmref) = Phylosift::Summarize::read_ncbi_taxon_name_map();
 	my %nameidmap = %$nimref; 
 	my %idnamemap  = %$inmref;
-	my %parent = Phylosift::Summarize::read_ncbi_taxonomy_structure();
-	print STDERR "ncbi tree has " . scalar( keys(%parent) ) . " nodes\n";
+	my $parent = Phylosift::Summarize::read_ncbi_taxonomy_structure();
+	print STDERR "ncbi tree has " . scalar( keys(%$parent) ) . " nodes\n";
 	my %merged = read_merged_nodes();
 	print "Read " . scalar( keys(%merged) ) . " merged nodes\n";
 
@@ -622,7 +622,7 @@ sub make_ncbi_subtree {
 
 			# create a new node & add to tree
 			my $parentid;
-			$parentid = $parent{$tid}->[0] unless $tid == 1;
+			$parentid = $parent->{$tid}->[0] unless $tid == 1;
 			if ( !defined($parentid) && $tid != 1) {
 				print STDERR "Could not find parent for $tid\n";
 				exit;
@@ -1040,7 +1040,7 @@ EOF
 
 		# run reconciliation on them
 		my @marray = ($marker);
-#		qsub_job(script=>$aa_script, job_ids=>\@jobids, script_args=>\@marray );
+		qsub_job(script=>$aa_script, job_ids=>\@jobids, script_args=>\@marray );
 
 		for(my $group_id=1; ; $group_id++){
 			my $subalignment = get_fasta_filename( marker => $marker, dna => 1, updated => 1, pruned => 0, sub_marker => $group_id );
@@ -1311,6 +1311,7 @@ EOF
 		my $taxit_cl =
 	"taxit create -a \"Aaron Darling\" -d \"topology-constrained marker $target_marker\" -l $target_marker -f $target_alignment_amended -t $target_constrained_tree -s $target_constrained_log -Y FastTree -P $target_marker.constrained";
 		system($taxit_cl);
+		unlink($constraint_splits);
 	}else{
 
 		# make a pplacer package with the renamed tree
@@ -1318,7 +1319,6 @@ EOF
 	"taxit create -a \"Aaron Darling\" -d \"topology-constrained marker $target_marker\" -l $target_marker -f $target_alignment_amended -t $renamed_tree -Y FastTree -P $target_marker.constrained";
 		system($taxit_cl);		
 	}
-
 }
 
 =head2 join_trees
@@ -1427,15 +1427,15 @@ sub package_markers {
 	unshift( @markerlist, "concat" );
 	foreach my $marker (@markerlist) {
 
-#		for ( my $dna = 0 ; $dna < 2 ; $dna++ ) {    # zero for aa, one for dna
-#			my $pack = get_marker_package( marker => $marker, dna => $dna, updated => 1 );
-#			# move in reps
-#			my $pruned_reps = get_reps_filename( marker => $marker, updated => 1, clean => 1, pruned => 1 );
-#			`mv $pruned_reps $pack/$marker.reps` if $dna==0;
+		for ( my $dna = 0 ; $dna < 2 ; $dna++ ) {    # zero for aa, one for dna
+			my $pack = get_marker_package( marker => $marker, dna => $dna, updated => 1 );
+			# move in reps
+			my $pruned_reps = get_reps_filename( marker => $marker, updated => 1, clean => 1, pruned => 1 );
+			`mv $pruned_reps $pack/$marker.reps` if $dna==0 && -e $pruned_reps;
 			# move in taxonmap
-#			my $taxonmap = get_taxonmap_filename( marker => $marker, dna => $dna, updated => 1, pruned => 0 );
-#			`mv $taxonmap $pack/$marker.taxonmap`;
-#		}
+			my $taxonmap = get_taxonmap_filename( marker => $marker, dna => $dna, updated => 1, pruned => 0 );
+			`mv $taxonmap $pack/$marker.taxonmap` if -e $taxonmap;
+		}
 		# now do codon submarkers
 		for(my $group_id=1; ; $group_id++){
 			my $subalignment = get_fasta_filename( marker => $marker, dna => 1, updated => 1, pruned => 0, sub_marker => $group_id );
@@ -1447,7 +1447,7 @@ sub package_markers {
 			last unless -e $subalignment;
 			# move in taxonmap
 			my $taxonmap = get_taxonmap_filename( marker => $marker, dna => 1, updated => 1, pruned => 0, sub_marker => $group_id );
-			`mv $taxonmap $pack/$marker.taxonmap`;
+			`mv $taxonmap $pack/$marker.taxonmap` if -e $taxonmap;
 		}
 
 	}
