@@ -83,6 +83,14 @@ chdir("libwww-perl-6.04");
 `mv blib/lib/LWP/ ../PhyloSift/lib/`;
 chdir("..");
 
+`wget http://search.cpan.org/CPAN/authors/id/G/GA/GAAS/HTTP-Message-6.03.tar.gz`;
+`tar xzf HTTP-Message-6.03.tar.gz`;
+chdir("HTTP-Message-6.03");
+`perl Makefile.PL`;
+`make`;
+`mv blib/lib/HTTP/ ../PhyloSift/lib/`;
+chdir("..");
+
 # add Version.pm
 `wget http://search.cpan.org/CPAN/authors/id/J/JP/JPEACOCK/version-0.95.tar.gz`;
 `tar xzf version-0.95.tar.gz`;
