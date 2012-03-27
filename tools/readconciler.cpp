@@ -17,6 +17,12 @@ void reconcile( PhyloTree< TreeNode >& reftree, string treefile, unordered_multi
 
 unordered_map<string, string> other_map;
 
+/** An upper limit on the number of taxonomy mappings that an edge in the gene tree is allowed to have. 
+ *  If more than this, the gene tree edge is ignored.  This is ugly, but effectively happens anyway since the mapping gets too diffuse.
+ *  We need a real gene tree/species tree reconciliation algorithm to fix this.
+ */
+const int placement_limit = 30;
+
 int main(int argc, char** argv){
 
 	if(argc < 3){
@@ -367,13 +373,22 @@ void reconcile( PhyloTree< TreeNode >& reftree, string treefile, unordered_multi
 			scoresum += maxscores.back();
 			bestscore = max(maxscores.back(), bestscore);
 		}
+		// count the number of nodes with the max score. if it is more than a threshold, ignore this node since it is too hard to reconcile
+		int place_count = 0;
 		for(size_t j=0; j<maxscores.size(); j++){
 			if(maxscores[j] < bestscore)
 				continue;
-			string refnodename = reftree[ refpg.edge_array[j].first ].name;
-//			cout << "gene tree edge " << i << " linking " << other_map[tree[pg.edge_array[i].first].name] << " best reftree edge " << refnodename << endl; 
-//			cout << "found edge " << pg.edge_array[i].first << "\n";
-			mapout << edgenum_map[pg.edge_array[i].first] << "\t" << refnodename << endl;
+			place_count++;
+		}
+		if(place_count < placement_limit ){
+			for(size_t j=0; j<maxscores.size(); j++){
+				if(maxscores[j] < bestscore)
+					continue;
+				string refnodename = reftree[ refpg.edge_array[j].first ].name;
+	//			cout << "gene tree edge " << i << " linking " << other_map[tree[pg.edge_array[i].first].name] << " best reftree edge " << refnodename << endl; 
+	//			cout << "found edge " << pg.edge_array[i].first << "\n";
+				mapout << edgenum_map[pg.edge_array[i].first] << "\t" << refnodename << endl;
+			}
 		}
 //		if(pg_splitlist[i].count() == 1)
 //			return;
