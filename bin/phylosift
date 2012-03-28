@@ -90,6 +90,7 @@ GetOptions(
 	"f"          => \$force,       #overrides a previous run otherwise stop
 	"continue"   => \$continue,    #when a mode different than all is used, continue the rest of Phylosift after the section specified by the mode is finished
 	"threaded=i" => \$ps->{"threads"},
+	"simple"     => \$ps->{"simple"},	# generate only a simple text taxonomic summary, no krona, no taxon names in jplace
 	"isolate"    => \$ps->{"isolate"},     #use when processing one or more isolate genomes
 	"reverse"         => \$ps->{"reverseTranslate"},    #use to output the reverse translation of the AA alignments
 	"besthit"         => \$ps->{"besthit"},             #should we keep only the best hit when there are multiple?

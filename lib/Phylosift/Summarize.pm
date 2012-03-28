@@ -371,8 +371,11 @@ sub summarize {
 	}
 	close($TAXAHPDOUT);
 	
-	debug "Generating krona\n";
-	krona_report(self=>$self);
+	unless($self->{"simple"}){
+		# skip this if only a simple summary is desired (it's slow)
+		debug "Generating krona\n";
+		krona_report(self=>$self);
+	}
 }
 
 my $xml;
