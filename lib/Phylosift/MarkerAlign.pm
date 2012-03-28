@@ -452,46 +452,50 @@ sub alignAndMask {
 		close $UNMASKEDOUT;
 		close $ALIOUT;
 
-		# do we need to output a nucleotide alignment in addition to the AA alignment?
-		foreach my $type (@search_types) {
-
-			#if it exists read the reference nucleotide sequences for the candidates
-			my %referenceNuc    = ();
-			my $core_file_name  = Phylosift::Utilities::get_candidate_file( self => $self, marker => $marker, type => $type, dna => 1 );
-			my @candidate_files = <$core_file_name.*>;
-			foreach my $cand_file (@candidate_files) {
-				if ( -e $cand_file && -e $outputFastaAA ) {
-					my $REFSEQSIN = ps_open($cand_file);
-					my $currID    = "";
-					my $currSeq   = "";
-					while ( my $line = <$REFSEQSIN> ) {
-						chomp($line);
-						if ( $line =~ m/^>(.*)/ ) {
-							$currID = $1;
-						} else {
-							my $tempseq = Bio::PrimarySeq->new( -seq => $line, -id => $currID, -nowarnonempty => 1 );
-							$referenceNuc{$currID} = $tempseq;
+		my $type = Phylosift::Utilities::get_sequence_input_type( $self->{"readsFile"} );
+		if($type->{seqtype} ne "protein" && Phylosift::Utilities::is_protein_marker( marker => $marker ) ){
+			# do we need to output a nucleotide alignment in addition to the AA alignment?
+			my %referenceNuc    = (); # this will collect all the nucleotide seqs for the marker by name
+			foreach my $type (@search_types) {
+	
+				#if it exists read the reference nucleotide sequences for the candidates
+				my $core_file_name  = Phylosift::Utilities::get_candidate_file( self => $self, marker => $marker, type => $type, dna => 1 );
+				my @candidate_files = <$core_file_name.*>;
+				foreach my $cand_file (@candidate_files) {
+					if ( -e $cand_file && -e $outputFastaAA ) {
+						my $REFSEQSIN = ps_open($cand_file);
+						my $currID    = "";
+						my $currSeq   = "";
+						while ( my $line = <$REFSEQSIN> ) {
+							chomp($line);
+							if ( $line =~ m/^>(.*)/ ) {
+								$currID = $1;
+							} else {
+								my $tempseq = Bio::PrimarySeq->new( -seq => $line, -id => $currID, -nowarnonempty => 1 );
+								$referenceNuc{$currID} = $tempseq;
+							}
 						}
-					}
-					close($REFSEQSIN);
-				}
-				my $ALITRANSOUT = ps_open( ">>" . $outputFastaDNA );
-				if ( $self->{"extended"} ) {
-					$marker =~ s/^\d+\///g;
-				}
-				debug "MARKER : $marker\n";
-				my $aa_ali = new Bio::AlignIO( -file => $self->{"alignDir"} . "/$marker.unmasked", -format => 'fasta' );
-				if ( my $aln = $aa_ali->next_aln() ) {
-					my $dna_ali = &aa_to_dna_aln( aln => $aln, dna_seqs => \%referenceNuc );
-					foreach my $seq ( $dna_ali->each_seq() ) {
-						my $cleanseq = $seq->seq;
-						$cleanseq =~ s/\.//g;
-						$cleanseq =~ s/[a-z]//g;
-						print $ALITRANSOUT ">" . $seq->id . "\n" . $cleanseq . "\n";
+						close($REFSEQSIN);
 					}
 				}
-				close($ALITRANSOUT);
 			}
+			my $ALITRANSOUT = ps_open( ">>" . $outputFastaDNA );
+			if ( $self->{"extended"} ) {
+				$marker =~ s/^\d+\///g;
+			}
+			debug "MARKER : $marker\n";
+			my $aa_ali = new Bio::AlignIO( -file => $self->{"alignDir"} . "/$marker.unmasked", -format => 'fasta' );
+			if ( my $aln = $aa_ali->next_aln() ) {
+				my $dna_ali = &aa_to_dna_aln( aln => $aln, dna_seqs => \%referenceNuc );
+				foreach my $seq ( $dna_ali->each_seq() ) {
+					my $cleanseq = $seq->seq;
+					$cleanseq =~ s/\.//g;
+					$cleanseq =~ s/[a-z]//g;
+					print $ALITRANSOUT ">" . $seq->id . "\n" . $cleanseq . "\n";
+				}
+			}
+			close($ALITRANSOUT);
+			
 		}
 
 		#checking if sequences were written to the marker alignment file
