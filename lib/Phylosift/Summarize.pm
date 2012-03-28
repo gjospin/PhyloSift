@@ -227,10 +227,6 @@ sub summarize {
 	read_ncbi_taxon_name_map();
 	read_ncbi_taxonomy_structure();
 	my $markerdir = $Phylosift::Utilities::marker_dir;
-	my %namemap = Phylosift::Utilities::read_name_table( marker_directory => $markerdir );
-	foreach my $key ( keys(%namemap) ) {
-		$namemap{$key} = homogenize_name_ala_dongying( name => $namemap{$key} );
-	}
 
 	# try to read a contig coverage file if it exists
 	my %coverage;
