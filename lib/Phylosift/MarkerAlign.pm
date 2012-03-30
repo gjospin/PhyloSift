@@ -510,7 +510,9 @@ sub alignAndMask {
 		if ( $self->{"readsFile_2"} ne "" ) {
 			merge_alignment( alignment_file => $self->{"alignDir"} . "/$mbname.unmasked", type => 'AA' );
 			merge_alignment( alignment_file => $outputFastaAA,                            type => 'AA' );
-			merge_alignment( alignment_file => $outputFastaDNA,                           type => 'DNA' );
+			if( Phylosift::Utilities::is_protein_marker( marker => $marker ) ){
+				merge_alignment( alignment_file => $outputFastaDNA,                           type => 'DNA' );
+			}
 		}
 	}
 }
