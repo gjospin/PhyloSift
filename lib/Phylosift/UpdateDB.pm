@@ -222,8 +222,8 @@ sub find_new_genomes {
 		if ( -e "$results_dir/$gbase/alignDir/concat.trim.fasta" ) {
 			my $ctime = ( stat("$results_dir/$gbase/alignDir/concat.trim.fasta") )[9];
 			my $mtime = ( stat($genome) )[9];
-			push( @{$files}, $genome ) if ( $ctime < $mtime );
-#			push( @{$files}, $genome );
+#			push( @{$files}, $genome ) if ( $ctime < $mtime );
+			push( @{$files}, $genome );
 			print STDERR "Found up-to-date $gbase\n" if ( $ctime >= $mtime );
 		} else {
 			push( @{$files}, $genome );
@@ -324,11 +324,21 @@ sub collate_markers {
 	my %args        = @_;
 	my $local_directory = $args{local_directory} || miss ("local_directory");
 	my $marker_dir  = $args{marker_dir} || miss("marker_dir");
+	my $taxon_knockouts = $args{taxon_knockouts};
 
 	# get list of markers
 	chdir($marker_dir);
 	my @markerlist = Phylosift::Utilities::gather_markers();
 	print STDERR "Markers are " . join( " ", @markerlist ) . "\n";
+	
+	my %ko_list;
+	if(defined($taxon_knockouts)){
+		my $KO = ps_open($taxon_knockouts);
+		while(my $line = <$KO>){
+			chomp $line;
+			$ko_list{$line}=1;
+		}
+	}
 
 	# get a list of genomes available in the results directory
 	# this hopefully means we touch each inode over NFS only once
@@ -346,6 +356,8 @@ sub collate_markers {
 		foreach my $file (@alldata) {
 			next unless $file =~ /(.+\.fasta)\/alignDir\/$marker.trim.fasta/;
 			my $genome = $1;
+			my $taxon = $1 if $genome =~ /\.(\d+)\.fasta/;
+			next if( defined($taxon) && defined($ko_list{$taxon}));
 			chomp($file);
 			push( @catfiles, $file );
 

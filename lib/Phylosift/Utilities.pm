@@ -971,6 +971,7 @@ sub concatenate_alignments {
 	foreach my $file (@alignments) {
 		my $aln;
 		my $marker = basename($file);
+		$gapmultiplier = 1 if($marker =~ /16s/ || $marker =~ /18s/);
 		$marker =~ s/\..+//g;                                                # FIXME: this should really come from a list of markers
 		unless ( -e $file ) {
 
