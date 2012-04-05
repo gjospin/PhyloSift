@@ -107,9 +107,9 @@ chdir("..");
 # package everything up and datestamp it
 my @timerval = localtime();
 my $datestr  = ( 1900 + $timerval[5] );
-$datestr .= 0 if $timerval[4] < 9;
+$datestr .= 0 if $timerval[4] <= 9;
 $datestr .= ( $timerval[4] + 1 );
-$datestr .= 0 if $timerval[3] < 9;
+$datestr .= 0 if $timerval[3] <= 9;
 $datestr .= $timerval[3];
 `mv PhyloSift phylosift_$datestr`;
 `tar cjf phylosift_$datestr.tar.bz2 phylosift_$datestr`;
