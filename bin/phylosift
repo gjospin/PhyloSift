@@ -64,6 +64,10 @@ Mode : Only execute a specific step in the pipeline
   summary - run the taxonomy assignment steps
   index - indexes the various databases needed for Rapsearch, Bowtie and Blast
   build_maker - creates a reference package from a multiple alignment file
+  sim - Picks random genomes from the concatenated reference tree, 
+        knocks the selected genomes out of the marker DB, 
+        runs PS on the generated reads from the selected genomes (in different formats).
+        evaluates a benchmark on the simulated data.
 
 Options Available at this time :
    -h --help             Prints the usage section of the README
@@ -120,7 +124,7 @@ if ( scalar(@ARGV) < 1 ) {
 }elsif ( scalar(@ARGV) == 3 ) {
 	croak $usage unless ( $ARGV[0] && $ARGV[1] && $ARGV[2] );
 } else {
-	croak $usage. "\nOR\n" . $usage . "\n";
+	#croak $usage. "\nOR\n" . $usage . "\n";
 }
 # make sure we're on a 64-bit OS
 unless ( (POSIX::uname)[4] =~ /64/ || $^O =~ /arwin/ ) {
@@ -128,7 +132,10 @@ unless ( (POSIX::uname)[4] =~ /64/ || $^O =~ /arwin/ ) {
 	die "Sorry, PhyloSift requires a 64-bit OS to run.\n";
 }
 debug "PAIR : $pair\n";
-if ( $pair == 0 ) {
+if( $ARGV[0] eq 'sim'){
+	debug "Running a Simulation\n";
+	$ps = $ps->initialize( mode=>$ARGV[0], file_1=>"Sims" );
+}elsif ( $pair == 0 ) {
 	debug "notpaired @ARGV\n";
 	$ps = $ps->initialize( mode=>$ARGV[0], file_1=>$ARGV[1] );
 } else {
