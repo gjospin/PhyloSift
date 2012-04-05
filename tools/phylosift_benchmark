@@ -6,6 +6,7 @@ use Cwd;
 
 my $phylosift = $ARGV[0];
 my $report_path = $ARGV[1];
+my $marker_url = $ARGV[2];
 
 use lib "$ARGV[0]/lib";
 use FindBin qw($Bin); use lib "$Bin/lib";
@@ -14,7 +15,7 @@ use Carp;
 use Phylosift::Utilities qw(debug);
 use Phylosift::Benchmark;
 
-die "Usage: phylosift_benchmark <path to phylosift> <path to report output>\n" if(@ARGV !=2);
+die "Usage: phylosift_benchmark <path to phylosift> <path to report output> [marker url]\n" if(@ARGV <2);
 
 my $ps = new Phylosift::Phylosift();
 Phylosift::Phylosift::read_phylosift_config(self=>$ps);
@@ -36,9 +37,11 @@ for(my $bI=0; $bI<@benchmark_data; $bI++){
 	$ff->fetch(to=>".");
 
 	# run through the command-line just to test the interface as well
-	print STDOUT "Running $phylosift/bin/phylosift all -f $seqname\n";
+	my $url_arg = "";
+	$url_arg = " --marker_url=$marker_url " if defined($marker_url);
+	print STDOUT "Running $phylosift/bin/phylosift all $url_arg -f $seqname\n";
 	Phylosift::Utilities::start_timer(name=>$seqname);
-	system("export PATH=\"$phylosift/bin:\$PATH\" ; $phylosift/bin/phylosift all --simple --debug --config benchmarkrc -f $seqname");
+	system("export PATH=\"$phylosift/bin:\$PATH\" ; $phylosift/bin/phylosift all --simple --debug --config benchmarkrc $url_arg -f $seqname");
 	my $seconds = Phylosift::Utilities::end_timer(name=>$seqname);
 
 	# now benchmark
