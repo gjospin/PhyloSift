@@ -114,5 +114,4 @@ $datestr .= $timerval[3];
 `mv PhyloSift phylosift_$datestr`;
 `tar cjf phylosift_$datestr.tar.bz2 phylosift_$datestr`;
 `rm -rf phylosift_$datestr`;
-`cp phylosift_$datestr.tar.bz2 ~/public_html/phylosift/phylosift_latest.tar.bz2`;
-`mv phylosift_$datestr.tar.bz2 ~/public_html/phylosift/`;
+print "phylosift_$datestr";
