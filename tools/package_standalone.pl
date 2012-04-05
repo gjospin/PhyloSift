@@ -114,4 +114,4 @@ $datestr .= $timerval[3];
 `mv PhyloSift phylosift_$datestr`;
 `tar cjf phylosift_$datestr.tar.bz2 phylosift_$datestr`;
 `rm -rf phylosift_$datestr`;
-print "phylosift_$datestr";
+`echo "phylosift_$datestr" > psversion`;
