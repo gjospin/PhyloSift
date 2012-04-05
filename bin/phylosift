@@ -96,6 +96,7 @@ GetOptions(
 	"besthit"         => \$ps->{"besthit"},             #should we keep only the best hit when there are multiple?
 	"coverage=s"      => \$ps->{"coverage"},            #provides a contig/scaffold coverage file
 	"updated_markers" => \$ps->{"updated"},             #Indicates if Phylosift uses the updated versions of the Markers.
+	"marker_url"      => \$ps->{"marker_url"},          # an alternate address to retrieve markers from
 	"extended"        => \$ps->{"extended"},  #Should the full extended set of markers be used?
 	"config=s"        => \$ps->{"configuration"},       #custom config file
 	"h"               => \$help,                #prints the usage part of the README file

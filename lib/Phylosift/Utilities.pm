@@ -253,8 +253,8 @@ sub download_data {
 	`cd $destination/../ ; tar xzf $archive.tgz ; touch $archive`;
 	`rm $destination/../$archive.tgz`;
 }
-my $marker_update_url           = "http://edhar.genomecenter.ucdavis.edu/~koadman/phylosift_markers/markers.tgz";
-my $markers_extended_update_url = "http://edhar.genomecenter.ucdavis.edu/~koadman/phylosift_markers/markers_extended.tgz";
+
+my $marker_base_url             = "http://edhar.genomecenter.ucdavis.edu/~koadman/phylosift_markers/";
 my $ncbi_url                    = "http://edhar.genomecenter.ucdavis.edu/~koadman/ncbi.tgz";
 
 =head2 marker_update_check
@@ -308,6 +308,17 @@ sub data_checks {
 	my %args = @_;
 	my $self = $args{self};
 
+	#
+	# determine where to look for markers
+	my $mbase = $marker_base_url;
+	if(defined($Phylosift::Settings::marker_base_url)){
+		$mbase = $Phylosift::Settings::marker_base_url;
+	}
+	if(defined($self->{"marker_url"})){
+		$mbase = $self->{"marker_url"};
+	}
+	my $marker_update_url           = "$mbase/markers.tgz";
+	my $markers_extended_update_url = "$mbase/markers_extended.tgz";
 	#
 	# first check for the standard marker directory
 	$marker_dir = get_data_path( data_name => "markers", data_path => $Phylosift::Settings::marker_path );
