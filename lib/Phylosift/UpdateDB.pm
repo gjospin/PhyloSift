@@ -1208,6 +1208,7 @@ Makes a tree for a marker that respects topological constraints given by another
 sub make_constrained_tree {
 	my %args              = @_;
 	my $constraint_marker = $args{constraint_marker} || miss("constraint_marker");
+	my $constraint_tree   = $args{constraint_tree} || miss("constraint_tree");
 	my $target_marker     = $args{target_marker} || miss("target_marker");
 	my $marker_dir        = $args{marker_dir} || miss("marker_dir");
 	my $constraint_pruned = $args{constraint_pruned} || 0;
@@ -1216,7 +1217,6 @@ sub make_constrained_tree {
 	my ($idtref,$mtiref) = read_gene_ids(file=>"$marker_dir/".get_gene_id_file(dna=>0));
 	my %id_to_taxon = %$idtref;
 	my %marker_taxon_to_id = %$mtiref;
-	my $constraint_tree = get_fasttree_tre_filename( marker => $constraint_marker, dna => 0, updated => 1, pruned => $constraint_pruned );
 
 	croak("$constraint_tree does not exist") unless -e $constraint_tree;
 	# first convert the constraint tree leaf names to match the target
@@ -1333,8 +1333,11 @@ sub join_trees {
 
 	# first apply protein constraints to 16s
 	# then apply 16s constraints to protein
-	make_constrained_tree( constraint_marker => "concat",       target_marker => "16s_reps_bac", marker_dir => $marker_dir, constraint_pruned => 1, target_pruned => 0 );
-	make_constrained_tree( constraint_marker => "16s_reps_bac", target_marker => "concat",       marker_dir => $marker_dir, constraint_pruned => 0, target_pruned => 1 );
+#	my $constraint_tree = get_fasttree_tre_filename( marker => "concat", dna => 0, updated => 1, pruned => 1 );
+#	make_constrained_tree( constraint_marker => "concat", constraint_tree => $constraint_tree,   target_marker => "16s_reps_bac", marker_dir => $marker_dir, constraint_pruned => 1, target_pruned => 0 );
+	my $tctree = get_fasttree_tre_filename( marker => "16s_reps_bac", dna => 0, updated => 1, pruned => 0 ) . ".constrained";
+	print "Using $tctree to provide constraints for concat\n";
+	make_constrained_tree( constraint_marker => "16s_reps_bac", constraint_tree => $tctree, target_marker => "concat",       marker_dir => $marker_dir, constraint_pruned => 0, target_pruned => 1, copy_tree=>1 );
 
 	# with a little luck we can now??? do what?
 }
