@@ -94,6 +94,23 @@ sub MarkerAlign {
 													  gap_multiplier => 3,
 													  alignments     => \@markeralignments
 		);
+
+
+		# produce a concatenate with 16s + DNA alignments
+		for ( my $i = 0 ; $i < @markeralignments ; $i++ ) {
+			$markeralignments[$i] =~ s/trim.fasta/trim.fna.fasta/g;
+		}
+		push( @markeralignments, $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta_AA( marker => "16s_reps_bac" ) );
+		push( @markeralignments, $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta_AA( marker => "16s_reps_arc" ) );
+		push( @markeralignments, $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta_AA( marker => "18s_reps" ) );
+		$outputFastaDNA = $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta_DNA( marker => "concat16" );
+		Phylosift::Utilities::concatenate_alignments(
+													  self           => $self,
+													  output_fasta   => $outputFastaDNA,
+													  output_bayes   => $self->{"alignDir"} . "/mrbayes-dna16.nex",
+													  gap_multiplier => 3,
+													  alignments     => \@markeralignments
+		);
 		debug "AFTER concatenateALI\n";
 	}
 	return $self;
