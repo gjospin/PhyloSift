@@ -130,7 +130,7 @@ sub simulate_reads {
 	my $read_number        = $args{reads} || 100000;
 	my ( $core, $path, $ext ) = fileparse( $input_genomes_file, qr/\.[^.]*$/ );
 
-	#Illumina paired ends
+	#Illumina paired ends  Generates
 	debug "Simulating paired ends reads\n";
 	my $ill_paired_ends_cmd =
 	    "grinder -fq 1 "
