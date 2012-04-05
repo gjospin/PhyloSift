@@ -84,7 +84,8 @@ sub set_submarker_distance {
 	my $dist  = $args{dist} || miss("dist");
 	my $group = $args{group} || miss("group");
 	my $edge = $1 if $name=~ /\{\d+\}/g;
-	$subgroup_dist{$edge} = ($dist, $group);
+	my @dist = ($dist, $group);
+	$subgroup_dist{$edge} = @dist;
 }
 
 my %submarker_map;
