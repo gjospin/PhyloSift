@@ -26,15 +26,15 @@ broken pipes as soon a possible!
 Download PhyloSift from here:
 http://edhar.genomecenter.ucdavis.edu/~koadman/phylosift/phylosift_latest.tar.bz2
 
-Unpack with `tar xvjf phylosift_latest.tar.bz2`, then run:
+Unpack with `tar xvjf phylosift_latest.tar.bz2`, then change into the new directory and run:
 
-`phylosift all --output=results sequences.fasta`
+`bin/phylosift all --output=results sequences.fasta`
 
 Or using compressed paired FastQ data from an Illumina instrument:
 
-`phylosift all --output=results --paired read_1.gz read_2.gz`
+`bin/phylosift all --output=results --paired read_1.gz read_2.gz`
 
-Results will be stored in the a new directory called "results".
+Results will be stored in a new directory called "results".
 
 See `results/krona.html` for a visual summary of the sequence data.
 
