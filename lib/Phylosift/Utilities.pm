@@ -1357,6 +1357,7 @@ sub gather_markers {
 			next if $line =~ /concat/;
 			next if $line =~ /representatives/;
 			next if $line =~ /.updated$/;         # just include the base version name
+			next if $line =~ /codon.updated.sub\d+$/;  # just include the base version name
 			$line = substr( $line, length($path) + 1 );
 
 			# all markers need to have an hmm or a cm else they are not usable
