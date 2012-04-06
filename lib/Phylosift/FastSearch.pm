@@ -8,9 +8,12 @@ use Bio::SeqUtils;
 use Carp;
 use Phylosift::Phylosift;
 use Phylosift::Utilities qw(:all);
+use Phylosift::MarkerAlign;
 use File::Basename;
 use POSIX qw(ceil floor);
 use constant FLANKING_LENGTH => 150;
+use constant CHUNK_MAX_SEQS => 20000;
+use constant CHUNK_MAX_SIZE => 10000000;
 
 =head1 NAME
 
@@ -94,8 +97,22 @@ sub run_search {
 	my $contigs    = 0;
 	$contigs = 1 if ( defined( $self->{"coverage"} ) && $type->{seqtype} ne "protein" && ( !defined $self->{"isolate"} || $self->{"isolate"} != 1 ) );
 
+	# open the input file(s)
+	my $F1IN = Phylosift::Utilities::open_sequence_file( file => $self->{"readsFile"} );
+	my $F2IN;
+	$F2IN = Phylosift::Utilities::open_sequence_file( file => $self->{"readsFile_2"} ) if length( $self->{"readsFile_2"} ) > 0;
+
 	# launch the searches
-	launch_searches( self => $self, readtype => $type, dir => $self->{"blastDir"}, contigs => $contigs );
+	for(my $chunkI=1; ; $chunkI++){
+		my $finished = launch_searches( self => $self, readtype => $type, dir => $self->{"blastDir"}, contigs => $contigs, chunk=>$chunkI, FILE1 => $F1IN, FILE2 => $F2IN );
+		if($self->{"mode"} eq "all" || $self->{"continue"}){
+			# fire up the next step!
+			# TODO: make this a call to a function "chunk_done" in main Phylosift module
+			# that starts the next step
+			Phylosift::MarkerAlign::MarkerAlign(self=>$self, marker_reference=>$markersRef, chunk=>$chunkI);
+		}
+		last if $finished;
+	}
 	return $self;
 }
 
@@ -115,6 +132,9 @@ sub launch_searches {
 	my $last_rna_pipe   = $args{dir} . "/last_rna.pipe";
 	my $reads_file      = $args{dir} . "/reads.fasta";
 	my $readtype        = $args{readtype} || miss("readtype");
+	my $chunk           = $args{chunk} || miss("chunk");
+	my $FILE1           = $args{FILE1};
+	my $FILE2           = $args{FILE2};
 	my $bowtie2_r2_pipe;
 	$bowtie2_r2_pipe = $args{dir} . "/bowtie2_r2.pipe" if $args{readtype}->{paired};
 	debug "Making fifos\n";
@@ -192,7 +212,7 @@ sub launch_searches {
 
 			# write out sequence regions hitting marker genes to candidate files
 			debug "Writing candidates from process $count\n";
-			write_candidates( self => $self, hitsref => $hitsref, searchtype => "$candidate_type", reads => $reads_file, process_id => $count );
+			write_candidates( self => $self, hitsref => $hitsref, searchtype => "$candidate_type", reads => $reads_file, process_id => $count, chunk => $chunk );
 			exit 0;
 		} else {
 			croak "couldn't fork: $!\n";
@@ -212,14 +232,14 @@ sub launch_searches {
 	# parent process streams out sequences to fifos
 	# child processes run the search on incoming sequences
 	debug "Demuxing sequences\n";
-	demux_sequences(
+	my $finished = demux_sequences(
 					 bowtie2_pipe1 => $BOWTIE2_R1_PIPE,
 					 bowtie2_pipe2 => $BOWTIE2_R2_PIPE,
 					 lastal_pipes  => \@LAST_PIPE_ARRAY,
 					 LAST_RNA_PIPE => $LAST_RNA_PIPE,
 					 dna           => $self->{"dna"},
-					 file1         => $self->{"readsFile"},
-					 file2         => $self->{"readsFile_2"},
+					 FILE1         => $FILE1,
+					 FILE2         => $FILE2,
 					 reads_pipe    => $READS_PIPE,
 	);
 
@@ -234,6 +254,7 @@ sub launch_searches {
 	foreach my $last_pipe (@last_pipe_array) {
 		`rm -f $last_pipe`;
 	}
+	return $finished;
 }
 
 =head2 demux_sequences
@@ -250,17 +271,21 @@ sub demux_sequences {
 	my $last_array_reference = $args{lastal_pipes} || miss("lastal_pipes");
 	my $LAST_RNA_PIPE        = $args{LAST_RNA_PIPE};
 	my @LAST_PIPE_ARRAY      = @{$last_array_reference};
-	my $F1IN                 = Phylosift::Utilities::open_sequence_file( file => $args{file1} );
-	my $F2IN;
-	$F2IN = Phylosift::Utilities::open_sequence_file( file => $args{file2} ) if length( $args{file2} ) > 0;
+	my $F1IN                 = $args{FILE1};
+	my $F2IN                 = $args{FILE2};
 	my @lines1;
 	my @lines2;
 	$lines1[0] = <$F1IN>;
 	$lines2[0] = <$F2IN> if defined($F2IN);
 	my $lastal_index   = 0;
 	my $lastal_threads = scalar(@LAST_PIPE_ARRAY);
+	
+	# the following two variables track how far we are through a chunk
+	my $seq_count = 0;
+	my $seq_size  = 0;
 
 	while ( defined( $lines1[0] ) ) {
+		$seq_count++;
 		my $last_pipe = $LAST_PIPE_ARRAY[$lastal_index];
 		if ( $lines1[0] =~ /^@/ ) {
 
@@ -337,6 +362,7 @@ sub demux_sequences {
 		}
 		$lastal_index++;
 		$lastal_index = $lastal_index % $lastal_threads;
+		last if($seq_count > CHUNK_MAX_SEQS);
 	}
 	foreach my $LAST_PIPE (@LAST_PIPE_ARRAY) {
 		close($LAST_PIPE);
@@ -345,6 +371,10 @@ sub demux_sequences {
 #	close($BOWTIE2_PIPE2) if defined($F2IN);
 	close($LAST_RNA_PIPE);
 	close($READS_PIPE);
+
+	# return 1 if we've processed all the data, zero otherwise
+	return 0 if defined($lines1[0]);
+	return 1;
 }
 
 sub read_marker_lengths {
@@ -715,6 +745,7 @@ sub write_candidates {
 	my $type = $args{searchtype} || "";    # search type -- candidate filenames will have this name embedded, enables parallel output from different programs
 	my $reads_file  = $args{reads} || miss("reads");
 	my $process_id  = $args{process_id} || miss("process id");
+	my $chunk       = $args{chunk} || miss("chunk");
 	my %contig_hits = %$contigHitsRef;
 	my %markerHits;
 	debug "ReadsFile:  $self->{\"readsFile\"}" . "\n";
@@ -817,12 +848,12 @@ sub write_candidates {
 	foreach my $marker ( keys %markerHits ) {
 
 		#writing the hits to the candidate file
-		my $candidate_file = Phylosift::Utilities::get_candidate_file( self => $self, marker => $marker, type => $type );
+		my $candidate_file = Phylosift::Utilities::get_candidate_file( self => $self, marker => $marker, type => $type, chunk => $chunk );
 		my $FILE_OUT = ps_open( ">$candidate_file" . "." . $process_id );
 		print $FILE_OUT $markerHits{$marker};
 		close($FILE_OUT);
 		if ( $self->{"dna"} && $type !~ /\.rna/ ) {
-			$candidate_file = Phylosift::Utilities::get_candidate_file( self => $self, marker => $marker, type => $type, dna => 1 );
+			$candidate_file = Phylosift::Utilities::get_candidate_file( self => $self, marker => $marker, type => $type, dna => 1, chunk => $chunk );
 			my $FILE_OUT = ps_open( ">$candidate_file" . "." . $process_id );
 			print $FILE_OUT $markerNuc{$marker} if defined( $markerNuc{$marker} );
 			close($FILE_OUT);

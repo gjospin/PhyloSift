@@ -47,6 +47,8 @@ sub pplacer {
 	my %args    = @_;
 	my $self    = $args{self} || miss("self");
 	my $markRef = $args{marker_reference} || miss("marker_reference");
+	my $chunk   = $args{chunk};
+	
 	directoryPrepAndClean( self => $self );
 	# if we have a coverage map then weight the placements
 	my $covref;
@@ -55,16 +57,39 @@ sub pplacer {
 	}
 
 	if ( $self->{"updated"} ) {
-		place_reads(self=>$self, marker=>"concat", options=>"--groups 10", dna=>0, reads=>$self->{"alignDir"} . "/concat.trim.fasta");
+		my $outputFastaAA = $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta_AA( marker => "concat", chunk => $chunk );
+		my $place_file = place_reads(self=>$self, marker=>"concat", options=>"--groups 10", dna=>0, reads=>$outputFastaAA);
+		merge_chunk(chunk => $chunk, place_file=>$place_file);
 	}
 	foreach my $marker ( @{$markRef} ) {
 		# the PMPROK markers are contained in the concat above
 		next if($marker =~ /PMPROK/ && $self->{"updated"});
 
-		my $read_alignment_file = $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta_AA( marker => $marker );
+		my $read_alignment_file = $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta_AA( marker => $marker, chunk => $chunk );
 		next unless -e $read_alignment_file;
 		
-		place_reads(self=>$self, marker=>$marker, dna=>0, reads=>$read_alignment_file);		
+		my $place_file = place_reads(self=>$self, marker=>$marker, dna=>0, reads=>$read_alignment_file);
+		# if we're chunked, merge this with the main jplace
+		merge_chunk(chunk => $chunk, place_file=>$place_file);
+	}
+}
+
+sub merge_chunk {
+	my %args = @_;
+	my $chunk = $args{chunk};
+	my $place_file = $args{place_file};
+	# make sure there's actually work to be done
+	return unless defined($chunk) && defined($place_file);
+	my $unchunked_place = $place_file;
+	$unchunked_place =~ s/\.\d+\.trim/.trim/g;
+	if(-e $unchunked_place){
+		# merge
+		my $merge_cl = "$Phylosift::Utilities::guppy merge -o $unchunked_place $place_file $unchunked_place";
+		debug("Merging jplaces with $merge_cl\n");
+		system($merge_cl);
+	}else{
+		# move
+		`mv $place_file $unchunked_place`;
 	}
 }
 
@@ -268,9 +293,10 @@ sub place_reads{
 		debug "Naming taxa in marker $marker\n";
 		name_taxa_in_jplace( self => $self, input => $self->{"treeDir"} . "/$jplace", output => $self->{"treeDir"} . "/$jplace" );
 	}
-	return unless defined($covref);
+	return $self->{"treeDir"} . "/$jplace" unless defined($covref);
 	debug "Weighting sequences in $marker\n";
 	weight_placements( self => $self, coverage => $covref, place_file => $self->{"treeDir"} . "/$jplace" );
+	return $self->{"treeDir"} . "/$jplace";
 }
 
 =head2 weight_placements

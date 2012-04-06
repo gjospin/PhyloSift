@@ -786,8 +786,10 @@ given by markerName
 sub get_aligner_output_fasta_AA {
 	my %args   = @_;
 	my $marker = $args{marker};
+	my $chunk  = $args{chunk};
+	my $chunky = defined($chunk) ? ".$chunk" : "";
 	my $bname  = get_marker_basename( marker => $marker );
-	return "$bname.trim.fasta";
+	return "$bname$chunky.trim.fasta";
 }
 
 =head2 get_aligner_output_fasta_DNA
@@ -798,8 +800,10 @@ given by markerName
 sub get_aligner_output_fasta_DNA {
 	my %args   = @_;
 	my $marker = $args{marker};
+	my $chunk  = $args{chunk};
+	my $chunky = defined($chunk) ? ".$chunk" : "";
 	my $bname  = get_marker_basename( marker => $marker );
-	return "$bname.trim.fna.fasta";
+	return "$bname$chunky.trim.fna.fasta";
 }
 
 =head2 get_read_placement_file
@@ -1229,14 +1233,17 @@ sub get_candidate_file {
 	my $type   = $args{type};
 	my $dna    = $args{dna};
 	my $new    = $args{new};
+	my $chunk  = $args{chunk};
 	my $ffn    = ".aa";
 	$ffn = ".ffn" if ( defined( $args{dna} ) && $dna );
 	my $candidate = ".candidate";
 	$candidate = ".newCandidate" if defined( $args{new} ) && $new;
 	my $dir = $self->{"blastDir"};
 	$dir = $self->{"alignDir"} if defined( $args{new} ) && $new;
+	my $chunky = "";
+	$chunky = ".$chunk" if defined($chunk);
 	$marker =~ s/.+\///g;    # strip off any prepended directories
-	return "$dir/$marker$type$candidate$ffn";
+	return "$dir/$marker$type$candidate$ffn$chunky";
 }
 
 =head2 index_marker_db
