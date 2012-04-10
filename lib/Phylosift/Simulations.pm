@@ -55,38 +55,41 @@ sub prep_simulation {
 	debug "RAND $random_knockouts\n";
 	my $top_ko_gen_file  = $self->{"fileDir"} . "/top_knockout.genomes";
 	my $rand_ko_gen_file = $self->{"fileDir"} . "/random_knockout.genomes";
-	my @gen_files        = ( $top_ko_gen_file, $rand_ko_gen_file );
+	my %gen_files        = ( top=>$top_ko_gen_file, random=>$rand_ko_gen_file );
+	my %gen_lists = (top=>$top_knockouts, random=>$random_knockouts);
 	gather_genomes( self => $self, genome_list => $top_knockouts,    genomes => $genomes_dir, target => $top_ko_gen_file );
 	gather_genomes( self => $self, genome_list => $random_knockouts, genomes => $genomes_dir, target => $rand_ko_gen_file );
 	debug "Finished gathering the genomes\n";
 	my ( $core, $path, $ext ) = fileparse( $top_ko_gen_file, qr/\.[^.]*$/ );
-
-	foreach my $gen_file (@gen_files) {
-		next unless -e $gen_file;
+	foreach my $type (keys(%gen_files)) {
+		next unless -e $gen_files{$type};
 		#generate simulated reads for each knockout set
 		simulate_reads(
 						self    => $self,
-						input   => $gen_file,
+						input   => $gen_files{$type},
 						reads   => $read_number * 2,
 						params  => $params_ill_fq,
 						outname => $core . "_ill_fastq",
-						outdir  => $path
+						outdir  => $path,
+						distribution_file => $gen_lists{$type} 
 		);
 		simulate_reads(
 						self    => $self,
-						input   => $gen_file,
+						input   => $gen_files{$type},
 						reads   => $read_number,
 						params  => $params_ill_fa,
 						outname => $core . "_ill_fasta",
-						outdir  => $path
+						outdir  => $path,
+						distribution_file => $gen_lists{$type}
 		);
 		simulate_reads(
 						self    => $self,
-						input   => $gen_file,
+						input   => $gen_files{$type},
 						reads   => $read_number,
 						params  => $params_454,
 						outname => $core . "_454_fasta",
-						outdir  => $path
+						outdir  => $path,
+						distribution_file => $gen_lists{$type}
 		);
 	}
 }
@@ -107,11 +110,12 @@ sub gather_genomes {
 	my $FH          = Phylosift::Utilities::ps_open($genome_list);
 	while (<$FH>) {
 		chomp($_);
-		my $grep_cmd = "ls $genomes_dir | grep \'.$_.fasta\'";
-		debug "GREPPING : " . $grep_cmd . "\n";
-		my $grep = `ls $genomes_dir | grep '.$_.fasta'`;
+		my @line = split(/\t/, $_);
+		my $grep_cmd = "ls $genomes_dir | grep \'.$line[0].fasta\'";
+		#debug "GREPPING : " . $grep_cmd . "\n";
+		my $grep = `ls $genomes_dir | grep '.$line[0].fasta'`;
 		if ( $grep eq "" ) {
-			warn "Warning : $_ was not found\n";
+			warn "Warning : $line[0] was not found\n";
 		} else {
 
 			#debug "GOT $grep";
@@ -120,7 +124,15 @@ sub gather_genomes {
 			$file = get_largest_file( file_list => \@file_names, directory => $genomes_dir ) if scalar(@file_names) > 1;
 
 			#debug "Using $file\n";
-			`cat $genomes_dir/$file >> $target_file`;
+			my $OUT = Phylosift::Utilities::ps_open(">>$target_file");
+			my $IN = Phylosift::Utilities::ps_open("$genomes_dir/$file");
+			while(<$IN>){
+				chomp($_);
+				$_ =~ s/^>(\S+)/>$line[0] \1/g;
+				print $OUT $_."\n";
+			}
+			close($OUT);
+			close($IN);
 		}
 	}
 }
@@ -164,10 +176,10 @@ sub simulate_reads {
 	my $out_directory      = $args{outdir} || miss("Output Directory");
 	my $out_file           = $args{outname} || miss("Output file name");
 	my $params             = $args{params} || miss("Simulate reads parameters");
-
+	my $distrib = $args{distribution_file} || miss("Distribution file");
 	#Illumina paired ends  Generates
 	debug "Simulating reads\n";
-	my $simulation_cmd = "grinder " . $params . "-total_reads " . $read_number . " -bn $out_file -od $out_directory" . " -reference_file " . $input_genomes_file;
+	my $simulation_cmd = "grinder " . $params . "-total_reads " . $read_number . " -bn $out_file -od $out_directory" . " -reference_file " . $input_genomes_file ." -abundance_file " . $distrib ;
 	debug "RUNNING : $simulation_cmd\n";
 	`$simulation_cmd`;
 }
@@ -229,12 +241,21 @@ sub knockout_genomes() {
 	my $random_name = $self->{"fileDir"} . "/random.ko";
 	my $TOP         = Phylosift::Utilities::ps_open(">$top_name");
 	my $RAND        = Phylosift::Utilities::ps_open(">$random_name");
-	foreach ( my $i = 0 ; $i < $num_picked ; $i++ ) {
-		print $TOP $list[$i] . "\n";
-		print $RAND $list[ int( rand($list_length) ) ] . "\n";
+	my $seed_percent = 100;
+	my @top_array = @list[0..$num_picked-1];
+	for( my $i = 0 ; $i < $num_picked ; $i++ ) {
+		my $rand_index = int(rand(scalar(@top_array)-1));
+		my $rand_taxa = $top_array[$rand_index];
+		my $number = $seed_percent-$num_picked+$i+1;
+		my $random = sprintf("%.1f", rand($number));
+		$random = sprintf("%.1f",$number) if $i == $num_picked-1;
+		$seed_percent = $seed_percent - $random;
+		print $RAND $list[ int( rand($list_length) ) ] . "\t" . $random . "\n";
+		print $TOP $rand_taxa . "\t" . $random ."\n";
+		splice(@top_array,$rand_index,1);
 	}
-	close($TOP);
 	close($RAND);
+	close($TOP);
 	return ( $top_name, $random_name );
 }
 1;    # End of Phylosift::Simulations.pm
