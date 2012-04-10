@@ -45,7 +45,6 @@ Phylosift::Utilities - Implements miscellaneous accessory functions for Phylosif
 Version 0.01
 
 =cut
-
 our $VERSION = '0.01';
 
 =head1 SYNOPSIS
@@ -203,7 +202,6 @@ sub programChecks {
 Check for requisite PhyloSift marker datasets
 
 =cut
-
 our $marker_dir           = "";
 our $markers_extended_dir = "";
 our $ncbi_dir             = "";
@@ -253,15 +251,13 @@ sub download_data {
 	`cd $destination/../ ; tar xzf $archive.tgz ; touch $archive`;
 	`rm $destination/../$archive.tgz`;
 }
-
-my $marker_base_url             = "http://edhar.genomecenter.ucdavis.edu/~koadman/phylosift_markers/";
-my $ncbi_url                    = "http://edhar.genomecenter.ucdavis.edu/~koadman/ncbi.tgz";
+my $marker_base_url = "http://edhar.genomecenter.ucdavis.edu/~koadman/phylosift_markers/";
+my $ncbi_url        = "http://edhar.genomecenter.ucdavis.edu/~koadman/ncbi.tgz";
 
 =head2 marker_update_check
 
 Checks with the remote location to see if the markers have been updated since the last download
 If the downloadable marker package is newer than what is currently being used then download the newer version.
-
 =cut
 
 sub marker_update_check {
@@ -311,14 +307,15 @@ sub data_checks {
 	#
 	# determine where to look for markers
 	my $mbase = $marker_base_url;
-	if(defined($Phylosift::Settings::marker_base_url)){
+	if ( defined($Phylosift::Settings::marker_base_url) ) {
 		$mbase = $Phylosift::Settings::marker_base_url;
 	}
-	if(defined($self->{"marker_url"})){
+	if ( defined( $self->{"marker_url"} ) ) {
 		$mbase = $self->{"marker_url"};
 	}
 	my $marker_update_url           = "$mbase/markers.tgz";
 	my $markers_extended_update_url = "$mbase/markers_extended.tgz";
+
 	#
 	# first check for the standard marker directory
 	$marker_dir = get_data_path( data_name => "markers", data_path => $Phylosift::Settings::marker_path );
@@ -1321,6 +1318,7 @@ sub index_marker_db {
 =back
 
 =cut
+
 sub gather_markers {
 	my %args        = @_;
 	my $marker_file = $args{marker_file};
@@ -1356,8 +1354,8 @@ sub gather_markers {
 			next if $line =~ /PMPROK/;
 			next if $line =~ /concat/;
 			next if $line =~ /representatives/;
-			next if $line =~ /.updated$/;         # just include the base version name
-			next if $line =~ /codon.updated.sub\d+$/;  # just include the base version name
+			next if $line =~ /.updated$/;                # just include the base version name
+			next if $line =~ /codon.updated.sub\d+$/;    # just include the base version name
 			$line = substr( $line, length($path) + 1 );
 
 			# all markers need to have an hmm or a cm else they are not usable
@@ -1681,5 +1679,4 @@ See http://dev.perl.org/licenses/ for more information.
 
 
 =cut
-
 1;    # End of Phylosift::Utilities

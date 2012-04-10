@@ -140,17 +140,22 @@ add new markers, you will need to run this step manually.
 
 Mode : Only execute a specific step in the pipeline
 
-  all         : execute all the following steps in that order
-  search      : only execute the database searches + write candidate 
-                files
-  align       : hmmsearch + hmmalign + trims + coverage filters
-  placer      : run pplacer on the results from the align step
-  summary     : run the taxonomy assignment steps
-  index       : indexes the various databases needed for Rapsearch, 
-                Bowtie and Blast
-  build_maker : creates a reference package from a multiple alignment
-                file
-
+  all          : execute all the following steps in that order
+  search       : only execute the database searches + write candidate 
+                 files
+  align        : hmmsearch + hmmalign + trims + coverage filters
+  placer       : run pplacer on the results from the align step
+  summary      : run the taxonomy assignment steps
+  index        : indexes the various databases needed for Rapsearch, 
+                 Bowtie and Blast
+  build_marker : creates a reference package from a multiple alignment
+                 file
+  sim          : Generates simulated reads using Grinder from a set of genomes, top PD contribution and randomly picked
+                 from the concatenated tree for the marker DB
+                 Need to have the genomes downloaded to a directory. This feature should be reserved for in house usage.
+                 Generates paired ends reads in fastq format, 454 reads in fasta format and paired end reads in fasta format.
+                 Generates 2 files containing the taxon IDs for the genomes used in the simulations
+                 
 == Options ==
 
 Options Available at this time : 
@@ -190,6 +195,9 @@ Options Available at this time :
    --updated            Use the set of updated markers with newly
                         sequenced genomes instead of the stock 
                         markers
+                       
+   --output=<directory> Specifies an output directory instead of using
+                        PS's default
 
 == Requirements ==
 

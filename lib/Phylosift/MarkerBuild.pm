@@ -70,7 +70,7 @@ sub build_marker {
 
 	#need to generate representatives using PDA
 	my $rep_file = get_representatives_from_tree( tree => $fasttree_file, target_directory => $target_dir, cutoff => $cutoff );
-
+	Phylosift::Utilities::generate_hmm();
 	#need to read the representatives picked by PDA and generate a representative fasta file
 	my $rep_fasta = get_fasta_from_pda_representatives( pda_file => $rep_file, target_dir => $target_dir, fasta_reference => $fasta_file, id_map => \%id_map );
 

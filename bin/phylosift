@@ -25,32 +25,37 @@ $0
 
 Usage
 ==========================================
-> phylosift <Mode> <options> <sequence_file>
+> phylosift.pl <Mode> <options> <sequence_file>
 
    sequence_file needs to be in fasta format
 
-> phylosift <Mode> <options> --paired <sequence_file_1> <sequence_file_2>
+> phylosift.pl <Mode> <options> --paired <sequence_file_1> <sequence_file_2>
 
    sequence_file_1 and _2 need to be in fastq format
 
 Examples
 ==========================================
-> phylosift all --output=my_results illumina_reads.fastq
+> phylosift.pl all --output=my_results illumina_reads.fastq
 This command analyzes FastQ format sequence reads and stores the results in a directory called my_results.
 
-> phylosift all --output=genome genome_assembly.fasta
+> phylosift.pl all --output=genome genome_assembly.fasta
 This command will analyze the fasta format genome assembly in genome_assembly.fasta and store the results in a directory called genome.
 
-> phylosift all proteins.fa
+> phylosift.pl all proteins.fa
 This example searches a set of protein sequences. When --output is not given, the results go to a directory called PS_temp/<filename>
 
 
 Creating a PhyloSift Marker (Does not allow for taxonomic summaries, only searching, aligning and placement steps)
 ===========================================
 
-> phylosift build_marker <alignment_file> <PD pruning threshold>
-Example 1:  > phylosift build_marker test.aln 0.01
-Example 2:  > phylosift build_marker -f test.aln 0.01
+> phylosift.pl build_marker <alignment_file> <PD pruning threshold>
+Example 1:  > phylosift.pl build_marker test.aln 0.01
+Example 2:  > phylosift.pl build_marker -f test.aln 0.01
+
+Simulating Reads
+===========================================
+> phylosift.pl sim --output=<output_path> <genomes_path> <number_of_genomes_to_choose_from> <reads_to_generate>
+Example 1: > phylosift.pl sim --output=/home/user/PhyloSift/PS_temp/sim1 genomes 10 100000
    
 Index the search databases
 ============================================

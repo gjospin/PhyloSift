@@ -24,6 +24,11 @@ Need as input : Genome directory from where to look for the genomes picked
 
 =cut
 
+#read simulations parameters
+my $params_ill_fa = "-read_dist 105 -insert_dist 400 normal 50 -md poly4 3e-3 3.3e-8 -mr 95 5 ";
+my $params_ill_fq = "-fq 1 -ql 30 10 " . $params_ill_fa;
+my $params_454    = "-read_dist 100 normal 10 -homopolymer_dist balzer ";
+
 =head2 prep_simulation
 
 Runs the various steps necessary to running simulations
@@ -50,12 +55,40 @@ sub prep_simulation {
 	debug "RAND $random_knockouts\n";
 	my $top_ko_gen_file  = $self->{"fileDir"} . "/top_knockout.genomes";
 	my $rand_ko_gen_file = $self->{"fileDir"} . "/random_knockout.genomes";
+	my @gen_files        = ( $top_ko_gen_file, $rand_ko_gen_file );
 	gather_genomes( self => $self, genome_list => $top_knockouts,    genomes => $genomes_dir, target => $top_ko_gen_file );
 	gather_genomes( self => $self, genome_list => $random_knockouts, genomes => $genomes_dir, target => $rand_ko_gen_file );
 	debug "Finished gathering the genomes\n";
+	my ( $core, $path, $ext ) = fileparse( $top_ko_gen_file, qr/\.[^.]*$/ );
 
-	#generate simulated reads for each knockout set
-	simulate_reads( self => $self, input => $top_ko_gen_file, reads => $read_number );
+	foreach my $gen_file (@gen_files) {
+		next unless -e $gen_file;
+		#generate simulated reads for each knockout set
+		simulate_reads(
+						self    => $self,
+						input   => $gen_file,
+						reads   => $read_number * 2,
+						params  => $params_ill_fq,
+						outname => $core . "_ill_fastq",
+						outdir  => $path
+		);
+		simulate_reads(
+						self    => $self,
+						input   => $gen_file,
+						reads   => $read_number,
+						params  => $params_ill_fa,
+						outname => $core . "_ill_fasta",
+						outdir  => $path
+		);
+		simulate_reads(
+						self    => $self,
+						input   => $gen_file,
+						reads   => $read_number,
+						params  => $params_454,
+						outname => $core . "_454_fasta",
+						outdir  => $path
+		);
+	}
 }
 
 =head2 gather_genomes
@@ -128,19 +161,15 @@ sub simulate_reads {
 	my $self               = $args{self} || miss("PS_object");
 	my $input_genomes_file = $args{input} || miss("Genomes list");
 	my $read_number        = $args{reads} || 100000;
-	my ( $core, $path, $ext ) = fileparse( $input_genomes_file, qr/\.[^.]*$/ );
+	my $out_directory      = $args{outdir} || miss("Output Directory");
+	my $out_file           = $args{outname} || miss("Output file name");
+	my $params             = $args{params} || miss("Simulate reads parameters");
 
 	#Illumina paired ends  Generates
-	debug "Simulating paired ends reads\n";
-	my $ill_paired_ends_cmd =
-	    "grinder -fq 1 "
-	  . "-ql 30 10 "
-	  . "-read_dist 105 -insert_dist 400 "
-	  . "normal 50 -md poly4 3e-3 3.3e-8 -mr 95 5 "
-	  . "-genome_file $input_genomes_file -total_reads ".$read_number*2
-	  ."-bn $core.paired_ends -od $path";
-	`$ill_paired_ends_cmd`;
-
+	debug "Simulating reads\n";
+	my $simulation_cmd = "grinder " . $params . "-total_reads " . $read_number . " -bn $out_file -od $out_directory" . " -reference_file " . $input_genomes_file;
+	debug "RUNNING : $simulation_cmd\n";
+	`$simulation_cmd`;
 }
 
 =head2 get_genome_ids_from_pda
