@@ -83,115 +83,6 @@ sub read_ncbi_taxonomy_structure {
 	return \%parent;
 }
 
-sub make_ncbi_tree_from_update {
-	my %args        = @_;
-	my $self        = $args{self} || miss("self");
-	my $results_dir = $args{results_directory} || miss("results_directory");
-	my $markerdir   = $args{marker_directory} || miss("marker_directory");
-	read_ncbi_taxon_name_map();
-	read_ncbi_taxonomy_structure();
-	my $AAIDS = ps_open( "$markerdir/gene_ids.aa.txt" );
-	my $MARKERTAXONMAP = ps_open( ">$markerdir/marker_taxon_map.updated.txt" );
-	my @taxonids;
-
-	while ( my $line = <$AAIDS> ) {
-		chomp $line;
-		my ( $marker, $taxon, $uniqueid ) = split( /\t/, $line );
-		push( @taxonids, $taxon ) if $taxon =~ /^\d+$/;
-		print $MARKERTAXONMAP "$uniqueid\t$taxon\n";
-	}
-	close $MARKERTAXONMAP;
-	my %tidnodes;
-	my $phylotree = Bio::Phylo::Forest::Tree->new();
-	foreach my $tid (@taxonids) {
-		next if ( $tid eq "" );
-		my $child;
-		while ( $tid != 1 ) {
-
-			# check if we've already seen this one
-			last if ( defined( $tidnodes{$tid} ) );
-
-			# create a new node & add to tree
-			my $parentid = $parent{$tid}->[0];
-			my $newnode;
-			$newnode = Bio::Phylo::Forest::Node->new( -parent => $tidnodes{$parentid}, -name => $tid ) if defined( $tidnodes{$parentid} );
-			$newnode = Bio::Phylo::Forest::Node->new( -name => $tid ) if !defined( $tidnodes{$parentid} );
-			$tidnodes{$tid} = $newnode;
-			$newnode->set_child($child) if ( defined($child) );
-			$phylotree->insert($newnode);
-
-			# continue traversal toward root
-			$tid   = $parentid;
-			$child = $newnode;
-		}
-	}
-	my $TREEOUT = ps_open( ">ncbi_tree.updated.tre" );
-	print $TREEOUT $phylotree->to_newick( "-nodelabels" => 1 );
-	close $TREEOUT;
-}
-
-=head2 make_ncbi_tree
-Reads all the marker gene trees, finds their corresponding taxa in the NCBI taxonomy, and
-constructs a newick format tree representation of the NCBI taxonomy containing only the
-organisms present in the marker gene trees.  
-=cut
-
-sub make_ncbi_tree {
-	my %args = @_;
-	my $self = $args{self} || miss("self");
-	read_ncbi_taxon_name_map();
-	read_ncbi_taxonomy_structure();
-
-	# now read the list of organisms we have in our DB
-	# construct a phylo tree with the NCBI topology containing
-	# just the organisms in our database
-	my $markerdir = $Phylosift::Utilities::marker_dir;
-	my %namemap   = Phylosift::Utilities::read_name_table( marker_directory => $markerdir );
-	my $phylotree = Bio::Phylo::Forest::Tree->new();
-	my $MARKERTAXONMAP = ps_open( ">$markerdir/marker_taxon_map.txt" );
-	my %tidnodes;
-	foreach my $key ( keys(%namemap) ) {
-		$namemap{$key} = homogenize_name_ala_dongying( name => $namemap{$key} );
-		my ( $tid, $name ) = donying_find_name_in_taxa_db( name => $namemap{$key} );
-		if ( $tid eq "ERROR" ) {
-			carp("Error! Could not find $namemap{$key} in name map\n") if length($key) > 12;
-			next;
-		}
-
-		# add it to the mapping file
-		debug "TEST:".$idnamemap{$tid}."\n";
-		my $treename = tree_name( name => $idnamemap{$tid} );
-		print $MARKERTAXONMAP "$key\t$treename\n";
-
-		#got the taxon id, now walk to root adding tree nodes as necessary
-		next unless ( defined($tid) );
-		my $child;
-		while ( $tid != 1 ) {
-
-			# check if we've already seen this one
-			last if ( defined( $tidnodes{$tid} ) );
-
-			# create a new node & add to tree
-			my $nodename = tree_name( name => $idnamemap{$tid} );
-			my $parentid = $parent{$tid}->[0];
-			my $newnode;
-			$newnode = Bio::Phylo::Forest::Node->new( -parent => $tidnodes{$parentid}, -name => $nodename ) if defined( $tidnodes{$parentid} );
-			$newnode = Bio::Phylo::Forest::Node->new( -name => $nodename ) if !defined( $tidnodes{$parentid} );
-			$tidnodes{$tid} = $newnode;
-			$newnode->set_child($child) if ( defined($child) );
-			$phylotree->insert($newnode);
-
-			# continue traversal toward root
-			$tid   = $parentid;
-			$child = $newnode;
-		}
-	}
-	close $MARKERTAXONMAP;
-	my $TREEOUT = ps_open( ">ncbi_tree.tre" );
-	print $TREEOUT $phylotree->to_newick( "-nodelabels" => 1 );
-	close $TREEOUT;
-}
-
 =head2 read_coverage
 Reads a coverage file
 Input: file - a file name
@@ -240,62 +131,74 @@ sub summarize {
 	# this is a hash structured as {sequenceID}{taxonID}=probabilitySum
 	my %placements;
 	unshift( @{$markRef}, "concat" ) if $self->{"updated"};
-	foreach my $marker ( @{$markRef} ) {
-		my $markermapfile = "$markerdir/$marker.ncbimap";
-		$markermapfile = "$markerdir/$marker.updated/$marker.taxonmap" if $self->{"updated"};
-		next unless -e $markermapfile;
-
-		# don't bother with this one if there's no read placements
-		my $placeFile = $self->{"treeDir"} . "/" . Phylosift::Utilities::get_read_placement_file( marker => $marker );
-		next unless ( -e $placeFile );
-		my $PP_COVFILE = ps_open( ">" . Phylosift::Utilities::get_read_placement_file( marker => $marker ) . ".cov" ) if ( defined $self->{"coverage"} );
-
-		# first read the taxonomy mapping
-		my $TAXONMAP = ps_open( $markermapfile );
-		my %markerncbimap;
-		while ( my $line = <$TAXONMAP> ) {
-			chomp($line);
-			my ( $markerbranch, $ncbiname ) = split( /\t/, $line );
-			$markerncbimap{$markerbranch} = [] unless defined( $markerncbimap{$markerbranch} );
-			push( @{ $markerncbimap{$markerbranch} }, $ncbiname );
-		}
-
-		# then read & map the placement
-		my $JPLACEFILE = ps_open( $placeFile );
-		my @treedata = <$JPLACEFILE>;	
-		close $JPLACEFILE;
-		my $json_data = decode_json( join("", @treedata) );
-
-		# for each placement record
-		for(my $i=0; $i< @{$json_data->{placements}}; $i++){
-			my $place = $json_data->{placements}->[$i];
-			my $qname = $place->{nm}->[0]->[0];
-			my $qweight = $place->{nm}->[0]->[1];
-			# for each placement edge in the placement record
-			for( my $j=0; $j < @{$place->{p}}; $j++){
-				my $edge = $place->{p}->[$j]->[0];
-
-				croak( "Marker $marker missing mapping from phylogeny edge $edge to taxonomy" ) unless defined( $markerncbimap{$edge} );
-				next unless defined( $markerncbimap{$edge} );
-				my $mapcount = scalar( @{ $markerncbimap{$edge} } );
-				croak( "Found 0 taxa for edge $edge\n" ) if ( scalar( @{ $markerncbimap{$edge} } ) == 0 );
-				# for each taxon to which the current phylogeny edge could map
-				foreach my $taxon ( @{ $markerncbimap{$edge} } ) {
-					my ( $taxon_name, $taxon_level, $taxon_id ) = get_taxon_info( taxon => $taxon );
-					# for each query seq in the current placement record
-					for(my $k=0; $k < @{$place->{nm}}; $k++){
-						my $qname = $place->{nm}->[$k]->[0];
-						my $qweight = $place->{nm}->[$k]->[1];
-						$placements{$qname} = () unless defined( $placements{$qname} );
-						$placements{$qname}{$taxon_id} = 0 unless defined( $placements{$qname}{$taxon_id} );
-						$placements{$qname}{$taxon_id} += $qweight / $mapcount;
-						$ncbireads{$taxon} = 0 unless defined $ncbireads{$taxon};
-						$ncbireads{$taxon} += $qweight / $mapcount;    # split the p.p. across the possible edge mappings
+	for(my $dna = 0; $dna <2; $dna++){
+		
+		foreach my $marker ( @{$markRef} ) {
+	
+			# don't bother with this one if there's no read placements
+			my $sub_mark;
+			$sub_mark = "*" if $dna;
+			my $place_base = $self->{"treeDir"} . "/" . Phylosift::Utilities::get_read_placement_file( marker => $marker, dna => $dna, sub_marker => $sub_mark );
+			my @place_files;
+			@place_files = glob($place_base) if $dna;	# need to glob on all submarkers if in DNA
+			push(@place_files, $place_base) if $dna == 0 && -e $place_base;
+			
+			foreach my $placeFile(@place_files){
+				my $PP_COVFILE = ps_open( ">" . Phylosift::Utilities::get_read_placement_file( marker => $marker ) . ".cov" ) if ( defined $self->{"coverage"} );
+	
+				my $sub;
+				$sub = $1 if $placeFile =~ /\.sub(\d+)\./;
+				# first read the taxonomy mapping
+				my $markermapfile = Phylosift::Utilities::get_marker_taxon_map(self=>$self, marker=>$marker, dna=>$dna, sub_marker=>$sub);
+				next unless -e $markermapfile;	# can't summarize if there ain't no mappin'!
+				my $TAXONMAP = ps_open( $markermapfile );
+				my %markerncbimap;
+				while ( my $line = <$TAXONMAP> ) {
+					chomp($line);
+					my ( $markerbranch, $ncbiname ) = split( /\t/, $line );
+					$markerncbimap{$markerbranch} = [] unless defined( $markerncbimap{$markerbranch} );
+					push( @{ $markerncbimap{$markerbranch} }, $ncbiname );
+				}
+		
+				# then read & map the placement
+				my $JPLACEFILE = ps_open( $placeFile );
+				my @treedata = <$JPLACEFILE>;	
+				close $JPLACEFILE;
+				my $json_data = decode_json( join("", @treedata) );
+		
+				# for each placement record
+				for(my $i=0; $i< @{$json_data->{placements}}; $i++){
+					my $place = $json_data->{placements}->[$i];
+					my $qname = $place->{nm}->[0]->[0];
+					my $qweight = $place->{nm}->[0]->[1];
+					# for each placement edge in the placement record
+					for( my $j=0; $j < @{$place->{p}}; $j++){
+						my $edge = $place->{p}->[$j]->[0];
+		
+						croak( "Marker $marker missing mapping from phylogeny edge $edge to taxonomy" ) unless defined( $markerncbimap{$edge} );
+						next unless defined( $markerncbimap{$edge} );
+						my $mapcount = scalar( @{ $markerncbimap{$edge} } );
+						croak( "Found 0 taxa for edge $edge\n" ) if ( scalar( @{ $markerncbimap{$edge} } ) == 0 );
+						# for each taxon to which the current phylogeny edge could map
+						foreach my $taxon ( @{ $markerncbimap{$edge} } ) {
+							my ( $taxon_name, $taxon_level, $taxon_id ) = get_taxon_info( taxon => $taxon );
+							# for each query seq in the current placement record
+							for(my $k=0; $k < @{$place->{nm}}; $k++){
+								my $qname = $place->{nm}->[$k]->[0];
+								my $qweight = $place->{nm}->[$k]->[1];
+								$placements{$qname} = () unless defined( $placements{$qname} );
+								$placements{$qname}{$taxon_id} = 0 unless defined( $placements{$qname}{$taxon_id} );
+								$placements{$qname}{$taxon_id} += $qweight / $mapcount;
+								$ncbireads{$taxon} = 0 unless defined $ncbireads{$taxon};
+								$ncbireads{$taxon} += $qweight / $mapcount;    # split the p.p. across the possible edge mappings
+							}
+						}
 					}
+		
 				}
 			}
-
 		}
+
 	}
 
 	# make a summary of total reads at each taxonomic level
@@ -531,6 +434,8 @@ sub get_taxon_info {
 	if ( $in =~ /^\d+$/ ) {
 
 		#it's an ncbi taxon id.  look up its name and level.
+		my $merged = Phylosift::Summarize::read_merged_nodes();
+		$in = $merged->{$in} if defined($merged->{$in});
 		my $name  = $idnamemap{$in};
 		my $level = $parent{$in}->[1];
 		return ( $name, $level, $in );
@@ -602,6 +507,28 @@ sub donying_find_name_in_taxa_db {
 	}
 	return ( $id, $q_name );
 }
+
+
+=head2 read_merged_nodes
+
+Read in obsolete NCBI taxon IDs that have been merged into new taxon IDs.
+Returns a hash mapping old to new taxon ID
+
+=cut
+my %merged;
+sub read_merged_nodes {
+	return \%merged if %merged;
+	debug "Reading merged ncbi nodes\n";
+	my $MERGED = ps_open( "$Phylosift::Utilities::ncbi_dir/merged.dmp" );
+	while ( my $line = <$MERGED> ) {
+		chomp $line;
+		my @vals = split( /\s+\|\s*/, $line );
+		$merged{ $vals[0] } = $vals[1];
+	}
+	debug "Done reading merged\n";
+	return \%merged;
+}
+
 
 =head1 AUTHOR
 
