@@ -18,6 +18,7 @@ use Phylosift::Benchmark;
 use Phylosift::BeastInterface;
 use Phylosift::Comparison;
 use Phylosift::MarkerBuild;
+use Phylosift::Simulations;
 
 =head2 new
 
@@ -146,9 +147,9 @@ sub run {
 	start_timer( name => "START" );
 	read_phylosift_config( self => $self );
 	run_program_check( self => $self );
-	Phylosift::Utilities::data_checks( self => $self ) unless $self->{"mode"} eq 'build_marker';
-	file_check( self => $self ) unless $self->{"mode"} eq 'index';
-	directory_prep( self => $self, force => $force ) unless $self->{"mode"} eq 'index';
+	Phylosift::Utilities::data_checks( self => $self ) unless $self->{"mode"} eq 'build_marker' || $self->{"mode"} eq 'sim';
+	file_check( self => $self ) unless $self->{"mode"} eq 'index' || $self->{"mode"} eq 'sim';
+	directory_prep( self => $self, force => $force ) unless $self->{"mode"} eq 'index' ;
 	$self->{"readsFile"} = prep_isolate_files( self => $self, file => $self->{"readsFile"} ) if $self->{"isolate"} == 1;
 
 	# Forcing usage of updated markers
@@ -195,6 +196,9 @@ sub run {
 	}
 	if ( $self->{"mode"} eq 'build_marker' ) {
 		Phylosift::MarkerBuild::build_marker( self => $self, alignment => $ARGV[1], cutoff => $ARGV[2], force => $force );
+	}
+	if ( $self->{"mode"} eq 'sim' ){
+		Phylosift::Simulations::prep_simulation( self => $self , pick => $ARGV[2] , genomes_dir => $ARGV[1], reads => $ARGV[3] );
 	}
 }
 
@@ -323,7 +327,7 @@ sub directory_prep {
 	#    print "FORCE DIRPREP   $force\t mode   ".$self->{"mode"}."\n";
 	#    exit;
 	#remove the directory from a previous run
-	if ( $force && $self->{"mode"} eq 'all' ) {
+	if ( $force && $self->{"mode"} eq 'all' || $self->{"mode"} eq 'sim') {
 		debug( "deleting an old run\n", 0 );
 		`rm -rf "$self->{"fileDir"}"`;
 	} elsif ( -e $self->{"fileDir"} && $self->{"mode"} eq 'all' ) {
