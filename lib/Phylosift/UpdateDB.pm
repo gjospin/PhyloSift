@@ -1439,7 +1439,8 @@ sub make_pplacer_packages_with_taxonomy {
 }
 
 sub package_markers {
-	my $marker_dir = shift || miss("marker_directory");
+	my %args = @_;
+	my $marker_dir = $args{marker_directory}|| miss("marker_directory");
 	my @markerlist = Phylosift::Utilities::gather_markers();
 	unshift( @markerlist, "concat" );
 	foreach my $marker (@markerlist) {
@@ -1469,9 +1470,10 @@ sub package_markers {
 
 	}
 	chdir( $marker_dir . "/../" );
+	system("pwd");
 	my @timerval = localtime();
 	my $datestr  = Phylosift::Utilities::get_date_YYYYMMDD;
-	`tar czf markers_$datestr.tgz markers`;
+	system("tar czf markers_$datestr.tgz markers");
 	`rm -f markers.tgz`;
 	`ln -s markers_$datestr.tgz markers.tgz`;
 }
