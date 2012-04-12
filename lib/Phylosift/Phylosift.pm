@@ -320,26 +320,23 @@ sub directory_prep {
 	my %args  = @_;
 	my $self  = $args{self} || miss("self");
 	my $force = $args{force};
-
 	#    print "FORCE DIRPREP   $force\t mode   ".$self->{"mode"}."\n";
 	#    exit;
 	#remove the directory from a previous run
 	if ( $force && $self->{"mode"} eq 'all' ) {
 		debug( "deleting an old run\n", 0 );
-		my $dir = $self->{"fileDir"};
-		`rm -rf $dir`;
+		`rm -rf "$self->{"fileDir"}"`;
 	} elsif ( -e $self->{"fileDir"} && $self->{"mode"} eq 'all' ) {
 		croak(   "A previous run was found using the same file name aborting the current run\n"
 			   . "Either delete that run from "
 			   . $self->{"fileDir"}
 			   . ", or force overwrite with the -f command-line option\n" );
 	}
-
 	#create a directory for the Reads file being processed.
-	`mkdir -p $self->{"fileDir"}`  unless ( -e $self->{"fileDir"} );
-	`mkdir -p $self->{"blastDir"}` unless ( -e $self->{"blastDir"} );
-	`mkdir -p $self->{"alignDir"}` unless ( -e $self->{"alignDir"} );
-	`mkdir -p $self->{"treeDir"}`  unless ( -e $self->{"treeDir"} );
+	`mkdir -p "$self->{"fileDir"}"`  unless ( -e $self->{"fileDir"} );
+	`mkdir -p "$self->{"blastDir"}"` unless ( -e $self->{"blastDir"} );
+	`mkdir -p "$self->{"alignDir"}"` unless ( -e $self->{"alignDir"});
+	`mkdir -p "$self->{"treeDir"}"`  unless ( -e $self->{"treeDir"} );
 	return $self;
 }
 
@@ -419,10 +416,10 @@ sub run_marker_align {
 	my $continue = $args{cont} || 0;
 	my $markRef  = $args{marker} || miss("marker");
 	Phylosift::Utilities::start_timer( name => "Alignments" );
-
+	
 	#clearing the alignment directory if needed
 	my $alignDir = $self->{"alignDir"};
-	`rm $alignDir/*` if (<$alignDir/*>);
+	`rm "$alignDir"/*` if (<"$alignDir"/*>);
 
 	#Align Markers
 	my $threadNum = 1;
@@ -453,8 +450,7 @@ sub run_search {
 
 	#clearing the blast directory
 	my $blastDir = $self->{"blastDir"};
-	`rm $self->{"blastDir"}/*` if (<$blastDir/*>);
-
+	`rm "$blastDir"/*` if (<"$blastDir"/*>);
 	#run Searches
 	Phylosift::FastSearch::run_search( self => $self, custom => $custom, marker_reference => $markerListRef );
 	Phylosift::Utilities::end_timer( name => "runBlast" );

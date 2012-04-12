@@ -106,7 +106,7 @@ sub get_program_path {
 	if ( defined($progpath) && $progpath ne "" && -x $progpath . "/" . $progname ) {
 		$progcheck = $progpath . "/" . $progname;
 	} else {
-		$progcheck = `which $progname 2> /dev/null`;
+		$progcheck = `which "$progname" 2> /dev/null`;
 		chomp $progcheck;
 	}
 
@@ -237,7 +237,7 @@ sub download_data {
 	my %args        = @_;
 	my $url         = $args{url};
 	my $destination = $args{destination};
-	`mkdir -p $destination`;
+	`mkdir -p "$destination"`;
 
 	# FIXME this is insecure!
 	# but then again, so is just about every other line of code in this program...
@@ -248,10 +248,10 @@ sub download_data {
 	my $archive = $1;
 	debug "ARCHIVE : $archive\n";
 	if ( -e "$destination/.. " ) {
-		`rm -rf $destination/..`;
+		`rm -rf "$destination/.."`;
 	}
-	`cd $destination/../ ; tar xzf $archive.tgz ; touch $archive`;
-	`rm $destination/../$archive.tgz`;
+	`cd "$destination/../" ; tar xzf $archive.tgz ; touch $archive`;
+	`rm "$destination/../$archive.tgz"`;
 }
 
 my $marker_base_url             = "http://edhar.genomecenter.ucdavis.edu/~koadman/phylosift_markers/";
@@ -944,7 +944,7 @@ sub get_count_from_reps {
 	my $self        = $args{self};
 	my $marker      = $args{marker};
 	my $marker_file = get_marker_rep_file( self => $self, marker => $marker );
-	my $rep_num     = `grep -c '>' $marker_file`;
+	my $rep_num     = `grep -c '>' "$marker_file"`;
 	chomp($rep_num);
 	return $rep_num;
 }
@@ -1096,6 +1096,22 @@ sub marker_oldstyle {
 	return 0;
 }
 
+=head2 escape_char
+
+Inserts \ before problematic characters 
+Characters currently flagged as problematic : < > (space)
+Add as needed.
+
+=cut
+
+sub escape_char{
+	my %args = @_;
+	my $string = $args{string};
+	$string =~ s/\s/\\ /g;
+	return $string;
+}
+
+
 =head2 open_SeqIO_object
 
 Opens a sequence file and returns a SeqIO object.  Allows for gzip and bzip compression
@@ -1112,9 +1128,9 @@ sub open_SeqIO_object {
 		$format = $args{format};
 	}
 	if ( $args{file} =~ /\.gz$/ ) {
-		$io_object = Bio::SeqIO->new( -file => "zcat $args{file} |", -format => $format );
+		$io_object = Bio::SeqIO->new( -file => "zcat \"$args{file}\" |", -format => $format );
 	} elsif ( $args{file} =~ /\.bz2$/ ) {
-		$io_object = Bio::SeqIO->new( -file => "bzcat $args{file} |", -format => $format );
+		$io_object = Bio::SeqIO->new( -file => "bzcat \"$args{file}\" |", -format => $format );
 	} else {
 		$io_object = Bio::SeqIO->new( -file => $args{file}, -format => $format );
 	}
@@ -1133,9 +1149,9 @@ sub open_sequence_file {
 	my $file = $args{file} || miss("file");
 	my $F1IN;
 	if ( $file =~ /\.gz$/ ) {
-		$F1IN = ps_open("zcat $file |");
+		$F1IN = ps_open("zcat \"$file\" |");
 	} elsif ( $file =~ /\.bz2$/ ) {
-		$F1IN = ps_open("bzcat $file |");
+		$F1IN = ps_open("bzcat \"$file\" |");
 	} else {
 		$F1IN = ps_open($file);
 	}
@@ -1286,16 +1302,16 @@ sub index_marker_db {
 	close $PDBOUT;    # be sure to flush I/O
 	close $RNADBOUT;
 	my $blastp_db = get_blastp_db( path => $path );
-	`mv $blastp_db $path/rep.dbfasta`;
+	`mv "$blastp_db" "$path/rep.dbfasta"`;
 
 	# make a last database
-	`cd $path ; $Phylosift::Utilities::lastdb -p replast rep.dbfasta`;
+	`cd "$path" ; $Phylosift::Utilities::lastdb -p replast rep.dbfasta`;
 	unlink("$path/rep.dbfasta");    # don't need this anymore!
 
 	# make a bowtie2 database
 	if ( -e $bowtie2_db_fasta && -s $bowtie2_db_fasta > 100 ) {
-		`cd $path ; $Phylosift::Utilities::lastdb $bowtie2_db $bowtie2_db_fasta`;
-		`cd $path ; $Phylosift::Utilities::bowtie2build $bowtie2_db_fasta $bowtie2_db`;
+		`cd "$path" ; $Phylosift::Utilities::lastdb "$bowtie2_db" "$bowtie2_db_fasta"`;
+		`cd "$path" ; $Phylosift::Utilities::bowtie2build "$bowtie2_db_fasta" "$bowtie2_db"`;
 	}
 
 	# now create the .hmm files if they aren't already present
@@ -1306,7 +1322,7 @@ sub index_marker_db {
 		my $cm_file = get_marker_cm_file( self => $args{self}, marker => $marker );
 		next if -e $cm_file;
 		my $stk_file = get_marker_stockholm_file( self => $args{self}, marker => $marker );
-		`$hmmbuild $hmm_file $stk_file`;
+		`$hmmbuild "$hmm_file" "$stk_file"`;
 	}
 }
 
@@ -1573,7 +1589,7 @@ sub generate_hmm {
 	my $target_dir = $args{target_dir};
 	my ( $core_name, $path, $ext ) = fileparse( $file_name, qr/\.[^.]*$/ );
 	if ( !-e "$target_dir/$core_name.hmm" ) {
-		`hmmbuild --informat afa $target_dir/$core_name.hmm $file_name`;
+		`hmmbuild --informat afa "$target_dir/$core_name.hmm" "$file_name"`;
 	}
 	return "$target_dir/$core_name.hmm";
 }
@@ -1592,7 +1608,7 @@ sub hmmalign_to_model {
 	my $ref_ali       = $args{reference_aln};
 	my ( $core_name, $path, $ext ) = fileparse( $sequence_file, qr/\.[^.]*$/ );
 	if ( !-e "$target_dir/$core_name.aln" ) {
-		`hmmalign --mapali $ref_ali --trim --outformat afa -o $target_dir/$core_name.aln $hmm_profile $sequence_file`;
+		`hmmalign --mapali "$ref_ali" --trim --outformat afa -o "$target_dir/$core_name.aln" "$hmm_profile" "$sequence_file"`;
 
 		#	    `hmmalign --outformat afa -o $target_dir/$core_name.aln $hmm_profile $sequence_file`;
 	}

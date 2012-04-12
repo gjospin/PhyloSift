@@ -44,8 +44,8 @@ sub build_marker {
 		croak
 "Marker already exists in $marker_dir. Delete Marker and restart the marker build.\nUse -f to force an override of the previous marker.\nUsage:\n>phylosift build_marker -f aln_file cutoff\n";
 	} else {
-		`rm -rf $target_dir` if $force;
-		`mkdir $target_dir`;
+		`rm -rf "$target_dir"` if $force;
+		`mkdir "$target_dir"`;
 	}
 	my $fasta_file = "$target_dir/$core.fasta";
 	my $seq_count  = Phylosift::Utilities::unalign_sequences( aln => $aln_file, output_path => $fasta_file );
@@ -76,17 +76,17 @@ sub build_marker {
 
 	#use taxit to create a new reference package required for running PhyloSift
 	#needed are : 1 alignment file, 1 representatives fasta file, 1 hmm profile, 1 tree file, 1 log tree file.
-`cd $target_dir;taxit create -c -d "Creating a reference package for PhyloSift for the $core marker" -l $core -f $clean_aln -t $target_dir/$core.tree -s $target_dir/$core.log -Y FastTree -P $core`;
-	`rm $target_dir/$core.pda`;
-	`rm $target_dir/$core.tree`;
-	`rm $target_dir/$core.log`;
-	`rm $target_dir/$core.aln`;
-	`rm $target_dir/$core.fasta`;
-	`rm $clean_aln`;
-	`rm $masked_aln`;
-	`mv $target_dir/$core/* $target_dir`;
-	`rm -rf $target_dir/$core`;
-	`rm -rf $self->{"fileDir"}`;
+`cd "$target_dir";taxit create -c -d "Creating a reference package for PhyloSift for the $core marker" -l "$core" -f "$clean_aln" -t "$target_dir/$core.tree" -s "$target_dir/$core.log" -Y FastTree -P "$core"`;
+	`rm "$target_dir/$core.pda"`;
+	`rm "$target_dir/$core.tree"`;
+	`rm "$target_dir/$core.log"`;
+	`rm "$target_dir/$core.aln"`;
+	`rm "$target_dir/$core.fasta"`;
+	`rm "$clean_aln"`;
+	`rm "$masked_aln"`;
+	`mv "$target_dir/$core"/* "$target_dir"`;
+	`rm -rf "$target_dir/$core"`;
+	`rm -rf "$self->{"fileDir"}"`;
 }
 
 =head2 generate_hmm
@@ -100,7 +100,7 @@ sub generate_hmm {
 	my %args      = @_;
 	my $file_name = $args{file_name} || miss("file_name");
 	my $hmm_name  = $args{hmm_name} || miss("hmm_name");
-	`$Phylosift::Utilities::hmmbuild --informat afa $hmm_name $file_name`;
+	`$Phylosift::Utilities::hmmbuild --informat afa "$hmm_name" "$file_name"`;
 }
 
 =head2 hmmalign_to_model
@@ -179,9 +179,9 @@ sub generate_fasttree {
 	my ( $core, $path, $ext ) = fileparse( $aln_file, qr/\.[^.]*$/ );
 	my %type = Phylosift::Utilities::get_sequence_input_type($aln_file);
 	if ( $type{seqtype} eq "dna" ) {
-		`$Phylosift::Utilities::fasttree -nt -gtr -log $target_dir/$core.log $aln_file > $target_dir/$core.tree 2> /dev/null`;
+		`$Phylosift::Utilities::fasttree -nt -gtr -log "$target_dir/$core.log" "$aln_file" > "$target_dir/$core.tree" 2> /dev/null`;
 	} else {
-		`$Phylosift::Utilities::fasttree -gtr -log $target_dir/$core.log $aln_file > $target_dir/$core.tree 2> /dev/null`;
+		`$Phylosift::Utilities::fasttree -gtr -log "$target_dir/$core.log" "$aln_file" > "$target_dir/$core.tree" 2> /dev/null`;
 	}
 	return ( "$target_dir/$core.tree", "$target_dir/$core.log" );
 }
@@ -213,7 +213,7 @@ sub get_representatives_from_tree {
 
 	#pda doesn't seem to want to run if $taxa_count is the number of leaves. Decrementing to let pda do the search.
 	$taxa_count--;
-	my $pda_cmd = "cd $target_dir;$Phylosift::Utilities::pda -g -k $taxa_count -minlen $cutoff $tree_file $target_dir/$core.pda";
+	my $pda_cmd = "cd \"$target_dir\";$Phylosift::Utilities::pda -g -k $taxa_count -minlen $cutoff \"$tree_file\" \"$target_dir/$core.pda\"";
 	`$pda_cmd`;
 	return "$target_dir/$core.pda";
 }
