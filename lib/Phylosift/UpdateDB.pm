@@ -326,6 +326,9 @@ sub collate_markers {
 	my $marker_dir  = $args{marker_dir} || miss("marker_dir");
 	my $taxon_knockouts = $args{taxon_knockouts};
 
+	# make the directory if it doesn't yet exist
+	`mkdir -p $marker_dir`;
+
 	# get list of markers
 	chdir($marker_dir);
 	my @markerlist = Phylosift::Utilities::gather_markers();
@@ -456,8 +459,10 @@ sub assign_seqids {
 		);
 		# now put the IDs in the reps file
 		print STDERR "marker $marker rep seqids\n";
-		my $clean_reps = get_reps_filename( marker => $marker, updated => 1, clean => 1 );
-		assign_seqids_for_marker( marker => $marker, alignment => $clean_reps, counter => 0, existing_ids => \%id_mapping );
+		unless( $marker =~ /concat/ ){
+			my $clean_reps = get_reps_filename( marker => $marker, updated => 1, clean => 1 );
+			assign_seqids_for_marker( marker => $marker, alignment => $clean_reps, counter => 0, existing_ids => \%id_mapping );
+		}
 
 		my $codon_fasta = get_fasta_filename(marker=>$marker, updated=>1, dna=>1);
 		next unless -e $codon_fasta;
@@ -1143,7 +1148,7 @@ sub make_codon_submarkers {
 	# this is the maximum distance in amino acid substitutions per site that are allowed
 	# on any branch of the tree relating members of a group
 	# TODO: tune this value
-	my $max_aa_branch_distance = 0.1;
+	my $max_aa_branch_distance = 0.15;
 	my ($idtref, $mtiref) = read_gene_ids( file => "$marker_dir/".get_gene_id_file(dna=>0) );
 	my %id_to_taxon = %$idtref;
 	my %marker_taxon_to_id = %$mtiref;
