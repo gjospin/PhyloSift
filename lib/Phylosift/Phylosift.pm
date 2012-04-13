@@ -18,6 +18,7 @@ use Phylosift::Benchmark;
 use Phylosift::BeastInterface;
 use Phylosift::Comparison;
 use Phylosift::MarkerBuild;
+use Phylosift::Simulations;
 
 =head2 new
 
@@ -146,9 +147,9 @@ sub run {
 	start_timer( name => "START" );
 	read_phylosift_config( self => $self );
 	run_program_check( self => $self );
-	Phylosift::Utilities::data_checks( self => $self ) unless $self->{"mode"} eq 'build_marker';
-	file_check( self => $self ) unless $self->{"mode"} eq 'index';
-	directory_prep( self => $self, force => $force ) unless $self->{"mode"} eq 'index';
+	Phylosift::Utilities::data_checks( self => $self ) unless $self->{"mode"} eq 'build_marker' || $self->{"mode"} eq 'sim';
+	file_check( self => $self ) unless $self->{"mode"} eq 'index' || $self->{"mode"} eq 'sim';
+	directory_prep( self => $self, force => $force ) unless $self->{"mode"} eq 'index' ;
 	$self->{"readsFile"} = prep_isolate_files( self => $self, file => $self->{"readsFile"} ) if $self->{"isolate"} == 1;
 
 	# Forcing usage of updated markers
@@ -195,6 +196,9 @@ sub run {
 	}
 	if ( $self->{"mode"} eq 'build_marker' ) {
 		Phylosift::MarkerBuild::build_marker( self => $self, alignment => $ARGV[1], cutoff => $ARGV[2], force => $force );
+	}
+	if ( $self->{"mode"} eq 'sim' ){
+		Phylosift::Simulations::prep_simulation( self => $self , pick => $ARGV[2] , genomes_dir => $ARGV[1], reads => $ARGV[3] );
 	}
 }
 
@@ -320,26 +324,23 @@ sub directory_prep {
 	my %args  = @_;
 	my $self  = $args{self} || miss("self");
 	my $force = $args{force};
-
 	#    print "FORCE DIRPREP   $force\t mode   ".$self->{"mode"}."\n";
 	#    exit;
 	#remove the directory from a previous run
-	if ( $force && $self->{"mode"} eq 'all' ) {
+	if ( $force && $self->{"mode"} eq 'all' || $self->{"mode"} eq 'sim') {
 		debug( "deleting an old run\n", 0 );
-		my $dir = $self->{"fileDir"};
-		`rm -rf $dir`;
+		`rm -rf "$self->{"fileDir"}"`;
 	} elsif ( -e $self->{"fileDir"} && $self->{"mode"} eq 'all' ) {
 		croak(   "A previous run was found using the same file name aborting the current run\n"
 			   . "Either delete that run from "
 			   . $self->{"fileDir"}
 			   . ", or force overwrite with the -f command-line option\n" );
 	}
-
 	#create a directory for the Reads file being processed.
-	`mkdir -p $self->{"fileDir"}`  unless ( -e $self->{"fileDir"} );
-	`mkdir -p $self->{"blastDir"}` unless ( -e $self->{"blastDir"} );
-	`mkdir -p $self->{"alignDir"}` unless ( -e $self->{"alignDir"} );
-	`mkdir -p $self->{"treeDir"}`  unless ( -e $self->{"treeDir"} );
+	`mkdir -p "$self->{"fileDir"}"`  unless ( -e $self->{"fileDir"} );
+	`mkdir -p "$self->{"blastDir"}"` unless ( -e $self->{"blastDir"} );
+	`mkdir -p "$self->{"alignDir"}"` unless ( -e $self->{"alignDir"});
+	`mkdir -p "$self->{"treeDir"}"`  unless ( -e $self->{"treeDir"} );
 	return $self;
 }
 
@@ -419,10 +420,10 @@ sub run_marker_align {
 	my $continue = $args{cont} || 0;
 	my $markRef  = $args{marker} || miss("marker");
 	Phylosift::Utilities::start_timer( name => "Alignments" );
-
+	
 	#clearing the alignment directory if needed
 	my $alignDir = $self->{"alignDir"};
-	`rm $alignDir/*` if (<$alignDir/*>);
+	`rm "$alignDir"/*` if (<"$alignDir"/*>);
 
 	#Align Markers
 	my $threadNum = 1;
@@ -453,8 +454,7 @@ sub run_search {
 
 	#clearing the blast directory
 	my $blastDir = $self->{"blastDir"};
-	`rm $self->{"blastDir"}/*` if (<$blastDir/*>);
-
+	`rm "$blastDir"/*` if (<"$blastDir"/*>);
 	#run Searches
 	Phylosift::FastSearch::run_search( self => $self, custom => $custom, marker_reference => $markerListRef );
 	Phylosift::Utilities::end_timer( name => "runBlast" );

@@ -254,13 +254,13 @@ sub place_reads{
 		return;
 		croak("Marker: $marker\nPackage: $marker_package\nPackage does not exist\nPlacement without a marker package is no longer supported");
 	}
-	my $pp = "$Phylosift::Utilities::pplacer $options --verbosity 0 -j ".$self->{"threads"}." -c $marker_package $reads";
+	my $pp = "$Phylosift::Utilities::pplacer $options --verbosity 0 -j ".$self->{"threads"}." -c $marker_package \"$reads\"";
 	print "Running $pp\n";
 	system($pp);
 	
 	my $jplace = basename($reads, ".fasta").".jplace";
 
-	`mv $jplace $self->{"treeDir"}` if ( -e $jplace );
+	`mv "$jplace" "$self->{"treeDir"}"` if ( -e $jplace );
 	
 	return unless -e $self->{"treeDir"} . "/$jplace";
 	unless($self->{"simple"}){
@@ -316,8 +316,8 @@ sub directoryPrepAndClean {
 	my $self = $args{self} || miss("self");
 	
 	#create a directory for the Reads file being processed.
-	`mkdir $self->{"fileDir"}` unless ( -e $self->{"fileDir"} );
-	`mkdir $self->{"treeDir"}` unless ( -e $self->{"treeDir"} );
+	`mkdir "$self->{"fileDir"}"` unless ( -e $self->{"fileDir"} );
+	`mkdir "$self->{"treeDir"}"` unless ( -e $self->{"treeDir"} );
 }
 
 =head1 SUBROUTINES/METHODS

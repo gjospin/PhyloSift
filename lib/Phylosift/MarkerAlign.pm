@@ -10,7 +10,6 @@ use List::Util qw(min);
 use Carp;
 use Phylosift::Phylosift;
 use Phylosift::Utilities qw(:all);
-
 =head1 NAME
 
 Phylosift::MarkerAlign - Subroutines to align reads to marker HMMs
@@ -126,8 +125,8 @@ sub directoryPrepAndClean {
 	my $markRef = $args{marker_reference} || miss("marker_reference");
 
 	#create a directory for the Reads file being processed.
-	`mkdir -p $self->{"fileDir"}`;
-	`mkdir -p $self->{"alignDir"}`;
+	`mkdir -p "$self->{"fileDir"}"`;
+	`mkdir -p "$self->{"alignDir"}"`;
 	for ( my $index = 0 ; $index < @{$markRef} ; $index++ ) {
 		my $marker = ${$markRef}[$index];
 		my $candidate_file = Phylosift::Utilities::get_candidate_file( self => $self, marker => $marker, type => "" );
@@ -184,8 +183,10 @@ sub markerPrepAndRun {
 			unlink($candidate_short);
 			foreach my $type (@search_types_rna) {
 				my $candidate = Phylosift::Utilities::get_candidate_file( self => $self, marker => $marker, type => $type );
-				my @candidate_files = <$candidate.*>;
+				$candidate = Phylosift::Utilities::escape_char(string=>$candidate);
+				my @candidate_files = glob("$candidate.*");
 				foreach my $cand_file (@candidate_files) {
+					debug "SPLITTING |$cand_file|\n";
 					split_rna_on_size( in_file => $cand_file, short_out => $candidate_short, long_out => $candidate_long );
 				}
 			}
@@ -208,12 +209,15 @@ sub markerPrepAndRun {
 		unlink($new_candidate);
 		foreach my $type (@search_types) {
 			my $candidate = Phylosift::Utilities::get_candidate_file( self => $self, marker => $marker, type => $type );
-			my @candidate_files = <$candidate.*>;
+			$candidate = Phylosift::Utilities::escape_char(string=>$candidate);
+			my @candidate_files = glob("$candidate.*");
 			foreach my $cand_file (@candidate_files) {
 				next unless -e $cand_file;
 				my $fifo_out = $self->{"alignDir"} . "/" . Phylosift::Utilities::get_marker_basename( marker => $marker ) . ".tmpout.fifo";
-				`mkfifo $fifo_out`;
-				system( "$Phylosift::Utilities::hmmsearch -E 10 --cpu " . $self->{"threads"} . " --max --tblout $fifo_out $hmm_file $cand_file > /dev/null &" );
+				`mkfifo "$fifo_out"`;
+				my $hmmsearch_cmd = "$Phylosift::Utilities::hmmsearch -E 10 --cpu " . $self->{"threads"} . " --max --tblout \"$fifo_out\" \"$hmm_file\" \"$cand_file\" > /dev/null &";
+				debug ("$hmmsearch_cmd\n");
+				system( $hmmsearch_cmd );
 				my $HMMSEARCH = ps_open($fifo_out);
 				hmmsearch_parse( self => $self, marker => $marker, type => $type, HMMSEARCH => $HMMSEARCH, fasta_file => $cand_file );
 				unlink($fifo_out);
@@ -386,7 +390,7 @@ sub alignAndMask {
 
 			# Align the hits to the reference alignment using Hmmer3
 			# pipe in the aligned sequences, trim them further, and write them back out
-			$hmmalign = "$Phylosift::Utilities::hmmalign --outformat afa --mapali " . $stockholm_file . " $hmm_file $new_candidate |";
+			$hmmalign = "$Phylosift::Utilities::hmmalign --outformat afa --mapali " . $stockholm_file . " $hmm_file \"$new_candidate\" |";
 			debug "Running $hmmalign\n";
 			my $HMMALIGN = ps_open($hmmalign);
 			@lines = <$HMMALIGN>;
@@ -477,7 +481,8 @@ sub alignAndMask {
 	
 				#if it exists read the reference nucleotide sequences for the candidates
 				my $core_file_name  = Phylosift::Utilities::get_candidate_file( self => $self, marker => $marker, type => $type, dna => 1 );
-				my @candidate_files = <$core_file_name.*>;
+				$core_file_name = Phylosift::Utilities::escape_char(string=>$core_file_name);
+				my @candidate_files = glob("$core_file_name.*");
 				foreach my $cand_file (@candidate_files) {
 					if ( -e $cand_file && -e $outputFastaAA ) {
 						my $REFSEQSIN = ps_open($cand_file);
@@ -534,7 +539,7 @@ sub alignAndMask {
 		# get rid of the process IDs -- they break concatenation
 		strip_trailing_ids(alignment_file=>$outputFastaAA);
 		if( Phylosift::Utilities::is_protein_marker( marker => $marker ) ){
-			strip_trailing_ids(alignment_file=>$outputFastaDNA);
+			strip_trailing_ids(alignment_file=>$outputFastaDNA) if -e $outputFastaDNA;
 		}
 	}
 }
