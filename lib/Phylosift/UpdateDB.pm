@@ -835,7 +835,7 @@ sub fix_names_in_alignment {
 	}
 	close $INALN;
 	close $OUTALN;
-	`mv "$alignment.fixed $alignment"`;
+	`mv "$alignment.fixed" "$alignment"`;
 }
 
 sub create_temp_read_fasta {
