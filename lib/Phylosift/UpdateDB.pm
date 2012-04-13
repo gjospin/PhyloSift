@@ -307,16 +307,16 @@ sub concat_marker_files {
 	
 	my $catline = join( " ", @$cfref );
 	my $fasta = get_fasta_filename(marker=>$marker, updated=>1);
-	`cat "$catline" "$cat_ch" "$local_directory/$fasta"`;
+	`cat $catline $cat_ch "$local_directory/$fasta"`;
 	$catline =~ s/\.trim\.fasta/\.trim\.fna\.fasta/g;
 	if ( Phylosift::Utilities::is_protein_marker( marker => $marker ) ) {
 		my $codon_fasta = get_fasta_filename(marker=>$marker, updated=>1, dna=>1);
-		`cat "$catline" "$cat_ch" "$local_directory/$codon_fasta"`;
+		`cat $catline $cat_ch "$local_directory/$codon_fasta"`;
 	}
 	unless($marker eq "concat"){
 		$catline =~ s/\.trim\.fna\.fasta/\.unmasked/g;
 		my $reps = get_reps_filename( marker => $marker, updated => 1 );
-		`cat "$catline" "$cat_ch" "$local_directory/$reps"`;
+		`cat $catline $cat_ch "$local_directory/$reps"`;
 	}
 }
 

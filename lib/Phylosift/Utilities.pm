@@ -714,9 +714,40 @@ Returns the path to the lookup table between marker gene IDs and their taxa
 sub get_marker_taxon_map {
 	my %args = @_;
 	my $self = $args{self};
-	return "$marker_dir/marker_taxon_map.updated.txt" if ( $self->{"updated"} );
-	return "$marker_dir/marker_taxon_map.txt";
+	my $marker = $args{marker};
+	my $marker_path = get_marker_path( self => $self, marker => $marker );	
+	my $bname       = get_marker_basename( marker => $marker );
+	my $decorated = get_decorated_marker_name(%args);
+	return "$marker_path/$decorated/$bname.taxonmap";
 }
+
+sub get_decorated_marker_name {
+	my %args = @_;
+	my $name = $args{marker} || miss("marker");
+	my $dna = $args{dna} || 0;
+	my $updated = $args{updated} || 0;
+	my $sub_marker = $args{sub_marker};
+	$name .= ".codon"   if $dna;
+	$name .= ".updated" if $updated || $args{self}->{"updated"};
+
+	# rna markers don't get pruned
+	$name .= ".sub".$sub_marker if defined($sub_marker);
+	return $name;
+}
+
+
+=head2 get_gene_id_file
+
+Returns the gene id file name
+
+=cut
+sub get_gene_id_file {
+	my %args = @_;
+	my $dna = $args{dna} || 0;
+	return "$marker_dir/gene_ids.codon.txt" if $dna;
+	return "$marker_dir/gene_ids.aa.txt";
+}
+
 
 =head2 is_protein_marker
 
@@ -768,11 +799,8 @@ sub get_marker_package {
 	my $self        = $args{self};
 	my $marker      = $args{marker};
 	my $marker_path = get_marker_path( self => $self, marker => $marker );
-	if ( $self->{"updated"} == 0 ) {
-		return "$marker_path/$marker";
-	} else {
-		return "$marker_path/$marker.updated";
-	}
+	my $decorated   = get_decorated_marker_name(%args);
+	return "$marker_path/$decorated";
 }
 
 =head2 get_aligner_output_fasta_AA
@@ -785,6 +813,19 @@ sub get_aligner_output_fasta_AA {
 	my $marker = $args{marker};
 	my $bname  = get_marker_basename( marker => $marker );
 	return "$bname.trim.fasta";
+}
+
+=head2 get_aligner_output_fasta
+Returns the FastA file containing DNA read or contig alignments to the marker
+given by markerName
+=cut
+
+sub get_aligner_output_fasta {
+	my %args   = @_;
+	my $marker = $args{marker};
+	my $bname  = get_marker_basename( marker => $marker );
+	my $decorated = get_decorated_marker_name( %args );
+	return "$decorated.fasta";
 }
 
 =head2 get_aligner_output_fasta_DNA
@@ -808,19 +849,8 @@ sub get_read_placement_file {
 	my %args   = @_;
 	my $marker = $args{marker};
 	my $bname  = get_marker_basename( marker => $marker );
-	return "$bname.trim.jplace";
-}
-
-=head2 get_read_placement_file_DNA
-Returns the read placement Jplace file to the marker
-given by markerName
-=cut
-
-sub get_read_placement_file_DNA {
-	my %args   = @_;
-	my $marker = $args{marker};
-	my $bname  = get_marker_basename( marker => $marker );
-	return "$bname.trim.fna.jplace";
+	my $decorated = get_decorated_marker_name(%args);
+	return "$decorated.jplace";
 }
 
 =head2 get_trimfinal_marker_file

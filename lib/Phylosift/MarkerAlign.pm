@@ -85,10 +85,10 @@ sub MarkerAlign {
 		for ( my $i = 0 ; $i < @markeralignments ; $i++ ) {
 			$markeralignments[$i] =~ s/trim.fasta/trim.fna.fasta/g;
 		}
-		my $outputFastaDNA = $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta_DNA( marker => "concat" );
+		my $output_fasta_DNA = $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta( marker => "concat", dna=>1 );
 		Phylosift::Utilities::concatenate_alignments(
 													  self           => $self,
-													  output_fasta   => $outputFastaDNA,
+													  output_fasta   => $output_fasta_DNA,
 													  output_bayes   => $self->{"alignDir"} . "/mrbayes-dna.nex",
 													  gap_multiplier => 3,
 													  alignments     => \@markeralignments
@@ -102,10 +102,10 @@ sub MarkerAlign {
 		push( @markeralignments, $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta_AA( marker => "16s_reps_bac" ) );
 		push( @markeralignments, $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta_AA( marker => "16s_reps_arc" ) );
 		push( @markeralignments, $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta_AA( marker => "18s_reps" ) );
-		$outputFastaDNA = $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta_DNA( marker => "concat16" );
+		$output_fasta_DNA = $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta_DNA( marker => "concat16" );
 		Phylosift::Utilities::concatenate_alignments(
 													  self           => $self,
-													  output_fasta   => $outputFastaDNA,
+													  output_fasta   => $output_fasta_DNA,
 													  output_bayes   => $self->{"alignDir"} . "/mrbayes-dna16.nex",
 													  gap_multiplier => 3,
 													  alignments     => \@markeralignments
