@@ -14,10 +14,22 @@
   - Evolution provides a primary signal for read classification
     - Evolution of nucleotides/amino acids
     - Evolution of gene content
+
+  - Previous work
+    - whole-metagenome binning
+      - composition classifiers
+      - identity/homology classifiers
+    - community composition without binning
+      - AMPHORA, MLTreeMap, others?
+      - MetaPHlan
+
   - In this work we employ phylogenetic models of nucleotide and amino acid substitution to perform metagenomic binning and community composition analysis
+  - We evaluate the new method using simulated datasets
 
+- Design and Implementation
 
+  
 
 - Discussion
   - Fundamental limits to computational methods -- resolving linkage among polymorphisms in a population
-
+  
