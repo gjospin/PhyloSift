@@ -1,0 +1,23 @@
+#
+# tell it like a story
+# 
+
+- Intro
+  - Evolution: the joint processes of reproduction with mutation and natural selection acting on mutations
+  - Molecular evolution has left an indelible mark on microbes
+  - Metagenomics, has for the first time offered a glimpse of the genetic structure of uncultured microbial communities
+  - Metagenomics, in its current form, destroys some of the most valuable information present in a sample: genetic linkage.
+  - Cells are shredded to get the DNA -- mixes DNA among many cells
+  - Chromosomes are sheared down in to fragments palatable for sequencing instruments. Usually less than 1Kbp (though sometimes 10-20kbp). 
+  - Single cell genomics can resolve this to some extent
+  - Computational methods very helpful
+  - Evolution provides a primary signal for read classification
+    - Evolution of nucleotides/amino acids
+    - Evolution of gene content
+  - In this work we employ phylogenetic models of nucleotide and amino acid substitution to perform metagenomic binning and community composition analysis
+
+
+
+- Discussion
+  - Fundamental limits to computational methods -- resolving linkage among polymorphisms in a population
+

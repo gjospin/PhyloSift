@@ -275,7 +275,8 @@ sub summarize {
 			for( my $j=0; $j < @{$place->{p}}; $j++){
 				my $edge = $place->{p}->[$j]->[0];
 
-				croak( "Marker $marker missing mapping from phylogeny edge $edge to taxonomy" ) unless defined( $markerncbimap{$edge} );
+#				croak( "Marker $marker missing mapping from phylogeny edge $edge to taxonomy" ) unless defined( $markerncbimap{$edge} );
+# FIXME: need to mark this read as unclassifiable
 				next unless defined( $markerncbimap{$edge} );
 				my $mapcount = scalar( @{ $markerncbimap{$edge} } );
 				croak( "Found 0 taxa for edge $edge\n" ) if ( scalar( @{ $markerncbimap{$edge} } ) == 0 );

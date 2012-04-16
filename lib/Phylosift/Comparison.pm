@@ -66,9 +66,9 @@ sub compare {
 	my @processfiles = @files;
 	unshift( @files, "$parent_directory/merged.jplace" );
 	foreach my $file (@files) {
-		my $rarefact_cl = "$Phylosift::Utilities::guppy rarefact -o $file.rarefaction $file";
+		my $rarefact_cl = "$Phylosift::Utilities::guppy rarefact -o \"$file.rarefaction\" \"$file\"";
 		system($rarefact_cl);
-		my $compress_cl = "$Phylosift::Utilities::guppy compress -o $file.compression --cutoff 0.4 $file";
+		my $compress_cl = "$Phylosift::Utilities::guppy compress -o \"$file.compression\" --cutoff 0.4 \"$file\"";
 		system($compress_cl);
 	}
 	rename_nodes( in_file => "pca.xml", out_file => "pca.named.xml" );
