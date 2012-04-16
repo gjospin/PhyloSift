@@ -24,7 +24,7 @@
       - MetaPHlan
 
   - In this work we employ phylogenetic models of nucleotide and amino acid substitution to perform metagenomic binning and community composition analysis
-  - We evaluate the new method using simulated datasets
+  - We evaluate the new method and compare it to previous approaches using simulated datasets
 
 - Design and Implementation
 
