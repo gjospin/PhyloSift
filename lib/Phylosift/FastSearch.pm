@@ -84,7 +84,6 @@ sub run_search {
 
 	# need to use BLAST for isolate mode, since RAP only handles very short reads
 	# ensure databases and sequences are prepared for search
-	debug "before rapPrepandclean\n";
 	prep_and_clean( self => $self );
 
 	#read_marker_lengths( self => $self );
@@ -847,7 +846,6 @@ Generates the blastable database using the marker representatives
 sub prep_and_clean {
 	my %args = @_;
 	my $self = $args{self} || miss("self");
-	debug "prepclean MARKERS @markers\n";
 
 	#create a directory for the Reads file being processed.
 	`mkdir "$self->{"fileDir"}"`  unless ( -e $self->{"fileDir"} );

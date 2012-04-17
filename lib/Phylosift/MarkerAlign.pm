@@ -60,9 +60,7 @@ sub MarkerAlign {
 	my $self       = $args{self} || miss("self");
 	my $markersRef = $args{marker_reference} || miss("marker_reference");
 	my @allmarkers = @{$markersRef};
-	debug "beforeDirprepClean @{$markersRef}\n";
 	directoryPrepAndClean( self => $self, marker_reference => $markersRef );
-	debug "AFTERdirprepclean @{$markersRef}\n";
 	my $index = -1;
 	markerPrepAndRun( self => $self, marker_reference => $markersRef );
 	debug "after HMMSEARCH PARSE\n";
