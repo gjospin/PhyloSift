@@ -165,10 +165,12 @@ sub run {
 		debug "MODE :: " . $self->{"mode"} . "\n";
 	}
 	debug "MODE :: " . $self->{"mode"} . "\n";
-	if ( $self->{"mode"} eq 'align' || $self->{"mode"} eq 'all' ) {
+#	if ( $self->{"mode"} eq 'align' || $self->{"mode"} eq 'all' ) {
+	if ( $self->{"mode"} eq 'align' ) {
 		$self = run_marker_align( self => $self, cont => $continue, marker => \@markers );
 	}
-	if ( $self->{"mode"} eq 'placer' || $self->{"mode"} eq 'all' ) {
+#	if ( $self->{"mode"} eq 'placer' || $self->{"mode"} eq 'all' ) {
+	if ( $self->{"mode"} eq 'placer' ) {
 		croak "No marker gene hits found in the input data. Unable to reconstruct phylogeny and taxonomy." if ( scalar(@markers) == 0 );
 		$self = run_pplacer( self => $self, cont => $continue, marker => \@markers );
 	}
