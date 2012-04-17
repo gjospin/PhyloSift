@@ -275,21 +275,22 @@ sub place_reads{
 	my $options = $args{options} || "";
 	print "Placing for $marker\n";
 	my $marker_package = Phylosift::Utilities::get_marker_package( self => $self, marker => $marker );
+	print "MARKER PACKAGE : $marker_package\n";
 	unless(-d $marker_package ){
 		return;
 		croak("Marker: $marker\nPackage: $marker_package\nPackage does not exist\nPlacement without a marker package is no longer supported");
 	}
-	my $pp = "$Phylosift::Utilities::pplacer $options --verbosity 0 -j ".$self->{"threads"}." -c $marker_package $reads";
+	my $pp = "$Phylosift::Utilities::pplacer $options --verbosity 0 -j ".$self->{"threads"}." -c $marker_package \"$reads\"";
 	print "Running $pp\n";
 	system($pp);
 	
 	my $jplace = basename($reads, ".fasta").".jplace";
 
-	`mv $jplace $self->{"treeDir"}` if ( -e $jplace );
+	`mv "$jplace" "$self->{"treeDir"}"` if ( -e $jplace );
 	
 	return unless -e $self->{"treeDir"} . "/$jplace";
 	unless($self->{"simple"}){
-		# skip this if a simple summary is desired since it's slow.
+		# skip this if a simple summary if desired since it's slow.
 		debug "Naming taxa in marker $marker\n";
 		name_taxa_in_jplace( self => $self, input => $self->{"treeDir"} . "/$jplace", output => $self->{"treeDir"} . "/$jplace" );
 	}
@@ -342,8 +343,8 @@ sub directoryPrepAndClean {
 	my $self = $args{self} || miss("self");
 	
 	#create a directory for the Reads file being processed.
-	`mkdir $self->{"fileDir"}` unless ( -e $self->{"fileDir"} );
-	`mkdir $self->{"treeDir"}` unless ( -e $self->{"treeDir"} );
+	`mkdir "$self->{"fileDir"}"` unless ( -e $self->{"fileDir"} );
+	`mkdir "$self->{"treeDir"}"` unless ( -e $self->{"treeDir"} );
 }
 
 =head1 SUBROUTINES/METHODS

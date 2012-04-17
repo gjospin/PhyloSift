@@ -54,7 +54,7 @@ sub Export($$$) {
 		my $treeStatsFile = Phylosift::Utilities::get_tree_stats_marker_file( self => $self, marker => $marker );
 		my $readAlignmentFile = $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta_AA( marker => $marker );
 		if ( !-e "$trimfinalFastaFile" ) {
-			`cp $trimfinalFile $trimfinalFastaFile`;
+			`cp "$trimfinalFile" "$trimfinalFastaFile"`;
 		}
 	}
 

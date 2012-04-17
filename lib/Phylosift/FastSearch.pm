@@ -146,9 +146,9 @@ sub launch_searches {
 	}
 	my $rna_procs = 0;
 	if($readtype->{seqtype} eq "dna"){
-		`mkfifo $bowtie2_r1_pipe`;
-		`mkfifo $bowtie2_r2_pipe` if $readtype->{paired};
-		`mkfifo $last_rna_pipe`;
+		`mkfifo "$bowtie2_r1_pipe"`;
+		`mkfifo "$bowtie2_r2_pipe"` if $readtype->{paired};
+		`mkfifo "$last_rna_pipe"`;
 		$rna_procs = 2;
 	}else{
 		# if we're searching protein, send these to the bitbucket
@@ -193,8 +193,8 @@ sub launch_searches {
 					# still need to open/close pipes for parent process
 					my $btp1 = ps_open($bowtie2_r1_pipe);
 					my $btp2 = ps_open($bowtie2_r2_pipe) if defined($bowtie2_r2_pipe);
-					`rm -f $bowtie2_r1_pipe`;
-					`rm -f $bowtie2_r2_pipe` if defined($bowtie2_r2_pipe);
+					`rm -f "$bowtie2_r1_pipe"`;
+					`rm -f "$bowtie2_r2_pipe"` if defined($bowtie2_r2_pipe);
 					exit 0;
 				} else {
 					$hitstream = bowtie2( self => $self, readtype => $args{readtype}, reads1 => $bowtie2_r1_pipe, reads2 => $bowtie2_r2_pipe );
@@ -249,10 +249,11 @@ sub launch_searches {
 	}
 
 	# clean up
-	`rm -f $bowtie2_r1_pipe $last_rna_pipe $reads_file`;
-	`rm -f $bowtie2_r2_pipe` if defined($bowtie2_r2_pipe);
+	`rm -f "reads_file"`;
+	`rm -f "$bowtie2_r1_pipe" "$last_rna_pipe"` if ($bowtie2_r1_pipe ne "/dev/null");
+	`rm -f "$bowtie2_r2_pipe"` if defined($bowtie2_r2_pipe);
 	foreach my $last_pipe (@last_pipe_array) {
-		`rm -f $last_pipe`;
+		`rm -f "$last_pipe"`;
 	}
 	return $finished;
 }
@@ -400,7 +401,7 @@ sub lastal_table {
 	my $last_opts = "";
 	$last_opts = "-F15" if $readtype->{seqtype} eq "dna";
 	my $db         = Phylosift::Utilities::get_lastal_db( self => $self );
-	my $lastal_cmd = "$Phylosift::Utilities::lastal $last_opts -e75 -f0 $db $query_file |";
+	my $lastal_cmd = "$Phylosift::Utilities::lastal $last_opts -e75 -f0 $db \"$query_file\" |";
 	debug "Running $lastal_cmd";
 	my $HISTREAM = ps_open($lastal_cmd);
 	return $HISTREAM;
@@ -418,7 +419,7 @@ sub lastal_table_rna {
 	my $self       = $args{self} || miss("self");
 	my $query_file = $args{query_file} || miss("query_file");
 	my $db         = Phylosift::Utilities::get_bowtie2_db( self => $self );
-	my $lastal_cmd = "$Phylosift::Utilities::lastal -e300 -f0 $db $query_file |";
+	my $lastal_cmd = "$Phylosift::Utilities::lastal -e300 -f0 $db \"$query_file\" |";
 	debug "Running $lastal_cmd";
 	my $HISTREAM = ps_open($lastal_cmd);
 	return $HISTREAM;
@@ -444,7 +445,7 @@ sub bowtie2 {
 #	if ( $args{readtype}->{paired} ) {
 #		$bowtie2_cmd .= " -1 $args{reads1} -2 $args{reads2} ";
 #	} else {
-		$bowtie2_cmd .= " -U $args{reads1} ";
+		$bowtie2_cmd .= " -U \"$args{reads1}\" ";
 #	}
 	$bowtie2_cmd .= " |";
 	debug "Running $bowtie2_cmd";
@@ -879,8 +880,8 @@ sub prep_and_clean {
 	#debug "prepclean MARKERS @markers\n";
 
 	#create a directory for the Reads file being processed.
-	`mkdir $self->{"fileDir"}`  unless ( -e $self->{"fileDir"} );
-	`mkdir $self->{"blastDir"}` unless ( -e $self->{"blastDir"} );
+	`mkdir "$self->{"fileDir"}"`  unless ( -e $self->{"fileDir"} );
+	`mkdir "$self->{"blastDir"}"` unless ( -e $self->{"blastDir"} );
 	return $self;
 }
 

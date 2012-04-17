@@ -52,8 +52,9 @@ int main(int argc, char** argv){
 		stringstream line_str(line);
 		string gene;
 		string species;
-		getline(line_str, gene, '\t');
-		getline(line_str, species);
+		getline(line_str, species, '\t');
+		getline(line_str, species, '\t');
+		getline(line_str, gene);
 		gene_map.insert(make_pair(species, gene));
 		other_map.insert(make_pair(gene,species));
 	}
