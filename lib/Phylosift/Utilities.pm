@@ -100,24 +100,27 @@ sub get_program_path {
 	my $progpath  = $args{prog_path};
 	my $progcheck = "";
 
-	#	print STDERR "BIN : $Bin\n";
-	#	exit;
+	# if a path was already given try that first
 	if ( defined($progpath) && $progpath ne "" && -x $progpath . "/" . $progname ) {
 		$progcheck = $progpath . "/" . $progname;
-	} else {
-		$progcheck = `which "$progname" 2> /dev/null`;
-		chomp $progcheck;
 	}
 
-	# last ditch attempt, check the directories from where the script is running
+	# then check the directories from where the script is running
 	$progcheck = $Bin . "/" . $progname     unless ( $progcheck =~ /$progname/ || !( -x $Bin . "/" . $progname ) );
 	$progcheck = $Bin . "/bin/" . $progname unless ( $progcheck =~ /$progname/ || !( -x $Bin . "/bin/" . $progname ) );
 
-	# check the OS and use Mac binaries if needed
+	# then check the OS and use Mac binaries if needed
 	if ( $^O =~ /arwin/ ) {
 		$progcheck = $Bin . "/../osx/" . $progname unless ( $progcheck =~ /$progname/ && !( -x $Bin . "/" . $progname ) );
 		$progcheck = $Bin . "/../osx/" . $progname if ( $progcheck =~ /$Bin\/bin/ );    # don't use the linux binary!
 	}
+
+	# last ditch attempt, try the system path and hope we get the right version
+	unless( -x $progcheck ){
+		$progcheck = `which "$progname" 2> /dev/null`;
+		chomp $progcheck;
+	}
+
 	return $progcheck;
 }
 
@@ -509,6 +512,7 @@ sub get_marker_length {
 	my $length = 0;
 	if ( is_protein_marker( marker => $marker ) ) {
 		my $hmm_file = get_marker_hmm_file( self => $self, marker => $marker );
+#		return unless -e $hmm_file;
 		my $HMM = ps_open($hmm_file);
 		while ( my $line = <$HMM> ) {
 			if ( $line =~ /LENG\s+(\d+)/ ) {
