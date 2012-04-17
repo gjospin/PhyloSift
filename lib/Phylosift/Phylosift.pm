@@ -140,7 +140,7 @@ sub run {
 	my $self     = shift;
 	my %args     = @_;
 	my $force    = $args{force} || 0;
-	my $custom   = $args{custom} || "";
+	my $custom   = $args{custom};
 	my $continue = $args{cont} || 0;      #continue is a reserved word, using a shortened version
 	debug "force : $force\n";
 	Phylosift::Utilities::print_citations();
@@ -159,11 +159,9 @@ sub run {
 		@markers = Phylosift::Utilities::gather_markers( self => $self, path => $Phylosift::Utilities::markers_extended_dir );
 	}
 
-	#create a file with a list of markers called markers.list
-	debug "CUSTOM = " . $custom . "\n";
 	debug "MODE :: " . $self->{"mode"} . "\n";
 	if ( $self->{"mode"} eq 'search' || $self->{"mode"} eq 'all' ) {
-		$self = run_search( self => $self, cont => $continue, custom => $custom, marker => \@markers );
+		$self = run_search( self => $self, cont => $continue, marker => \@markers );
 		debug "MODE :: " . $self->{"mode"} . "\n";
 	}
 	debug "MODE :: " . $self->{"mode"} . "\n";
@@ -447,7 +445,6 @@ sub run_search {
 	my %args          = @_;
 	my $self          = $args{self} || miss("self");
 	my $continue      = $args{cont} || 0;
-	my $custom        = $args{custom} || 0;
 	my $markerListRef = $args{marker} || miss("marker");
 	Phylosift::Utilities::start_timer( name => "runBlast" );
 
@@ -455,7 +452,7 @@ sub run_search {
 	my $blastDir = $self->{"blastDir"};
 	`rm "$blastDir"/*` if (<"$blastDir"/*>);
 	#run Searches
-	Phylosift::FastSearch::run_search( self => $self, custom => $custom, marker_reference => $markerListRef );
+	Phylosift::FastSearch::run_search( self => $self, marker_reference => $markerListRef );
 	Phylosift::Utilities::end_timer( name => "runBlast" );
 	if ( $continue != 0 ) {
 		$self->{"mode"} = 'align';

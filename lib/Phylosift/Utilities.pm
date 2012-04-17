@@ -512,7 +512,7 @@ sub get_marker_length {
 	my $length = 0;
 	if ( is_protein_marker( marker => $marker ) ) {
 		my $hmm_file = get_marker_hmm_file( self => $self, marker => $marker );
-#		return unless -e $hmm_file;
+		return unless -e $hmm_file;
 		my $HMM = ps_open($hmm_file);
 		while ( my $line = <$HMM> ) {
 			if ( $line =~ /LENG\s+(\d+)/ ) {
@@ -1306,6 +1306,7 @@ sub index_marker_db {
 	my $bowtie2_db_fasta = "$bowtie2_db.fasta";
 	my $PDBOUT           = ps_open( ">" . get_blastp_db( path => $path ) );
 	my $RNADBOUT         = ps_open( ">" . $bowtie2_db_fasta );
+	my $MARKERLISTOUT    = ps_open( ">$path/marker_list.txt" );
 	foreach my $marker (@markers) {
 		my $marker_rep = get_marker_rep_file( self => $args{self}, marker => $marker, updated => 1 );
 		$marker_rep = get_marker_rep_file( self => $args{self}, marker => $marker, updated => 0 ) unless -e $marker_rep;
@@ -1317,6 +1318,7 @@ sub index_marker_db {
 			warn "Warning: marker $marker appears to be missing data\n";
 			next;
 		}
+		print $MARKERLISTOUT "$marker\n";
 		my $INALN = ps_open($marker_rep);
 		while ( my $line = <$INALN> ) {
 			if ( $line =~ /^>(.+)/ ) {
@@ -1330,6 +1332,7 @@ sub index_marker_db {
 	}
 	print $PDBOUT "\n";
 	print $RNADBOUT "\n";
+	close $MARKERLISTOUT;
 	close $PDBOUT;    # be sure to flush I/O
 	close $RNADBOUT;
 	my $blastp_db = get_blastp_db( path => $path );
@@ -1374,12 +1377,17 @@ sub gather_markers {
 	my %args        = @_;
 	my $marker_file = $args{marker_file};
 	my $missing_hmm = $args{allow_missing_hmm} || 0;
+	my $force_gather = $args{force_gather} || 0;
 	my $path        = $args{path} || $marker_dir;
 	my @marks       = ();
 
+	# try to use a marker list file if it exists
+	if(!defined($marker_file) && !$force_gather){
+		$marker_file = "$path/marker_list.txt" if -e "$path/marker_list.txt";
+	}
 	#create a file with a list of markers called markers.list
 	if ( defined($marker_file) && -f $marker_file && $marker_file ne "" ) {
-
+		debug "Using a marker list file\n";
 		#gather a custom list of makers, list convention is 1 marker per line
 		my $MARKERS_IN = ps_open($marker_file);
 		while (<$MARKERS_IN>) {

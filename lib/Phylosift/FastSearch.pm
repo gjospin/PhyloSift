@@ -65,7 +65,6 @@ my %markerLength;
 sub run_search {
 	my %args       = @_;
 	my $self       = $args{self} || miss("self");
-	my $custom     = $args{custom};
 	my $markersRef = $args{marker_reference} || miss("marker_reference");
 	@markers = @{$markersRef};
 	my $position = rindex( $self->{"readsFile"}, "/" );
