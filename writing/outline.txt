@@ -27,9 +27,42 @@
   - We evaluate the new method and compare it to previous approaches using simulated datasets
 
 - Design and Implementation
+  - Core workflow similar to AMPHORA, MLTreeMap
+  - Marker gene set expanded to include 38 Bact+Arch markers, mtDNA, euk, 16s, 18s, viral fams
+  - Details of each step
+    - Process sequence (reads or assembly) to identify similarity to marker genes
+      - LAST, bowtie2
+    - Generate high quality alignments
+      - reverse translation to DNA when possible
+    - Place reads on a phylogenetic reference tree
+    - Compute summaries of read placements
+      - taxonomic summary
+      - other summaries
+    - Or compare among samples
+      - stuff A, B, and C
+  - Database update workflow
+    - pull any new genomes from NCBI/EBI/JGI/otherI
+    - run core workflow to identify marker homologs (--besthit --isolate)
+    - assigned unique ID, linking to taxon ID etc.
+    - build tree (FastTree)
+    - etc, etc
+  - Taxonomy reconciliation
 
+- Results
+  - Simulated datasets
+    - How they were generated
+    - Building PhyloSift DBs without test datasets
+  - Precision, recall, and F1
+  - Relationship between F1 and neighbor taxon density
   
+  - Application to a real dataset (which one?)
+    - correspondence with 16s on this dataset?
+    - any other interesting features?
 
 - Discussion
   - Fundamental limits to computational methods -- resolving linkage among polymorphisms in a population
-  
+  - Advantages to the approach taken by PhyloSift
+  - Disadvantages
+    - many
+  - Future work
+
