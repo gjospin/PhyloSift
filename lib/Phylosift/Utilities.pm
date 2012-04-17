@@ -141,6 +141,7 @@ our $pda          = "";
 our $fasttree     = "";
 our $lastdb       = "";
 our $lastal       = "";
+our %marker_lookup = ();
 
 sub programChecks {
 	eval 'require Bio::Seq;';
@@ -574,7 +575,9 @@ sub get_marker_path {
 	return "$markers_extended_dir" if ( -d "$markers_extended_dir/$marker" );
 
 	# TODO: check any local marker repositories
-	warn "Could not find repository for marker $marker\n";
+	#warn "Could not find repository for marker $marker\n";
+	$Carp::Verbose = 1;
+	croak("Could not find repository for marker $marker\n");
 }
 
 =head2 get_marker_basename
@@ -588,6 +591,18 @@ sub get_marker_basename {
 	my $marker = $args{marker};
 	$marker =~ s/^.+\///g;
 	return $marker;
+}
+
+=head2 get_marker_basename
+
+Returns the full name of the marker -- the marker name with any directories prepended
+
+=cut
+
+sub get_marker_fullname {
+	my %args   = @_;
+	my $marker = $args{marker};
+	return $marker_lookup{$marker};
 }
 
 =head2 get_alignment_marker_file 
@@ -815,8 +830,10 @@ given by markerName
 sub get_aligner_output_fasta_AA {
 	my %args   = @_;
 	my $marker = $args{marker};
+	my $chunk  = $args{chunk};
+	my $chunky = defined($chunk) ? ".$chunk" : "";
 	my $bname  = get_marker_basename( marker => $marker );
-	return "$bname.trim.fasta";
+	return "$bname$chunky.trim.fasta";
 }
 
 =head2 get_aligner_output_fasta
@@ -827,9 +844,11 @@ given by markerName
 sub get_aligner_output_fasta {
 	my %args   = @_;
 	my $marker = $args{marker};
+	my $chunk  = $args{chunk};
+	my $chunky = defined($chunk) ? ".$chunk" : "";
 	my $bname  = get_marker_basename( marker => $marker );
 	my $decorated = get_decorated_marker_name( %args );
-	return "$decorated.fasta";
+	return "$decorated$chunky.fasta";
 }
 
 =head2 get_aligner_output_fasta_DNA
@@ -1276,14 +1295,17 @@ sub get_candidate_file {
 	my $type   = $args{type};
 	my $dna    = $args{dna};
 	my $new    = $args{new};
+	my $chunk  = $args{chunk};
 	my $ffn    = ".aa";
 	$ffn = ".ffn" if ( defined( $args{dna} ) && $dna );
 	my $candidate = ".candidate";
 	$candidate = ".newCandidate" if defined( $args{new} ) && $new;
 	my $dir = $self->{"blastDir"};
 	$dir = $self->{"alignDir"} if defined( $args{new} ) && $new;
+	my $chunky = "";
+	$chunky = ".$chunk" if defined($chunk);
 	$marker =~ s/.+\///g;    # strip off any prepended directories
-	return "$dir/$marker$type$candidate$ffn";
+	return "$dir/$marker$type$candidate$ffn$chunky";
 }
 
 =head2 index_marker_db
@@ -1423,6 +1445,7 @@ sub gather_markers {
 			if ( !$missing_hmm ) {
 				next unless ( -e "$path/$line/$line.cm" || -e "$path/$line/$baseline.hmm" );
 			}
+			$marker_lookup{$baseline} = $line;
 			push( @marks, $line );
 		}
 	}
