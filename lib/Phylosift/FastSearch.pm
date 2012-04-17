@@ -125,7 +125,7 @@ sub launch_searches {
 		`mkfifo "$args{dir}/last_$i.pipe"`;
 	}
 	my $rna_procs = 0;
-	if($readtype->{seqtype} eq "dna"){
+	if($readtype->{seqtype} eq "dna" && -e Phylosift::Utilities::get_bowtie2_db() ){
 		`mkfifo "$bowtie2_r1_pipe"`;
 		`mkfifo "$bowtie2_r2_pipe"` if $readtype->{paired};
 		`mkfifo "$last_rna_pipe"`;
@@ -154,21 +154,20 @@ sub launch_searches {
 				$candidate_type = ".lastal";
 			} elsif ( $count == $self->{"threads"} + 1 ) {
 
-				#if(!-e Phylosift::Utilities::get_bowtie2_db()){
-				#	debug "Existing process $count bowtie2 db not found\n";
-				#	my $lrp1 = ps_open($last_rna_pipe);
-				#	`rm -f $last_rna_pipe`;
-				#	exit 0;
-				#}else{
-				$hitstream = lastal_table_rna( self => $self, query_file => $last_rna_pipe );
-
-				#}
+				if(!-e Phylosift::Utilities::get_bowtie2_db()){
+					debug "Exiting process $count because rna db not found\n";
+					my $lrp1 = ps_open($last_rna_pipe);
+					`rm -f $last_rna_pipe`;
+					exit 0;
+				}else{
+					$hitstream = lastal_table_rna( self => $self, query_file => $last_rna_pipe );
+				}
 				$candidate_type = ".lastal.rna";
 			} elsif ( $count == $self->{"threads"} + 2 ) {
 
 				#exit the thread if the bowtie DB does not exit
-				if ( !-e Phylosift::Utilities::get_bowtie2_db() . ".prj" ) {
-					debug "Exiting process $count because the rnaDB does not exist\n";
+				if ( !-e Phylosift::Utilities::get_bowtie2_db() ) {
+					debug "Exiting process $count because the bowtie2 rna db does not exist\n";
 
 					# still need to open/close pipes for parent process
 					my $btp1 = ps_open($bowtie2_r1_pipe);
@@ -741,8 +740,9 @@ sub write_candidates {
 			# if it looks like the query seq goes off the marker boundary
 			$markerLength{$markerHit} = Phylosift::Utilities::get_marker_length( self => $self, marker => $markerHit ) unless exists $markerLength{$markerHit};
 			if ( !defined($markerHit) || !defined( $markerLength{$markerHit} ) ) {
-				debug "markerHit is $markerHit\n";
-				debug $markerLength{$markerHit} . "\n";
+				debug "no alignment length for marker $markerHit\n";
+#				debug $markerLength{$markerHit} . "\n";
+				next;
 			}
 			my $min_len = $markerLength{$markerHit} < $seq->length ? $markerLength{$markerHit} : $seq->length;
 			next unless ( ( $end - $start ) / $min_len >= $align_fraction );
