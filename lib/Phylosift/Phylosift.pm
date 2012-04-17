@@ -153,7 +153,6 @@ sub run {
 	$self->{"readsFile"} = prep_isolate_files( self => $self, file => $self->{"readsFile"} ) if $self->{"isolate"} == 1;
 
 	# Forcing usage of updated markers
-	$self->{"updated"} = 1;
 	debug "Using updated markers\n" if $self->{"updated"};
 	my @markers = Phylosift::Utilities::gather_markers( self => $self, marker_file => $custom );
 	if ( $self->{"extended"} ) {

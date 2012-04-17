@@ -54,7 +54,7 @@ sub pplacer {
 		$covref = Phylosift::Summarize::read_coverage( file => $self->{"coverage"} );
 	}
 
-	if ( $self->{"updated"} ) {
+	if ( $self->{"updated"} && -e $self->{"alignDir"} . "/concat.trim.fasta") {
 		place_reads(self=>$self, marker=>"concat", options=>"--groups 10", dna=>0, reads=>$self->{"alignDir"} . "/concat.trim.fasta");
 	}
 	foreach my $marker ( @{$markRef} ) {
@@ -63,7 +63,6 @@ sub pplacer {
 
 		my $read_alignment_file = $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta_AA( marker => $marker );
 		next unless -e $read_alignment_file;
-		
 		place_reads(self=>$self, marker=>$marker, dna=>0, reads=>$read_alignment_file);		
 	}
 }
@@ -256,7 +255,6 @@ sub place_reads{
 
 	my $marker_package = Phylosift::Utilities::get_marker_package( self => $self, marker => $marker, dna => $dna, sub_marker=>$submarker );
 	unless(-d $marker_package ){
-		return;
 		croak("Marker: $marker\nPackage: $marker_package\nPackage does not exist\nPlacement without a marker package is no longer supported");
 	}
 	my $pp = "$Phylosift::Utilities::pplacer $options --verbosity 0 -j ".$self->{"threads"}." -c $marker_package \"$reads\"";
@@ -266,8 +264,8 @@ sub place_reads{
 	my $jplace = basename($reads, ".fasta").".jplace";
 
 	`mv "$jplace" "$self->{"treeDir"}"` if ( -e $jplace );
-	unless($dna){
-		make_submarker_placements(self=>$self, marker=>"concat", place_file=>$self->{"treeDir"} . "/$jplace");
+	unless($dna || !$self->{"updated"}){
+		make_submarker_placements(self=>$self, marker=>$marker, place_file=>$self->{"treeDir"} . "/$jplace");
 	}
 	
 	return unless -e $self->{"treeDir"} . "/$jplace";
