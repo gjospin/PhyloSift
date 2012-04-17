@@ -20,7 +20,6 @@ Phylosift::MarkerAlign - Subroutines to align reads to marker HMMs
 Version 0.01
 
 =cut
-
 our $VERSION = '0.01';
 
 =head1 SYNOPSIS
@@ -53,7 +52,6 @@ if you don't export anything, such as for a purely object-oriented module.
 =head2 MarkerAlign
 
 =cut
-
 my $minAlignedResidues = 20;
 
 sub MarkerAlign {
@@ -61,11 +59,13 @@ sub MarkerAlign {
 	my $self       = $args{self} || miss("self");
 	my $markersRef = $args{marker_reference} || miss("marker_reference");
 	my $chunk      = $args{chunk};
-	
-	my @allmarkers = @{$markersRef};
-	debug "beforeDirprepClean @{$markersRef}\n";
+	#my @allmarkers = @{$markersRef};
+	my @allmarkers = gather_chunky_markers( self=>$self , chunk=>$chunk );
+	$markersRef = \@allmarkers;
+	print "MARKERS : @allmarkers\n";
+	debug "beforeDirprepClean \n";
 	directoryPrepAndClean( self => $self, marker_reference => $markersRef, chunk => $chunk );
-	debug "AFTERdirprepclean @{$markersRef}\n";
+	debug "AFTERdirprepclean \n";
 	my $index = -1;
 	markerPrepAndRun( self => $self, marker_reference => $markersRef, chunk => $chunk );
 	debug "after HMMSEARCH PARSE\n";
@@ -97,14 +97,13 @@ sub MarkerAlign {
 													  alignments     => \@markeralignments
 		);
 
-
 		# produce a concatenate with 16s + DNA alignments
 		for ( my $i = 0 ; $i < @markeralignments ; $i++ ) {
 			$markeralignments[$i] =~ s/trim.fasta/trim.fna.fasta/g;
 		}
 		push( @markeralignments, $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta_AA( marker => "16s_reps_bac", chunk => $chunk ) );
 		push( @markeralignments, $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta_AA( marker => "16s_reps_arc", chunk => $chunk ) );
-		push( @markeralignments, $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta_AA( marker => "18s_reps", chunk => $chunk ) );
+		push( @markeralignments, $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta_AA( marker => "18s_reps",     chunk => $chunk ) );
 		$outputFastaDNA = $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta_DNA( marker => "concat16", chunk => $chunk );
 		Phylosift::Utilities::concatenate_alignments(
 													  self           => $self,
@@ -115,12 +114,30 @@ sub MarkerAlign {
 		);
 		debug "AFTER concatenateALI\n";
 	}
-	
+
 	# if we're chunking, feed the chunk to the next step
-	if(defined($chunk) && $self->{"mode"} eq "all"){
+	if ( defined($chunk) && $self->{"mode"} eq "all" ) {
 		Phylosift::pplacer::pplacer( self => $self, marker_reference => $markersRef, chunk => $chunk );
 	}
 	return $self;
+}
+
+=head2 gather_chunky_markers
+
+=cut
+sub gather_chunky_markers{
+	my %args = @_;
+	my $self = $args{self}|| miss("PS object");
+	my $chunk = $args{chunk} || miss("Chunk");
+	my $type = $args{type};
+	my $seed = $self->{"blastDir"}."/*.lastal.candidate.aa.".$chunk.".*";
+	my @candidate_markers = glob("$seed");
+	my @markers = ();
+	foreach my $line (@candidate_markers){
+		$line =~ m/\/blastDir\/([^\/]+)\.\S+.candidate/;
+		push(@markers, Phylosift::Utilities::get_marker_fullname(marker=>$1));
+	}
+	return @markers;
 }
 
 =head2 directoryPrepAndClean
@@ -131,7 +148,7 @@ sub directoryPrepAndClean {
 	my %args    = @_;
 	my $self    = $args{self} || miss("self");
 	my $markRef = $args{marker_reference} || miss("marker_reference");
-	my $chunk      = $args{chunk};
+	my $chunk   = $args{chunk};
 
 	#create a directory for the Reads file being processed.
 	`mkdir -p $self->{"fileDir"}`;
@@ -181,13 +198,13 @@ sub markerPrepAndRun {
 	my %args    = @_;
 	my $self    = $args{self} || miss("self");
 	my $markRef = $args{marker_reference} || miss("marker_reference");
-	my $chunk      = $args{chunk};
-	debug "ALIGNDIR : " . $self->{"alignDir"} . "\n";
+	my $chunk   = $args{chunk};
+	debug "Running on ".scalar(@{$markRef})." markers\n";
 	foreach my $marker ( @{$markRef} ) {
 		unless ( Phylosift::Utilities::is_protein_marker( marker => $marker ) ) {
 
 			# separate RNA candidates by size
-			my $candidate_long  = Phylosift::Utilities::get_candidate_file( self => $self, marker => $marker, type => ".rna.long", chunk => $chunk );
+			my $candidate_long  = Phylosift::Utilities::get_candidate_file( self => $self, marker => $marker, type => ".rna.long",  chunk => $chunk );
 			my $candidate_short = Phylosift::Utilities::get_candidate_file( self => $self, marker => $marker, type => ".rna.short", chunk => $chunk );
 			unlink($candidate_long);
 			unlink($candidate_short);
@@ -376,7 +393,7 @@ sub alignAndMask {
 	my %args    = @_;
 	my $self    = $args{self} || miss("self");
 	my $markRef = $args{marker_reference} || miss("marker_reference");
-	my $chunk      = $args{chunk};
+	my $chunk   = $args{chunk};
 	for ( my $index = 0 ; $index < @{$markRef} ; $index++ ) {
 		my $marker         = ${$markRef}[$index];
 		my $refcount       = 0;
@@ -403,7 +420,7 @@ sub alignAndMask {
 			@lines = <$HMMALIGN>;
 		} else {
 			debug "Setting up cmalign for marker $marker\n";
-			my $candidate_long  = Phylosift::Utilities::get_candidate_file( self => $self, marker => $marker, type => ".rna.long", chunk => $chunk );
+			my $candidate_long  = Phylosift::Utilities::get_candidate_file( self => $self, marker => $marker, type => ".rna.long",  chunk => $chunk );
 			my $candidate_short = Phylosift::Utilities::get_candidate_file( self => $self, marker => $marker, type => ".rna.short", chunk => $chunk );
 
 			#if the marker is rna, use infernal instead of hmmalign
@@ -437,7 +454,7 @@ sub alignAndMask {
 		my $prev_seq;
 		my $prev_name;
 		my $seqCount    = 0;
-		my $chunky = defined($chunk) ? ".$chunk" : "";
+		my $chunky      = defined($chunk) ? ".$chunk" : "";
 		my $UNMASKEDOUT = ps_open( ">" . $self->{"alignDir"} . "/$mbname$chunky.unmasked" );
 
 		foreach my $line (@lines) {
@@ -480,15 +497,15 @@ sub alignAndMask {
 		$seqCount -= $refcount;
 		close $UNMASKEDOUT;
 		close $ALIOUT;
-
 		my $type = Phylosift::Utilities::get_sequence_input_type( $self->{"readsFile"} );
-		if($type->{seqtype} ne "protein" && Phylosift::Utilities::is_protein_marker( marker => $marker ) ){
+		if ( $type->{seqtype} ne "protein" && Phylosift::Utilities::is_protein_marker( marker => $marker ) ) {
+
 			# do we need to output a nucleotide alignment in addition to the AA alignment?
-			my %referenceNuc    = (); # this will collect all the nucleotide seqs for the marker by name
+			my %referenceNuc = ();    # this will collect all the nucleotide seqs for the marker by name
 			foreach my $type (@search_types) {
-	
+
 				#if it exists read the reference nucleotide sequences for the candidates
-				my $core_file_name  = Phylosift::Utilities::get_candidate_file( self => $self, marker => $marker, type => $type, dna => 1, chunk => $chunk );
+				my $core_file_name = Phylosift::Utilities::get_candidate_file( self => $self, marker => $marker, type => $type, dna => 1, chunk => $chunk );
 				my @candidate_files = <$core_file_name.*>;
 				foreach my $cand_file (@candidate_files) {
 					if ( -e $cand_file && -e $outputFastaAA ) {
@@ -509,11 +526,8 @@ sub alignAndMask {
 				}
 			}
 			my $ALITRANSOUT = ps_open( ">>" . $outputFastaDNA );
-			if ( $self->{"extended"} ) {
-				$marker =~ s/^\d+\///g;
-			}
-			debug "MARKER : $marker\n";
-			my $aa_ali = new Bio::AlignIO( -file => $self->{"alignDir"} . "/$marker$chunky.unmasked", -format => 'fasta' );
+			debug "MARKER : $mbname\n";
+			my $aa_ali = new Bio::AlignIO( -file => $self->{"alignDir"} . "/$mbname$chunky.unmasked", -format => 'fasta' );
 			if ( my $aln = $aa_ali->next_aln() ) {
 				my $dna_ali = &aa_to_dna_aln( aln => $aln, dna_seqs => \%referenceNuc );
 				foreach my $seq ( $dna_ali->each_seq() ) {
@@ -524,7 +538,6 @@ sub alignAndMask {
 				}
 			}
 			close($ALITRANSOUT);
-			
 		}
 
 		#checking if sequences were written to the marker alignment file
@@ -538,29 +551,30 @@ sub alignAndMask {
 		# check alignments so it merges sequences in case of paired end reads
 		if ( $self->{"readsFile_2"} ne "" ) {
 			merge_alignment( alignment_file => $self->{"alignDir"} . "/$mbname$chunky.unmasked", type => 'AA' );
-			merge_alignment( alignment_file => $outputFastaAA,                            type => 'AA' );
-			if( Phylosift::Utilities::is_protein_marker( marker => $marker ) ){
-				merge_alignment( alignment_file => $outputFastaDNA,                           type => 'DNA' );
+			merge_alignment( alignment_file => $outputFastaAA, type => 'AA' );
+			if ( Phylosift::Utilities::is_protein_marker( marker => $marker ) ) {
+				merge_alignment( alignment_file => $outputFastaDNA, type => 'DNA' );
 			}
 		}
+
 		# get rid of the process IDs -- they break concatenation
-		strip_trailing_ids(alignment_file=>$outputFastaAA);
-		strip_trailing_ids(alignment_file => $self->{"alignDir"} . "/$mbname$chunky.unmasked");
-		if( Phylosift::Utilities::is_protein_marker( marker => $marker ) ){
-			strip_trailing_ids(alignment_file=>$outputFastaDNA);
+		strip_trailing_ids( alignment_file => $outputFastaAA );
+		strip_trailing_ids( alignment_file => $self->{"alignDir"} . "/$mbname$chunky.unmasked" );
+		if ( Phylosift::Utilities::is_protein_marker( marker => $marker ) ) {
+			strip_trailing_ids( alignment_file => $outputFastaDNA );
 		}
 	}
 }
 
 sub strip_trailing_ids {
-	my %args = @_;
+	my %args     = @_;
 	my $ali_file = $args{alignment_file};
-	my $ALI_IN = ps_open($ali_file);
-	my @ali = <$ALI_IN>;
-	my $ALI_OUT = ps_open(">".$ali_file);
-	foreach my $line (@ali){
+	my $ALI_IN   = ps_open($ali_file);
+	my @ali      = <$ALI_IN>;
+	my $ALI_OUT  = ps_open( ">" . $ali_file );
+	foreach my $line (@ali) {
 		chomp $line;
-		if($line =~ /^>/){
+		if ( $line =~ /^>/ ) {
 			$line =~ s/_\d+$//g;
 		}
 		print $ALI_OUT "$line\n";
@@ -690,5 +704,4 @@ See http://dev.perl.org/licenses/ for more information.
 
 
 =cut
-
 1;    # End of Phylosift::MarkerAlign.pm

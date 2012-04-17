@@ -56,7 +56,7 @@ sub pplacer {
 		$covref = Phylosift::Summarize::read_coverage( file => $self->{"coverage"} );
 	}
 
-	if ( $self->{"updated"} ) {
+	if ( $self->{"updated"} && ! $self->{"extended"} ) {
 		my $outputFastaAA = $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta_AA( marker => "concat", chunk => $chunk );
 		my $place_file = place_reads(self=>$self, marker=>"concat", options=>"--groups 10", dna=>0, reads=>$outputFastaAA);
 		merge_chunk(chunk => $chunk, place_file=>$place_file);
@@ -64,8 +64,8 @@ sub pplacer {
 	foreach my $marker ( @{$markRef} ) {
 		# the PMPROK markers are contained in the concat above
 		next if($marker =~ /PMPROK/ && $self->{"updated"});
-
 		my $read_alignment_file = $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta_AA( marker => $marker, chunk => $chunk );
+		print "ALIGNMENT FILE : $read_alignment_file\n";
 		next unless -e $read_alignment_file;
 		
 		my $place_file = place_reads(self=>$self, marker=>$marker, dna=>0, reads=>$read_alignment_file);
@@ -273,7 +273,7 @@ sub place_reads{
 	my $reads = $args{reads} || miss("reads");
 	my $covref = $args{coverage};
 	my $options = $args{options} || "";
-
+	print "Placing for $marker\n";
 	my $marker_package = Phylosift::Utilities::get_marker_package( self => $self, marker => $marker );
 	unless(-d $marker_package ){
 		return;

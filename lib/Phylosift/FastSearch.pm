@@ -876,7 +876,7 @@ Generates the blastable database using the marker representatives
 sub prep_and_clean {
 	my %args = @_;
 	my $self = $args{self} || miss("self");
-	debug "prepclean MARKERS @markers\n";
+	#debug "prepclean MARKERS @markers\n";
 
 	#create a directory for the Reads file being processed.
 	`mkdir $self->{"fileDir"}`  unless ( -e $self->{"fileDir"} );
