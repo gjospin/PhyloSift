@@ -286,11 +286,12 @@ sub place_reads{
 	my $jplace = basename($reads, ".fasta").".jplace";
 
 	`mv "$jplace" "$self->{"treeDir"}"` if ( -e $jplace );
+	return unless -e $self->{"treeDir"} . "/$jplace";
+
 	unless($dna || !$self->{"updated"}){
 		make_submarker_placements(self=>$self, marker=>$marker, chunk=>$chunk, place_file=>$self->{"treeDir"} . "/$jplace");
 	}
 	
-	return unless -e $self->{"treeDir"} . "/$jplace";
 	unless($self->{"simple"}){
 		# skip this if a simple summary if desired since it's slow.
 		debug "Naming taxa in marker $marker\n";
