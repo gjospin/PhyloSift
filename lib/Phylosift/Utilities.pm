@@ -1415,6 +1415,8 @@ sub gather_markers {
 		while (<$MARKERS_IN>) {
 			chomp($_);
 			push( @marks, $_ );
+			my $mbname = get_marker_basename(marker=>$_);
+			$marker_lookup{$mbname} = $_;
 		}
 		close($MARKERS_IN);
 	} else {
