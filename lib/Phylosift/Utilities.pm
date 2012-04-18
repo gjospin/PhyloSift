@@ -822,20 +822,6 @@ sub get_marker_package {
 	return "$marker_path/$decorated";
 }
 
-=head2 get_aligner_output_fasta_AA
-Returns the FastA file containing amino acid read or contig alignments to the marker
-given by markerName
-=cut
-
-sub get_aligner_output_fasta_AA {
-	my %args   = @_;
-	my $marker = $args{marker};
-	my $chunk  = $args{chunk};
-	my $chunky = defined($chunk) ? ".$chunk" : "";
-	my $bname  = get_marker_basename( marker => $marker );
-	return "$bname$chunky.trim.fasta";
-}
-
 =head2 get_aligner_output_fasta
 Returns the FastA file containing DNA read or contig alignments to the marker
 given by markerName
@@ -851,17 +837,6 @@ sub get_aligner_output_fasta {
 	return "$decorated$chunky.fasta";
 }
 
-=head2 get_aligner_output_fasta_DNA
-Returns the FastA file containing DNA read or contig alignments to the marker
-given by markerName
-=cut
-
-sub get_aligner_output_fasta_DNA {
-	my %args   = @_;
-	my $marker = $args{marker};
-	my $bname  = get_marker_basename( marker => $marker );
-	return "$bname.trim.fna.fasta";
-}
 
 =head2 get_read_placement_file
 Returns the read placement Jplace file to the marker
@@ -1024,13 +999,11 @@ sub concatenate_alignments {
 		$gapmultiplier = 1 if($marker =~ /16s/ || $marker =~ /18s/);
 		$marker =~ s/\..+//g;                                                # FIXME: this should really come from a list of markers
 		unless ( -e $file ) {
-
 			# this marker doesn't exist, need to create a dummy with the right number of gap columns
 			$aln = make_dummy_file( self => $self, marker => $marker, gap_multiplier => $gapmultiplier );
 		} else {
 			my $in = Bio::AlignIO->new( -file => $file, '-format' => 'fasta' );
 			unless ( $aln = $in->next_aln() ) {
-
 				# empty marker alignment file, need to create a dummy with the right number of gap columns
 				$aln = make_dummy_file( self => $self, marker => $marker, gap_multiplier => $gapmultiplier );
 			}
@@ -1415,8 +1388,7 @@ sub gather_markers {
 		while (<$MARKERS_IN>) {
 			chomp($_);
 			push( @marks, $_ );
-			my $mbname = get_marker_basename(marker=>$_);
-			$marker_lookup{$mbname} = $_;
+			$marker_lookup{get_marker_basename(marker=>$_)} = $_;
 		}
 		close($MARKERS_IN);
 	} else {

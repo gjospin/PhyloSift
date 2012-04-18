@@ -56,13 +56,8 @@ if you don't export anything, such as for a purely object-oriented module.
 my $bestHitsBitScoreRange  = 30;     # all hits with a bit score within this amount of the best will be used
 my $align_fraction         = 0.5;    # at least this amount of min[length(query),length(marker)] must align to be considered a hit
 my $align_fraction_isolate = 0.8;    # use this align_fraction when in isolate mode on long sequences
-my $pair                   = 0;      #used if using paired FastQ files
 my @markers;
 my %markerNuc = ();
-my $readsCore;
-my $blastdb_name  = "blastrep.faa";
-my $blastp_params = "-p blastp -e 0.1 -b 50000 -v 50000 -m 8";
-my $blastn_params = "-p blastn -e 0.1 -b 50000 -v 50000 -m 8";
 my %markerLength;
 
 sub run_search {
@@ -72,7 +67,6 @@ sub run_search {
 	@markers = @{$markersRef};
 	my $position = rindex( $self->{"readsFile"}, "/" );
 	$self->{"readsFile"} =~ m/(\w+)\.?(\w*)$/;
-	$readsCore = $1;
 
 	# set align_fraction appropriately
 	$align_fraction = $align_fraction_isolate if ( $self->{"isolate"} );
@@ -87,7 +81,6 @@ sub run_search {
 
 	# need to use BLAST for isolate mode, since RAP only handles very short reads
 	# ensure databases and sequences are prepared for search
-	debug "before rapPrepandclean\n";
 	prep_and_clean( self => $self );
 
 	#read_marker_lengths( self => $self );
@@ -127,24 +120,25 @@ sub launch_searches {
 	my %args            = @_;
 	my $self            = $args{self};
 	my $dir             = $args{dir} || miss("dir");
-	my $bowtie2_r1_pipe = $args{dir} . "/bowtie2_r1.pipe";
-	my $last_rna_pipe   = $args{dir} . "/last_rna.pipe";
-	my $reads_file      = $args{dir} . "/reads.fasta";
 	my $readtype        = $args{readtype} || miss("readtype");
 	my $chunk           = $args{chunk} || miss("chunk");
 	my $FILE1           = $args{FILE1};
 	my $FILE2           = $args{FILE2};
+	my $chunky = defined($chunk) ? ".$chunk" : "";
+	my $reads_file      = $dir . "/reads.fasta$chunky";
+	my $last_rna_pipe   = $dir . "/last_rna.pipe";
+	my $bowtie2_r1_pipe = $dir . "/bowtie2_r1.pipe";
 	my $bowtie2_r2_pipe;
-	$bowtie2_r2_pipe = $args{dir} . "/bowtie2_r2.pipe" if $args{readtype}->{paired};
+	$bowtie2_r2_pipe = $dir . "/bowtie2_r2.pipe" if $readtype->{paired};
 	debug "Making fifos\n";
 	my @last_pipe_array = ();
 
 	for ( my $i = 0 ; $i <= $self->{"threads"} - 1 ; $i++ ) {
-		push( @last_pipe_array, $args{dir} . "/last_$i.pipe" );
-		`mkfifo "$args{dir}/last_$i.pipe"`;
+		push( @last_pipe_array, $dir . "/last_$i.pipe" );
+		`mkfifo "$dir/last_$i.pipe"`;
 	}
 	my $rna_procs = 0;
-	if($readtype->{seqtype} eq "dna" && -e Phylosift::Utilities::get_bowtie2_db() ){
+	if($readtype->{seqtype} eq "dna" && -e Phylosift::Utilities::get_bowtie2_db().".prj" ){
 		`mkfifo "$bowtie2_r1_pipe"`;
 		`mkfifo "$bowtie2_r2_pipe"` if $readtype->{paired};
 		`mkfifo "$last_rna_pipe"`;
@@ -173,7 +167,7 @@ sub launch_searches {
 				$candidate_type = ".lastal";
 			} elsif ( $count == $self->{"threads"} + 1 ) {
 
-				if(!-e Phylosift::Utilities::get_bowtie2_db()){
+				if(!-e Phylosift::Utilities::get_bowtie2_db().".prj"){
 					debug "Exiting process $count because rna db not found\n";
 					my $lrp1 = ps_open($last_rna_pipe);
 					`rm -f $last_rna_pipe`;
@@ -185,7 +179,7 @@ sub launch_searches {
 			} elsif ( $count == $self->{"threads"} + 2 ) {
 
 				#exit the thread if the bowtie DB does not exit
-				if ( !-e Phylosift::Utilities::get_bowtie2_db() ) {
+				if ( !-e Phylosift::Utilities::get_bowtie2_db().".prj" ) {
 					debug "Exiting process $count because the bowtie2 rna db does not exist\n";
 
 					# still need to open/close pipes for parent process
@@ -229,7 +223,7 @@ sub launch_searches {
 
 	# parent process streams out sequences to fifos
 	# child processes run the search on incoming sequences
-	debug "Demuxing sequences\n";
+	debug "Octopus is handing out sequences\n";
 	my $finished = demux_sequences(
 					 bowtie2_pipe1 => $BOWTIE2_R1_PIPE,
 					 bowtie2_pipe2 => $BOWTIE2_R2_PIPE,
@@ -247,7 +241,7 @@ sub launch_searches {
 	}
 
 	# clean up
-	`rm -f "reads_file"`;
+	`rm -f "$reads_file"`;
 	`rm -f "$bowtie2_r1_pipe" "$last_rna_pipe"` if ($bowtie2_r1_pipe ne "/dev/null");
 	`rm -f "$bowtie2_r2_pipe"` if defined($bowtie2_r2_pipe);
 	foreach my $last_pipe (@last_pipe_array) {
@@ -282,6 +276,12 @@ sub demux_sequences {
 	# the following two variables track how far we are through a chunk
 	my $seq_count = 0;
 	my $seq_size  = 0;
+	
+	# scan up to the next sequence
+	while ( defined( $lines1[0] ) && $lines1[0] !~ /^>/ && $lines1[0] !~ /^@/ ) {
+		$lines1[0] = <$F1IN>;
+		$lines2[0] = <$F2IN> if defined($F2IN);
+	}
 
 	while ( defined( $lines1[0] ) ) {
 		$seq_count++;
@@ -370,6 +370,7 @@ sub demux_sequences {
 #	close($BOWTIE2_PIPE2) if defined($F2IN);
 	close($LAST_RNA_PIPE);
 	close($READS_PIPE);
+	debug "Octopus handed out $seq_count sequences\n";
 
 	# return 1 if we've processed all the data, zero otherwise
 	return 0 if defined($lines1[0]);
@@ -843,6 +844,7 @@ sub write_candidates {
 			$markerHits{$markerHit} .= ">" . $new_id . "\n" . $new_seq . "\n";
 		}
 	}
+	debug "Got ".scalar(keys %markerHits)." hits\n";
 
 	#write the read+ref_seqs for each markers in the list
 	foreach my $marker ( keys %markerHits ) {
@@ -876,7 +878,6 @@ Generates the blastable database using the marker representatives
 sub prep_and_clean {
 	my %args = @_;
 	my $self = $args{self} || miss("self");
-	#debug "prepclean MARKERS @markers\n";
 
 	#create a directory for the Reads file being processed.
 	`mkdir "$self->{"fileDir"}"`  unless ( -e $self->{"fileDir"} );

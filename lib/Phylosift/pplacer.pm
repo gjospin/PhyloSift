@@ -59,10 +59,10 @@ sub pplacer {
 	foreach my $marker ( @{$markRef} ) {
 		# the PMPROK markers are contained in the concat above
 		next if($marker =~ /PMPROK/ && $self->{"updated"});
-		my $read_alignment_file = $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta_AA( marker => $marker, chunk => $chunk );
+		my $read_alignment_file = $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta( marker => $marker, chunk => $chunk );
 		print "ALIGNMENT FILE : $read_alignment_file\n";
 		next unless -e $read_alignment_file;
-		my $place_file = place_reads(self=>$self, marker=>$marker, dna=>0, reads=>$read_alignment_file);
+		my $place_file = place_reads(self=>$self, marker=>$marker, dna=>0, chunk => $chunk, reads=>$read_alignment_file);
 		# if we're chunked, merge this with the main jplace
 		merge_chunk(chunk => $chunk, place_file=>$place_file);
 	}
@@ -229,6 +229,7 @@ sub make_submarker_placements{
 	my $self = $args{self} || miss("self");
 	my $marker = $args{marker} || miss("marker");
 	my $place_file = $args{place_file} || miss("place_file");
+	my $chunk = $args{chunk};
 
 	# determine which reads go to which submarker
 	my $subreads = find_submarker_reads(place_file=>$place_file);
@@ -240,11 +241,12 @@ sub make_submarker_placements{
 	}
 	
 	# filter the codon alignment into subalignments
-	my $codon_file = $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta( marker => $marker, dna=>1 );
+	my $codon_file = $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta( marker => $marker, dna=>1, chunk => $chunk );
+	debug "Trying to read from $codon_file\n";
 	my $alnio = Bio::AlignIO->new(-file => $codon_file );
 	my $codon_aln = $alnio->next_aln;
 	foreach my $group( keys(%groups)){
-		my $sub_file = $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta( marker => $marker, sub_marker=>$group, dna=>1 );
+		my $sub_file = $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta( marker => $marker, sub_marker=>$group, dna=>1, chunk => $chunk );
 		my $ALNOUT = ps_open(">$sub_file");
 		debug scalar(@{$groups{$group}})." reads in group $group\n";
 		debug "reads are ".join(" ",@{$groups{$group}})."\n";
@@ -258,8 +260,8 @@ sub make_submarker_placements{
 	
 	# now place reads on each of these subalignments
 	foreach my $group( keys(%groups)){
-		my $group_aln = $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta( marker => $marker, sub_marker=>$group, dna=>1 );
-		place_reads(self=>$self, reads=>$group_aln, marker=>$marker, dna=>1, sub_marker=>$group);
+		my $group_aln = $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta( marker => $marker, sub_marker=>$group, dna=>1, chunk => $chunk );
+		place_reads(self=>$self, reads=>$group_aln, marker=>$marker, dna=>1, sub_marker=>$group, chunk => $chunk);
 	}
 }
 
@@ -271,6 +273,7 @@ sub place_reads{
 	my $reads = $args{reads} || miss("reads");
 	my $covref = $args{coverage};
 	my $submarker = $args{sub_marker};
+	my $chunk = $args{chunk};
 	my $options = $args{options} || "";
 	my $marker_package = Phylosift::Utilities::get_marker_package( self => $self, marker => $marker, dna => $dna, sub_marker=>$submarker );
 	unless(-d $marker_package ){
@@ -283,11 +286,12 @@ sub place_reads{
 	my $jplace = basename($reads, ".fasta").".jplace";
 
 	`mv "$jplace" "$self->{"treeDir"}"` if ( -e $jplace );
+	return unless -e $self->{"treeDir"} . "/$jplace";
+
 	unless($dna || !$self->{"updated"}){
-		make_submarker_placements(self=>$self, marker=>$marker, place_file=>$self->{"treeDir"} . "/$jplace");
+		make_submarker_placements(self=>$self, marker=>$marker, chunk=>$chunk, place_file=>$self->{"treeDir"} . "/$jplace");
 	}
 	
-	return unless -e $self->{"treeDir"} . "/$jplace";
 	unless($self->{"simple"}){
 		# skip this if a simple summary if desired since it's slow.
 		debug "Naming taxa in marker $marker\n";
