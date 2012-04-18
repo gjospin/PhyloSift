@@ -95,26 +95,77 @@ blahdeeblah, blah blah
 
 We follow in the footsteps of the great Martin Wu and Jonathan Eisen~\cite{WuEisen2008}.
 
+\subsection*{Previous work}
+Microbial ecology is a burgeoning field, we focus here on shotgun metagenome sequencing approaches and 
+do not discuss analysis methods for amplicon sequencing data such as QIIME and others. 
+\subsubsection*{Whole metagenome binning}
+- composition classifiers
+  - TACOA~\cite{Diaz2009}, PhyloPythia 1 \& 2\cite{Patil2011},Eu-Detect\cite{Mohammed2011},ProViDE~\cite{Ghosh2011}
+- identity/homology classifiers
+  - MEGAN~\cite{Huson2007}, SORT-Items~\cite{Haque2009}, NBC~\cite{Rosen2011}, MTR~\cite{Gori2011}, others
+\subsubsection*{Estimating community composition from metagenomes}
+      - AMPHORA\cite{WuEisen2008}, MLTreeMap\cite{Stark2010}, others?
+      - MetaPHlan (under review)
+
+% You may title this section "Methods" or "Models". 
+% "Models" is not a valid title for PLoS ONE authors. However, PLoS ONE
+% authors may use "Analysis" 
+\section*{Methods or Design and Implementation}
+
+\subsection*{Detailed PhyloSift workflow}
+Stream computing
+\subsubsection*{Sequence identity search}
+Process sequence (reads or assembly) to identify similarity to marker genes
+      - Evaluated BLAST~\cite{Altschul1997}, BLAST+~\cite{Camacho2009}, RAPsearch2~\cite{Zhao2011}, LAST~\cite{Kiełbasa2011}, bowtie2~\cite{Langmead2009}. Picked LAST, bowtie2.
+\subsubsection*{Alignment to reference multiple alignment}
+      - reverse translation to DNA when possible
+\subsubsection*{Placement on a phylogenetic reference tree}
+
+\subsubsection*{Taxonomic summary of read placements}
+      - taxonomic summary
+      - other summaries
+\subsubsection*{Comparison among samples}
+
+\subsection*{PhyloSift database update workflow}
+\subsubsection*{Acquire new genome data}
+\subsubsection*{Run PhyloSift workflow on each genome}
+\subsubsection*{Taxonomic reconciliation}
+
 % Results and Discussion can be combined.
 \section*{Results}
 
 
 \subsection*{look Ma, I'm famous}
 
+\subsection*{Simulated data}
+    - How they were generated
+    - Building PhyloSift DBs without test datasets
+\subsubsection*{Precision, recall, and F1}
+\subsubsection*{Relationship between F1 and neighbor taxon density}
+
+\subsubsection*{Community structure accuracy}
+RMSD or other metric?
+
+\subsubsection*{Accuracy on particular taxonomic groups}
+Bacteria, Arch, Eukarya, viral
+
+\subsection*{Application to a real dataset}
+ (which one?)
 
 \subsection*{PhyloSift crushes its former self}
 
 
 \section*{Discussion}
+  - Fundamental limits to computational methods -- resolving linkage among polymorphisms in a population
+  - Advantages to the approach taken by PhyloSift
+  - Disadvantages
+    - many
 
 
 \subsection*{Limitations and scope}
 
 
-% You may title this section "Methods" or "Models". 
-% "Models" is not a valid title for PLoS ONE authors. However, PLoS ONE
-% authors may use "Analysis" 
-\section*{Design and Implementation}
+\subsection*{Future work}
 
 
 \section*{Availability}

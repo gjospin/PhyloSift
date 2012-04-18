@@ -100,24 +100,27 @@ sub get_program_path {
 	my $progpath  = $args{prog_path};
 	my $progcheck = "";
 
-	#	print STDERR "BIN : $Bin\n";
-	#	exit;
+	# if a path was already given try that first
 	if ( defined($progpath) && $progpath ne "" && -x $progpath . "/" . $progname ) {
 		$progcheck = $progpath . "/" . $progname;
-	} else {
-		$progcheck = `which "$progname" 2> /dev/null`;
-		chomp $progcheck;
 	}
 
-	# last ditch attempt, check the directories from where the script is running
+	# then check the directories from where the script is running
 	$progcheck = $Bin . "/" . $progname     unless ( $progcheck =~ /$progname/ || !( -x $Bin . "/" . $progname ) );
 	$progcheck = $Bin . "/bin/" . $progname unless ( $progcheck =~ /$progname/ || !( -x $Bin . "/bin/" . $progname ) );
 
-	# check the OS and use Mac binaries if needed
+	# then check the OS and use Mac binaries if needed
 	if ( $^O =~ /arwin/ ) {
 		$progcheck = $Bin . "/../osx/" . $progname unless ( $progcheck =~ /$progname/ && !( -x $Bin . "/" . $progname ) );
 		$progcheck = $Bin . "/../osx/" . $progname if ( $progcheck =~ /$Bin\/bin/ );    # don't use the linux binary!
 	}
+
+	# last ditch attempt, try the system path and hope we get the right version
+	unless( -x $progcheck ){
+		$progcheck = `which "$progname" 2> /dev/null`;
+		chomp $progcheck;
+	}
+
 	return $progcheck;
 }
 
@@ -138,6 +141,7 @@ our $pda          = "";
 our $fasttree     = "";
 our $lastdb       = "";
 our $lastal       = "";
+our %marker_lookup = ();
 
 sub programChecks {
 	eval 'require Bio::Seq;';
@@ -509,6 +513,7 @@ sub get_marker_length {
 	my $length = 0;
 	if ( is_protein_marker( marker => $marker ) ) {
 		my $hmm_file = get_marker_hmm_file( self => $self, marker => $marker );
+		return unless -e $hmm_file;
 		my $HMM = ps_open($hmm_file);
 		while ( my $line = <$HMM> ) {
 			if ( $line =~ /LENG\s+(\d+)/ ) {
@@ -570,7 +575,9 @@ sub get_marker_path {
 	return "$markers_extended_dir" if ( -d "$markers_extended_dir/$marker" );
 
 	# TODO: check any local marker repositories
-	warn "Could not find repository for marker $marker\n";
+	#warn "Could not find repository for marker $marker\n";
+	$Carp::Verbose = 1;
+	croak("Could not find repository for marker $marker\n");
 }
 
 =head2 get_marker_basename
@@ -584,6 +591,18 @@ sub get_marker_basename {
 	my $marker = $args{marker};
 	$marker =~ s/^.+\///g;
 	return $marker;
+}
+
+=head2 get_marker_basename
+
+Returns the full name of the marker -- the marker name with any directories prepended
+
+=cut
+
+sub get_marker_fullname {
+	my %args   = @_;
+	my $marker = $args{marker};
+	return $marker_lookup{$marker};
 }
 
 =head2 get_alignment_marker_file 
@@ -714,9 +733,40 @@ Returns the path to the lookup table between marker gene IDs and their taxa
 sub get_marker_taxon_map {
 	my %args = @_;
 	my $self = $args{self};
-	return "$marker_dir/marker_taxon_map.updated.txt" if ( $self->{"updated"} );
-	return "$marker_dir/marker_taxon_map.txt";
+	my $marker = $args{marker};
+	my $marker_path = get_marker_path( self => $self, marker => $marker );	
+	my $bname       = get_marker_basename( marker => $marker );
+	my $decorated = get_decorated_marker_name(%args);
+	return "$marker_path/$decorated/$bname.taxonmap";
 }
+
+sub get_decorated_marker_name {
+	my %args = @_;
+	my $name = $args{marker} || miss("marker");
+	my $dna = $args{dna} || 0;
+	my $updated = $args{updated} || 0;
+	my $sub_marker = $args{sub_marker};
+	$name .= ".codon"   if $dna;
+	$name .= ".updated" if $updated || $args{self}->{"updated"};
+
+	# rna markers don't get pruned
+	$name .= ".sub".$sub_marker if defined($sub_marker);
+	return $name;
+}
+
+
+=head2 get_gene_id_file
+
+Returns the gene id file name
+
+=cut
+sub get_gene_id_file {
+	my %args = @_;
+	my $dna = $args{dna} || 0;
+	return "$marker_dir/gene_ids.codon.txt" if $dna;
+	return "$marker_dir/gene_ids.aa.txt";
+}
+
 
 =head2 is_protein_marker
 
@@ -768,36 +818,25 @@ sub get_marker_package {
 	my $self        = $args{self};
 	my $marker      = $args{marker};
 	my $marker_path = get_marker_path( self => $self, marker => $marker );
-	if ( $self->{"updated"} == 0 ) {
-		return "$marker_path/$marker";
-	} else {
-		return "$marker_path/$marker.updated";
-	}
+	my $decorated   = get_decorated_marker_name(%args);
+	return "$marker_path/$decorated";
 }
 
-=head2 get_aligner_output_fasta_AA
-Returns the FastA file containing amino acid read or contig alignments to the marker
-given by markerName
-=cut
-
-sub get_aligner_output_fasta_AA {
-	my %args   = @_;
-	my $marker = $args{marker};
-	my $bname  = get_marker_basename( marker => $marker );
-	return "$bname.trim.fasta";
-}
-
-=head2 get_aligner_output_fasta_DNA
+=head2 get_aligner_output_fasta
 Returns the FastA file containing DNA read or contig alignments to the marker
 given by markerName
 =cut
 
-sub get_aligner_output_fasta_DNA {
+sub get_aligner_output_fasta {
 	my %args   = @_;
 	my $marker = $args{marker};
+	my $chunk  = $args{chunk};
+	my $chunky = defined($chunk) ? ".$chunk" : "";
 	my $bname  = get_marker_basename( marker => $marker );
-	return "$bname.trim.fna.fasta";
+	my $decorated = get_decorated_marker_name( %args );
+	return "$decorated$chunky.fasta";
 }
+
 
 =head2 get_read_placement_file
 Returns the read placement Jplace file to the marker
@@ -808,19 +847,8 @@ sub get_read_placement_file {
 	my %args   = @_;
 	my $marker = $args{marker};
 	my $bname  = get_marker_basename( marker => $marker );
-	return "$bname.trim.jplace";
-}
-
-=head2 get_read_placement_file_DNA
-Returns the read placement Jplace file to the marker
-given by markerName
-=cut
-
-sub get_read_placement_file_DNA {
-	my %args   = @_;
-	my $marker = $args{marker};
-	my $bname  = get_marker_basename( marker => $marker );
-	return "$bname.trim.fna.jplace";
+	my $decorated = get_decorated_marker_name(%args);
+	return "$decorated.jplace";
 }
 
 =head2 get_trimfinal_marker_file
@@ -971,13 +999,11 @@ sub concatenate_alignments {
 		$gapmultiplier = 1 if($marker =~ /16s/ || $marker =~ /18s/);
 		$marker =~ s/\..+//g;                                                # FIXME: this should really come from a list of markers
 		unless ( -e $file ) {
-
 			# this marker doesn't exist, need to create a dummy with the right number of gap columns
 			$aln = make_dummy_file( self => $self, marker => $marker, gap_multiplier => $gapmultiplier );
 		} else {
 			my $in = Bio::AlignIO->new( -file => $file, '-format' => 'fasta' );
 			unless ( $aln = $in->next_aln() ) {
-
 				# empty marker alignment file, need to create a dummy with the right number of gap columns
 				$aln = make_dummy_file( self => $self, marker => $marker, gap_multiplier => $gapmultiplier );
 			}
@@ -1242,14 +1268,17 @@ sub get_candidate_file {
 	my $type   = $args{type};
 	my $dna    = $args{dna};
 	my $new    = $args{new};
+	my $chunk  = $args{chunk};
 	my $ffn    = ".aa";
 	$ffn = ".ffn" if ( defined( $args{dna} ) && $dna );
 	my $candidate = ".candidate";
 	$candidate = ".newCandidate" if defined( $args{new} ) && $new;
 	my $dir = $self->{"blastDir"};
 	$dir = $self->{"alignDir"} if defined( $args{new} ) && $new;
+	my $chunky = "";
+	$chunky = ".$chunk" if defined($chunk);
 	$marker =~ s/.+\///g;    # strip off any prepended directories
-	return "$dir/$marker$type$candidate$ffn";
+	return "$dir/$marker$type$candidate$ffn$chunky";
 }
 
 =head2 index_marker_db
@@ -1272,6 +1301,7 @@ sub index_marker_db {
 	my $bowtie2_db_fasta = "$bowtie2_db.fasta";
 	my $PDBOUT           = ps_open( ">" . get_blastp_db( path => $path ) );
 	my $RNADBOUT         = ps_open( ">" . $bowtie2_db_fasta );
+	my $MARKERLISTOUT    = ps_open( ">$path/marker_list.txt" );
 	foreach my $marker (@markers) {
 		my $marker_rep = get_marker_rep_file( self => $args{self}, marker => $marker, updated => 1 );
 		$marker_rep = get_marker_rep_file( self => $args{self}, marker => $marker, updated => 0 ) unless -e $marker_rep;
@@ -1283,6 +1313,7 @@ sub index_marker_db {
 			warn "Warning: marker $marker appears to be missing data\n";
 			next;
 		}
+		print $MARKERLISTOUT "$marker\n";
 		my $INALN = ps_open($marker_rep);
 		while ( my $line = <$INALN> ) {
 			if ( $line =~ /^>(.+)/ ) {
@@ -1296,6 +1327,7 @@ sub index_marker_db {
 	}
 	print $PDBOUT "\n";
 	print $RNADBOUT "\n";
+	close $MARKERLISTOUT;
 	close $PDBOUT;    # be sure to flush I/O
 	close $RNADBOUT;
 	my $blastp_db = get_blastp_db( path => $path );
@@ -1340,17 +1372,23 @@ sub gather_markers {
 	my %args        = @_;
 	my $marker_file = $args{marker_file};
 	my $missing_hmm = $args{allow_missing_hmm} || 0;
+	my $force_gather = $args{force_gather} || 0;
 	my $path        = $args{path} || $marker_dir;
 	my @marks       = ();
 
+	# try to use a marker list file if it exists
+	if(!defined($marker_file) && !$force_gather){
+		$marker_file = "$path/marker_list.txt" if -e "$path/marker_list.txt";
+	}
 	#create a file with a list of markers called markers.list
 	if ( defined($marker_file) && -f $marker_file && $marker_file ne "" ) {
-
+		debug "Using a marker list file\n";
 		#gather a custom list of makers, list convention is 1 marker per line
 		my $MARKERS_IN = ps_open($marker_file);
 		while (<$MARKERS_IN>) {
 			chomp($_);
 			push( @marks, $_ );
+			$marker_lookup{get_marker_basename(marker=>$_)} = $_;
 		}
 		close($MARKERS_IN);
 	} else {
@@ -1381,6 +1419,7 @@ sub gather_markers {
 			if ( !$missing_hmm ) {
 				next unless ( -e "$path/$line/$line.cm" || -e "$path/$line/$baseline.hmm" );
 			}
+			$marker_lookup{$baseline} = $line;
 			push( @marks, $line );
 		}
 	}

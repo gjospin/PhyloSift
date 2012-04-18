@@ -131,7 +131,7 @@ sub gather_genomes {
 			my $IN  = Phylosift::Utilities::ps_open("$genomes_dir/$file");
 			while (<$IN>) {
 				chomp($_);
-				$_ =~ s/^>(\S+)/>$line[0] \1/g;
+				$_ =~ s/^>(\S+)/>$line[0] $1/g;
 				print $OUT $_ . "\n";
 			}
 			close($OUT);

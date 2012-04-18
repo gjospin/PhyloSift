@@ -13,9 +13,9 @@ use POSIX;
 my $pair             = 0;
 my $clean            = 0;
 my $continue         = 0;
-my $custom           = 0;
 my $force            = 0;
 my $my_debug         = 0;
+my $custom;
 my $coverage;
 my $configuration;
 my $help=0;
@@ -89,7 +89,10 @@ Options Available at this time :
 ~;
 
 my $ps = new Phylosift::Phylosift();
+
+# set default values
 $ps->{"threads"} = 1;
+$ps->{"updated"} = 1;
 
 GetOptions(
 	"output=s"   => \$ps->{"fileDir"}, # directory for output
@@ -104,7 +107,7 @@ GetOptions(
 	"reverse"         => \$ps->{"reverseTranslate"},    #use to output the reverse translation of the AA alignments
 	"besthit"         => \$ps->{"besthit"},             #should we keep only the best hit when there are multiple?
 	"coverage=s"      => \$ps->{"coverage"},            #provides a contig/scaffold coverage file
-	"updated_markers" => \$ps->{"updated"},             #Indicates if Phylosift uses the updated versions of the Markers.
+	"updated_markers=i" => \$ps->{"updated"},             #Indicates if Phylosift uses the updated versions of the Markers.
 	"marker_url=s"      => \$ps->{"marker_url"},          # an alternate address to retrieve markers from
 	"extended"        => \$ps->{"extended"},  #Should the full extended set of markers be used?
 	"config=s"        => \$ps->{"configuration"},       #custom config file
