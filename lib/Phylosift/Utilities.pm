@@ -1334,7 +1334,7 @@ sub index_marker_db {
 	`mv "$blastp_db" "$path/rep.dbfasta"`;
 
 	# make a last database
-	`cd "$path" ; $Phylosift::Utilities::lastdb -p replast rep.dbfasta`;
+	`cd "$path" ; $Phylosift::Utilities::lastdb -s 1300M -p replast rep.dbfasta`;
 	unlink("$path/rep.dbfasta");    # don't need this anymore!
 
 	# make a bowtie2 database
