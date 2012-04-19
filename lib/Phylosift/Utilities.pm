@@ -746,6 +746,8 @@ sub get_decorated_marker_name {
 	my $dna = $args{dna} || 0;
 	my $updated = $args{updated} || 0;
 	my $sub_marker = $args{sub_marker};
+	my $base = $args{base} || 0;
+	$name = get_marker_basename(marker=>$name) if $base;
 	$name .= ".codon"   if $dna;
 	$name .= ".updated" if $updated || $args{self}->{"updated"};
 
@@ -832,8 +834,7 @@ sub get_aligner_output_fasta {
 	my $marker = $args{marker};
 	my $chunk  = $args{chunk};
 	my $chunky = defined($chunk) ? ".$chunk" : "";
-	my $bname  = get_marker_basename( marker => $marker );
-	my $decorated = get_decorated_marker_name( %args );
+	my $decorated = get_decorated_marker_name( %args, base=>1 );
 	return "$decorated$chunky.fasta";
 }
 
@@ -846,8 +847,7 @@ given by markerName
 sub get_read_placement_file {
 	my %args   = @_;
 	my $marker = $args{marker};
-	my $bname  = get_marker_basename( marker => $marker );
-	my $decorated = get_decorated_marker_name(%args);
+	my $decorated = get_decorated_marker_name(%args, base=>1);
 	return "$decorated.jplace";
 }
 
@@ -1334,7 +1334,7 @@ sub index_marker_db {
 	`mv "$blastp_db" "$path/rep.dbfasta"`;
 
 	# make a last database
-	`cd "$path" ; $Phylosift::Utilities::lastdb -s 1300M -p replast rep.dbfasta`;
+	`cd "$path" ; $Phylosift::Utilities::lastdb -s 900M -p replast rep.dbfasta`;
 	unlink("$path/rep.dbfasta");    # don't need this anymore!
 
 	# make a bowtie2 database
