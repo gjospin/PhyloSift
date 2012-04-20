@@ -1176,7 +1176,7 @@ sub make_codon_submarkers {
 		my $aln = $alnio->next_aln();
 
 		# get groups of taxa that are close
-		my $GROUP_TABLE = ps_open("segment_tree $aa_tree $max_aa_branch_distance |");
+		my $GROUP_TABLE = ps_open("$Phylosift::Utilities::segment_tree $aa_tree $max_aa_branch_distance |");
 		my %gene_groups;
 		my $group_id = 1;
 		while( my $group_line = <$GROUP_TABLE>) {			

@@ -141,6 +141,7 @@ our $pda          = "";
 our $fasttree     = "";
 our $lastdb       = "";
 our $lastal       = "";
+our $segment_tree = "";
 our %marker_lookup = ();
 
 sub programChecks {
@@ -186,6 +187,7 @@ sub programChecks {
 		return 1;
 	}
 	$readconciler = get_program_path( prog_name => "readconciler",  prog_path => $Phylosift::Settings::ps_path );
+	$segment_tree = get_program_path( prog_name => "segment_tree",  prog_path => $Phylosift::Settings::ps_path );
 	$pda          = get_program_path( prog_name => "pda",           prog_path => $Phylosift::Settings::ps_path );
 	$fasttree     = get_program_path( prog_name => "FastTree",      prog_path => $Phylosift::Settings::ps_path );
 	$lastdb       = get_program_path( prog_name => "lastdb",        prog_path => $Phylosift::Settings::ps_path );
@@ -327,7 +329,7 @@ sub data_checks {
 
 	#
 	# now look for the extended marker directory
-	$markers_extended_dir = get_data_path( data_name => "markers_extended", data_path => $Phylosift::Settings::marker_path );
+	$markers_extended_dir = get_data_path( data_name => "markers_extended", data_path => $Phylosift::Settings::extended_marker_path );
 	if ( $self->{"extended"} ) {
 		marker_update_check( self => $self, dir => $markers_extended_dir, url => $markers_extended_update_url );
 	}
@@ -575,9 +577,9 @@ sub get_marker_path {
 	return "$markers_extended_dir" if ( -d "$markers_extended_dir/$marker" );
 
 	# TODO: check any local marker repositories
-	#warn "Could not find repository for marker $marker\n";
-	$Carp::Verbose = 1;
-	croak("Could not find repository for marker $marker\n");
+	warn "Could not find repository for marker $marker\n";
+#	$Carp::Verbose = 1;
+#	croak("Could not find repository for marker $marker\n");
 }
 
 =head2 get_marker_basename
