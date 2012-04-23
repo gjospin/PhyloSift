@@ -48,9 +48,10 @@ This example searches a set of protein sequences. When --output is not given, th
 Creating a PhyloSift Marker (Does not allow for taxonomic summaries, only searching, aligning and placement steps)
 ===========================================
 
-> phylosift.pl build_marker <alignment_file> <PD pruning threshold>
+> phylosift.pl build_marker <alignment_file> <PD pruning threshold> <optional Acc to NCBI taxonID map>
 Example 1:  > phylosift.pl build_marker test.aln 0.01
 Example 2:  > phylosift.pl build_marker -f test.aln 0.01
+Example 3:  > phylosift.pl build_marker -f test.aln 0.01 file.map
 
 Simulating Reads
 ===========================================

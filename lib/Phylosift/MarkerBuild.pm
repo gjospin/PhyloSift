@@ -2,6 +2,7 @@ package Phylosift::MarkerBuild;
 use Cwd;
 use Carp;
 use Phylosift::Utilities qw(:all);
+use Phylosift::UpdateDB qw(:all);
 use File::Basename;
 
 =head1 NAME
@@ -36,10 +37,12 @@ sub build_marker {
 	my $self     = $args{self} || miss("self");
 	my $aln_file = $args{alignment} || miss("alignment");
 	my $cutoff   = $args{cutoff} || miss("cutoff");
-	my $force    = $args{force} ; #force is not a required option
+	my $force    = $args{force};                            #force is not a required option
+	my $mapping  = $args{mapping};                          #not a required argument
 	my ( $core, $path, $ext ) = fileparse( $aln_file, qr/\.[^.]*$/ );
 	my $marker_dir = Phylosift::Utilities::get_data_path( data_name => "markers", data_path => $Phylosift::Settings::marker_path );
 	my $target_dir = $marker_dir . "/$core";
+
 	if ( -e $target_dir && !$force ) {
 		croak
 "Marker already exists in $marker_dir. Delete Marker and restart the marker build.\nUse -f to force an override of the previous marker.\nUsage:\n>phylosift build_marker -f aln_file cutoff\n";
@@ -52,8 +55,8 @@ sub build_marker {
 	my $masked_aln = "$target_dir/$core.masked";
 	mask_aln( file => $aln_file, output => $masked_aln );
 	my $hmm_file = "$target_dir/$core.hmm";
-	generate_hmm( file_name => $masked_aln, hmm_name => $hmm_file );
-	Phylosift::Utilities::fasta2stockholm( fasta => $masked_aln, output => "$target_dir/$core.stk" );
+	generate_hmm( file_name => $aln_file, hmm_name => $hmm_file );
+	Phylosift::Utilities::fasta2stockholm( fasta => $aln_file, output => "$target_dir/$core.stk" );
 	my $stk_aln = "$target_dir/$core.stk";
 
 	#may need to create an unaligned file for the sequences before aligning them
@@ -66,13 +69,38 @@ sub build_marker {
 	);
 	my $clean_aln = "$target_dir/$core.clean";
 	my %id_map = mask_and_clean_alignment( alignment_file => $new_alignment_file, output_file => $clean_aln );
+	debug( "ID_map is " . scalar( keys(%id_map) ) . " long\n" );
+	my @array = keys(%id_map);
 	my ( $fasttree_file, $tree_log_file ) = generate_fasttree( alignment_file => $clean_aln, target_directory => $target_dir );
 
 	#need to generate representatives using PDA
 	my $rep_file = get_representatives_from_tree( tree => $fasttree_file, target_directory => $target_dir, cutoff => $cutoff );
-	Phylosift::Utilities::generate_hmm();
+
+	#Phylosift::Utilities::generate_hmm();
 	#need to read the representatives picked by PDA and generate a representative fasta file
 	my $rep_fasta = get_fasta_from_pda_representatives( pda_file => $rep_file, target_dir => $target_dir, fasta_reference => $fasta_file, id_map => \%id_map );
+	if ( defined $mapping ) {
+		my $tmp_jplace     = $target_dir . "/" . $core . ".tmpread.jplace";
+		my $mangled_jplace = $tmp_jplace . ".mangled";
+		my $taxon_map      = $target_dir . "/" . $core . ".taxonmap";
+		my $id_taxon_map   = $target_dir . "/" . $core . ".gene_map";
+		my $ncbi_sub_tree  = $target_dir . "/" . $core . ".subtree";
+		debug("Using the mapping stuff\n");
+
+		#make dummy placement reference package
+`taxit create -a "Guillaume Jospin" -d "simple package for reconciliation only" -l temp -f $clean_aln -t $fasttree_file -s $tree_log_file -Y FastTree -P $target_dir/temp_ref`;
+
+		#make a dummy jplace file
+		my $tmpread_file = Phylosift::UpdateDB::create_temp_read_fasta( file => "$target_dir/$core", aln_file => $clean_aln );
+		`cd "$target_dir";pplacer -c temp_ref -p "$tmpread_file"`;
+		jplace_mangler( in => $tmp_jplace, out => $mangled_jplace );
+
+		#create a file with a list of IDs
+		my @taxon_array = generate_id_to_taxonid_map( id_hash_ref => \%id_map, map_file => $mapping, out_file => $id_taxon_map, marker => $core );
+		Phylosift::UpdateDB::make_ncbi_subtree( out_file => $ncbi_sub_tree, taxon_ids => \@taxon_array );
+		`readconciler $ncbi_sub_tree $mangled_jplace $id_taxon_map $taxon_map`;
+		`rm -rf "$tmpread_file" "$mangled_jplace" "$tmp_jplace" "$id_taxon_map" "$ncbi_sub_tree"  "$target_dir/temp_ref"`;
+	}
 
 	#use taxit to create a new reference package required for running PhyloSift
 	#needed are : 1 alignment file, 1 representatives fasta file, 1 hmm profile, 1 tree file, 1 log tree file.
@@ -83,10 +111,57 @@ sub build_marker {
 	`rm "$target_dir/$core.aln"`;
 	`rm "$target_dir/$core.fasta"`;
 	`rm "$clean_aln"`;
-	`rm "$masked_aln"`;
 	`mv "$target_dir/$core"/* "$target_dir"`;
 	`rm -rf "$target_dir/$core"`;
 	`rm -rf "$self->{"fileDir"}"`;
+}
+
+=head2 generate_id_to_taxonid_map
+
+reads in a hash of unique IDs and a mapping file and writes the <uniqueID><tab><TaxonID> to the output file
+the mapping file should be in the following format : <GI><space><TaxonID>
+Also returns a list of Taxon IDs
+=cut
+
+sub generate_id_to_taxonid_map {
+	my %args       = @_;
+	my $list_ref   = $args{id_hash_ref} || miss("Hash for GI to unique IDs");
+	my $map_file   = $args{map_file} || miss("GI to TaxonID file");
+	my $out_file   = $args{out_file} || miss("ID_taxon mapping filename");
+	my $marker     = $args{marker} || miss("Marker name");
+	my %map_hash   = %{$list_ref};
+	my $FHOUT      = Phylosift::Utilities::ps_open( ">" . $out_file );
+	my $FHIN       = Phylosift::Utilities::ps_open($map_file);
+	my @taxon_hash = ();
+	while (<$FHIN>) {
+		chomp($_);
+		my @line = split( / /, $_ );
+		if ( exists $map_hash{ $line[0] } ) {    #&& $line[1] ne 'na'
+			print $FHOUT $marker . "\t" . $line[1] . "\t" . $map_hash{ $line[0] } . "\n";
+			push( @taxon_hash, $line[1] );
+		}
+
+		#no need to print anything otherwise
+	}
+	return @taxon_hash;
+}
+
+=head2 jplace_mangler
+
+mangles a Jplace file according the regex
+
+=cut
+
+sub jplace_mangler {
+	my %args    = @_;
+	my $fileIN  = $args{in} || miss("Input file");
+	my $fileOUT = $args{out} || miss("Output file");
+	my $FH      = Phylosift::Utilities::ps_open($fileIN);
+	my $FHOUT   = Phylosift::Utilities::ps_open( ">" . $fileOUT );
+	while ( my $line = <$FH> ) {
+		$line =~ s/:(.+?)\{(\d+?)\}/\{$2\}:$1/g;
+		print $FHOUT $line;
+	}
 }
 
 =head2 generate_hmm
@@ -117,9 +192,9 @@ sub hmmalign_to_model {
 	my $ref_ali       = $args{reference_alignment} || miss("reference_alignment");
 	my $seq_count     = $args{sequence_count} || miss("sequence_count");
 	my ( $core_name, $path, $ext ) = fileparse( $sequence_file, qr/\.[^.]*$/ );
-	my $ALNOUT = ps_open( ">$target_dir/$core_name.aln" );
-	my $ALNIN = ps_open( "$Phylosift::Utilities::hmmalign --mapali $ref_ali --trim --outformat afa $hmm_profile $sequence_file |" );
-	my $s = 0;
+	my $ALNOUT = ps_open(">$target_dir/$core_name.aln");
+	my $ALNIN  = ps_open("$Phylosift::Utilities::hmmalign --mapali $ref_ali --trim --outformat afa $hmm_profile $sequence_file |");
+	my $s      = 0;
 
 	while ( my $line = <$ALNIN> ) {
 		if ( $line =~ /^>/ ) {
@@ -144,19 +219,19 @@ sub mask_and_clean_alignment {
 	my $aln_file    = $args{alignment_file} || miss("alignment_file");
 	my $output_file = $args{output_file} || miss("output_file");
 	my %id_map;    # will store a map of unique IDs to sequence names
-
-	my $in = Phylosift::Utilities::open_SeqIO_object( file => $aln_file );
-	my %s = ();    #hash remembering the IDs already printed
-	my $FILEOUT = ps_open( ">$output_file" );
+	debug "Using $aln_file\n";
+	my $in          = Phylosift::Utilities::open_SeqIO_object( file => $aln_file );
+	my %s           = ();                                                             #hash remembering the IDs already printed
+	my $FILEOUT     = ps_open(">$output_file");
 	my $seq_counter = 0;
 	while ( my $seq_object = $in->next_seq() ) {
 		my $seq       = $seq_object->seq;
 		my $id        = $seq_object->id;
 		my $unique_id = sprintf( "%09d", $seq_counter++ );
 		$id_map{$id} = $unique_id;
-		$id  =~ s/\(\)//g;     #removes ( and ) from the header lines
-		$seq =~ s/[a-z]//g;    # lowercase chars didnt align to model
-		$seq =~ s/\.//g;       # shouldnt be any dots
+		$id  =~ s/\(\)//g;                                                            #removes ( and ) from the header lines
+		$seq =~ s/[a-z]//g;                                                           # lowercase chars didnt align to model
+		$seq =~ s/\.//g;                                                              # shouldnt be any dots
 		print $FILEOUT ">" . $unique_id . "\n" . $seq . "\n";
 	}
 
@@ -234,7 +309,7 @@ sub get_fasta_from_pda_representatives {
 	my ( $core, $path, $ext ) = fileparse( $pda_file, qr/\.[^.]*$/ );
 
 	#reading the pda file to get the representative IDs
-	my $REPSIN = open( $pda_file );
+	my $REPSIN        = open($pda_file);
 	my $taxa_number   = 0;
 	my %selected_taxa = ();
 	while (<$REPSIN>) {
@@ -300,7 +375,7 @@ sub mask_aln {
 	}
 
 	# writing out a fasta
-	my $TRIMOUT = ps_open( ">$outfile" );
+	my $TRIMOUT = ps_open(">$outfile");
 	foreach my $key (@ori_order) {
 		print $TRIMOUT ">" . $key . "\n";
 		my $i;
@@ -382,7 +457,7 @@ sub read_alignment {
 	my @order;
 	my $id;
 	my $input_file = $self->{inputfile};
-	my $MASKIN = ps_open( $input_file );
+	my $MASKIN     = ps_open($input_file);
 	while (<$MASKIN>) {
 		chop;
 		if (/%([\S]+)/) {

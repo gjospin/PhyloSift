@@ -457,9 +457,9 @@ sub alignAndMask {
 			@lines = split( /\n/, $fasta );
 			next if @lines == 0;
 		}
-		my $outputFastaAA = $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta( marker => $marker, chunk => $chunk );
-		my $outputFastaDNA = $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta( marker => $marker, dna => 1, chunk => $chunk );
 		my $mbname = Phylosift::Utilities::get_marker_basename( marker => $marker );
+		my $outputFastaAA = $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta( marker => $mbname, chunk => $chunk );
+		my $outputFastaDNA = $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta( marker => $mbname, dna => 1, chunk => $chunk );
 		my $ALIOUT = ps_open( ">" . $outputFastaAA );
 		my $prev_seq;
 		my $prev_name;

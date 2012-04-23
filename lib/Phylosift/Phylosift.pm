@@ -147,7 +147,7 @@ sub run {
 	start_timer( name => "START" );
 	read_phylosift_config( self => $self );
 	run_program_check( self => $self );
-	Phylosift::Utilities::data_checks( self => $self ) unless $self->{"mode"} eq 'build_marker' || $self->{"mode"} eq 'sim';
+	Phylosift::Utilities::data_checks( self => $self ) unless $self->{"mode"} eq 'sim';
 	file_check( self => $self ) unless $self->{"mode"} eq 'index' || $self->{"mode"} eq 'sim';
 	directory_prep( self => $self, force => $force ) unless $self->{"mode"} eq 'index' ;
 	$self->{"readsFile"} = prep_isolate_files( self => $self, file => $self->{"readsFile"} ) if $self->{"isolate"} == 1;
@@ -194,7 +194,7 @@ sub run {
 		  if -d $Phylosift::Utilities::markers_extended_dir && $self->{"extended"};
 	}
 	if ( $self->{"mode"} eq 'build_marker' ) {
-		Phylosift::MarkerBuild::build_marker( self => $self, alignment => $ARGV[1], cutoff => $ARGV[2], force => $force );
+		Phylosift::MarkerBuild::build_marker( self => $self, alignment => $ARGV[1], cutoff => $ARGV[2], force => $force , mapping => $ARGV[3] );
 	}
 	if ( $self->{"mode"} eq 'sim' ){
 		Phylosift::Simulations::prep_simulation( self => $self , pick => $ARGV[2] , genomes_dir => $ARGV[1], reads => $ARGV[3] );
