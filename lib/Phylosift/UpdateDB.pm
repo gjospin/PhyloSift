@@ -602,9 +602,9 @@ sub make_ncbi_subtree {
 	my %nameidmap = %$nimref; 
 	my %idnamemap  = %$inmref;
 	my $parent = Phylosift::Summarize::read_ncbi_taxonomy_structure();
-	print STDERR "ncbi tree has lots of nodes\n";
+	debug "ncbi tree has lots of nodes\n";
 	my $merged = Phylosift::Summarize::read_merged_nodes();
-	print "Read a bunch of merged nodes\n";
+	debug "Read a bunch of merged nodes\n";
 
 	my %tidnodes;
 	my $phylotree = Bio::Phylo::Forest::Tree->new();
@@ -838,6 +838,12 @@ sub fix_names_in_alignment {
 	`mv "$alignment.fixed" "$alignment"`;
 }
 
+=head2 create_temp_read_fasta
+
+reads a fasta file and writes 1 read/sequence to the output file specified
+
+=cut
+
 sub create_temp_read_fasta {
 	my %args = @_;
 	my $file = $args{file} || miss("file");
@@ -852,6 +858,7 @@ sub create_temp_read_fasta {
 		last if $line =~ /^>/;
 		print $TMPREAD $line;
 	}
+	return $file.".tmpread.fasta";
 }
 
 sub filter_fasta {
