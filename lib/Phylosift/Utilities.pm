@@ -141,6 +141,7 @@ our $pda          = "";
 our $fasttree     = "";
 our $lastdb       = "";
 our $lastal       = "";
+our $segment_tree = "";
 our %marker_lookup = ();
 
 sub programChecks {
@@ -186,6 +187,7 @@ sub programChecks {
 		return 1;
 	}
 	$readconciler = get_program_path( prog_name => "readconciler",  prog_path => $Phylosift::Settings::ps_path );
+	$segment_tree = get_program_path( prog_name => "segment_tree",  prog_path => $Phylosift::Settings::ps_path );
 	$pda          = get_program_path( prog_name => "pda",           prog_path => $Phylosift::Settings::ps_path );
 	$fasttree     = get_program_path( prog_name => "FastTree",      prog_path => $Phylosift::Settings::ps_path );
 	$lastdb       = get_program_path( prog_name => "lastdb",        prog_path => $Phylosift::Settings::ps_path );
@@ -327,7 +329,7 @@ sub data_checks {
 
 	#
 	# now look for the extended marker directory
-	$markers_extended_dir = get_data_path( data_name => "markers_extended", data_path => $Phylosift::Settings::marker_path );
+	$markers_extended_dir = get_data_path( data_name => "markers_extended", data_path => $Phylosift::Settings::extended_marker_path );
 	if ( $self->{"extended"} ) {
 		marker_update_check( self => $self, dir => $markers_extended_dir, url => $markers_extended_update_url );
 	}
@@ -575,9 +577,9 @@ sub get_marker_path {
 	return "$markers_extended_dir" if ( -d "$markers_extended_dir/$marker" );
 
 	# TODO: check any local marker repositories
-	#warn "Could not find repository for marker $marker\n";
-	$Carp::Verbose = 1;
-	croak("Could not find repository for marker $marker\n");
+	warn "Could not find repository for marker $marker\n";
+#	$Carp::Verbose = 1;
+#	croak("Could not find repository for marker $marker\n");
 }
 
 =head2 get_marker_basename
@@ -746,6 +748,8 @@ sub get_decorated_marker_name {
 	my $dna = $args{dna} || 0;
 	my $updated = $args{updated} || 0;
 	my $sub_marker = $args{sub_marker};
+	my $base = $args{base} || 0;
+	$name = get_marker_basename(marker=>$name) if $base;
 	$name .= ".codon"   if $dna;
 	$name .= ".updated" if $updated || $args{self}->{"updated"};
 	# rna markers don't get pruned
@@ -831,8 +835,7 @@ sub get_aligner_output_fasta {
 	my $marker = $args{marker};
 	my $chunk  = $args{chunk};
 	my $chunky = defined($chunk) ? ".$chunk" : "";
-	my $bname  = get_marker_basename( marker => $marker );
-	my $decorated = get_decorated_marker_name( %args );
+	my $decorated = get_decorated_marker_name( %args, base=>1 );
 	return "$decorated$chunky.fasta";
 }
 
@@ -845,8 +848,7 @@ given by markerName
 sub get_read_placement_file {
 	my %args   = @_;
 	my $marker = $args{marker};
-	my $bname  = get_marker_basename( marker => $marker );
-	my $decorated = get_decorated_marker_name(%args);
+	my $decorated = get_decorated_marker_name(%args, base=>1);
 	return "$decorated.jplace";
 }
 
@@ -1333,7 +1335,7 @@ sub index_marker_db {
 	`mv "$blastp_db" "$path/rep.dbfasta"`;
 
 	# make a last database
-	`cd "$path" ; $Phylosift::Utilities::lastdb -p replast rep.dbfasta`;
+	`cd "$path" ; $Phylosift::Utilities::lastdb -s 900M -p replast rep.dbfasta`;
 	unlink("$path/rep.dbfasta");    # don't need this anymore!
 
 	# make a bowtie2 database

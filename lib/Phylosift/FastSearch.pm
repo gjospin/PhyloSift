@@ -138,7 +138,7 @@ sub launch_searches {
 		`mkfifo "$dir/last_$i.pipe"`;
 	}
 	my $rna_procs = 0;
-	if($readtype->{seqtype} eq "dna" && -e Phylosift::Utilities::get_bowtie2_db().".prj" ){
+	if($readtype->{seqtype} eq "dna" && -e Phylosift::Utilities::get_bowtie2_db(self => $self).".prj" ){
 		`mkfifo "$bowtie2_r1_pipe"`;
 		`mkfifo "$bowtie2_r2_pipe"` if $readtype->{paired};
 		`mkfifo "$last_rna_pipe"`;
@@ -167,7 +167,7 @@ sub launch_searches {
 				$candidate_type = ".lastal";
 			} elsif ( $count == $self->{"threads"} + 1 ) {
 
-				if(!-e Phylosift::Utilities::get_bowtie2_db().".prj"){
+				if(!-e Phylosift::Utilities::get_bowtie2_db(self => $self).".prj"){
 					debug "Exiting process $count because rna db not found\n";
 					my $lrp1 = ps_open($last_rna_pipe);
 					`rm -f $last_rna_pipe`;
@@ -179,7 +179,7 @@ sub launch_searches {
 			} elsif ( $count == $self->{"threads"} + 2 ) {
 
 				#exit the thread if the bowtie DB does not exit
-				if ( !-e Phylosift::Utilities::get_bowtie2_db().".prj" ) {
+				if ( !-e Phylosift::Utilities::get_bowtie2_db(self => $self).".prj" ) {
 					debug "Exiting process $count because the bowtie2 rna db does not exist\n";
 
 					# still need to open/close pipes for parent process
