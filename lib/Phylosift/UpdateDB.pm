@@ -849,7 +849,7 @@ sub create_temp_read_fasta {
 	my $file = $args{file} || miss("file");
 	my $aln_file = $args{aln_file} || miss("aln_file");
 	my $TMPREAD = ps_open( ">$file.tmpread.fasta" );
-	print STDERR "creating tmpread $file.tmpread.fasta\n";
+	debug "creating tmpread $file.tmpread.fasta\n";
 	
 	print $TMPREAD ">blahblahblah\n";
 	my $ALNIN = ps_open( "$aln_file" );
