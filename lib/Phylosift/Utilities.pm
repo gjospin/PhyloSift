@@ -771,7 +771,6 @@ sub get_decorated_marker_name {
 	$name = get_marker_basename(marker=>$name) if $base;
 	$name .= ".codon"   if $dna;
 	$name .= ".updated" if $updated || $args{self}->{"updated"};
-
 	# rna markers don't get pruned
 	$name .= ".sub".$sub_marker if defined($sub_marker);
 	return $name;
@@ -1645,6 +1644,7 @@ sub generate_hmm {
 	my %args       = @_;
 	my $file_name  = $args{file};
 	my $target_dir = $args{target_dir};
+	debug ("HMM on : $file_name\n");
 	my ( $core_name, $path, $ext ) = fileparse( $file_name, qr/\.[^.]*$/ );
 	if ( !-e "$target_dir/$core_name.hmm" ) {
 		`hmmbuild --informat afa "$target_dir/$core_name.hmm" "$file_name"`;
