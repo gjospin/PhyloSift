@@ -61,7 +61,8 @@ sub pplacer {
 		next if($marker =~ /PMPROK/ && $self->{"updated"});
 		my $read_alignment_file = $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta( marker => Phylosift::Utilities::get_marker_basename(marker=>$marker), chunk => $chunk );
 		next unless -e $read_alignment_file;
-		my $place_file = place_reads(self=>$self, marker=>$marker, dna=>0, chunk => $chunk, reads=>$read_alignment_file);
+		my $options = $marker eq "concat" ? "--groups 10" : "";
+		my $place_file = place_reads(self=>$self, marker=>$marker, dna=>0, chunk => $chunk, reads=>$read_alignment_file, options=>$options);
 		# if we're chunked, merge this with the main jplace
 		merge_chunk(chunk => $chunk, place_file=>$place_file);
 	}
@@ -74,7 +75,7 @@ sub merge_chunk {
 	# make sure there's actually work to be done
 	return unless defined($chunk) && defined($place_file);
 	my $unchunked_place = $place_file;
-	$unchunked_place =~ s/\.\d+\.trim/.trim/g;
+	$unchunked_place =~ s/\.\d+\.jplace/.jplace/g;
 	if(-e $unchunked_place){
 		# merge
 		my $merge_cl = "$Phylosift::Utilities::guppy merge -o $unchunked_place $place_file $unchunked_place";
