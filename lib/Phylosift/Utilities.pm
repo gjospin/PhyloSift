@@ -257,7 +257,7 @@ sub download_data {
 	`cd "$destination/../" ; tar xzf $archive.tgz ; touch $archive`;
 	`rm "$destination/../$archive.tgz"`;
 }
-my $marker_base_url = "http://edhar.genomecenter.ucdavis.edu/~koadman/phylosift_markers/";
+my $marker_base_url = "http://edhar.genomecenter.ucdavis.edu/~koadman/phylosift_markers";
 my $ncbi_url        = "http://edhar.genomecenter.ucdavis.edu/~koadman/ncbi.tgz";
 
 =head2 marker_update_check
@@ -272,7 +272,7 @@ sub marker_update_check {
 	my $url         = $args{url};
 	my $marker_path = $args{dir};
 	my ( $content_type, $document_length, $modified_time, $expires, $server ) = head($url);
-	debug "MARKER_PATH : " . $marker_path . "\n";
+	debug "MARKER_PATH : " . $marker_path . "\nURL : $url\n";
 	my $get_new_markers = 0;
 	if ( -x $marker_path ) {
 		my $mtime = ( stat($marker_path) )[9];
@@ -1448,7 +1448,6 @@ sub get_sequence_input_type {
 	my $allcount = 0;
 	my $sequence = 1;
 	my $minq     = 255;    # minimum fastq quality score (for detecting phred33/phred64)
-
 	while ( my $line = <$FILE> ) {
 		if ( $line =~ /^>/ ) {
 			$maxfound = $counter > $maxfound ? $counter : $maxfound;
@@ -1468,6 +1467,7 @@ sub get_sequence_input_type {
 				$minq = ord($q) if ord($q) < $minq;
 			}
 		} elsif ($sequence) {
+			$sequence =~ s/[-\.]//g; #removing gaps from the sequences
 			$counter  += length($line) - 1;
 			$dnacount += $line =~ tr/[ACGTNacgtn]//;
 			$allcount += length($line) - 1;
@@ -1479,6 +1479,7 @@ sub get_sequence_input_type {
 	$maxfound = $counter > $maxfound ? $counter : $maxfound;
 	$type{seqtype} = "protein" if ( $dnacount < $allcount * 0.75 );
 	$type{seqtype} = "dna"     if ( $type{format} eq "fastq" );       # nobody using protein fastq (yet)
+	debug "TYPE : ".$type{seqtype}."\n";
 	$type{qtype}   = "phred64" if $minq < 255;
 	$type{qtype}   = "phred33" if $minq < 64;
 	$type{paired} = 0;                                                # TODO: detect interleaved read pairing

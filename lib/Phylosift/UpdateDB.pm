@@ -664,6 +664,7 @@ sub make_ncbi_subtree {
 		close $TREEOUT;
 		return 1; # success
 	}
+	debug "NOTHING IN THE TREE\n";
 	return 0; # no tree!
 }
 

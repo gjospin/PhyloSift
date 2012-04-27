@@ -43,6 +43,8 @@ sub new {
 	$self->{"coverage"}    = undef;
 	$self->{"isolate"}     = 0;
 	$self->{"threads"}     = 1;
+	my %temp_hash = ();
+	$self->{"read_names"}  = \%temp_hash;
 	bless($self);
 	return $self;
 }
@@ -75,6 +77,7 @@ sub initialize {
 	$self->{"alignDir"} = $self->{"fileDir"} . "/alignDir";
 	$self->{"treeDir"}  = $self->{"fileDir"} . "/treeDir";
 	$self->{"dna"}      = 0;
+	%{$self->{"read_names"}} = ();
 	return $self;
 }
 

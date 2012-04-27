@@ -14,6 +14,7 @@ Phylosift::MarkerBuild - build a seed marker package from an existing multiple s
 Version 0.01
 
 =cut
+
 our $VERSION = '0.01';
 
 =head1 SYNOPSIS
@@ -43,20 +44,21 @@ sub build_marker {
 	my $marker_dir = Phylosift::Utilities::get_data_path( data_name => "markers", data_path => $Phylosift::Settings::marker_path );
 	my $target_dir = $marker_dir . "/$core";
 
+	#$target_dir = $self->{"fileDir"};
 	if ( -e $target_dir && !$force ) {
 		croak
 "Marker already exists in $marker_dir. Delete Marker and restart the marker build.\nUse -f to force an override of the previous marker.\nUsage:\n>phylosift build_marker -f aln_file cutoff\n";
 	} else {
-		`rm -rf "$target_dir"` if $force;
-		`mkdir "$target_dir"`;
+		#`rm -rf "$target_dir"` if $force;
+		#`mkdir "$target_dir"`;
 	}
 	my $fasta_file = "$target_dir/$core.fasta";
 	my $seq_count  = Phylosift::Utilities::unalign_sequences( aln => $aln_file, output_path => $fasta_file );
 	my $masked_aln = "$target_dir/$core.masked";
-	mask_aln( file => $aln_file, output => $masked_aln );
+	mask_aln( file => $aln_file, output => $masked_aln ) unless -e $masked_aln;
 	my $hmm_file = "$target_dir/$core.hmm";
-	generate_hmm( file_name => $aln_file, hmm_name => $hmm_file );
-	Phylosift::Utilities::fasta2stockholm( fasta => $aln_file, output => "$target_dir/$core.stk" );
+	generate_hmm( file_name => $aln_file, hmm_name => $hmm_file ) unless -e $hmm_file;
+	Phylosift::Utilities::fasta2stockholm( fasta => $aln_file, output => "$target_dir/$core.stk" ) unless -e "$target_dir/$core.stk";
 	my $stk_aln = "$target_dir/$core.stk";
 
 	#may need to create an unaligned file for the sequences before aligning them
@@ -71,14 +73,21 @@ sub build_marker {
 	my %id_map = mask_and_clean_alignment( alignment_file => $new_alignment_file, output_file => $clean_aln );
 	debug( "ID_map is " . scalar( keys(%id_map) ) . " long\n" );
 	my @array = keys(%id_map);
-	my ( $fasttree_file, $tree_log_file ) = generate_fasttree( alignment_file => $clean_aln, target_directory => $target_dir );
+
+	my $fasttree_file = "$target_dir/18s_reps.tree";
+	my $tree_log_file = "$target_dir/18s_reps.log";
+	#my ( $fasttree_file, $tree_log_file ) = generate_fasttree( alignment_file => $clean_aln, target_directory => $target_dir ) unless -e "$target_dir/$core.tree";
 
 	#need to generate representatives using PDA
-	my $rep_file = get_representatives_from_tree( tree => $fasttree_file, target_directory => $target_dir, cutoff => $cutoff );
+	#my $rep_file = "$target_dir/18s_reps.tree";
+	my $rep_file = get_representatives_from_tree( tree => $fasttree_file, target_directory => $target_dir, cutoff => $cutoff )
+	  unless -e "$target_dir/$core.pda";
 
 	#Phylosift::Utilities::generate_hmm();
 	#need to read the representatives picked by PDA and generate a representative fasta file
-	my $rep_fasta = get_fasta_from_pda_representatives( pda_file => $rep_file, target_dir => $target_dir, fasta_reference => $fasta_file, id_map => \%id_map );
+	#my $rep_fasta = "$target_dir/18s_reps.rep";
+	my $rep_fasta = get_fasta_from_pda_representatives( pda_file => $rep_file, target_dir => $target_dir, fasta_reference => $fasta_file, id_map => \%id_map )
+	  unless -e "$target_dir/$core.rep";
 	if ( defined $mapping ) {
 		my $tmp_jplace     = $target_dir . "/" . $core . ".tmpread.jplace";
 		my $mangled_jplace = $tmp_jplace . ".mangled";
@@ -88,15 +97,19 @@ sub build_marker {
 		debug("Using the mapping stuff\n");
 
 		#make dummy placement reference package
-`taxit create -a "Guillaume Jospin" -d "simple package for reconciliation only" -l temp -f $clean_aln -t $fasttree_file -s $tree_log_file -Y FastTree -P $target_dir/temp_ref`;
+`taxit create -a "Guillaume Jospin" -d "simple package for reconciliation only" -l temp -f $clean_aln -t $fasttree_file -s $tree_log_file -Y FastTree -P $target_dir/temp_ref`
+		  unless -e "target_dir/temp_ref";
 
 		#make a dummy jplace file
-		my $tmpread_file = Phylosift::UpdateDB::create_temp_read_fasta( file => "$target_dir/$core", aln_file => $clean_aln );
-		`cd "$target_dir";pplacer -c temp_ref -p "$tmpread_file"`;
+		#my $tmpread_file = "$target_dir/18s_reps.tmpread";
+		my $tmpread_file = Phylosift::UpdateDB::create_temp_read_fasta( file => "$target_dir/$core", aln_file => $clean_aln )
+		  unless -e "$target_dir/$core.tmpread.fasta";
+		`cd "$target_dir";pplacer -c temp_ref -p "$tmpread_file"` unless -e $tmp_jplace;
 		jplace_mangler( in => $tmp_jplace, out => $mangled_jplace );
 
 		#create a file with a list of IDs
 		my @taxon_array = generate_id_to_taxonid_map( id_hash_ref => \%id_map, map_file => $mapping, out_file => $id_taxon_map, marker => $core );
+		debug "ID_MAP : " . scalar( keys(%id_map) ) . "\n";
 		Phylosift::UpdateDB::make_ncbi_subtree( out_file => $ncbi_sub_tree, taxon_ids => \@taxon_array );
 		`readconciler $ncbi_sub_tree $mangled_jplace $id_taxon_map $taxon_map`;
 		`rm -rf "$tmpread_file" "$mangled_jplace" "$tmp_jplace" "$id_taxon_map" "$ncbi_sub_tree"  "$target_dir/temp_ref"`;
@@ -125,14 +138,15 @@ Also returns a list of Taxon IDs
 
 sub generate_id_to_taxonid_map {
 	my %args       = @_;
-	my $list_ref   = $args{id_hash_ref} || miss("Hash for GI to unique IDs");
-	my $map_file   = $args{map_file} || miss("GI to TaxonID file");
+	my $list_ref   = $args{id_hash_ref} || miss("Hash for seqID to unique IDs");
+	my $map_file   = $args{map_file} || miss("seqID to TaxonID file");
 	my $out_file   = $args{out_file} || miss("ID_taxon mapping filename");
 	my $marker     = $args{marker} || miss("Marker name");
 	my %map_hash   = %{$list_ref};
 	my $FHOUT      = Phylosift::Utilities::ps_open( ">" . $out_file );
 	my $FHIN       = Phylosift::Utilities::ps_open($map_file);
 	my @taxon_hash = ();
+	my @test_array = keys(%map_hash);
 	while (<$FHIN>) {
 		chomp($_);
 		my @line = split( / /, $_ );
@@ -192,16 +206,17 @@ sub hmmalign_to_model {
 	my $ref_ali       = $args{reference_alignment} || miss("reference_alignment");
 	my $seq_count     = $args{sequence_count} || miss("sequence_count");
 	my ( $core_name, $path, $ext ) = fileparse( $sequence_file, qr/\.[^.]*$/ );
-	my $ALNOUT = ps_open(">$target_dir/$core_name.aln");
-	my $ALNIN  = ps_open("$Phylosift::Utilities::hmmalign --mapali $ref_ali --trim --outformat afa $hmm_profile $sequence_file |");
-	my $s      = 0;
+	#my $ALNOUT = ps_open(">$target_dir/$core_name.aln");
+	#my $ALNIN  = ps_open("$Phylosift::Utilities::hmmalign --mapali $ref_ali --trim --outformat afa $hmm_profile $sequence_file |");
 
+	my $ALNIN = ps_open("$target_dir/18s_reps.aln");
+	my $s = 0;
 	while ( my $line = <$ALNIN> ) {
 		if ( $line =~ /^>/ ) {
 			$s++;
 			last if $s > $seq_count;
 		}
-		print $ALNOUT $line;
+		#print $ALNOUT $line;
 	}
 	close $ALNOUT;
 	return "$target_dir/$core_name.aln";
@@ -252,11 +267,13 @@ sub generate_fasttree {
 	my $aln_file   = $args{alignment_file} || miss("alignment_file");
 	my $target_dir = $args{target_directory} || miss("target_directory");
 	my ( $core, $path, $ext ) = fileparse( $aln_file, qr/\.[^.]*$/ );
-	my %type = Phylosift::Utilities::get_sequence_input_type($aln_file);
+	my %type = %{ Phylosift::Utilities::get_sequence_input_type($aln_file) };
 	if ( $type{seqtype} eq "dna" ) {
+		debug "DNA alignment detected\n";
 		`$Phylosift::Utilities::fasttree -nt -gtr -log "$target_dir/$core.log" "$aln_file" > "$target_dir/$core.tree" 2> /dev/null`;
 	} else {
-		`$Phylosift::Utilities::fasttree -gtr -log "$target_dir/$core.log" "$aln_file" > "$target_dir/$core.tree" 2> /dev/null`;
+		debug "NOT DNA detected\n";
+		`$Phylosift::Utilities::fasttree -log "$target_dir/$core.log" "$aln_file" > "$target_dir/$core.tree" 2> /dev/null`;
 	}
 	return ( "$target_dir/$core.tree", "$target_dir/$core.log" );
 }
@@ -305,16 +322,17 @@ sub get_fasta_from_pda_representatives {
 	my $pda_file        = $args{pda_file} || miss("pda_file");
 	my $target_dir      = $args{target_dir} || miss("target_dir");
 	my $reference_fasta = $args{fasta_reference} || miss("fasta_reference");
-	my $id_map          = $args{id_map} || miss("id_map");
+	my $id_map_ref      = $args{id_map} || miss("id_map");
+	my %id_map          = %{$id_map_ref};
 	my ( $core, $path, $ext ) = fileparse( $pda_file, qr/\.[^.]*$/ );
 
 	#reading the pda file to get the representative IDs
-	my $REPSIN        = open($pda_file);
+	my $REPSIN        = Phylosift::Utilities::ps_open($pda_file);
 	my $taxa_number   = 0;
 	my %selected_taxa = ();
 	while (<$REPSIN>) {
 		chomp($_);
-		if ( $_ =~ m/optimal PD set has (\d+) taxa:/ ) {
+		if ( $_ =~ m/optimal PD set has (\d+) taxa/ ) {
 			$taxa_number = $1;
 		} elsif ( $_ =~ m/Corresponding sub-tree:/ ) {
 			last;
@@ -324,12 +342,13 @@ sub get_fasta_from_pda_representatives {
 		}
 	}
 	close($REPSIN);
+	my @lect = keys(%selected_taxa);
 
 	#reading the reference sequences and printing the selected representatives using BioPerl
 	my $reference_seqs        = Phylosift::Utilities::open_SeqIO_object( file => $reference_fasta,         format => "FASTA" );
 	my $representatives_fasta = Phylosift::Utilities::open_SeqIO_object( file => ">$target_dir/$core.rep", format => "FASTA" );
 	while ( my $ref_seq = $reference_seqs->next_seq ) {
-		if ( exists $selected_taxa{ $id_map->{ $ref_seq->id } } ) {
+		if ( exists $selected_taxa{ $id_map{ $ref_seq->id } } ) {
 			$representatives_fasta->write_seq($ref_seq);
 		}
 	}
@@ -725,4 +744,5 @@ See http://dev.perl.org/licenses/ for more information.
 
 
 =cut
+
 1;    # End of Phylosift::MarkerBuild.pm

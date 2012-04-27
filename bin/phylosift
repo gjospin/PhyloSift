@@ -98,7 +98,7 @@ $ps->{"updated"} = 1;
 GetOptions(
 	"output=s"   => \$ps->{"fileDir"}, # directory for output
 	"clean"      => \$clean,
-	"paired"     => \$pair,        # used for paired fastQ input split in 2 different files
+	"paired"     => \$ps->{"paired"},        # used for paired fastQ input split in 2 different files OR interleaved 
 	"custom=s"   => \$custom,      #need a file containing the marker names to use without extensions ** marker names shouldn't contain '_'
 	"f"          => \$force,       #overrides a previous run otherwise stop
 	"continue"   => \$continue,    #when a mode different than all is used, continue the rest of Phylosift after the section specified by the mode is finished
@@ -129,7 +129,7 @@ if ( scalar(@ARGV) < 1 ) {
 	croak $usage unless ( $ARGV[0] eq 'index' );
 }elsif ( scalar(@ARGV) == 2 ) {
 	croak $usage if ($ARGV[0] eq 'index');
-	croak $usage unless ( $ARGV[0] && $ARGV[1] && $pair == 0 );
+	croak $usage unless ( $ARGV[0] && $ARGV[1]  );
 }elsif ( scalar(@ARGV) == 3 ) {
 	croak $usage unless ( $ARGV[0] && $ARGV[1] && $ARGV[2] );
 } else {
@@ -144,12 +144,9 @@ debug "PAIR : $pair\n";
 if( $ARGV[0] eq 'sim'){
 	debug "Running a Simulation\n";
 	$ps = $ps->initialize( mode=>$ARGV[0], file_1=>"Sims" );
-}elsif ( $pair == 0 ) {
-	debug "notpaired @ARGV\n";
-	$ps = $ps->initialize( mode=>$ARGV[0], file_1=>$ARGV[1] );
-} else {
-	debug "INSIDE paired\n";
-	$ps = $ps->initialize( mode=>$ARGV[0], file_1=>$ARGV[1], file_2=>$ARGV[2] );
+}else{
+	$ps = $ps->initialize( mode => $ARGV[0], file_1 => $ARGV[1], file_2 => $ARGV[2]) if exists( $ARGV[2] );
+	$ps = $ps->initialize( mode => $ARGV[0], file_1 => $ARGV[1]) 
 }
 debug "FORCE: " . $force . "\n";
 debug "Continue : " . $continue . "\n";

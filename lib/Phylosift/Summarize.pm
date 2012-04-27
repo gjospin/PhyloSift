@@ -229,7 +229,11 @@ sub summarize {
 			my ( $taxon_name, $taxon_level, $tid ) = get_taxon_info( taxon => $taxon_id );
 			$taxon_level = "Unknown" unless defined($taxon_level);
 			$taxon_name  = "Unknown" unless defined($taxon_name);
-			print $SEQUENCETAXA "$qname\t$taxon_id\t$taxon_level\t$taxon_name\t" . $placements{$qname}{$taxon_id} . "\n";
+			if(exists ${$self->{"read_names"}}{$qname}){
+				foreach my $name (@{${$self->{"read_names"}}{$qname}}){
+					print $SEQUENCETAXA "$qname\t$taxon_id\t$taxon_level\t$taxon_name\t" . $placements{$qname}{$taxon_id} . "\n";
+				}
+			}
 		}
 		my $readsummary = sum_taxon_levels( placements => $placements{$qname} );
 		foreach my $taxon_id ( sort { $readsummary->{$b} <=> $readsummary->{$a} } keys %{$readsummary} ) {

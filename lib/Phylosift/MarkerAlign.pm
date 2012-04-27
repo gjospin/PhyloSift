@@ -20,7 +20,6 @@ Phylosift::MarkerAlign - Subroutines to align reads to marker HMMs
 Version 0.01
 
 =cut
-
 our $VERSION = '0.01';
 
 =head1 SYNOPSIS
@@ -53,7 +52,6 @@ if you don't export anything, such as for a purely object-oriented module.
 =head2 MarkerAlign
 
 =cut
-
 my $minAlignedResidues = 20;
 
 sub MarkerAlign {
@@ -61,14 +59,11 @@ sub MarkerAlign {
 	my $self       = $args{self} || miss("self");
 	my $markersRef = $args{marker_reference} || miss("marker_reference");
 	my $chunk      = $args{chunk};
-
-	if(defined($chunk)){
+	if ( defined($chunk) ) {
 		my @allmarkers = gather_chunky_markers( self => $self, chunk => $chunk );
 		$markersRef = \@allmarkers;
 	}
-
 	directoryPrepAndClean( self => $self, marker_reference => $markersRef, chunk => $chunk );
-
 	my $index = -1;
 	markerPrepAndRun( self => $self, marker_reference => $markersRef, chunk => $chunk );
 	debug "after HMMSEARCH PARSE\n";
@@ -102,8 +97,7 @@ sub MarkerAlign {
 		push( @markeralignments, $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta( marker => "16s_reps_bac", chunk => $chunk ) );
 		push( @markeralignments, $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta( marker => "16s_reps_arc", chunk => $chunk ) );
 		push( @markeralignments, $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta( marker => "18s_reps",     chunk => $chunk ) );
-		$output_fasta_DNA =
-		  $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta( marker => "concat16", dna => 1, chunk => $chunk );
+		$output_fasta_DNA = $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta( marker => "concat16", dna => 1, chunk => $chunk );
 		Phylosift::Utilities::concatenate_alignments(
 													  self           => $self,
 													  output_fasta   => $output_fasta_DNA,
@@ -323,7 +317,9 @@ sub writeAlignedSeq {
 	return if $aligned_count < $minAlignedResidues;
 
 	#substitute all the non letter or number characters into _ in the IDs to avoid parsing issues in tree viewing programs or others
-	$prev_name = Phylosift::Summarize::tree_name( name => $prev_name );
+	my $new_name = Phylosift::Summarize::tree_name( name => $prev_name );
+	push(@{${$self->{"read_names"}}{$new_name}}, $prev_name);
+	$prev_name = $new_name;
 
 	#add a paralog ID if we're running in isolate mode and more than one good hit
 	#$prev_name .= "_p$seq_count" if $seq_count > 0 && $self->{"isolate"};
@@ -529,6 +525,8 @@ sub alignAndMask {
 								$currID = $1;
 							} else {
 								my $tempseq = Bio::PrimarySeq->new( -seq => $line, -id => $currID, -nowarnonempty => 1 );
+
+								#debug "ID : $currID \t BioPerlID : ".$tempseq->id."\n";
 								$referenceNuc{$currID} = $tempseq;
 							}
 						}
@@ -560,19 +558,23 @@ sub alignAndMask {
 		}
 
 		# check alignments so it merges sequences in case of paired end reads
-		if ( $self->{"readsFile_2"} ne "" ) {
-			merge_alignment( alignment_file => $self->{"alignDir"} . "/$mbname$chunky.unmasked", type => 'AA' );
-			merge_alignment( alignment_file => $outputFastaAA, type => 'AA' );
+		
+		if ( defined($self->{"paired"}) && $self->{"paired"} ) {
+			#debug "PAIRED : " . $self->{"paired"} . "\n";
+			merge_alignment( self=>$self,alignment_file => $self->{"alignDir"} . "/$mbname$chunky.unmasked", type => 'AA' );
+			merge_alignment( self=>$self,alignment_file => $outputFastaAA, type => 'AA' );
 			if ( Phylosift::Utilities::is_protein_marker( marker => $marker ) ) {
-				merge_alignment( alignment_file => $outputFastaDNA, type => 'DNA' );
+				merge_alignment( self=>$self,alignment_file => $outputFastaDNA, type => 'DNA' );
 			}
 		}
 
 		# get rid of the process IDs -- they break concatenation
-		strip_trailing_ids( alignment_file => $outputFastaAA );
-		strip_trailing_ids( alignment_file => $self->{"alignDir"} . "/$mbname$chunky.unmasked" );
-		if ( Phylosift::Utilities::is_protein_marker( marker => $marker ) ) {
-			strip_trailing_ids( alignment_file => $outputFastaDNA ) if -e $outputFastaDNA;
+		if ( $self->{"isolate"} ) {
+			strip_trailing_ids( alignment_file => $outputFastaAA );
+			strip_trailing_ids( alignment_file => $self->{"alignDir"} . "/$mbname$chunky.unmasked" );
+			if ( Phylosift::Utilities::is_protein_marker( marker => $marker ) ) {
+				strip_trailing_ids( alignment_file => $outputFastaDNA ) if -e $outputFastaDNA;
+			}
 		}
 	}
 }
@@ -601,14 +603,16 @@ if a residue will always win over a gap
 
 sub merge_alignment {
 	my %args     = @_;
+	my $self = $args{self};
 	my $ali_file = $args{alignment_file};
 	my $type     = $args{type};
 	my %seqs     = ();
 	my $seq_IO   = Phylosift::Utilities::open_SeqIO_object( file => $ali_file );
 	while ( my $seq = $seq_IO->next_seq() ) {
-		$seq->id =~ m/^(\S+)(\d+)$/;
+		$seq->id =~ m/^(\S+)_(\d+)$/;
 		my $core = $1;
-
+		push(@{${$self->{"read_names"}}{$core}}, ${$self->{"read_names"}}{$seq->id});
+		delete(${$self->{"read_names"}}{$seq->id});
 		#debug "Comparing " . $seq->id . " with " . $core . "\n";
 		if ( exists $seqs{$core} ) {
 			my @seq1 = split( //, $seqs{$core} );
@@ -649,10 +653,11 @@ sub getPMPROKMarkerAlignmentFiles {
 	my $chunk            = $args{chunk};
 	my $dna              = $args{dna};
 	my @markeralignments = ();
-	my @marker_list = Phylosift::Utilities::gather_markers(); 
-	foreach my $marker ( @marker_list ) {
+	my @marker_list      = Phylosift::Utilities::gather_markers();
+	foreach my $marker (@marker_list) {
 		next unless $marker =~ /PMPROK/;
-		push( @markeralignments, $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta( marker => $marker, chunk => $chunk, dna => $dna ) );
+		push( @markeralignments,
+			  $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta( marker => $marker, chunk => $chunk, dna => $dna ) );
 	}
 	return @markeralignments;
 }
@@ -716,5 +721,4 @@ See http://dev.perl.org/licenses/ for more information.
 
 
 =cut
-
 1;    # End of Phylosift::MarkerAlign.pm
