@@ -238,7 +238,8 @@ sub qsub_updates {
 	my %args        = @_;
 	my $local_directory = $args{local_directory} || miss ("local_directory");
 	my $files       = $args{files} || miss("files");
-
+	my $params;
+#	$params      = "--updated_markers=0 --extended";
 	# qsub a slew of phylosift jobs and have them report results to a local directory on this host for concatenation
 	my $hostname = `hostname`;
 	chomp $hostname;
@@ -254,8 +255,8 @@ export PERL5LIB=\$HOME/lib/perl5:/home/koadman/development/PhyloSift/lib
 WORKDIR=/state/partition1/koadman/phylosift/\$JOB_ID
 mkdir -p \$WORKDIR
 cd \$WORKDIR
-phylosift search -isolate -besthit \$1
-phylosift align -isolate -besthit \$1
+phylosift search $params --isolate --besthit \$1
+phylosift align $params --isolate --besthit \$1
 rm -rf PS_temp/*/treeDir
 rm -rf PS_temp/*/blastDir
 rm -rf PS_temp/*/isolates.fasta
@@ -748,7 +749,7 @@ sub build_marker_trees_fasttree {
 	my $codon_tre   = get_fasttree_tre_filename( marker => '$1', dna => 1, updated => 1, pruned => 0, sub_marker => '$2' );
 	my $aa_tre      = get_fasttree_tre_filename( marker => '$1', dna => 0, updated => 1, pruned => $pruned );
 	my $codon_log   = get_fasttree_log_filename( marker => '$1', dna => 1, updated => 1, pruned => 0, sub_marker => '$2' );
-	my $aa_log      = get_fasttree_log_filename( marker => '$1', dna => 0, updated => 1, pruned => $pruned );
+	my $aa_log      = get_fasttree_log_filename( marker => '$1', dna => 0, updated => 1, pruned => $pruned );	
 	my $TREESCRIPT = ps_open( ">/tmp/ps_tree.sh" );
 	print $TREESCRIPT qq{#!/bin/sh
 #\$ -cwd
@@ -919,6 +920,7 @@ sub prune_marker {
 sub pd_prune_markers {
 	my %args = @_;
 	my $marker_dir = $args{marker_directory} || miss("marker_directory");
+	chdir($marker_dir);
 
 	# prune distance is different for AA and DNA
 	# these distances are in substitutions per site
@@ -1151,6 +1153,7 @@ Find groups of closely related taxa that would be better analyzed with DNA seque
 sub make_codon_submarkers {
 	my %args = @_;
 	my $marker_dir = $args{marker_dir} || miss("marker_dir");
+	chdir($marker_dir);
 
 	# this is the maximum distance in amino acid substitutions per site that are allowed
 	# on any branch of the tree relating members of a group
@@ -1176,14 +1179,14 @@ sub make_codon_submarkers {
 		my $codon_alignment = get_fasta_filename( marker => $marker, dna => 1, updated => 1, pruned => 0 );
 		# clean out any stale version of this marker
 		my $sub_pack = get_marker_package( marker => $marker, dna => 1, updated => 1, pruned => 0, sub_marker=>'*' );
-		print STDERR "removing $sub_pack";
+		debug "removing $sub_pack\n";
 		`rm -rf $sub_pack`;
 		next unless -e $codon_alignment;
 		my $alnio = Bio::AlignIO->new(-file => $codon_alignment );
 		my $aln = $alnio->next_aln();
 
 		# get groups of taxa that are close
-		my $GROUP_TABLE = ps_open("$Phylosift::Utilities::segment_tree $aa_tree $max_aa_branch_distance |");
+		my $GROUP_TABLE = ps_open("segment_tree $aa_tree $max_aa_branch_distance |");
 		my %gene_groups;
 		my $group_id = 1;
 		while( my $group_line = <$GROUP_TABLE>) {			

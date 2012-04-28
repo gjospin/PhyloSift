@@ -231,6 +231,17 @@ sub get_data_path {
 	return $datacheck;
 }
 
+sub get_marker_version {
+	my %args = @_;
+	my $path = $args{path};
+	my $MFILE = ps_open("$path/version.txt");
+	my $url = <$MFILE>;
+	chomp $url;
+	my $timestamp = <$MFILE>;
+	chomp $timestamp;
+	return ($url, $timestamp);
+}
+
 =head2 download_data
 
 Downloads the data given a url and a destination for the data
@@ -275,13 +286,18 @@ sub marker_update_check {
 	debug "MARKER_PATH : " . $marker_path . "\n";
 	my $get_new_markers = 0;
 	if ( -x $marker_path ) {
-		my $mtime = ( stat($marker_path) )[9];
-		debug "TEST LOCAL :" . localtime($mtime) . "\n";
+		my ($m_url,$m_timestamp) = get_marker_version(path=>$marker_path);
+		debug "TEST LOCAL :" . localtime($m_timestamp) . "\n";
 		if ( !defined($modified_time) ) {
 			warn "Warning: unable to connect to marker update server, please check your internet connection\n";
-		} elsif ( $modified_time > $mtime ) {
+		} elsif ( $modified_time > $m_timestamp ) {
 			debug "TEST REMOTE:" . localtime($modified_time) . "\n";
 			warn "Found newer version of the marker data\n";
+			$get_new_markers = 1;
+		} elsif ( $url ne $m_url ){
+			warn "The marker update URL differs from the local marker DB copy, updating";
+			warn "local url $m_url\n";
+			warn "update url $url\n";
 			$get_new_markers = 1;
 		}
 	} else {
@@ -294,6 +310,9 @@ sub marker_update_check {
 	if ($get_new_markers) {
 		warn "Downloading from $url\n";
 		download_data( url => $url, destination => $marker_path );
+		my $VOUT = ps_open(">$marker_path/version.txt");
+		print $VOUT "$url\n";
+		print $VOUT "$modified_time\n";
 		my @markers = gather_markers( self => $self, path => $marker_path );
 		index_marker_db( self => $self, markers => \@markers, path => $marker_path );
 	}
