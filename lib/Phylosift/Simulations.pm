@@ -25,7 +25,7 @@ Need as input : Genome directory from where to look for the genomes picked
 =cut
 
 #read simulations parameters
-my $params_ill_fa = "-read_dist 105 -insert_dist 400 normal 50 -md poly4 3e-3 3.3e-8 -mr 95 5 ";
+my $params_ill_fa = "-read_dist 105 -insert_dist 300 normal 50 -md poly4 3e-3 3.3e-8 -mr 95 5 ";
 my $params_ill_fq = "-fq 1 -ql 30 10 " . $params_ill_fa;
 my $params_454    = "-read_dist 100 normal 10 -homopolymer_dist balzer ";
 
@@ -44,23 +44,33 @@ sub prep_simulation {
 	my $read_number = $args{reads} || 100000;
 	my $genomes_dir = $args{genomes_dir} || miss("Genome Directory");
 	my $marker_dir  = Phylosift::Utilities::get_data_path( data_name => "markers", data_path => $Phylosift::Settings::marker_path );
+
+	# this finds the genomes which add the most PD to the tree
 	my $rep_file = Phylosift::MarkerBuild::get_representatives_from_tree(
-																		  tree             => $marker_dir . "/concat.updated.pruned.tre",
+																		  tree             => $marker_dir . "/concat.updated.tre",
 																		  target_directory => $self->{"fileDir"},
 																		  cutoff           => 0.01
 	);
+
+	# read a list of the available genomes for taxa
+	debug "getting genome list\n";
+	my $taxon_genome_files = find_taxon_genome_files(self=>$self, genomes => $genomes_dir);
+
+	debug "found ".scalar(keys(%$taxon_genome_files))." genomes\n";
+
+	# this reads in a list of genomes ordered by PD contribution
 	my @genome_ids = get_genome_ids_from_pda( self => $self, rep_file => $rep_file, gene_map => "$marker_dir/gene_ids.aa.txt" );
-	my ( $top_knockouts, $random_knockouts ) = knockout_genomes( self => $self, list => \@genome_ids, pick_number => $pick_number );
-	debug "TOP $top_knockouts\n";
-	debug "RAND $random_knockouts\n";
-	my $top_ko_gen_file  = $self->{"fileDir"} . "/top_knockout.genomes";
-	my $rand_ko_gen_file = $self->{"fileDir"} . "/random_knockout.genomes";
-	my %gen_files        = ( top => $top_ko_gen_file, random => $rand_ko_gen_file );
-	my %gen_lists        = ( top => $top_knockouts, random => $random_knockouts );
-	gather_genomes( self => $self, genome_list => $top_knockouts,    genomes => $genomes_dir, target => $top_ko_gen_file );
-	gather_genomes( self => $self, genome_list => $random_knockouts, genomes => $genomes_dir, target => $rand_ko_gen_file );
+	debug "Got ".scalar(@genome_ids)." genomes from PDA\n";
+	debug "picking simulation genomes\n";
+	my ( $knockouts) = knockout_genomes( self => $self, list => \@genome_ids, pick_number => $pick_number, taxon_genome_files=>$taxon_genome_files );
+	debug "knockouts $knockouts\n";
+	my $ko_genome_file  = $self->{"fileDir"} . "/knockout.genomes";
+	my %gen_files        = ( top => $ko_genome_file );
+	my %gen_lists        = ( top => $knockouts );
+	# now create a fasta file with the target genomes
+	gather_genomes( self => $self, genome_list => $knockouts,    genomes => $genomes_dir, target => $ko_genome_file );
 	debug "Finished gathering the genomes\n";
-	my ( $core, $path, $ext ) = fileparse( $top_ko_gen_file, qr/\.[^.]*$/ );
+	my ( $core, $path, $ext ) = fileparse( $ko_genome_file, qr/\.[^.]*$/ );
 
 	foreach my $type ( keys(%gen_files) ) {
 		next unless -e $gen_files{$type};
@@ -70,8 +80,17 @@ sub prep_simulation {
 						self              => $self,
 						input             => $gen_files{$type},
 						reads             => $read_number * 2,
-						params            => $params_ill_fq,
-						outname           => $core . "_ill_fastq",
+						params            => $params_ill_fq." -am uniform 1",
+						outname           => $core . "unif_ill_fastq",
+						outdir            => $path,
+						distribution_file => $gen_lists{$type}
+		);
+		simulate_reads(
+						self              => $self,
+						input             => $gen_files{$type},
+						reads             => $read_number * 2,
+						params            => $params_ill_fq." -am exponential",
+						outname           => $core . "exp_ill_fastq",
 						outdir            => $path,
 						distribution_file => $gen_lists{$type}
 		);
@@ -79,8 +98,8 @@ sub prep_simulation {
 						self              => $self,
 						input             => $gen_files{$type},
 						reads             => $read_number,
-						params            => $params_ill_fa,
-						outname           => $core . "_ill_fasta",
+						params            => $params_454." -am uniform 1",
+						outname           => $core . "unif_454_fasta",
 						outdir            => $path,
 						distribution_file => $gen_lists{$type}
 		);
@@ -88,12 +107,26 @@ sub prep_simulation {
 						self              => $self,
 						input             => $gen_files{$type},
 						reads             => $read_number,
-						params            => $params_454,
-						outname           => $core . "_454_fasta",
+						params            => $params_454." -am exponential",
+						outname           => $core . "exp_454_fasta",
 						outdir            => $path,
 						distribution_file => $gen_lists{$type}
 		);
 	}
+}
+
+sub find_taxon_genome_files {
+	my %args        = @_;
+	my $self        = $args{self} || miss("PS_object");
+	my $genomes_dir = $args{genomes} || miss("Genomes Directory");
+	my $LSSER = ps_open("ls -1 $genomes_dir |");
+	my %taxon_file_map;
+	while( my $line = <$LSSER>){
+		chomp $line;
+		my $taxon = $1 if $line =~ /\.(\d+)\.fasta$/;
+		$taxon_file_map{$taxon} = $line if defined($taxon);
+	}
+	return \%taxon_file_map;
 }
 
 =head2 gather_genomes
@@ -186,13 +219,11 @@ sub simulate_reads {
 	my $simulation_cmd =
 	    "grinder " 
 	  . $params
-	  . "-total_reads "
+	  . " -total_reads "
 	  . $read_number
 	  . " -bn $out_file -od $out_directory"
 	  . " -reference_file "
-	  . $input_genomes_file
-	  . " -abundance_file "
-	  . $distrib;
+	  . $input_genomes_file;
 	debug "RUNNING : $simulation_cmd\n";
 	`$simulation_cmd`;
 }
@@ -248,27 +279,153 @@ sub knockout_genomes() {
 	my $self         = $args{self} || miss("PS object");
 	my $list_ref     = $args{list} || miss("Genome list reference");
 	my $num_picked   = $args{pick_number} || 10;
+	my $taxon_genome_files = $args{taxon_genome_files};
 	my @list         = @{$list_ref};
 	my $list_length  = scalar(@list);
-	my $top_name     = $self->{"fileDir"} . "/top.ko";
-	my $random_name  = $self->{"fileDir"} . "/random.ko";
-	my $TOP          = Phylosift::Utilities::ps_open(">$top_name");
-	my $RAND         = Phylosift::Utilities::ps_open(">$random_name");
+	my $ko_name      = $self->{"fileDir"} . "/grinder_knockouts.txt";
+	my $full_ko_name      = $self->{"fileDir"} . "/knockouts.txt";
+	my $KO           = Phylosift::Utilities::ps_open(">$ko_name");
 	my $seed_percent = 100;
 	my @top_array    = @list[ 0 .. $num_picked - 1 ];
-	for ( my $i = 0 ; $i < $num_picked ; $i++ ) {
+	my %ko_taxa;
+	my $abund_sum=0;
+	my $nummer = $num_picked;
+
+	for ( my $i = 0 ; $i < $num_picked/2 ; ) {
+		# pick one from the maxpd set
 		my $rand_index = int( rand( scalar(@top_array) - 1 ) );
-		my $rand_taxa  = $top_array[$rand_index];
-		my $number     = $seed_percent - $num_picked + $i + 1;
-		my $random     = sprintf( "%.1f", rand($number) );
-		$random = sprintf( "%.1f", $number ) if $i == $num_picked - 1;
-		$seed_percent = $seed_percent - $random;
-		print $RAND $list[ int( rand($list_length) ) ] . "\t" . $random . "\n";
-		print $TOP $rand_taxa . "\t" . $random . "\n";
-		splice( @top_array, $rand_index, 1 );
+		my $rand_taxon  = $top_array[$rand_index];
+		$top_array[$rand_index] = $list[$nummer++];
+			debug "picked $rand_taxon, i $i\n";
+		next unless defined($taxon_genome_files->{$rand_taxon}); # don't add this one unless its available
+		$ko_taxa{$rand_taxon}=rand(1000);	# assign a uniformly random abundance
+		$abund_sum += $ko_taxa{$rand_taxon};
+		splice( @top_array, $rand_index, 1 );	# remove this one so it doesn't get resampled
+		$i++;
 	}
-	close($RAND);
-	close($TOP);
-	return ( $top_name, $random_name );
+	for ( my $i = $num_picked/2 ; $i < $num_picked ; ) {
+		# pick one uniformly at random
+		my $rand_taxon = $list[ int( rand($list_length) ) ];
+		debug "picked $rand_taxon, i $i\n";
+		next unless defined($taxon_genome_files->{$rand_taxon});
+		$ko_taxa{$rand_taxon}=rand(1000);
+		$abund_sum += $ko_taxa{$rand_taxon};
+		$i++;
+	}
+	foreach my $taxon(keys(%ko_taxa)){
+		print $KO "$taxon\n";#.($ko_taxa{$taxon}/$abund_sum)."\n";
+	}
+	close($KO);
+	my @kos = keys(%ko_taxa);
+	my $extra_ko = find_neighborhoods(self=>$self, taxa=>\@kos, swath=>0.15, concat_tree=>"$Phylosift::Utilities::marker_dir/concat.updated.tre");
+	my $FULLKO = Phylosift::Utilities::ps_open(">$full_ko_name");
+	foreach my $taxon(@$extra_ko){
+		print $FULLKO "$taxon\n";
+	}
+
+	return $ko_name;
 }
+
+sub find_neighborhoods {
+	my %args = @_;
+	my $self = $args{self} || miss("self");
+	my $concat_tree = $args{concat_tree} || miss("concat_tree");
+	my $taxa = $args{taxa} || miss("taxa");
+	my $swath = $args{swath} || miss("swath");
+
+	debug "reading concat tree\n";
+	my $tree = Bio::Phylo::IO->parse(
+									  '-file'   => $concat_tree,
+									  '-format' => 'newick',
+	)->first;
+	
+	# find the taxon of interest
+	debug "reading gene IDs\n";
+	my ($id_to_taxon, $marker_taxon_to_id) = Phylosift::UpdateDB::read_gene_ids(file=>"$Phylosift::Utilities::marker_dir/gene_ids.aa.txt");
+	my @target_nodes;
+	my %del_nodes;
+	foreach my $taxon(@$taxa){
+		$del_nodes{$taxon}=1;
+		my $gene_id = $marker_taxon_to_id->{"concat"}{$taxon}->[0];
+		my $target_node;
+		debug "Looking for neighbors of $gene_id\n";
+		foreach my $node ( @{ $tree->get_entities } ) {
+			if($node->get_name eq $gene_id){
+				$target_node = $node;
+				push(@target_nodes, $node);
+				last;
+			}
+		}
+		croak("Unable to find node for $gene_id, taxon $taxon") unless defined $target_node;
+		# find all neighbors within distance X 
+		foreach my $node ( @{ $tree->get_entities } ) {
+			# skip this one if it is not a leaf
+			next if ( scalar( @{ $node->get_children() } ) > 1 );
+			my $d1 = $node->calc_patristic_distance($target_node);
+			next if ($d1 > $swath);
+			my $name = $node->get_name;
+			$del_nodes{$id_to_taxon->{$name}}=1;
+		}
+	}
+	
+	# now calculate stats.
+	my %valid; # hash of nodes still in tree
+	foreach my $node ( @{ $tree->get_entities } ) {
+		# for each non-deleted leaf, walk up the tree and record it as valid
+		next if ( scalar( @{ $node->get_children() } ) > 1 );
+		next if defined($del_nodes{$id_to_taxon->{$node->get_name}});
+		my $parent = $node;
+		while($parent = $parent->get_parent()){
+			$valid{$parent}=$parent;
+		}
+	}
+	debug "Started with ".scalar(@{ $tree->get_entities })." nodes\n";
+	debug scalar(keys(%valid))." valid nodes remaining\n";
+	# each valid node should have zero or >= 2 valid children
+	my %dvalid;
+	foreach my $np(keys(%valid)){
+		my $v_child = 0;
+		foreach my $child(@{ $valid{$np}->get_children() }){
+			$v_child++ if(defined($valid{$child}));
+		}
+		$dvalid{$np}=$valid{$np} if $v_child != 1;
+	}
+	debug scalar(keys(%dvalid))." doubly valid nodes remaining\n";
+
+	# now for each deleted node, find it's ancestral valid node & record some stats
+	my %stats;
+	my $SIMSTATS = ps_open(">".$self->{"fileDir"} . "/sim_stats.txt");
+	foreach my $node(@target_nodes){
+		my $parent=$node;
+		my $p_len = $node->get_branch_length();
+		while($parent = $parent->get_parent()){
+			last if $dvalid{$parent};
+			$p_len += $parent->get_branch_length();
+		}
+		debug "dist to dvalid parent is $p_len\n";
+		# get distance from ancestor to grandpere
+		my $pp_len = $parent->get_branch_length();
+		debug "pplen $pp_len\n";
+		# get distance to other valid child
+		my $c_dist=0;
+		my $c = $parent;
+		while(defined($c) && ($c==$parent || !defined($dvalid{$c}))){
+			my $new_c;
+			foreach my $child(@{ $c->get_children() }){
+				next unless defined($valid{$c});
+				$c_dist += $c->get_branch_length();
+				$new_c = $child;
+				last;
+			}
+			$c = $new_c;
+		}
+		my $tid = $id_to_taxon->{$node->get_name()};
+		$stats{$node} = [$tid, $parent, $p_len, $pp_len, $c_dist];
+		# seems like there's some problem with c_dist
+		print $SIMSTATS join("\t", $tid, $parent, $p_len, $pp_len, $c_dist)."\n";
+	}
+	my @dn = keys(%del_nodes);
+	return \@dn;
+}
+
 1;    # End of Phylosift::Simulations.pm

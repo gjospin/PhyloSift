@@ -147,7 +147,7 @@ sub run {
 	start_timer( name => "START" );
 	read_phylosift_config( self => $self );
 	run_program_check( self => $self );
-	Phylosift::Utilities::data_checks( self => $self ) unless $self->{"mode"} eq 'sim';
+	Phylosift::Utilities::data_checks( self => $self ); # unless $self->{"mode"} eq 'sim';
 	file_check( self => $self ) unless $self->{"mode"} eq 'index' || $self->{"mode"} eq 'sim';
 	directory_prep( self => $self, force => $force ) unless $self->{"mode"} eq 'index' ;
 	$self->{"readsFile"} = prep_isolate_files( self => $self, file => $self->{"readsFile"} ) if $self->{"isolate"} == 1;
