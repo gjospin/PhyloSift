@@ -165,9 +165,10 @@ Options Available at this time :
    -f                   Overrides a previous run of the input data
                         by Phylosift, if applicable
 
-   --custom <file>      Reads a custom marker list from a file 
+   --custom=<file>      Reads a custom marker list from a file 
                         otherwise use all the markers from the 
-                        markers directory
+                        markers directory; marker names shouldn't
+                        contain '_'
 
    --threaded=<Number>  Runs Blast and Hmmer using the number of
                         processors sepcified Runs 1 Pplacer per
