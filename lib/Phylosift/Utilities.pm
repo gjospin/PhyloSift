@@ -313,7 +313,7 @@ sub marker_update_check {
 		my $VOUT = ps_open(">$marker_path/version.txt");
 		print $VOUT "$url\n";
 		print $VOUT "$modified_time\n";
-		my @markers = gather_markers( self => $self, path => $marker_path );
+		my @markers = gather_markers( self => $self, path => $marker_path, force_gather => 1 );
 		index_marker_db( self => $self, markers => \@markers, path => $marker_path );
 	}
 }
