@@ -162,14 +162,19 @@ Options Available at this time :
 
    -h, --help           Prints the usage section of the README
 
-   --custom <file>      Reads a custom marker list from a file 
+   -f                   Overrides a previous run of the input data
+                        by Phylosift, if applicable
+
+   --custom=<file>      Reads a custom marker list from a file 
                         otherwise use all the markers from the 
-                        markers directory
+                        markers directory; marker names shouldn't
+                        contain '_'
 
    --threaded=<Number>  Runs Blast and Hmmer using the number of
                         processors sepcified Runs 1 Pplacer per
-                        processor specified
-		                  (DEFAULT : 1)
+                        processor specified (DEFAULT : 1)
+
+   --extended           Uses the extended set of markers
 
    --clean              Cleans the temporary files created by 
                         Phylosift (NOT YET IMPLEMENTED)
@@ -184,7 +189,7 @@ Options Available at this time :
                         subsequent steps when not using the 'all' 
                         mode
 
-   --reverse		      If the submitted sequences were Nucleotides, 
+   --reverse		If the submitted sequences were Nucleotides, 
                         the program prints out an alignment for all 
                         the markers in DNA space in addition to the 
                         one in Protein space.
@@ -192,12 +197,28 @@ Options Available at this time :
    --isolate            Use this mode if you are running data from 
                         an Isolate genome
 
+   --simple             Generates a simple taxonomic summary of the 
+                        data only; no Krona output
+
+   --besthit            When there are multiple hits to the same read, 
+                        this option will keep only the best hit for that
+                        read
+
    --updated            Use the set of updated markers with newly
                         sequenced genomes instead of the stock 
                         markers
+
+   --marker_url=<url>   Phylosift will use markers available from the 
+                        url provided
+
+   --coverage=<file>    Provides a contig/scaffold coverage file to Phylosift
+
+   --config=<file>      Provides a custom configuration file to Phylosift
                        
    --output=<directory> Specifies an output directory instead of using
                         PS's default
+
+   --debug              Prints debugging messages
 
 == Requirements ==
 
