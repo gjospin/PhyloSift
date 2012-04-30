@@ -209,6 +209,10 @@ Options Available at this time :
 
    --marker_url=<url>   Phylosift will use markers available from the 
                         url provided
+
+   --coverage=<file>    Provides a contig/scaffold coverage file to Phylosift
+
+   --config=<file>      Provides a custom configuration file to Phylosift
                        
    --output=<directory> Specifies an output directory instead of using
                         PS's default
