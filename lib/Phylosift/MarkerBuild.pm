@@ -14,7 +14,6 @@ Phylosift::MarkerBuild - build a seed marker package from an existing multiple s
 Version 0.01
 
 =cut
-
 our $VERSION = '0.01';
 
 =head1 SYNOPSIS
@@ -49,6 +48,7 @@ sub build_marker {
 		croak
 "Marker already exists in $marker_dir. Delete Marker and restart the marker build.\nUse -f to force an override of the previous marker.\nUsage:\n>phylosift build_marker -f aln_file cutoff\n";
 	} else {
+
 		#`rm -rf "$target_dir"` if $force;
 		#`mkdir "$target_dir"`;
 	}
@@ -72,14 +72,13 @@ sub build_marker {
 	my $clean_aln = "$target_dir/$core.clean";
 	my %id_map = mask_and_clean_alignment( alignment_file => $new_alignment_file, output_file => $clean_aln );
 	debug( "ID_map is " . scalar( keys(%id_map) ) . " long\n" );
-	my @array = keys(%id_map);
-
+	my @array         = keys(%id_map);
 	my $fasttree_file = "$target_dir/18s_reps.tree";
 	my $tree_log_file = "$target_dir/18s_reps.log";
-	#my ( $fasttree_file, $tree_log_file ) = generate_fasttree( alignment_file => $clean_aln, target_directory => $target_dir ) unless -e "$target_dir/$core.tree";
 
-	#need to generate representatives using PDA
-	#my $rep_file = "$target_dir/18s_reps.tree";
+ #my ( $fasttree_file, $tree_log_file ) = generate_fasttree( alignment_file => $clean_aln, target_directory => $target_dir ) unless -e "$target_dir/$core.tree";
+ #need to generate representatives using PDA
+ #my $rep_file = "$target_dir/18s_reps.tree";
 	my $rep_file = get_representatives_from_tree( tree => $fasttree_file, target_directory => $target_dir, cutoff => $cutoff )
 	  unless -e "$target_dir/$core.pda";
 
@@ -206,16 +205,17 @@ sub hmmalign_to_model {
 	my $ref_ali       = $args{reference_alignment} || miss("reference_alignment");
 	my $seq_count     = $args{sequence_count} || miss("sequence_count");
 	my ( $core_name, $path, $ext ) = fileparse( $sequence_file, qr/\.[^.]*$/ );
+
 	#my $ALNOUT = ps_open(">$target_dir/$core_name.aln");
 	#my $ALNIN  = ps_open("$Phylosift::Utilities::hmmalign --mapali $ref_ali --trim --outformat afa $hmm_profile $sequence_file |");
-
 	my $ALNIN = ps_open("$target_dir/18s_reps.aln");
-	my $s = 0;
+	my $s     = 0;
 	while ( my $line = <$ALNIN> ) {
 		if ( $line =~ /^>/ ) {
 			$s++;
 			last if $s > $seq_count;
 		}
+
 		#print $ALNOUT $line;
 	}
 	close $ALNOUT;
@@ -233,7 +233,7 @@ sub mask_and_clean_alignment {
 	my %args        = @_;
 	my $aln_file    = $args{alignment_file} || miss("alignment_file");
 	my $output_file = $args{output_file} || miss("output_file");
-	my %id_map;    # will store a map of unique IDs to sequence names
+	my %id_map;                   # will store a map of unique IDs to sequence names
 	debug "Using $aln_file\n";
 	my $in          = Phylosift::Utilities::open_SeqIO_object( file => $aln_file );
 	my %s           = ();                                                             #hash remembering the IDs already printed
@@ -744,5 +744,4 @@ See http://dev.perl.org/licenses/ for more information.
 
 
 =cut
-
 1;    # End of Phylosift::MarkerBuild.pm

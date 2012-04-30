@@ -21,6 +21,7 @@ Phylosift::MarkerAlign - Subroutines to align reads to marker HMMs
 Version 0.01
 
 =cut
+
 our $VERSION = '0.01';
 
 =head1 SYNOPSIS
@@ -53,6 +54,7 @@ if you don't export anything, such as for a purely object-oriented module.
 =head2 MarkerAlign
 
 =cut
+
 my $minAlignedResidues = 20;
 
 sub MarkerAlign {
@@ -75,38 +77,38 @@ sub MarkerAlign {
 	unless ( $self->{"extended"} ) {
 		my @markeralignments = getPMPROKMarkerAlignmentFiles( self => $self, chunk => $chunk );
 		my $outputFastaAA = $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta( marker => "concat", chunk => $chunk );
-#		Phylosift::Utilities::concatenate_alignments(
+
+		#		Phylosift::Utilities::concatenate_alignments(
 		concatenate_alignments(
-													  self           => $self,
-													  output_fasta   => $outputFastaAA,
-													  output_bayes   => $self->{"alignDir"} . "/mrbayes.nex",
-													  gap_multiplier => 1,
-													  alignments     => \@markeralignments
+								self           => $self,
+								output_fasta   => $outputFastaAA,
+								output_bayes   => $self->{"alignDir"} . "/mrbayes.nex",
+								gap_multiplier => 1,
+								alignments     => \@markeralignments
 		);
 
 		# now concatenate any DNA alignments
 		@markeralignments = getPMPROKMarkerAlignmentFiles( self => $self, chunk => $chunk, dna => 1 );
 		my $output_fasta_DNA = $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta( marker => "concat", dna => 1, chunk => $chunk );
 		concatenate_alignments(
-													  self           => $self,
-													  output_fasta   => $output_fasta_DNA,
-													  output_bayes   => $self->{"alignDir"} . "/mrbayes-dna.nex",
-													  gap_multiplier => 3,
-													  alignments     => \@markeralignments
+								self           => $self,
+								output_fasta   => $output_fasta_DNA,
+								output_bayes   => $self->{"alignDir"} . "/mrbayes-dna.nex",
+								gap_multiplier => 3,
+								alignments     => \@markeralignments
 		);
 
 		# produce a concatenate with 16s + DNA alignments
 		push( @markeralignments, $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta( marker => "16s_reps_bac", chunk => $chunk ) );
 		push( @markeralignments, $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta( marker => "16s_reps_arc", chunk => $chunk ) );
 		push( @markeralignments, $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta( marker => "18s_reps",     chunk => $chunk ) );
-		$output_fasta_DNA =
-		  $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta( marker => "concat16", dna => 1, chunk => $chunk );
+		$output_fasta_DNA = $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta( marker => "concat16", dna => 1, chunk => $chunk );
 		concatenate_alignments(
-													  self           => $self,
-													  output_fasta   => $output_fasta_DNA,
-													  output_bayes   => $self->{"alignDir"} . "/mrbayes-dna16.nex",
-													  gap_multiplier => 3,
-													  alignments     => \@markeralignments
+								self           => $self,
+								output_fasta   => $output_fasta_DNA,
+								output_bayes   => $self->{"alignDir"} . "/mrbayes-dna16.nex",
+								gap_multiplier => 3,
+								alignments     => \@markeralignments
 		);
 		debug "AFTER concatenateALI\n";
 	}
@@ -321,7 +323,10 @@ sub writeAlignedSeq {
 
 	#substitute all the non letter or number characters into _ in the IDs to avoid parsing issues in tree viewing programs or others
 	my $new_name = Phylosift::Summarize::tree_name( name => $prev_name );
-	push(@{${$self->{"read_names"}}{$new_name}}, $prev_name);
+	$self->{"read_names"}{$new_name} = () if ( !exists $self->{"read_names"}{$new_name} );
+	push( @{ $self->{"read_names"}{$new_name} }, $prev_name );
+
+	#debug "KEEPING TRACK OF : ".${$self->{"read_names"}{$new_name}}[0]."\t changed into : $new_name\n";
 	$prev_name = $new_name;
 
 	#add a paralog ID if we're running in isolate mode and more than one good hit
@@ -561,13 +566,13 @@ sub alignAndMask {
 		}
 
 		# check alignments so it merges sequences in case of paired end reads
-		
-		if ( defined($self->{"paired"}) && $self->{"paired"} ) {
+		if ( defined( $self->{"paired"} ) && $self->{"paired"} ) {
+
 			#debug "PAIRED : " . $self->{"paired"} . "\n";
-			merge_alignment( self=>$self,alignment_file => $self->{"alignDir"} . "/$mbname$chunky.unmasked", type => 'AA' );
-			merge_alignment( self=>$self,alignment_file => $outputFastaAA, type => 'AA' );
+			merge_alignment( self => $self, alignment_file => $self->{"alignDir"} . "/$mbname$chunky.unmasked", type => 'AA' );
+			merge_alignment( self => $self, alignment_file => $outputFastaAA, type => 'AA' );
 			if ( Phylosift::Utilities::is_protein_marker( marker => $marker ) ) {
-				merge_alignment( self=>$self,alignment_file => $outputFastaDNA, type => 'DNA' );
+				merge_alignment( self => $self, alignment_file => $outputFastaDNA, type => 'DNA' );
 			}
 		}
 
@@ -603,10 +608,9 @@ merge alignments by combining sequences from paired end reads.
 If aligned columns do not match an X will be used for amino acids and a N will be used for nucleotides
 if a residue will always win over a gap
 =cut
-
 sub merge_alignment {
 	my %args     = @_;
-	my $self = $args{self};
+	my $self     = $args{self};
 	my $ali_file = $args{alignment_file};
 	my $type     = $args{type};
 	my %seqs     = ();
@@ -614,9 +618,9 @@ sub merge_alignment {
 	while ( my $seq = $seq_IO->next_seq() ) {
 		$seq->id =~ m/^(\S+)_(\d+)$/;
 		my $core = $1;
-		push(@{${$self->{"read_names"}}{$core}}, ${$self->{"read_names"}}{$seq->id});
-		delete(${$self->{"read_names"}}{$seq->id});
-		#debug "Comparing " . $seq->id . " with " . $core . "\n";
+		$self->{"read_names"}{$core} = () if ( !exists $self->{"read_names"}{$core} );
+		push( @{ ${ $self->{"read_names"} }{$core} }, $self->{"read_names"}{ $seq->id } )
+		  unless defined( @{ ${ $self->{"read_names"} }{$core} } ) && scalar( @{ ${ $self->{"read_names"} }{$core} } == 2 ); #both pairs have been added already
 		if ( exists $seqs{$core} ) {
 			my @seq1 = split( //, $seqs{$core} );
 			my @seq2 = split( //, $seq->seq );
@@ -666,48 +670,48 @@ sub getPMPROKMarkerAlignmentFiles {
 }
 
 sub concatenate_alignments {
-	my %args = @_;
+	my %args          = @_;
 	my $self          = $args{self};
-	my $output_fasta   = $args{output_fasta};
-	my $gapmultiplier = $args{gap_multiplier};                               # 1 for protein, 3 for reverse-translated DNA
+	my $output_fasta  = $args{output_fasta};
+	my $gapmultiplier = $args{gap_multiplier};    # 1 for protein, 3 for reverse-translated DNA
 	my $aln_ref       = $args{alignments};
-	
 	my %concat_aln;
 	my $cur_len = 0;
-	foreach my $alnfile(@$aln_ref){
+	foreach my $alnfile (@$aln_ref) {
 		my $marker = basename($alnfile);
-		$marker =~ s/\..+//g;                                                # FIXME: this should really come from a list of markers
-		$gapmultiplier = 1 if($marker =~ /16s/ || $marker =~ /18s/);
+		$marker =~ s/\..+//g;                     # FIXME: this should really come from a list of markers
+		$gapmultiplier = 1 if ( $marker =~ /16s/ || $marker =~ /18s/ );
 		my $len = Phylosift::Utilities::get_marker_length( self => $self, marker => $marker );
-		if(-e $alnfile){
+		if ( -e $alnfile ) {
 			my $ALN = ps_open($alnfile);
 			my $id;
-			while(my $line = <$ALN>){
+			while ( my $line = <$ALN> ) {
 				chomp $line;
-				if($line =~ />(.+)/){
+				if ( $line =~ />(.+)/ ) {
 					$id = $1;
-				}elsif(defined($id)){
-					$concat_aln{$id} = "" unless defined($concat_aln{$id});
-					my $gapfill = $cur_len - length($concat_aln{$id});				
+				} elsif ( defined($id) ) {
+					$concat_aln{$id} = "" unless defined( $concat_aln{$id} );
+					my $gapfill = $cur_len - length( $concat_aln{$id} );
 					$gapfill = $gapfill < 0 ? 0 : $gapfill;
 					$concat_aln{$id} .= "-" x $gapfill;
 					$concat_aln{$id} .= $line;
 				}
-			}		
+			}
 		}
 		$cur_len += $len * $gapmultiplier;
 	}
-	
+
 	# write out the alignment
-	my $ALNOUT = ps_open(">".$output_fasta);
-	foreach my $id(%concat_aln){
+	my $ALNOUT = ps_open( ">" . $output_fasta );
+	foreach my $id ( keys(%concat_aln) ) {
+
 		# gapfill for the last marker
-		my $gapfill = $cur_len - length($concat_aln{$id});				
+		my $gapfill = $cur_len - length( $concat_aln{$id} );
 		$gapfill = $gapfill < 0 ? 0 : $gapfill;
 		$concat_aln{$id} .= "-" x $gapfill;
-		my $gcount = ($concat_aln{$id} =~ tr/-//);
-		next if($gcount == length($concat_aln{$id}));	# don't write an all-gap seq. these can slip through sometimes.
-		# write
+		my $gcount = ( $concat_aln{$id} =~ tr/-// );
+		next if ( $gcount == length( $concat_aln{$id} ) );    # don't write an all-gap seq. these can slip through sometimes.
+		                                                      # write
 		print $ALNOUT ">$id\n$concat_aln{$id}\n";
 	}
 }
@@ -771,4 +775,5 @@ See http://dev.perl.org/licenses/ for more information.
 
 
 =cut
+
 1;    # End of Phylosift::MarkerAlign.pm
