@@ -145,8 +145,11 @@ if( $ARGV[0] eq 'sim'){
 	debug "Running a Simulation\n";
 	$ps = $ps->initialize( mode=>$ARGV[0], file_1=>"Sims" );
 }else{
-	$ps = $ps->initialize( mode => $ARGV[0], file_1 => $ARGV[1], file_2 => $ARGV[2]) if exists( $ARGV[2] );
-	$ps = $ps->initialize( mode => $ARGV[0], file_1 => $ARGV[1]) 
+	if (exists $ARGV[2] ){
+		$ps = $ps->initialize( mode => $ARGV[0], file_1 => $ARGV[1], file_2 => $ARGV[2]) ;
+	}else{
+		$ps = $ps->initialize( mode => $ARGV[0], file_1 => $ARGV[1]) ;
+	}
 }
 debug "FORCE: " . $force . "\n";
 debug "Continue : " . $continue . "\n";
