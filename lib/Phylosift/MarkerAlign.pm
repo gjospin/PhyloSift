@@ -10,6 +10,7 @@ use List::Util qw(min);
 use Carp;
 use Phylosift::Phylosift;
 use Phylosift::Utilities qw(:all);
+use File::Basename;
 
 =head1 NAME
 
@@ -74,7 +75,8 @@ sub MarkerAlign {
 	unless ( $self->{"extended"} ) {
 		my @markeralignments = getPMPROKMarkerAlignmentFiles( self => $self, chunk => $chunk );
 		my $outputFastaAA = $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta( marker => "concat", chunk => $chunk );
-		Phylosift::Utilities::concatenate_alignments(
+#		Phylosift::Utilities::concatenate_alignments(
+		concatenate_alignments(
 													  self           => $self,
 													  output_fasta   => $outputFastaAA,
 													  output_bayes   => $self->{"alignDir"} . "/mrbayes.nex",
@@ -85,7 +87,7 @@ sub MarkerAlign {
 		# now concatenate any DNA alignments
 		@markeralignments = getPMPROKMarkerAlignmentFiles( self => $self, chunk => $chunk, dna => 1 );
 		my $output_fasta_DNA = $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta( marker => "concat", dna => 1, chunk => $chunk );
-		Phylosift::Utilities::concatenate_alignments(
+		concatenate_alignments(
 													  self           => $self,
 													  output_fasta   => $output_fasta_DNA,
 													  output_bayes   => $self->{"alignDir"} . "/mrbayes-dna.nex",
@@ -97,8 +99,9 @@ sub MarkerAlign {
 		push( @markeralignments, $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta( marker => "16s_reps_bac", chunk => $chunk ) );
 		push( @markeralignments, $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta( marker => "16s_reps_arc", chunk => $chunk ) );
 		push( @markeralignments, $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta( marker => "18s_reps",     chunk => $chunk ) );
-		$output_fasta_DNA = $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta( marker => "concat16", dna => 1, chunk => $chunk );
-		Phylosift::Utilities::concatenate_alignments(
+		$output_fasta_DNA =
+		  $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta( marker => "concat16", dna => 1, chunk => $chunk );
+		concatenate_alignments(
 													  self           => $self,
 													  output_fasta   => $output_fasta_DNA,
 													  output_bayes   => $self->{"alignDir"} . "/mrbayes-dna16.nex",
@@ -660,6 +663,53 @@ sub getPMPROKMarkerAlignmentFiles {
 			  $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta( marker => $marker, chunk => $chunk, dna => $dna ) );
 	}
 	return @markeralignments;
+}
+
+sub concatenate_alignments {
+	my %args = @_;
+	my $self          = $args{self};
+	my $output_fasta   = $args{output_fasta};
+	my $gapmultiplier = $args{gap_multiplier};                               # 1 for protein, 3 for reverse-translated DNA
+	my $aln_ref       = $args{alignments};
+	
+	my %concat_aln;
+	my $cur_len = 0;
+	foreach my $alnfile(@$aln_ref){
+		my $marker = basename($alnfile);
+		$marker =~ s/\..+//g;                                                # FIXME: this should really come from a list of markers
+		$gapmultiplier = 1 if($marker =~ /16s/ || $marker =~ /18s/);
+		my $len = Phylosift::Utilities::get_marker_length( self => $self, marker => $marker );
+		if(-e $alnfile){
+			my $ALN = ps_open($alnfile);
+			my $id;
+			while(my $line = <$ALN>){
+				chomp $line;
+				if($line =~ />(.+)/){
+					$id = $1;
+				}elsif(defined($id)){
+					$concat_aln{$id} = "" unless defined($concat_aln{$id});
+					my $gapfill = $cur_len - length($concat_aln{$id});				
+					$gapfill = $gapfill < 0 ? 0 : $gapfill;
+					$concat_aln{$id} .= "-" x $gapfill;
+					$concat_aln{$id} .= $line;
+				}
+			}		
+		}
+		$cur_len += $len * $gapmultiplier;
+	}
+	
+	# write out the alignment
+	my $ALNOUT = ps_open(">".$output_fasta);
+	foreach my $id(%concat_aln){
+		# gapfill for the last marker
+		my $gapfill = $cur_len - length($concat_aln{$id});				
+		$gapfill = $gapfill < 0 ? 0 : $gapfill;
+		$concat_aln{$id} .= "-" x $gapfill;
+		my $gcount = ($concat_aln{$id} =~ tr/-//);
+		next if($gcount == length($concat_aln{$id}));	# don't write an all-gap seq. these can slip through sometimes.
+		# write
+		print $ALNOUT ">$id\n$concat_aln{$id}\n";
+	}
 }
 
 =head1 AUTHOR

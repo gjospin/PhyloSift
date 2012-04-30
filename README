@@ -100,7 +100,7 @@ $ phylosift <Mode> <options> <sequence_file>
 
    sequence_file needs to be in fasta format
 
-$ phylosift <Mode> <options> -paired <sequence_file_1> <sequence_file_2>
+$ phylosift <Mode> <options> --paired <sequence_file_1> <sequence_file_2>
 
    sequence_file_1 and _2 must contain paired sequences
 
@@ -160,9 +160,9 @@ Mode : Only execute a specific step in the pipeline
 
 Options Available at this time : 
 
-   -h -help             Prints the usage section of the README
+   -h, --help           Prints the usage section of the README
 
-   -custom <file>       Reads a custom marker list from a file 
+   --custom <file>      Reads a custom marker list from a file 
                         otherwise use all the markers from the 
                         markers directory
 
