@@ -65,6 +65,7 @@ sub run_search {
 	my $self       = $args{self} || miss("self");
 	my $markersRef = $args{marker_reference} || miss("marker_reference");
 	@markers = @{$markersRef};
+	
 	my $position = rindex( $self->{"readsFile"}, "/" );
 	$self->{"readsFile"} =~ m/(\w+)\.?(\w*)$/;
 
@@ -101,6 +102,7 @@ sub run_search {
 			# fire up the next step!
 			# TODO: make this a call to a function "chunk_done" in main Phylosift module
 			# that starts the next step
+			
 			Phylosift::MarkerAlign::MarkerAlign(self=>$self, marker_reference=>$markersRef, chunk=>$chunkI);
 		}
 		last if $finished;

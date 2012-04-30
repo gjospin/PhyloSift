@@ -1284,7 +1284,7 @@ sub get_lastal_db {
 sub get_candidate_file {
 	my %args   = @_;
 	my $self   = $args{self};
-	my $marker = $args{marker};
+	my $marker = $args{marker} || miss("Marker name");
 	my $type   = $args{type};
 	my $dna    = $args{dna};
 	my $new    = $args{new};
