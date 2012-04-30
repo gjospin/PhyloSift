@@ -134,7 +134,6 @@ sub gather_chunky_markers {
 	my @markers           = ();
 	foreach my $line (@candidate_markers) {
 		$line =~ m/\/blastDir\/([^\/\.]+)\.\S+.candidate/;
-		print "FOUND $1 marker \n";
 		push( @markers, Phylosift::Utilities::get_marker_fullname( marker => $1 ) );
 	}
 	return @markers;
