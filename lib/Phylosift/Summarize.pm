@@ -377,8 +377,19 @@ EOF
 	
 	$xml->endTag("krona");
 	$xml->end();
-	print $OUTPUT "\n</div></body></html>\n";
+	print $OUTPUT "\n</div>\n";
+	print_run_info(self=>$self, OUTPUT=>$OUTPUT, newline=>"<br/>\n");
+	print $OUTPUT "</body></html>\n";
 	$OUTPUT->close();
+}
+
+sub print_run_info{
+	my %args = @_;
+	my $self = $args{self} || miss("self");
+	my $OUTPUT = $args{OUTPUT} || miss("OUTPUT");
+	my $newline = $args{NEWLINE} || "\n";
+	print $OUTPUT "Program run as:$newline".join(" ", "phylosift", @{ $self->{"ARGV"} })."$newline";
+	print $OUTPUT "Marker database version:\n".join("$newline", Phylosift::Utilities::get_marker_version(path=>$Phylosift::Utilities::marker_dir))."$newline";
 }
 
 #

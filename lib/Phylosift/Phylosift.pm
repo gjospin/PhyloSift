@@ -164,6 +164,8 @@ sub run {
 
 	debug "MODE :: " . $self->{"mode"} . "\n";
 	if ( $self->{"mode"} eq 'search' || $self->{"mode"} eq 'all' ) {
+		my $RUNINFO = ps_open(">".$self->{"fileDir"}."/run_info.txt");
+		Phylosift::Summarize::print_run_info(self=>$self, OUTPUT=>$RUNINFO);
 		$self = run_search( self => $self, cont => $continue, marker => \@markers );
 		debug "MODE :: " . $self->{"mode"} . "\n";
 	}
