@@ -231,8 +231,8 @@ sub summarize {
 			$taxon_name  = "Unknown" unless defined($taxon_name);
 			if(exists $self->{"read_names"}{$qname}){
 				foreach my $name_ref (@{$self->{"read_names"}{$qname}}){
-					my @name_array = @{$name_ref};
-					print $SEQUENCETAXA "$name_array[0]\t$taxon_id\t$taxon_level\t$taxon_name\t" . $placements{$qname}{$taxon_id} . "\n";
+					#my @name_array = @{$name_ref};
+					print $SEQUENCETAXA "$name_ref\t$taxon_id\t$taxon_level\t$taxon_name\t" . $placements{$qname}{$taxon_id} . "\n";
 				}
 			}
 		}
@@ -243,8 +243,8 @@ sub summarize {
 			$taxon_name  = "Unknown" unless defined($taxon_name);
 			if(exists $self->{"read_names"}{$qname}){
 				foreach my $name_ref (@{$self->{"read_names"}{$qname}}){
-					my @name_array = @{$name_ref};
-					print $SEQUENCESUMMARY "$name_array[0]\t$taxon_id\t$taxon_level\t$taxon_name\t" . $readsummary->{$taxon_id} . "\n";
+					#my @name_array = @{$name_ref};
+					print $SEQUENCESUMMARY "$name_ref\t$taxon_id\t$taxon_level\t$taxon_name\t" . $readsummary->{$taxon_id} . "\n";
 				}
 			}
 			

@@ -619,7 +619,7 @@ sub merge_alignment {
 		$seq->id =~ m/^(\S+)_(\d+)$/;
 		my $core = $1;
 		$self->{"read_names"}{$core} = () if ( !exists $self->{"read_names"}{$core} );
-		push( @{ ${ $self->{"read_names"} }{$core} }, $self->{"read_names"}{ $seq->id } )
+		push( @{ ${ $self->{"read_names"} }{$core} }, $self->{"read_names"}{ $seq->id }[0] )
 		  unless defined( @{ ${ $self->{"read_names"} }{$core} } ) && scalar( @{ ${ $self->{"read_names"} }{$core} } == 2 ); #both pairs have been added already
 		if ( exists $seqs{$core} ) {
 			my @seq1 = split( //, $seqs{$core} );
