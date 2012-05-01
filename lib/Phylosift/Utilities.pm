@@ -233,7 +233,7 @@ sub get_data_path {
 
 sub get_marker_version {
 	my %args = @_;
-	my $path = $args{path};
+	my $path = $args{path} || miss("path");
 	return unless -e "$path/version.txt";
 	my $MFILE = ps_open("$path/version.txt");
 	my $url = <$MFILE>;
