@@ -130,6 +130,7 @@ sub summarize {
 	# map them onto the ncbi taxonomy
 	# this is a hash structured as {sequenceID}{taxonID}=probabilitySum
 	my %placements;
+	my %unclassifiable; # {sequenceID}=mass
 	unshift( @{$markRef}, "concat" ) if $self->{"updated"};
 	for(my $dna = 0; $dna <2; $dna++){
 		
@@ -174,12 +175,18 @@ sub summarize {
 					# for each placement edge in the placement record
 					for( my $j=0; $j < @{$place->{p}}; $j++){
 						my $edge = $place->{p}->[$j]->[0];
-		
-#				croak( "Marker $marker missing mapping from phylogeny edge $edge to taxonomy" ) unless defined( $markerncbimap{$edge} );
-# FIXME: need to mark this read as unclassifiable
-						next unless defined( $markerncbimap{$edge} );
+
+						if( !defined($markerncbimap{$edge}) ){
+							# mark these reads as unclassifiable
+							for(my $k=0; $k < @{$place->{nm}}; $k++){
+								my $qname = $place->{nm}->[$k]->[0];
+								my $qweight = $place->{nm}->[$k]->[1];
+								$unclassifiable{$qname}=0 unless defined($unclassifiable{$qname});
+								$unclassifiable{$qname} += $qweight;
+							}							
+						}
+
 						my $mapcount = scalar( @{ $markerncbimap{$edge} } );
-						croak( "Found 0 taxa for edge $edge\n" ) if ( scalar( @{ $markerncbimap{$edge} } ) == 0 );
 						# for each taxon to which the current phylogeny edge could map
 						foreach my $taxon ( @{ $markerncbimap{$edge} } ) {
 							my ( $taxon_name, $taxon_level, $taxon_id ) = get_taxon_info( taxon => $taxon );
@@ -269,7 +276,8 @@ sub summarize {
 	foreach my $val ( values(%ncbireads) ) {
 		$totalreads += $val;
 	}
-	debug "Total reads are $totalreads\n";
+	debug "Total reads placed is ".scalar(keys(%placements))."\n";
+	debug "Total classifiable probability mass is $totalreads\n";
 
 	# write the taxa with 90% highest posterior density, assuming each read is an independent observation
 	my $taxasum = 0;
