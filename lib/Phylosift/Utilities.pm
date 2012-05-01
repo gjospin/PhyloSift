@@ -282,11 +282,13 @@ sub marker_update_check {
 	my $self        = $args{self};
 	my $url         = $args{url};
 	my $marker_path = $args{dir};
+	$url =~ s/\/\//\//g;
 	my ( $content_type, $document_length, $modified_time, $expires, $server ) = head($url);
 	debug "MARKER_PATH : " . $marker_path . "\nURL : $url\n";
 	my $get_new_markers = 0;
 	if ( -x $marker_path ) {
 		my ($m_url,$m_timestamp) = get_marker_version(path=>$marker_path);
+		$m_url =~ s/\/\//\//g;
 		debug "TEST LOCAL :" . localtime($m_timestamp) . "\n";
 		if ( !defined($modified_time) ) {
 			warn "Warning: unable to connect to marker update server, please check your internet connection\n";
