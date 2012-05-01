@@ -94,6 +94,8 @@ my $ps = new Phylosift::Phylosift();
 # set default values
 $ps->{"threads"} = 1;
 $ps->{"updated"} = 1;
+my @args = @ARGV;
+$ps->{"ARGV"}=\@args;	# copy unmodified ARGV here.
 
 GetOptions(
 	"output=s"   => \$ps->{"fileDir"}, # directory for output
