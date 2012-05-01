@@ -40,6 +40,9 @@
       - other summaries
     - Or compare among samples
       - stuff A, B, and C
+
+== Figure 1: Client Workflow ==
+
   - Database update workflow
     - pull any new genomes from NCBI/EBI/JGI/otherI
     - run core workflow to identify marker homologs (--besthit --isolate)
@@ -48,16 +51,27 @@
     - etc, etc
   - Taxonomy reconciliation
 
+== Figure 2: DB Update Workflow ==
+
 - Results
   - Simulated datasets
     - How they were generated
     - Building PhyloSift DBs without test datasets
   - Precision, recall, and F1
   - Relationship between F1 and neighbor taxon density
-  
-  - Application to a real dataset (which one?)
+  - Compute time
+
+== Figure 3: Test set generation showing tree, phylo scope exclusion ==
+
+== Figure 4: Accuracy on simulated data ==
+
+== Figure 5: RMSD community reconstruction or PCA result ==
+
+  - Application to a real dataset (which one? human gut?)
     - correspondence with 16s on this dataset?
     - any other interesting features?
+
+== Figure 6: Krona on a human gut sample ==
 
 - Discussion
   - Fundamental limits to computational methods -- resolving linkage among polymorphisms in a population
