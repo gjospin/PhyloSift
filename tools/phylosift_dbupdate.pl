@@ -12,6 +12,7 @@ die "Usage: phylosift_dbupdate.pl <data repository path> <destination marker pat
 my $repository               = $ARGV[0];
 my $destination              = $ARGV[1];
 my $taxon_knockouts          = $ARGV[2];
+#my $local = "/state/partition1/koadman/phylosift_extended_dbupdate/";
 my $local = "/state/partition1/koadman/phylosift_dbupdate/";
 my $ebi_repository           = $repository . "/ebi";
 my $ncbi_draft_repository    = $repository . "/ncbi_draft";
@@ -41,14 +42,14 @@ Phylosift::UpdateDB::collate_markers( local_directory => $local, marker_dir => $
 Phylosift::UpdateDB::assign_seqids( marker_directory => $marker_dir );
 Phylosift::UpdateDB::update_rna( self => $newObject, marker_dir => $marker_dir );
 Phylosift::UpdateDB::update_ncbi_taxonomy( repository => $repository );
-#debug "Updating NCBI tree and taxon map...";
+debug "Updating NCBI tree and taxon map...";
 Phylosift::UpdateDB::make_ncbi_tree_from_update( self => $newObject, marker_dir => $marker_dir, repository => $repository );
-#debug "done\n";
+debug "done\n";
 Phylosift::UpdateDB::build_marker_trees_fasttree( marker_directory => $marker_dir, pruned => 0 );
 Phylosift::UpdateDB::make_codon_submarkers( marker_dir => $marker_dir );
 Phylosift::UpdateDB::pd_prune_markers( marker_directory => $marker_dir );
 Phylosift::UpdateDB::build_marker_trees_fasttree( marker_directory => $marker_dir, pruned => 1 );
-Phylosift::UpdateDB::make_pplacer_packages_with_taxonomy(marker_dir => $marker_dir);
+#Phylosift::UpdateDB::make_pplacer_packages_with_taxonomy(marker_dir => $marker_dir);
 Phylosift::UpdateDB::reconcile_with_ncbi( self => $newObject, marker_directory => $marker_dir, pruned => 1 );
-Phylosift::UpdateDB::join_trees( marker_dir => $marker_dir );
+#Phylosift::UpdateDB::join_trees( marker_dir => $marker_dir );
 Phylosift::UpdateDB::package_markers( marker_directory => $marker_dir );

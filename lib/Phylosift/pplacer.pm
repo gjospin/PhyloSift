@@ -111,6 +111,7 @@ my %submarker_map;
 sub load_submarkers {
 	my %args  = @_;
 	return if %submarker_map;
+	return unless -e "$Phylosift::Utilities::marker_dir/submarkers.txt";
 	my $SUBS = ps_open("$Phylosift::Utilities::marker_dir/submarkers.txt");
 	while(my $line = <$SUBS>){
 		chomp $line;
@@ -277,7 +278,15 @@ sub place_reads{
 	my $options = $args{options} || "";
 	my $marker_package = Phylosift::Utilities::get_marker_package( self => $self, marker => $marker, dna => $dna, sub_marker=>$submarker );
 	unless(-d $marker_package ){
-		croak("Marker: $marker\nPackage: $marker_package\nPackage does not exist\nPlacement without a marker package is no longer supported");
+		# try not updated
+		if($self->{"updated"}){
+			$self->{"updated"}=0;
+			$marker_package = Phylosift::Utilities::get_marker_package( self => $self, marker => $marker, dna => $dna, sub_marker=>$submarker );
+			$self->{"updated"}=1;
+		}
+		unless(-d $marker_package ){
+			croak("Marker: $marker\nPackage: $marker_package\nPackage does not exist\nPlacement without a marker package is no longer supported");
+		}
 	}
 	my $pp = "$Phylosift::Utilities::pplacer $options --verbosity 0 -j ".$self->{"threads"}." -c $marker_package \"$reads\"";
 	debug "Running $pp\n";
@@ -289,7 +298,10 @@ sub place_reads{
 	return unless -e $self->{"treeDir"} . "/$jplace";
 
 	unless($dna || !$self->{"updated"}){
-		make_submarker_placements(self=>$self, marker=>$marker, chunk=>$chunk, place_file=>$self->{"treeDir"} . "/$jplace");
+		load_submarkers();
+		if(keys(%submarker_map)>0){
+			make_submarker_placements(self=>$self, marker=>$marker, chunk=>$chunk, place_file=>$self->{"treeDir"} . "/$jplace");
+		}
 	}
 	
 	unless($self->{"simple"}){

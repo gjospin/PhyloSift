@@ -233,7 +233,8 @@ sub get_data_path {
 
 sub get_marker_version {
 	my %args = @_;
-	my $path = $args{path};
+	my $path = $args{path} || miss("path");
+	return unless -e "$path/version.txt";
 	my $MFILE = ps_open("$path/version.txt");
 	my $url = <$MFILE>;
 	chomp $url;
@@ -282,23 +283,32 @@ sub marker_update_check {
 	my $self        = $args{self};
 	my $url         = $args{url};
 	my $marker_path = $args{dir};
+	$url =~ s/\/\//\//g;
+	$url =~ s/http:/http:\//g;
 	my ( $content_type, $document_length, $modified_time, $expires, $server ) = head($url);
 	debug "MARKER_PATH : " . $marker_path . "\nURL : $url\n";
 	my $get_new_markers = 0;
 	if ( -x $marker_path ) {
 		my ($m_url,$m_timestamp) = get_marker_version(path=>$marker_path);
-		debug "TEST LOCAL :" . localtime($m_timestamp) . "\n";
-		if ( !defined($modified_time) ) {
-			warn "Warning: unable to connect to marker update server, please check your internet connection\n";
-		} elsif ( $modified_time > $m_timestamp ) {
-			debug "TEST REMOTE:" . localtime($modified_time) . "\n";
-			warn "Found newer version of the marker data\n";
-			$get_new_markers = 1;
-		} elsif ( $url ne $m_url ){
-			warn "The marker update URL differs from the local marker DB copy, updating";
-			warn "local url $m_url\n";
-			warn "update url $url\n";
-			$get_new_markers = 1;
+		if(defined($m_url)){
+			$m_url =~ s/\/\//\//g;
+			$m_url =~ s/http:/http:\//g;
+			debug "TEST LOCAL :" . localtime($m_timestamp) . "\n";
+			if ( !defined($modified_time) ) {
+				warn "Warning: unable to connect to marker update server, please check your internet connection\n";
+			} elsif ( $modified_time > $m_timestamp ) {
+				debug "TEST REMOTE:" . localtime($modified_time) . "\n";
+				warn "Found newer version of the marker data\n";
+				$get_new_markers = 1;
+			} elsif ( $url ne $m_url ){
+				warn "The marker update URL differs from the local marker DB copy, updating";
+				warn "local url $m_url\n";
+				warn "update url $url\n";
+				$get_new_markers = 1;
+			}
+		}else{
+				warn "Marker version unknown, downloading markers\n";			
+				$get_new_markers = 1;
 		}
 	} else {
 		if ( !defined($modified_time) ) {
@@ -313,7 +323,7 @@ sub marker_update_check {
 		my $VOUT = ps_open(">$marker_path/version.txt");
 		print $VOUT "$url\n";
 		print $VOUT "$modified_time\n";
-		my @markers = gather_markers( self => $self, path => $marker_path );
+		my @markers = gather_markers( self => $self, path => $marker_path, force_gather => 1 );
 		index_marker_db( self => $self, markers => \@markers, path => $marker_path );
 	}
 }
