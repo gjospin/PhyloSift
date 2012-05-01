@@ -31,9 +31,9 @@ sub run_benchmark {
 	%nameidmap = %$nimref;
 	%idnamemap  = %$inmref;
 	my $rents  = Phylosift::Summarize::read_ncbi_taxonomy_structure();
-	print STDERR "getInputTaxa\n";
+	print STDERR "parse_simulated_reads\n";
 	%parent = %$rents;
-	my ($refTaxa_ref, $taxon_read_counts,$taxonomy_counts) = getInputTaxa( file_name=>$self->{"readsFile"} );
+	my ($refTaxa_ref, $taxon_read_counts,$taxonomy_counts) = parse_simulated_reads( file_name=>$self->{"readsFile"} );
 	%refTaxa = %$refTaxa_ref;
 	my ($top_place,$all_place) = read_seq_summary( self=>$self, output_path=>$output_path,read_source=> \%readSource );
 	
@@ -131,10 +131,11 @@ sub compute_top_place_precision {
 				my $currRank  = $currTaxon[1];
 				$matchTop{$currRank} = 0 unless exists( $matchTop{$currRank} );
 				$matchTop{$currRank}++;
-				debug "Rank is $currRank\n";
-				debug "true tax is $true_taxon\n";
-				debug "count is $true_counts->{$true_taxon}{$currRank}\n";
-				$recall{$currRank}=$matchTop{$currRank} / $true_counts->{$true_taxon}{$currRank};
+				if(defined($target_taxon)){
+					$recall{$currRank}=$matchTop{$currRank} / $true_counts->{$true_taxon}{$currRank};
+				}else{
+					$recall{$currRank}=$matchTop{$currRank} / $true_counts->{""}{$currRank};
+				}
 			}
 		}
 	}
@@ -336,7 +337,7 @@ sub report_text {
 	print "Total placements : $allReadNumber\n";
 }
 
-=head2 getInputTaxa
+=head2 parse_simulated_reads
 Reads a fasta file extracting the source field for each read.
 Compiles statistics on the input read abundance
 Returns a hash of taxonomic ancestry for Source organisms
@@ -345,7 +346,7 @@ TODO : Determine which reads came from the marker gene regions from the source g
 
 =cut
 
-sub getInputTaxa {
+sub parse_simulated_reads {
     my %args = @_;
 	my $file_name         = $args{file_name} || miss("file_name");
 	my %sourceTaxa;
@@ -358,8 +359,8 @@ sub getInputTaxa {
 		my $taxon;
 		if($_ =~  m/^>/){
 	#		$_ =~ m/^>(\S+).*SOURCE_\d+="(.*)"/;  # for metasim header format
-	#		$_ =~ m/^>(\S+).*reference=.+?\.(\d+)\./;  # grinder header format
-			$_ =~ m/^>(\S+).*reference=(\d+)/;  # grinder header format
+			$_ =~ m/^>(\S+).*reference=.+?\.(\d+)\./;  # grinder header format
+#			$_ =~ m/^>(\S+).*reference=(\d+)/;  # grinder header format
 			$read_id = $1;
 			$taxon = $2;
 		}elsif($_ =~  m/^@/){
@@ -386,6 +387,9 @@ sub getInputTaxa {
 			$sourceTaxa{$taxon}{$id}=1;
 			$taxonomy_counts{$taxon}{$info[1]} = 0 unless defined($taxonomy_counts{$taxon}{$info[1]});
 			$taxonomy_counts{$taxon}{$info[1]}++;
+			# "" is to store counts for all taxa
+			$taxonomy_counts{""}{$info[1]} = 0 unless defined($taxonomy_counts{""}{$info[1]});
+			$taxonomy_counts{""}{$info[1]}++;
 		}
 	}
 	close($FILE_IN);
