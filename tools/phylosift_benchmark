@@ -22,8 +22,8 @@ Phylosift::Phylosift::read_phylosift_config(self=>$ps);
 Phylosift::Utilities::data_checks(self=>$ps);
 
 my @benchmark_data = (
-["A simulated 454 dataset with 10 organisms","http://edhar.genomecenter.ucdavis.edu/~koadman/phylosift/accuracy/sim_454.fna"],
-["A simulated illumina dataset with 10 organisms","http://edhar.genomecenter.ucdavis.edu/~koadman/phylosift/accuracy/sim_illumina.fna"], 
+["A simulated 454 dataset with 10 organisms","http://edhar.genomecenter.ucdavis.edu/~koadman/phylosift/accuracy/grinder_454.fa"],
+["A simulated illumina dataset with 10 organisms","http://edhar.genomecenter.ucdavis.edu/~koadman/phylosift/accuracy/grinder_illumina.fa"], 
 );
 
 # pull down the marker DB and index it -- don't count this in runtime
