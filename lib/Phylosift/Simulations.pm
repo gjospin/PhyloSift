@@ -27,7 +27,7 @@ Need as input : Genome directory from where to look for the genomes picked
 #read simulations parameters
 my $params_ill_fa = "-read_dist 105 -insert_dist 300 normal 50 -md poly4 3e-3 3.3e-8 -mr 95 5 ";
 my $params_ill_fq = "-fq 1 -ql 30 10 " . $params_ill_fa;
-my $params_454    = "-read_dist 100 normal 10 -homopolymer_dist balzer ";
+my $params_454    = "-read_dist 400 normal 40 -homopolymer_dist balzer ";
 
 =head2 prep_simulation
 
