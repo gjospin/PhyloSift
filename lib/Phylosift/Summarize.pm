@@ -130,6 +130,7 @@ sub summarize {
 	# map them onto the ncbi taxonomy
 	# this is a hash structured as {sequenceID}{taxonID}=probabilitySum
 	my %placements;
+	my %unclassifiable; # {sequenceID}=mass
 	unshift( @{$markRef}, "concat" ) if $self->{"updated"};
 	for(my $dna = 0; $dna <2; $dna++){
 		
@@ -174,12 +175,18 @@ sub summarize {
 					# for each placement edge in the placement record
 					for( my $j=0; $j < @{$place->{p}}; $j++){
 						my $edge = $place->{p}->[$j]->[0];
-		
-#				croak( "Marker $marker missing mapping from phylogeny edge $edge to taxonomy" ) unless defined( $markerncbimap{$edge} );
-# FIXME: need to mark this read as unclassifiable
-						next unless defined( $markerncbimap{$edge} );
+
+						if( !defined($markerncbimap{$edge}) ){
+							# mark these reads as unclassifiable
+							for(my $k=0; $k < @{$place->{nm}}; $k++){
+								my $qname = $place->{nm}->[$k]->[0];
+								my $qweight = $place->{nm}->[$k]->[1];
+								$unclassifiable{$qname}=0 unless defined($unclassifiable{$qname});
+								$unclassifiable{$qname} += $qweight;
+							}							
+						}
+
 						my $mapcount = scalar( @{ $markerncbimap{$edge} } );
-						croak( "Found 0 taxa for edge $edge\n" ) if ( scalar( @{ $markerncbimap{$edge} } ) == 0 );
 						# for each taxon to which the current phylogeny edge could map
 						foreach my $taxon ( @{ $markerncbimap{$edge} } ) {
 							my ( $taxon_name, $taxon_level, $taxon_id ) = get_taxon_info( taxon => $taxon );
@@ -229,14 +236,25 @@ sub summarize {
 			my ( $taxon_name, $taxon_level, $tid ) = get_taxon_info( taxon => $taxon_id );
 			$taxon_level = "Unknown" unless defined($taxon_level);
 			$taxon_name  = "Unknown" unless defined($taxon_name);
-			print $SEQUENCETAXA "$qname\t$taxon_id\t$taxon_level\t$taxon_name\t" . $placements{$qname}{$taxon_id} . "\n";
+			if(exists $self->{"read_names"}{$qname}){
+				foreach my $name_ref (@{$self->{"read_names"}{$qname}}){
+					#my @name_array = @{$name_ref};
+					print $SEQUENCETAXA "$name_ref\t$taxon_id\t$taxon_level\t$taxon_name\t" . $placements{$qname}{$taxon_id} . "\n";
+				}
+			}
 		}
 		my $readsummary = sum_taxon_levels( placements => $placements{$qname} );
 		foreach my $taxon_id ( sort { $readsummary->{$b} <=> $readsummary->{$a} } keys %{$readsummary} ) {
 			my ( $taxon_name, $taxon_level, $tid ) = get_taxon_info( taxon => $taxon_id );
 			$taxon_level = "Unknown" unless defined($taxon_level);
 			$taxon_name  = "Unknown" unless defined($taxon_name);
-			print $SEQUENCESUMMARY "$qname\t$taxon_id\t$taxon_level\t$taxon_name\t" . $readsummary->{$taxon_id} . "\n";
+			if(exists $self->{"read_names"}{$qname}){
+				foreach my $name_ref (@{$self->{"read_names"}{$qname}}){
+					#my @name_array = @{$name_ref};
+					print $SEQUENCESUMMARY "$name_ref\t$taxon_id\t$taxon_level\t$taxon_name\t" . $readsummary->{$taxon_id} . "\n";
+				}
+			}
+			
 		}
 	}
 	close($SEQUENCESUMMARY);
@@ -258,7 +276,8 @@ sub summarize {
 	foreach my $val ( values(%ncbireads) ) {
 		$totalreads += $val;
 	}
-	debug "Total reads are $totalreads\n";
+	debug "Total reads placed is ".scalar(keys(%placements))."\n";
+	debug "Total classifiable probability mass is $totalreads\n";
 
 	# write the taxa with 90% highest posterior density, assuming each read is an independent observation
 	my $taxasum = 0;
@@ -358,8 +377,19 @@ EOF
 	
 	$xml->endTag("krona");
 	$xml->end();
-	print $OUTPUT "\n</div></body></html>\n";
+	print $OUTPUT "\n</div><div style=\"position:absolute;bottom:0;\">\n";
+	print_run_info(self=>$self, OUTPUT=>$OUTPUT, newline=>"<br/>\n");
+	print $OUTPUT "</div></body></html>\n";
 	$OUTPUT->close();
+}
+
+sub print_run_info{
+	my %args = @_;
+	my $self = $args{self} || miss("self");
+	my $OUTPUT = $args{OUTPUT} || miss("OUTPUT");
+	my $newline = $args{newline} || "\n";
+	print $OUTPUT "Program run as:$newline".join(" ", "phylosift", @{ $self->{"ARGV"} })."$newline";
+	print $OUTPUT "Marker database version:\n".join("$newline", Phylosift::Utilities::get_marker_version(path=>$Phylosift::Utilities::marker_dir))."$newline";
 }
 
 #

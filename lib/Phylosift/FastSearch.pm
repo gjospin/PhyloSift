@@ -12,8 +12,8 @@ use Phylosift::MarkerAlign;
 use File::Basename;
 use POSIX qw(ceil floor);
 use constant FLANKING_LENGTH => 150;
-use constant CHUNK_MAX_SEQS => 20000;
-use constant CHUNK_MAX_SIZE => 10000000;
+my $CHUNK_MAX_SEQS = 20000;
+my $CHUNK_MAX_SIZE = 10000000;
 
 =head1 NAME
 
@@ -65,11 +65,15 @@ sub run_search {
 	my $self       = $args{self} || miss("self");
 	my $markersRef = $args{marker_reference} || miss("marker_reference");
 	@markers = @{$markersRef};
+	
 	my $position = rindex( $self->{"readsFile"}, "/" );
 	$self->{"readsFile"} =~ m/(\w+)\.?(\w*)$/;
 
 	# set align_fraction appropriately
 	$align_fraction = $align_fraction_isolate if ( $self->{"isolate"} );
+	
+	# use bigger chunks if not on extended markers
+	$CHUNK_MAX_SEQS = 1000000 unless $self->{"extended"};
 
 	# check what kind of input was provided
 	my $type = Phylosift::Utilities::get_sequence_input_type( $self->{"readsFile"} );
@@ -101,6 +105,7 @@ sub run_search {
 			# fire up the next step!
 			# TODO: make this a call to a function "chunk_done" in main Phylosift module
 			# that starts the next step
+			
 			Phylosift::MarkerAlign::MarkerAlign(self=>$self, marker_reference=>$markersRef, chunk=>$chunkI);
 		}
 		last if $finished;
@@ -361,7 +366,7 @@ sub demux_sequences {
 		}
 		$lastal_index++;
 		$lastal_index = $lastal_index % $lastal_threads;
-		last if($seq_count > CHUNK_MAX_SEQS);
+		last if($seq_count > $CHUNK_MAX_SEQS);
 	}
 	foreach my $LAST_PIPE (@LAST_PIPE_ARRAY) {
 		close($LAST_PIPE);

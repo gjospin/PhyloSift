@@ -43,6 +43,8 @@ sub new {
 	$self->{"coverage"}    = undef;
 	$self->{"isolate"}     = 0;
 	$self->{"threads"}     = 1;
+	my %temp_hash = ();
+	$self->{"read_names"}  = \%temp_hash;
 	bless($self);
 	return $self;
 }
@@ -75,6 +77,7 @@ sub initialize {
 	$self->{"alignDir"} = $self->{"fileDir"} . "/alignDir";
 	$self->{"treeDir"}  = $self->{"fileDir"} . "/treeDir";
 	$self->{"dna"}      = 0;
+	%{$self->{"read_names"}} = ();
 	return $self;
 }
 
@@ -147,7 +150,7 @@ sub run {
 	start_timer( name => "START" );
 	read_phylosift_config( self => $self );
 	run_program_check( self => $self );
-	Phylosift::Utilities::data_checks( self => $self ) unless $self->{"mode"} eq 'sim';
+	Phylosift::Utilities::data_checks( self => $self ); # unless $self->{"mode"} eq 'sim';
 	file_check( self => $self ) unless $self->{"mode"} eq 'index' || $self->{"mode"} eq 'sim';
 	directory_prep( self => $self, force => $force ) unless $self->{"mode"} eq 'index' ;
 	$self->{"readsFile"} = prep_isolate_files( self => $self, file => $self->{"readsFile"} ) if $self->{"isolate"} == 1;
@@ -161,6 +164,8 @@ sub run {
 
 	debug "MODE :: " . $self->{"mode"} . "\n";
 	if ( $self->{"mode"} eq 'search' || $self->{"mode"} eq 'all' ) {
+		my $RUNINFO = ps_open(">".$self->{"fileDir"}."/run_info.txt");
+		Phylosift::Summarize::print_run_info(self=>$self, OUTPUT=>$RUNINFO);
 		$self = run_search( self => $self, cont => $continue, marker => \@markers );
 		debug "MODE :: " . $self->{"mode"} . "\n";
 	}

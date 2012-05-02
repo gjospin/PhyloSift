@@ -462,7 +462,9 @@ sub assign_seqids {
 		print STDERR "marker $marker rep seqids\n";
 		unless( $marker =~ /concat/ ){
 			my $clean_reps = get_reps_filename( marker => $marker, updated => 1, clean => 1 );
-			assign_seqids_for_marker( marker => $marker, alignment => $clean_reps, counter => 0, existing_ids => \%id_mapping );
+			if(-e $clean_reps){
+				assign_seqids_for_marker( marker => $marker, alignment => $clean_reps, counter => 0, existing_ids => \%id_mapping );
+			}
 		}
 
 		my $codon_fasta = get_fasta_filename(marker=>$marker, updated=>1, dna=>1);
@@ -665,6 +667,7 @@ sub make_ncbi_subtree {
 		close $TREEOUT;
 		return 1; # success
 	}
+	debug "NOTHING IN THE TREE\n";
 	return 0; # no tree!
 }
 
