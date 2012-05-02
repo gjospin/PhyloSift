@@ -124,7 +124,7 @@ sub compute_top_place_precision {
 		my @ancArrayRead = get_ancestor_array( tax_id=>$topReadScore{$readID}->[1] );
 		my @tt           = Phylosift::Summarize::get_taxon_info(taxon=>$true_taxon);
 		my @firstTaxon   = Phylosift::Summarize::get_taxon_info( taxon=>$ancArrayRead[0] );
-		print "Read $readID assigned to $firstTaxon[0], true $tt[0]\n";
+#		print "Read $readID assigned to $firstTaxon[0], true $tt[0]\n";
 		foreach my $id (@ancArrayRead) {
 			if ( exists $refTaxa{$true_taxon}{$id} ) {
 				my @currTaxon = Phylosift::Summarize::get_taxon_info(taxon=>$id);
@@ -359,8 +359,7 @@ sub parse_simulated_reads {
 		my $taxon;
 		if($_ =~  m/^>/){
 	#		$_ =~ m/^>(\S+).*SOURCE_\d+="(.*)"/;  # for metasim header format
-			$_ =~ m/^>(\S+).*reference=.+?\.(\d+)\./;  # grinder header format
-#			$_ =~ m/^>(\S+).*reference=(\d+)/;  # grinder header format
+			$_ =~ m/^>(\S+).*reference=(\d+)/;  # grinder header format
 			$read_id = $1;
 			$taxon = $2;
 		}elsif($_ =~  m/^@/){
@@ -368,13 +367,11 @@ sub parse_simulated_reads {
 			$read_id = $1;
 			$taxon = $2;
 		}else{
-			print STDERR "Line was $_\n";
 			next;
 		}
 
 		#push(@sourceTaxa,$1);
 		$readSource{$read_id} = $taxon;
-		print STDERR "Read $read_id has taxon $taxon\n";
 		my @ancestors = get_ancestor_array(tax_id=>$taxon);
 		foreach my $id (@ancestors) {
 			$sourceIDs{$id} = 1;
@@ -393,6 +390,10 @@ sub parse_simulated_reads {
 		}
 	}
 	close($FILE_IN);
+
+	print "total counts ".join(" ",keys(%{$taxonomy_counts{""}}))."\n";
+	print "total counts ".join(" ",values(%{$taxonomy_counts{""}}))."\n";
+
 	foreach my $source ( keys %sourceReadCounts ) {
 		print $source . "\t";
 		if(exists $nameidmap{$source} ){
