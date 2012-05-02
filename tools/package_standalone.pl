@@ -27,7 +27,7 @@ my $branch = $ARGV[0] || "master";
 `mv bioperl-live/Bio* PhyloSift/lib`;
 
 # add Rutger Vos' Bio::Phylo
-`wget http://search.cpan.org/CPAN/authors/id/R/RV/RVOSA/Bio-Phylo-0.45.tar.gz`;
+`curl -LO http://search.cpan.org/CPAN/authors/id/R/RV/RVOSA/Bio-Phylo-0.45.tar.gz`;
 `tar xvzf Bio-Phylo-0.45.tar.gz`;
 chdir("Bio-Phylo-0.45");
 `perl Makefile.PL`;
@@ -36,7 +36,7 @@ chdir("Bio-Phylo-0.45");
 chdir("..");
 
 # add JSON package
-`wget http://search.cpan.org/CPAN/authors/id/M/MA/MAKAMAKA/JSON-2.53.tar.gz`;
+`curl -LO http://search.cpan.org/CPAN/authors/id/M/MA/MAKAMAKA/JSON-2.53.tar.gz`;
 `tar xvzf JSON-2.53.tar.gz`;
 chdir("JSON-2.53");
 `perl Makefile.PL`;
@@ -45,7 +45,7 @@ chdir("JSON-2.53");
 chdir("..");
 
 # Encode::Locale
-`wget http://search.cpan.org/CPAN/authors/id/G/GA/GAAS/Encode-Locale-0.04.tar.gz`;
+`curl -LO http://search.cpan.org/CPAN/authors/id/G/GA/GAAS/Encode-Locale-0.04.tar.gz`;
 `tar xzf Encode-Locale-0.04.tar.gz`;
 chdir("Encode-Locale-0.04");
 `perl Makefile.PL`;
@@ -54,7 +54,7 @@ chdir("Encode-Locale-0.04");
 chdir("..");
 
 # add Locale::Maketext
-`wget http://search.cpan.org/CPAN/authors/id/T/TO/TODDR/Locale-Maketext-1.19.tar.gz`;
+`curl -LO http://search.cpan.org/CPAN/authors/id/T/TO/TODDR/Locale-Maketext-1.19.tar.gz`;
 `tar xvzf Locale-Maketext-1.19.tar.gz`;
 chdir("Locale-Maketext-1.19");
 
@@ -66,7 +66,7 @@ chdir("Locale-Maketext-1.19");
 chdir("..");
 
 # XML::Writer
-`wget http://search.cpan.org/CPAN/authors/id/J/JO/JOSEPHW/XML-Writer-0.615.tar.gz`;
+`curl -LO http://search.cpan.org/CPAN/authors/id/J/JO/JOSEPHW/XML-Writer-0.615.tar.gz`;
 `tar xzf XML-Writer-0.615.tar.gz`;
 chdir("XML-Writer-0.615");
 `perl Makefile.PL`;
@@ -75,7 +75,7 @@ chdir("XML-Writer-0.615");
 chdir("..");
 
 # libwww-perl (for LWP::Simple)
-`wget http://search.cpan.org/CPAN/authors/id/G/GA/GAAS/libwww-perl-6.04.tar.gz`;
+`curl -LO http://search.cpan.org/CPAN/authors/id/G/GA/GAAS/libwww-perl-6.04.tar.gz`;
 `tar xzf libwww-perl-6.04.tar.gz`;
 chdir("libwww-perl-6.04");
 `perl Makefile.PL`;
@@ -83,7 +83,7 @@ chdir("libwww-perl-6.04");
 `mv blib/lib/LWP/ ../PhyloSift/lib/`;
 chdir("..");
 
-`wget http://search.cpan.org/CPAN/authors/id/G/GA/GAAS/HTTP-Message-6.03.tar.gz`;
+`curl -LO http://search.cpan.org/CPAN/authors/id/G/GA/GAAS/HTTP-Message-6.03.tar.gz`;
 `tar xzf HTTP-Message-6.03.tar.gz`;
 chdir("HTTP-Message-6.03");
 `perl Makefile.PL`;
@@ -92,7 +92,7 @@ chdir("HTTP-Message-6.03");
 chdir("..");
 
 # add Version.pm
-`wget http://search.cpan.org/CPAN/authors/id/J/JP/JPEACOCK/version-0.95.tar.gz`;
+`curl -LO http://search.cpan.org/CPAN/authors/id/J/JP/JPEACOCK/version-0.95.tar.gz`;
 `tar xzf version-0.95.tar.gz`;
 chdir("version-0.95");
 `perl Makefile.PL`;
