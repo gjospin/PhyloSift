@@ -64,7 +64,12 @@ sub pplacer {
 		my $options = $marker eq "concat" ? "--groups 10" : "";
 		my $place_file = place_reads(self=>$self, marker=>$marker, dna=>0, chunk => $chunk, reads=>$read_alignment_file, options=>$options);
 		# if we're chunked, merge this with the main jplace
-		merge_chunk(chunk => $chunk, place_file=>$place_file);
+		
+		#chunk merging needs to move to summarize.pm
+		#merge_chunk(chunk => $chunk, place_file=>$place_file); 
+	}
+	if ( defined($chunk) && $self->{"mode"} eq "all" ) {
+		Phylosift::Summarize::summarize( self => $self, marker_reference => $markRef , chunk=>$chunk  );
 	}
 }
 

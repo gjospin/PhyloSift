@@ -83,7 +83,7 @@ sub read_seq_summary {
 		my @readAncestor = get_ancestor_array(tax_id=> $taxPlacementID[2] );
 
 		#	    print $read." $taxPlacementID[1]\t$taxPlacementID[2]:\t@readAncestor\n";
-		my $rank = $taxPlacementID[1];
+		$rank = $taxPlacementID[1];
 
 		#keep only the top hits for all ranks for each Read
 		my @array = ( $probability, $taxPlacementID[2], scalar(@readAncestor) );

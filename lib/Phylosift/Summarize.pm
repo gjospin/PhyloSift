@@ -114,6 +114,7 @@ my %ncbi_summary;
 sub summarize {
 	my %args    = @_;
 	my $self    = $args{self} || miss("self");
+	my $chunk = $args{chunk} || miss("chunk");
 	my $markRef = $args{marker_reference} || miss("marker_reference");    # list of the markers we're using
 	read_ncbi_taxon_name_map();
 	read_ncbi_taxonomy_structure();
@@ -140,13 +141,13 @@ sub summarize {
 			# don't bother with this one if there's no read placements
 			my $sub_mark;
 			$sub_mark = "*" if $dna;
-			my $place_base = $self->{"treeDir"} . "/" . Phylosift::Utilities::get_read_placement_file( marker => $marker, dna => $dna, sub_marker => $sub_mark );
+			my $place_base = $self->{"treeDir"} . "/" . Phylosift::Utilities::get_read_placement_file( marker => $marker, dna => $dna, sub_marker => $sub_mark, chunk => $chunk );
 			my @place_files;
 			@place_files = glob($place_base) if $dna;	# need to glob on all submarkers if in DNA
 			push(@place_files, $place_base) if $dna == 0 && -e $place_base;
 			
 			foreach my $placeFile(@place_files){
-				my $PP_COVFILE = ps_open( ">" . Phylosift::Utilities::get_read_placement_file( marker => $marker ) . ".cov" ) if ( defined $self->{"coverage"} );
+				my $PP_COVFILE = ps_open( ">" . Phylosift::Utilities::get_read_placement_file( marker => $marker, chunk=>$chunk ) . ".cov" ) if ( defined $self->{"coverage"} );
 	
 				my $sub;
 				$sub = $1 if $placeFile =~ /\.sub(\d+)\./;
@@ -224,8 +225,8 @@ sub summarize {
 	}
 
 	# also write out the taxon assignments for sequences
-	my $SEQUENCETAXA = ps_open( ">" . $self->{"fileDir"} . "/sequence_taxa.txt" );
-	my $SEQUENCESUMMARY = ps_open( ">" . $self->{"fileDir"} . "/sequence_taxa_summary.txt" );
+	my $SEQUENCETAXA = ps_open( ">" . $self->{"fileDir"} . "/sequence_taxa.$chunk.txt" );
+	my $SEQUENCESUMMARY = ps_open( ">" . $self->{"fileDir"} . "/sequence_taxa_summary.$chunk.txt" );
 	foreach my $qname ( keys(%placements) ) {
 
 		# sum up all placements for this sequence, use to normalize
@@ -244,7 +245,6 @@ sub summarize {
 			$self->{"read_names"}{$qname} = [$qname] unless defined ($self->{"read_names"}{$qname});
 			if(exists $self->{"read_names"}{$qname}){
 				foreach my $name_ref (@{$self->{"read_names"}{$qname}}){
-					#my @name_array = @{$name_ref};
 					print $SEQUENCETAXA "$name_ref\t$taxon_id\t$taxon_level\t$taxon_name\t" . $placements{$qname}{$taxon_id} . "\t".join("\t",keys(%{$sequence_markers{$qname}}))."\n";
 				}
 			}
@@ -262,7 +262,6 @@ sub summarize {
 			$taxon_name  = "Unknown" unless defined($taxon_name);
 			if(exists $self->{"read_names"}{$qname}){
 				foreach my $name_ref (@{$self->{"read_names"}{$qname}}){
-					#my @name_array = @{$name_ref};
 					print $SEQUENCESUMMARY "$name_ref\t$taxon_id\t$taxon_level\t$taxon_name\t" . $readsummary->{$taxon_id}. "\t".join("\t",keys(%{$sequence_markers{$qname}})) . "\n";
 				}
 			}
@@ -272,7 +271,7 @@ sub summarize {
 	close($SEQUENCESUMMARY);
 	close($SEQUENCETAXA);
 
-	my $TAXAOUT = ps_open( ">" . $self->{"fileDir"} . "/taxasummary.txt" );
+	my $TAXAOUT = ps_open( ">" . $self->{"fileDir"} . "/taxasummary.$chunk.txt" );
 	# write unclassifiable
 	my $unclass_total=0;
 	foreach my $u(values(%unclassifiable)){
@@ -299,7 +298,7 @@ sub summarize {
 
 	# write the taxa with 90% highest posterior density, assuming each read is an independent observation
 	my $taxasum = 0;
-	my $TAXAHPDOUT = ps_open( ">" . $self->{"fileDir"} . "/taxa_90pct_HPD.txt" );
+	my $TAXAHPDOUT = ps_open( ">" . $self->{"fileDir"} . "/taxa_90pct_HPD.$chunk.txt" );
 	foreach my $taxon ( sort { $ncbireads{$b} <=> $ncbireads{$a} } keys %ncbireads ) {
 		$taxasum += $ncbireads{$taxon};
 		my ( $taxon_name, $taxon_level, $taxon_id ) = get_taxon_info( taxon => $taxon );
@@ -308,10 +307,12 @@ sub summarize {
 	}
 	close($TAXAHPDOUT);
 	
+	
+	#Need to move this to the merge summary function
 	unless($self->{"simple"}){
 		# skip this if only a simple summary is desired (it's slow)
 		debug "Generating krona\n";
-		krona_report(self=>$self);
+		#krona_report(self=>$self);
 	}
 }
 
