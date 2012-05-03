@@ -131,6 +131,7 @@ sub summarize {
 	# this is a hash structured as {sequenceID}{taxonID}=probabilitySum
 	my %placements;
 	my %unclassifiable; # {sequenceID}=mass
+	my %sequence_markers; # {sequenceID}=[markers hit]
 	unshift( @{$markRef}, "concat" ) if $self->{"updated"};
 	for(my $dna = 0; $dna <2; $dna++){
 		
@@ -172,6 +173,8 @@ sub summarize {
 					my $place = $json_data->{placements}->[$i];
 					my $qname = $place->{nm}->[0]->[0];
 					my $qweight = $place->{nm}->[0]->[1];
+					
+					$sequence_markers{$qname}{$marker}=1;
 					# for each placement edge in the placement record
 					for( my $j=0; $j < @{$place->{p}}; $j++){
 						my $edge = $place->{p}->[$j]->[0];
@@ -184,8 +187,9 @@ sub summarize {
 								$unclassifiable{$qname}=0 unless defined($unclassifiable{$qname});
 								$unclassifiable{$qname} += $qweight;
 							}							
+							next;
 						}
-
+						
 						my $mapcount = scalar( @{ $markerncbimap{$edge} } );
 						# for each taxon to which the current phylogeny edge could map
 						foreach my $taxon ( @{ $markerncbimap{$edge} } ) {
@@ -229,6 +233,7 @@ sub summarize {
 		foreach my $taxon_id ( keys( %{ $placements{$qname} } ) ) {
 			$placecount += $placements{$qname}{$taxon_id};
 		}
+		$placecount += $unclassifiable{$qname} if defined ($unclassifiable{$qname});
 
 		# normalize to probability distribution
 		foreach my $taxon_id ( sort { $placements{$qname}{$b} <=> $placements{$qname}{$a} } keys %{ $placements{$qname} } ) {
@@ -236,13 +241,20 @@ sub summarize {
 			my ( $taxon_name, $taxon_level, $tid ) = get_taxon_info( taxon => $taxon_id );
 			$taxon_level = "Unknown" unless defined($taxon_level);
 			$taxon_name  = "Unknown" unless defined($taxon_name);
+			$self->{"read_names"}{$qname} = [$qname] unless defined ($self->{"read_names"}{$qname});
 			if(exists $self->{"read_names"}{$qname}){
 				foreach my $name_ref (@{$self->{"read_names"}{$qname}}){
 					#my @name_array = @{$name_ref};
-					print $SEQUENCETAXA "$name_ref\t$taxon_id\t$taxon_level\t$taxon_name\t" . $placements{$qname}{$taxon_id} . "\n";
+					print $SEQUENCETAXA "$name_ref\t$taxon_id\t$taxon_level\t$taxon_name\t" . $placements{$qname}{$taxon_id} . "\t".join("\t",keys(%{$sequence_markers{$qname}}))."\n";
 				}
 			}
 		}
+		foreach my $name_ref (@{$self->{"read_names"}{$qname}}){
+			if(defined($unclassifiable{$qname})){
+				print $SEQUENCETAXA "$name_ref\tUnknown\tUnknown\tUnclassifiable\t" . ($unclassifiable{$qname} / $placecount). "\t".join("\t",keys(%{$sequence_markers{$qname}})) . "\n";
+			}
+		}
+
 		my $readsummary = sum_taxon_levels( placements => $placements{$qname} );
 		foreach my $taxon_id ( sort { $readsummary->{$b} <=> $readsummary->{$a} } keys %{$readsummary} ) {
 			my ( $taxon_name, $taxon_level, $tid ) = get_taxon_info( taxon => $taxon_id );
@@ -251,7 +263,7 @@ sub summarize {
 			if(exists $self->{"read_names"}{$qname}){
 				foreach my $name_ref (@{$self->{"read_names"}{$qname}}){
 					#my @name_array = @{$name_ref};
-					print $SEQUENCESUMMARY "$name_ref\t$taxon_id\t$taxon_level\t$taxon_name\t" . $readsummary->{$taxon_id} . "\n";
+					print $SEQUENCESUMMARY "$name_ref\t$taxon_id\t$taxon_level\t$taxon_name\t" . $readsummary->{$taxon_id}. "\t".join("\t",keys(%{$sequence_markers{$qname}})) . "\n";
 				}
 			}
 			
@@ -260,8 +272,14 @@ sub summarize {
 	close($SEQUENCESUMMARY);
 	close($SEQUENCETAXA);
 
-	# sort descending
 	my $TAXAOUT = ps_open( ">" . $self->{"fileDir"} . "/taxasummary.txt" );
+	# write unclassifiable
+	my $unclass_total=0;
+	foreach my $u(values(%unclassifiable)){
+		$unclass_total += $u;
+	}
+	# sort rest of taxa by descending abundance order
+	print $TAXAOUT "Unclassifiable\tUnknown\tUnknown\t$unclass_total\n";
 	foreach my $taxon ( sort { $ncbireads{$b} <=> $ncbireads{$a} } keys %ncbireads ) {
 		my ( $taxon_name, $taxon_level, $taxon_id ) = get_taxon_info( taxon => $taxon );
 		$taxon_level = "Unknown" unless defined($taxon_level);
@@ -286,7 +304,7 @@ sub summarize {
 		$taxasum += $ncbireads{$taxon};
 		my ( $taxon_name, $taxon_level, $taxon_id ) = get_taxon_info( taxon => $taxon );
 		print $TAXAHPDOUT join( "\t", $taxon_id, $taxon_level, $taxon_name, $ncbireads{$taxon} ), "\n";
-		last if $taxasum >= $totalreads * 0.9;
+		last if $taxasum >= $totalreads * 0.9;		
 	}
 	close($TAXAHPDOUT);
 	
