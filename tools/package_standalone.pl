@@ -65,6 +65,15 @@ chdir("Locale-Maketext-1.19");
 `mv blib/lib/Locale/ ../PhyloSift/lib/`;
 chdir("..");
 
+# Locale::Maketext::Simple 
+`curl -LO http://search.cpan.org/CPAN/authors/id/J/JE/JESSE/Locale-Maketext-Simple-0.21.tar.gz`;
+`tar xvzf Locale-Maketext-Simple-0.21.tar.gz`;
+chdir("Locale-Maketext-Simple-0.21");
+`perl Makefile.PL`;
+`make`;
+`mv blib/lib/Locale/Maketext/* ../PhyloSift/lib/Locale/Maketext/`;
+chdir("..");
+
 # XML::Writer
 `curl -LO http://search.cpan.org/CPAN/authors/id/J/JO/JOSEPHW/XML-Writer-0.615.tar.gz`;
 `tar xzf XML-Writer-0.615.tar.gz`;
