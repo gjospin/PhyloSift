@@ -104,13 +104,12 @@ chdir("..");
 `curl -LO http://search.cpan.org/CPAN/authors/id/J/JP/JPEACOCK/version-0.95.tar.gz`;
 `tar xzf version-0.95.tar.gz`;
 chdir("version-0.95");
-`perl Makefile.PL`;
+`perl Makefile.PL --perl_only`;
 `make`;
 
 # put these in "legacy" because we only want to use them if the perl version is ancient -- including them breaks newer perls
-`mkdir -p ../PhyloSift/legacy/arch/auto`;
 `mv blib/lib/version* ../PhyloSift/legacy/`;
-`mv blib/arch/auto/version ../PhyloSift/legacy/arch/auto/`;
+
 chdir("..");
 
 # package everything up and datestamp it
