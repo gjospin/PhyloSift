@@ -82,7 +82,8 @@ command :
    git clone git://github.com/gjospin/PhyloSift.git
 
 It may also be necessary to install several support packages,
-including BioPerl, Bio::Phylo, and others.
+including BioPerl, Bio::Phylo, and others. BioPerl offers bioperl-live from github,
+we suggest installing other dependencies using cpan.
 
 == Updating PhyloSift ==
 
