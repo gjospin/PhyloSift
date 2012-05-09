@@ -306,10 +306,13 @@ sub knockout_genomes() {
 	my $new_genomes = pick_new_genomes();
 	my $use_maxpd = 0;
 	
+	$num_picked *= 2 unless $use_maxpd;	# gawd this is ugly.
+
 	for ( my $i = 0 ; $i < $num_picked/2 ; ) {
 		# pick one uniformly at random
 		my $rand_taxon = $list[ int( rand($list_length) ) ];
 		debug "picked $rand_taxon, i $i\n";
+		croak("ran out of genomes, relax your constraints!") if $nummer == @list;
 		next unless defined($taxon_genome_files->{$rand_taxon});	# is it available on disk?
 		next unless defined($new_genomes->{$rand_taxon});	# is it new enough?
 		next if defined($ko_taxa{$rand_taxon});	# do we already have this one?
@@ -416,7 +419,7 @@ sub find_neighborhoods {
 	# now for each deleted node, find it's ancestral valid node & record some stats
 	my %stats;
 	my $SIMSTATS = ps_open(">".$self->{"fileDir"} . "/sim_stats.txt");
-	print $SIMSTATS "# TaxonID\tParentID\tParentDistance\tParentToGrandParent\tParentOtherChild\tMinLeafDist\n";
+	print $SIMSTATS "# TaxonID\tParentID\tParentDistance\tParentToGrandParent\tParentOtherChild\tMinLeafDist\tNodes0.05\tNodes0.10\tNodes0.15\tNodes0.20\tNodes0.25\n";
 
 	foreach my $node(@target_nodes){
 		my $parent=$node;
@@ -446,14 +449,26 @@ sub find_neighborhoods {
 		my $min_leaf_dist = -1;
 		foreach my $lnode ( @{ $tree->get_entities } ) {
 			next unless (@{ $lnode->get_children() } < 2);
-			next unless $dvalid{$lnode};
+			my $name = $lnode->get_name;
+			next if defined($del_nodes{$id_to_taxon->{$name}});
 			my $ldist = $lnode->calc_patristic_distance($node);
 			$min_leaf_dist = $ldist if($min_leaf_dist < 0 || $ldist < $min_leaf_dist);
 		}
+		# calculate node densities
+		my %n_density;
+		for(my $ddist = 5; $ddist <= 50; $ddist+=5){
+			$n_density{$ddist} = 0;
+			foreach my $lnode ( @{ $tree->get_entities } ) {
+				next unless $dvalid{$lnode};
+				next unless $lnode->calc_patristic_distance($node) < $ddist / 100;
+				$n_density{$ddist}++;
+			}
+		}
+		
 		my $tid = $id_to_taxon->{$node->get_name()};
 		$stats{$node} = [$tid, $parent, $p_len, $pp_len, $c_dist];
 		# seems like there's some problem with c_dist
-		print $SIMSTATS join("\t", $tid, $parent, $p_len, $pp_len, $c_dist, $min_leaf_dist)."\n";
+		print $SIMSTATS join("\t", $tid, $parent, $p_len, $pp_len, $c_dist, $min_leaf_dist, $n_density{5}, $n_density{10}, $n_density{15}, $n_density{20}, $n_density{25}, $n_density{30}, $n_density{35}, $n_density{40}, $n_density{45}, $n_density{50})."\n";
 	}
 	my @dn = keys(%del_nodes);
 	return \@dn;
