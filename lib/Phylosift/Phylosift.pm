@@ -167,7 +167,7 @@ sub run {
 		my $RUNINFO = ps_open(">".$self->{"fileDir"}."/run_info.txt");
 		Phylosift::Summarize::print_run_info(self=>$self, OUTPUT=>$RUNINFO);
 		$self = run_search( self => $self, cont => $continue, marker => \@markers );
-		Phylosift::Summarize::merge_sequence_taxa(self=>$self);
+#		Phylosift::Summarize::merge_sequence_taxa(self=>$self);
 		debug "MODE :: " . $self->{"mode"} . "\n";
 	}
 	debug "MODE :: " . $self->{"mode"} . "\n";
