@@ -202,8 +202,6 @@ sub summarize {
 								$placements{$qname} = () unless defined( $placements{$qname} );
 								$placements{$qname}{$taxon_id} = 0 unless defined( $placements{$qname}{$taxon_id} );
 								$placements{$qname}{$taxon_id} += $qweight / $mapcount;
-								$weights{$qname}{$taxon_id} = 0 unless defined( $weights{$qname}{$taxon_id} );
-								$weights{$qname}{$taxon_id} += $qweight ;
 								$ncbireads{$taxon} = 0 unless defined $ncbireads{$taxon};
 								$ncbireads{$taxon} += $qweight / $mapcount;    # split the p.p. across the possible edge mappings
 							}
@@ -236,8 +234,9 @@ sub summarize {
 			$taxon_name  = "Unknown" unless defined($taxon_name);
 			$self->{"read_names"}{$qname} = [$qname] unless defined ($self->{"read_names"}{$qname});
 			if(exists $self->{"read_names"}{$qname}){
+				$placements{$qname}{$taxon_id} /= @{$self->{"read_names"}{$qname}};
 				foreach my $name_ref (@{$self->{"read_names"}{$qname}}){
-					print $SEQUENCETAXA "$name_ref\t$taxon_id\t$taxon_level\t$taxon_name\t" . $placements{$qname}{$taxon_id} . "\t".$weights{$qname}{$taxon_id}."\t".join("\t",keys(%{$sequence_markers{$qname}}))."\n";
+					print $SEQUENCETAXA "$name_ref\t$taxon_id\t$taxon_level\t$taxon_name\t" . $placements{$qname}{$taxon_id} ."\t".join("\t",keys(%{$sequence_markers{$qname}}))."\n";
 				}
 			}
 		}
@@ -262,6 +261,7 @@ sub summarize {
 	}
 	close($SEQUENCESUMMARY);
 	close($SEQUENCETAXA);
+	merge_sequence_taxa(self=>$self);
 }
 
 =head2 merge_sequence_taxa
@@ -275,6 +275,7 @@ sub merge_sequence_taxa{
 	my $taxa_seed = $self->{"fileDir"}."/sequence_taxa.*.txt";
 	my @taxa_files = glob("$taxa_seed");
 	my %placements = ();
+	my %unclassifiable; # {sequenceID}=mass
 	foreach my $taxa_file(@taxa_files){
 		#read all the sequence information
 		my $TAXAIN = ps_open($taxa_file);
@@ -287,6 +288,11 @@ sub merge_sequence_taxa{
 			my $species_name = $line[3];
 			my $prob = $line[4];
 			my $marker_name = $line[5];
+			if($taxon_id eq "Unknown"){
+				$unclassifiable{$read_id}=$prob;
+			}else{
+				$placements{$read_id}{$taxon_id} = $prob;
+			}
 		}
 		close($TAXAIN);
 	}
@@ -304,9 +310,9 @@ sub merge_sequence_taxa{
 	my $TAXAOUT = ps_open( ">" . $self->{"fileDir"} . "/taxasummary.txt" );
 	# write unclassifiable
 	my $unclass_total=0;
-	#foreach my $u(values(%unclassifiable)){
-	#	$unclass_total += $u;
-	#}
+	foreach my $u(values(%unclassifiable)){
+		$unclass_total += $u;
+	}
 	# sort rest of taxa by descending abundance order
 	print $TAXAOUT "Unclassifiable\tUnknown\tUnknown\t$unclass_total\n";
 	foreach my $taxon ( sort { $ncbireads{$b} <=> $ncbireads{$a} } keys %ncbireads ) {
