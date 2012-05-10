@@ -869,6 +869,7 @@ sub write_candidates {
 }
 
 =head2 prep_and_clean
+=over
 
 =item *
 

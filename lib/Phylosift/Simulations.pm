@@ -8,7 +8,7 @@ use File::Basename;
 
 =head1 SUBROUTINES/METHODS
 
-=Head2 Simulations module
+=head2 Simulations module
 
 Generates Reads files simulated from randomly picked genomes from the concat.updated.pruned.tre in the markers directory.
 Using only the DEFAULT marker package.
