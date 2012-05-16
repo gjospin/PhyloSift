@@ -1386,6 +1386,7 @@ sub index_marker_db {
 }
 
 =head2 gather_markers
+=over
 
 =item *
 

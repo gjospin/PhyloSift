@@ -8,7 +8,7 @@ use Phylosift::Utilities;
 
 =head1 SUBROUTINES/METHODS
 
-=Head2 benchmark_illumina
+=head2 benchmark_illumina
 
 WARNING: The input file must have the correct format to run the benchmark
 Reads the input file looking for taxonomic origins in the read headers and 

@@ -289,6 +289,7 @@ sub run_program_check {
 }
 
 =head2 prep_isolate_files
+=over
 
 =item *
 
@@ -490,6 +491,7 @@ You can find documentation for this module with the perldoc command.
 
 You can also look for information at:
 
+=over
 
 =item * RT: CPAN's request tracker (report bugs here)
 
