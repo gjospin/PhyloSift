@@ -877,8 +877,9 @@ given by markerName
 sub get_read_placement_file {
 	my %args   = @_;
 	my $marker = $args{marker};
+	my $chunk = $args{chunk};
 	my $decorated = get_decorated_marker_name(%args, base=>1);
-	return "$decorated.jplace";
+	return "$decorated.$chunk.jplace";
 }
 
 =head2 get_trimfinal_marker_file

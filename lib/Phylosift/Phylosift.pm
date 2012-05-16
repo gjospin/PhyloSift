@@ -167,6 +167,7 @@ sub run {
 		my $RUNINFO = ps_open(">".$self->{"fileDir"}."/run_info.txt");
 		Phylosift::Summarize::print_run_info(self=>$self, OUTPUT=>$RUNINFO);
 		$self = run_search( self => $self, cont => $continue, marker => \@markers );
+#		Phylosift::Summarize::merge_sequence_taxa(self=>$self);
 		debug "MODE :: " . $self->{"mode"} . "\n";
 	}
 	debug "MODE :: " . $self->{"mode"} . "\n";
@@ -179,7 +180,8 @@ sub run {
 		croak "No marker gene hits found in the input data. Unable to reconstruct phylogeny and taxonomy." if ( scalar(@markers) == 0 );
 		$self = run_pplacer( self => $self, cont => $continue, marker => \@markers );
 	}
-	if ( $self->{"mode"} eq 'summary' || $self->{"mode"} eq 'all' ) {
+#	if ( $self->{"mode"} eq 'summary' || $self->{"mode"} eq 'all' ) {
+	if ( $self->{"mode"} eq 'summary'){
 		$self = taxonomy_assignments( self => $self, cont => $continue, marker => \@markers );
 	}
 	if ( $self->{"mode"} eq 'benchmark' ) {

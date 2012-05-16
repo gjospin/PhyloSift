@@ -74,7 +74,7 @@ sub run_search {
 	
 	# use bigger chunks if not on extended markers
 	$CHUNK_MAX_SEQS = 1000000 unless $self->{"extended"};
-
+	
 	# check what kind of input was provided
 	my $type = Phylosift::Utilities::get_sequence_input_type( $self->{"readsFile"} );
 	$self->{"dna"} = $type->{seqtype} eq "protein" ? 0 : 1;    # Is the input protein sequences?
