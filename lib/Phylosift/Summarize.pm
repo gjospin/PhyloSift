@@ -103,6 +103,20 @@ sub read_coverage {
 	return \%coverage;
 }
 
+sub read_taxonmap {
+	my %args = @_;
+	my $file = $args{file} || miss("file");
+	my $TAXONMAP = ps_open( $file );
+	my %markerncbimap;
+	while ( my $line = <$TAXONMAP> ) {
+		chomp($line);
+		my ( $markerbranch, $ncbiname ) = split( /\t/, $line );
+		$markerncbimap{$markerbranch} = [] unless defined( $markerncbimap{$markerbranch} );
+		push( @{ $markerncbimap{$markerbranch} }, $ncbiname );
+	}
+	return \%markerncbimap;
+}
+
 =head2 summarize
 Reads the .place files containing Pplacer read placements and maps them onto the
 NCBI taxonomy
@@ -154,14 +168,7 @@ sub summarize {
 				# first read the taxonomy mapping
 				my $markermapfile = Phylosift::Utilities::get_marker_taxon_map(self=>$self, marker=>$marker, dna=>$dna, sub_marker=>$sub);
 				next unless -e $markermapfile;	# can't summarize if there ain't no mappin'!
-				my $TAXONMAP = ps_open( $markermapfile );
-				my %markerncbimap;
-				while ( my $line = <$TAXONMAP> ) {
-					chomp($line);
-					my ( $markerbranch, $ncbiname ) = split( /\t/, $line );
-					$markerncbimap{$markerbranch} = [] unless defined( $markerncbimap{$markerbranch} );
-					push( @{ $markerncbimap{$markerbranch} }, $ncbiname );
-				}
+				my $markerncbimap = read_taxonmap(file=>$markermapfile);
 		
 				# then read & map the placement
 				my $JPLACEFILE = ps_open( $placeFile );
@@ -180,7 +187,7 @@ sub summarize {
 					for( my $j=0; $j < @{$place->{p}}; $j++){
 						my $edge = $place->{p}->[$j]->[0];
 
-						if( !defined($markerncbimap{$edge}) ){
+						if( !defined($markerncbimap->{$edge}) ){
 							# mark these reads as unclassifiable
 							for(my $k=0; $k < @{$place->{nm}}; $k++){
 								my $qname = $place->{nm}->[$k]->[0];
@@ -191,9 +198,9 @@ sub summarize {
 							next;
 						}
 						
-						my $mapcount = scalar( @{ $markerncbimap{$edge} } );
+						my $mapcount = scalar( @{ $markerncbimap->{$edge} } );
 						# for each taxon to which the current phylogeny edge could map
-						foreach my $taxon ( @{ $markerncbimap{$edge} } ) {
+						foreach my $taxon ( @{ $markerncbimap->{$edge} } ) {
 							my ( $taxon_name, $taxon_level, $taxon_id ) = get_taxon_info( taxon => $taxon );
 							# for each query seq in the current placement record
 							for(my $k=0; $k < @{$place->{nm}}; $k++){
