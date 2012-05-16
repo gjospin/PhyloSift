@@ -1367,7 +1367,8 @@ sub join_trees {
 	# then apply 16s constraints to protein
 #	my $constraint_tree = get_fasttree_tre_filename( marker => "concat", dna => 0, updated => 1, pruned => 1 );
 #	make_constrained_tree( constraint_marker => "concat", constraint_tree => $constraint_tree,   target_marker => "16s_reps_bac", marker_dir => $marker_dir, constraint_pruned => 1, target_pruned => 0 );
-	my $tctree = get_fasttree_tre_filename( marker => "16s_reps_bac", dna => 0, updated => 1, pruned => 0 ) . ".constrained";
+#	my $tctree = get_fasttree_tre_filename( marker => "16s_reps_bac", dna => 0, updated => 1, pruned => 0 ) . ".constrained";
+	my $tctree = get_fasttree_tre_filename( marker => "16s_reps_bac", dna => 0, updated => 1, pruned => 0 );
 	print "Using $tctree to provide constraints for concat\n";
 	make_constrained_tree( constraint_marker => "16s_reps_bac", constraint_tree => $tctree, target_marker => "concat",       marker_dir => $marker_dir, constraint_pruned => 0, target_pruned => 1, copy_tree=>1 );
 
