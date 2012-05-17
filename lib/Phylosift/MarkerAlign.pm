@@ -21,7 +21,6 @@ Phylosift::MarkerAlign - Subroutines to align reads to marker HMMs
 Version 0.01
 
 =cut
-
 our $VERSION = '0.01';
 
 =head1 SYNOPSIS
@@ -54,7 +53,6 @@ if you don't export anything, such as for a purely object-oriented module.
 =head2 MarkerAlign
 
 =cut
-
 my $minAlignedResidues = 20;
 
 sub MarkerAlign {
@@ -609,6 +607,7 @@ merge alignments by combining sequences from paired end reads.
 If aligned columns do not match an X will be used for amino acids and a N will be used for nucleotides
 if a residue will always win over a gap
 =cut
+
 sub merge_alignment {
 	my %args     = @_;
 	my $self     = $args{self};
@@ -776,5 +775,4 @@ See http://dev.perl.org/licenses/ for more information.
 
 
 =cut
-
 1;    # End of Phylosift::MarkerAlign.pm
