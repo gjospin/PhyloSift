@@ -266,19 +266,6 @@ sub get_genome_ids_from_pda {
 	return @taxa;
 }
 
-sub pick_new_genomes() {
-	my $date_cutoff = 20120101;
-	my $DETAILS = ps_open("/share/eisen-d2/amphora2/ebi/bacteria.details.txt");
-	my %new_genomes;
-	my $line = <$DETAILS>;
-	while($line = <$DETAILS>){
-		chomp $line;
-		my ( $acc, $version, $date, $taxid, $description ) = split( /\t/, $line );
-		$new_genomes{$taxid} = 1 if($version == 1 && $date > $date_cutoff);
-	}
-	return \%new_genomes;
-}
-
 =head2 knockout_genomes
 
 	Prints 2 files in the fileDir for the PS object
@@ -303,35 +290,27 @@ sub knockout_genomes() {
 	my %ko_taxa;
 	my $abund_sum=0;
 	my $nummer = $num_picked;
-	my $new_genomes = pick_new_genomes();
-	my $use_maxpd = 0;
-	
+
 	for ( my $i = 0 ; $i < $num_picked/2 ; ) {
+		# pick one from the maxpd set
+		my $rand_index = int( rand( scalar(@top_array) - 1 ) );
+		my $rand_taxon  = $top_array[$rand_index];
+		$top_array[$rand_index] = $list[$nummer++];
+			debug "picked $rand_taxon, i $i\n";
+		next unless defined($taxon_genome_files->{$rand_taxon}); # don't add this one unless its available
+		$ko_taxa{$rand_taxon}=rand(1000);	# assign a uniformly random abundance
+		$abund_sum += $ko_taxa{$rand_taxon};
+		splice( @top_array, $rand_index, 1 );	# remove this one so it doesn't get resampled
+		$i++;
+	}
+	for ( my $i = $num_picked/2 ; $i < $num_picked ; ) {
 		# pick one uniformly at random
 		my $rand_taxon = $list[ int( rand($list_length) ) ];
 		debug "picked $rand_taxon, i $i\n";
-		next unless defined($taxon_genome_files->{$rand_taxon});	# is it available on disk?
-		next unless defined($new_genomes->{$rand_taxon});	# is it new enough?
-		next if defined($ko_taxa{$rand_taxon});	# do we already have this one?
+		next unless defined($taxon_genome_files->{$rand_taxon});
 		$ko_taxa{$rand_taxon}=rand(1000);
 		$abund_sum += $ko_taxa{$rand_taxon};
 		$i++;
-	}
-	if($use_maxpd){
-		for ( my $i = $num_picked/2 ; $i < $num_picked ; ) {
-			# pick one from the maxpd set
-			my $rand_index = int( rand( scalar(@top_array) - 1 ) );
-			my $rand_taxon  = $top_array[$rand_index];
-			$top_array[$rand_index] = $list[$nummer++];
-			croak("ran out of genomes, relax your constraints!") if $nummer == @list;
-				debug "picked $rand_taxon, i $i\n";
-			next unless defined($taxon_genome_files->{$rand_taxon}); # don't add this one unless its available
-			next unless defined($new_genomes->{$rand_taxon}); # don't add unless it's new enough
-			$ko_taxa{$rand_taxon}=rand(1000);	# assign a uniformly random abundance
-			$abund_sum += $ko_taxa{$rand_taxon};
-			splice( @top_array, $rand_index, 1 );	# remove this one so it doesn't get resampled
-			$i++;
-		}
 	}
 	foreach my $taxon(keys(%ko_taxa)){
 		print $KO "$taxon\n";#.($ko_taxa{$taxon}/$abund_sum)."\n";
@@ -416,8 +395,6 @@ sub find_neighborhoods {
 	# now for each deleted node, find it's ancestral valid node & record some stats
 	my %stats;
 	my $SIMSTATS = ps_open(">".$self->{"fileDir"} . "/sim_stats.txt");
-	print $SIMSTATS "# TaxonID\tParentID\tParentDistance\tParentToGrandParent\tParentOtherChild\tMinLeafDist\n";
-
 	foreach my $node(@target_nodes){
 		my $parent=$node;
 		my $p_len = $node->get_branch_length();
@@ -442,18 +419,10 @@ sub find_neighborhoods {
 			}
 			$c = $new_c;
 		}
-		# get distance to nearest valid leaf
-		my $min_leaf_dist = -1;
-		foreach my $lnode ( @{ $tree->get_entities } ) {
-			next unless (@{ $lnode->get_children() } < 2);
-			next unless $dvalid{$lnode};
-			my $ldist = $lnode->calc_patristic_distance($node);
-			$min_leaf_dist = $ldist if($min_leaf_dist < 0 || $ldist < $min_leaf_dist);
-		}
 		my $tid = $id_to_taxon->{$node->get_name()};
 		$stats{$node} = [$tid, $parent, $p_len, $pp_len, $c_dist];
 		# seems like there's some problem with c_dist
-		print $SIMSTATS join("\t", $tid, $parent, $p_len, $pp_len, $c_dist, $min_leaf_dist)."\n";
+		print $SIMSTATS join("\t", $tid, $parent, $p_len, $pp_len, $c_dist)."\n";
 	}
 	my @dn = keys(%del_nodes);
 	return \@dn;
