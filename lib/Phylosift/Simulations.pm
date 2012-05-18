@@ -266,19 +266,6 @@ sub get_genome_ids_from_pda {
 	return @taxa;
 }
 
-sub pick_new_genomes() {
-	my $date_cutoff = 20120101;
-	my $DETAILS = ps_open("/share/eisen-d2/amphora2/ebi/bacteria.details.txt");
-	my %new_genomes;
-	my $line = <$DETAILS>;
-	while($line = <$DETAILS>){
-		chomp $line;
-		my ( $acc, $version, $date, $taxid, $description ) = split( /\t/, $line );
-		$new_genomes{$taxid} = 1 if($version == 1 && $date > $date_cutoff);
-	}
-	return \%new_genomes;
-}
-
 =head2 knockout_genomes
 
 	Prints 2 files in the fileDir for the PS object
@@ -309,6 +296,18 @@ sub knockout_genomes() {
 	$num_picked *= 2 unless $use_maxpd;	# gawd this is ugly.
 
 	for ( my $i = 0 ; $i < $num_picked/2 ; ) {
+		# pick one from the maxpd set
+		my $rand_index = int( rand( scalar(@top_array) - 1 ) );
+		my $rand_taxon  = $top_array[$rand_index];
+		$top_array[$rand_index] = $list[$nummer++];
+			debug "picked $rand_taxon, i $i\n";
+		next unless defined($taxon_genome_files->{$rand_taxon}); # don't add this one unless its available
+		$ko_taxa{$rand_taxon}=rand(1000);	# assign a uniformly random abundance
+		$abund_sum += $ko_taxa{$rand_taxon};
+		splice( @top_array, $rand_index, 1 );	# remove this one so it doesn't get resampled
+		$i++;
+	}
+	for ( my $i = $num_picked/2 ; $i < $num_picked ; ) {
 		# pick one uniformly at random
 		my $rand_taxon = $list[ int( rand($list_length) ) ];
 		debug "picked $rand_taxon, i $i\n";
@@ -319,22 +318,6 @@ sub knockout_genomes() {
 		$ko_taxa{$rand_taxon}=rand(1000);
 		$abund_sum += $ko_taxa{$rand_taxon};
 		$i++;
-	}
-	if($use_maxpd){
-		for ( my $i = $num_picked/2 ; $i < $num_picked ; ) {
-			# pick one from the maxpd set
-			my $rand_index = int( rand( scalar(@top_array) - 1 ) );
-			my $rand_taxon  = $top_array[$rand_index];
-			$top_array[$rand_index] = $list[$nummer++];
-			croak("ran out of genomes, relax your constraints!") if $nummer == @list;
-				debug "picked $rand_taxon, i $i\n";
-			next unless defined($taxon_genome_files->{$rand_taxon}); # don't add this one unless its available
-			next unless defined($new_genomes->{$rand_taxon}); # don't add unless it's new enough
-			$ko_taxa{$rand_taxon}=rand(1000);	# assign a uniformly random abundance
-			$abund_sum += $ko_taxa{$rand_taxon};
-			splice( @top_array, $rand_index, 1 );	# remove this one so it doesn't get resampled
-			$i++;
-		}
 	}
 	foreach my $taxon(keys(%ko_taxa)){
 		print $KO "$taxon\n";#.($ko_taxa{$taxon}/$abund_sum)."\n";

@@ -643,16 +643,19 @@ sub make_ncbi_subtree {
 	my %tidnodes;
 	my $phylotree = Bio::Phylo::Forest::Tree->new();
 	my $ncbi_count = 0;
+	my $count=0;
+	
 	foreach my $tid (@taxonids) {
+	    debug "COULD NOT FIND : " .$tid ."\n" unless (defined($idnamemap{$tid}));
 		next unless(defined($merged->{$tid}) || defined($idnamemap{$tid}));	# ensure the id actually exists in NCBI's db
 		next if ( $tid eq "" );
 		$ncbi_count++;
 		my @children;
 		while ( defined($tid) ) {
-
+		    
 			# check if we've already seen this one
 			last if ( defined( $tidnodes{$tid} ) );
-
+			#debug "ADDING $tid\n";
 			# process any merging that may have been done
 			my @mtid;
 			push( @mtid, $tid );
@@ -674,8 +677,10 @@ sub make_ncbi_subtree {
 				if ( defined( $parentid )  && defined( $tidnodes{$parentid} ) ){
 					$newnode = Bio::Phylo::Forest::Node->new( -parent => $tidnodes{$parentid}, -name => $mnode ) ;
 				}else{
+				    
 					$newnode = Bio::Phylo::Forest::Node->new( -name => $mnode );
 				}
+				$count++;
 				$tidnodes{$mnode} = $newnode;
 
 				# add all children to the new node
@@ -692,6 +697,8 @@ sub make_ncbi_subtree {
 		}
 	}	
 	# if there's something in the tree, write it out
+	debug "NCBI COUNT : $ncbi_count\n";
+	debug "Making $count Nodes\n";
 	if($ncbi_count>0){
 		my $TREEOUT = ps_open( ">$out_file" );
 		print $TREEOUT $phylotree->to_newick( "-nodelabels" => 1 );

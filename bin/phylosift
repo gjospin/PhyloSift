@@ -112,8 +112,9 @@ GetOptions(
 	"coverage=s"      => \$ps->{"coverage"},            #provides a contig/scaffold coverage file
 	"updated_markers=i" => \$ps->{"updated"},             #Indicates if Phylosift uses the updated versions of the Markers.
 	"marker_url=s"      => \$ps->{"marker_url"},          # an alternate address to retrieve markers from
-	"extended"        => \$ps->{"extended"},  #Should the full extended set of markers be used?
+	"extended"        => \$ps->{"extended"},            #Should the full extended set of markers be used?
 	"config=s"        => \$ps->{"configuration"},       #custom config file
+	"remove_dup"      => \$ps->{"remove_dup"},  #removes duplicate taxons when using build_marker
 	"h"               => \$help,                #prints the usage part of the README file
 	"help"            => \$help,                #same as -h
 	"debug"           => \$my_debug,            #print debugging messages?
