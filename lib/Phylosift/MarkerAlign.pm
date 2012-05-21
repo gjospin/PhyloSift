@@ -443,7 +443,7 @@ sub alignAndMask {
 			my $fasta = "";
 			if ( -e $candidate_long ) {
 				my $cmalign =
-				    "$Phylosift::Utilities::cmalign -q --dna --tau 1e-6 "
+				    "$Phylosift::Utilities::cmalign -q --dna --mxsize 2500 --tau 1e-6 "
 				  . Phylosift::Utilities::get_marker_cm_file( self => $self, marker => $marker )
 				  . " $candidate_long | ";
 				debug "Running $cmalign\n";
