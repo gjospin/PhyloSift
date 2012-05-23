@@ -180,12 +180,15 @@ sub vector_screen {
 		my $filt_name = $r1files{$barcode}{name};
 		$filt_name =~ s/\.r1\.fastq/.filtered.fastq/;
 		open(my $FILTFQ, ">$filt_name");
+		my $pair_id=0;
 		while(my $line = <$BWT>){
 			next if $line =~ /^@/;
 			chomp $line;
 			my @vals = split(/\t/, $line);
 			next unless $vals[2] eq "*";
-			print $FILTFQ "\@$vals[0]\n$vals[9]\n+\n$vals[10]\n";
+			print $FILTFQ "\@$vals[0]/".($pair_id+1)."\n$vals[9]\n+\n$vals[10]\n";
+			$pair_id++;
+			$pair_id = $pair_id % 2;
 		}
 	}
 }
