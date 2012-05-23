@@ -62,6 +62,8 @@ sub pplacer {
 		my $read_alignment_file = $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta( marker => Phylosift::Utilities::get_marker_basename(marker=>$marker), chunk => $chunk );
 		next unless -e $read_alignment_file;
 		my $options = $marker eq "concat" ? "--groups 10" : "";
+		$options .= "--mmap-file abracadabra" if ($marker =~ /18s/);  # FIXME: this should be based on the number of seqs in the tree.
+		$options .= "--mmap-file abracadabra" if ($marker =~ /16s/);
 		my $place_file = place_reads(self=>$self, marker=>$marker, dna=>0, chunk => $chunk, reads=>$read_alignment_file, options=>$options);
 		# if we're chunked, merge this with the main jplace
 		
@@ -315,7 +317,7 @@ sub place_reads{
 
 		# read the tree edge to taxon map for this marker
 		my $markermapfile = Phylosift::Utilities::get_marker_taxon_map(self=>$self, marker=>$marker, dna=>$dna, sub_marker=>$submarker);
-		next unless -e $markermapfile;	# can't summarize if there ain't no mappin'!
+		return unless -e $markermapfile;	# can't summarize if there ain't no mappin'!
 		my $taxonmap = Phylosift::Summarize::read_taxonmap(file=>$markermapfile);
 
 		# rename nodes
