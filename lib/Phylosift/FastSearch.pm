@@ -77,7 +77,7 @@ sub run_search {
 
 	# use bigger chunks if not on extended markers
 	$CHUNK_MAX_SEQS = 1000000 unless $self->{"extended"};
-	$CHUNK_MAX_SEQS = 2000;
+
 	# check what kind of input was provided
 	my $type =
 	  Phylosift::Utilities::get_sequence_input_type( $self->{"readsFile"} );
