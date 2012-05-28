@@ -450,7 +450,7 @@ sub alignAndMask {
 			}
 			if ( -e $candidate_short ) {
 				my $cmalign =
-				    "$Phylosift::Utilities::cmalign -q -l --dna --tau 1e-20 "
+				    "$Phylosift::Utilities::cmalign -q -l --dna --mxsize 2500 --tau 1e-20 "
 				  . Phylosift::Utilities::get_marker_cm_file( self => $self, marker => $marker )
 				  . " $candidate_short | ";
 				debug "Running $cmalign\n";
