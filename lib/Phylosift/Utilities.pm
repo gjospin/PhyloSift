@@ -1712,6 +1712,18 @@ sub unalign_sequences {
 	return $seq_count;
 }
 
+=head2 get_run_info_file
+
+returns the path to the run_info_file
+
+=cut
+sub get_run_info_file {
+	my %args = @_;
+	my $self = $args{self} || miss("PS object");
+	return $self->{"fileDir"}."/run_info.txt";
+}
+
+
 =head1 AUTHOR
 
 Aaron Darling, C<< <aarondarling at ucdavis.edu> >>
