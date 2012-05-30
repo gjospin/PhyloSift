@@ -76,17 +76,26 @@ Mode : Only execute a specific step in the pipeline
         evaluates a benchmark on the simulated data.
 
 Options Available at this time :
-   -h --help             Prints the usage section of the README
+   -h, --help            Prints the usage section of the README
+   -f                    Overrides a previous Phylosift run, if applicable
    --custom <file>       Reads a custom marker list from a file otherwise use all the markers from the markers directory
-   --threaded=<number>  Runs Blast and Hmmer using the number of processors specified
-                        (DEFAULT : 1)
+   --threaded=<number>   Runs Blast and Hmmer using the number of processors specified
+                         (DEFAULT : 1)
    --extended            Uses the extended set of markers
    --clean               Cleans the temporary files created by Phylosift (NOT YET IMPLEMENTED)
    --paired              Looks for 2 input files (paired end sequencing) in FastQ format.
-                        Reversing the sequences for the second file listed
-                        and appending to the corresponding pair from the first file listed.
+                         Reversing the sequences for the second file listed
+                         and appending to the corresponding pair from the first file listed.
    --continue            Enables the pipeline to continue to subsequent steps when not using the 'all' mode
    --isolate             Use this mode if you are running data from an Isolate genome
+   --simple              Creates a simple taxonomic summary of the output; no Krona output
+   --besthit             When there are multiple hits to the same read, keeps only the best hit to that read
+   --updated             Use the set of updated markers instead of stock markers
+   --marker_url=<url>    Phylosift will use markers available from the url provided
+   --coverage=<file>     Provides a contig/scaffold coverage file to Phylosift
+   --config=<file>       Provides a custom configuration file to Phylosift
+   --output=<dir>        Specifies an output directory other than PStemp
+   --debug               Prints debugging messages
 
 ~;
 
