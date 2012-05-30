@@ -8,7 +8,7 @@ use Phylosift::Utilities;
 
 =head1 SUBROUTINES/METHODS
 
-=Head2 benchmark_illumina
+=head2 benchmark_illumina
 
 WARNING: The input file must have the correct format to run the benchmark
 Reads the input file looking for taxonomic origins in the read headers and 
@@ -83,7 +83,7 @@ sub read_seq_summary {
 		my @readAncestor = get_ancestor_array(tax_id=> $taxPlacementID[2] );
 
 		#	    print $read." $taxPlacementID[1]\t$taxPlacementID[2]:\t@readAncestor\n";
-		my $rank = $taxPlacementID[1];
+		$rank = $taxPlacementID[1];
 
 		#keep only the top hits for all ranks for each Read
 		my @array = ( $probability, $taxPlacementID[2], scalar(@readAncestor) );

@@ -7,6 +7,7 @@ use Carp;
 use Phylosift::Summarize;
 use Phylosift::Utilities;
 use Bio::Phylo::IO qw(parse unparse);
+use LWP::Simple;
 
 =head1 NAME
 
@@ -40,14 +41,13 @@ sub get_ebi_genomes {
 	my %args = @_;
 	my $directory = $args{directory} || miss("directory");
 	chdir($directory);
-	get_ebi_from_list( url => "http://www.ebi.ac.uk/genomes/organelle.details.txt" );
-	get_ebi_from_list( url => "http://www.ebi.ac.uk/genomes/virus.details.txt" );
-	get_ebi_from_list( url => "http://www.ebi.ac.uk/genomes/phage.details.txt" );
-	get_ebi_from_list( url => "http://www.ebi.ac.uk/genomes/archaea.details.txt" );
-	get_ebi_from_list( url => "http://www.ebi.ac.uk/genomes/archaealvirus.details.txt" );
-	get_ebi_from_list( url => "http://www.ebi.ac.uk/genomes/bacteria.details.txt" );
-
-	#	get_ebi_from_list("http://www.ebi.ac.uk/genomes/eukaryota.details.txt");
+#	get_ebi_from_list( url => "http://www.ebi.ac.uk/genomes/organelle.details.txt" );
+#	get_ebi_from_list( url => "http://www.ebi.ac.uk/genomes/virus.details.txt" );
+#	get_ebi_from_list( url => "http://www.ebi.ac.uk/genomes/phage.details.txt" );
+#	get_ebi_from_list( url => "http://www.ebi.ac.uk/genomes/archaea.details.txt" );
+#	get_ebi_from_list( url => "http://www.ebi.ac.uk/genomes/archaealvirus.details.txt" );
+#	get_ebi_from_list( url => "http://www.ebi.ac.uk/genomes/bacteria.details.txt" );
+	get_ebi_from_list( url => "http://www.ebi.ac.uk/genomes/eukaryota.details.txt");
 }
 
 sub get_ebi_from_list {
@@ -56,12 +56,38 @@ sub get_ebi_from_list {
 	`wget $list_url -O "list.txt"`;
 	my $DETAILS = ps_open( "list.txt" );
 	my $line = <$DETAILS>;
+	my %taxa_details; # {$taxon_id}{$accession} = [$date, $version, $size]
 	while ( $line = <$DETAILS> ) {
-
 		# each line in the list file records a genome and some metadata
 		chomp $line;
 		my ( $acc, $version, $date, $taxid, $description ) = split( /\t/, $line );
-		my $outfile = $acc;
+		next if $description =~ /itochondri/; # skip mitochondrion
+		next if $description =~ /hloroplas/; # skip chloroplast
+		$taxa_details{$taxid}{$acc} = {dater=>$date, version=>$version};
+	}
+	foreach my $taxid(keys(%taxa_details)){
+		# add up the accession sizes
+		my $total_size = 0;
+		my $facc;
+		my $date;
+		
+		foreach my $acc(keys(%{$taxa_details{$taxid}})){
+			# if it's too big, don't download
+			my $url = "http://www.ebi.ac.uk/ena/data/view/$acc&display=txt&expanded=true";
+			my $ua = LWP::UserAgent->new(max_size=>200);
+			my $response = $ua->get($url);
+			my $content = $response->decoded_content();
+			my $sizer = $1 if $content =~ /(\d+) BP/;
+			$total_size += $sizer;
+			$facc = $acc unless defined $facc;
+			print STDERR "taxid $taxid, acc $acc\n";
+			$date = $taxa_details{$taxid}{$acc}->{dater} unless defined $date;
+		}
+		print STDERR "Total genome size of taxid $taxid is $total_size\n";
+		
+		next if $total_size > 200000000;  # 100Mbp limit
+		
+		my $outfile = $facc;
 		$outfile =~ s/\./_/g;
 		$outfile .= ".$taxid";
 		print STDERR "$outfile.fasta\n";
@@ -76,14 +102,19 @@ sub get_ebi_from_list {
 			$datestr .= ( $timerval[4] + 1 );
 			$datestr .= 0 if $timerval[3] < 9;
 			$datestr .= $timerval[3];
-			next unless int($datestr) < int($date);
+#			next unless int($datestr) < int($date);
 			`rm "$outfile.fasta"`;
 		}
 
 		# either we don't have this one yet, or our version is out of date
-		my $WGETTER = ps_open("| wget -i - -O $outfile.embl " );
-		print $WGETTER "http://www.ebi.ac.uk/ena/data/view/$acc&display=txt&expanded=true";
-		close $WGETTER;
+		my $catch = ">";
+		foreach my $acc(keys(%{$taxa_details{$taxid}})){
+			my $WGETTER = ps_open("| wget -i - -O $outfile.embl.tmp " );
+			print $WGETTER "http://www.ebi.ac.uk/ena/data/view/$acc&display=txt&expanded=true";
+			close $WGETTER;
+			`cat $outfile.embl.tmp $catch $outfile.embl ; rm $outfile.embl.tmp`;
+			$catch = ">>";
+		}
 
 		#		eval{
 		my $seq_in  = Phylosift::Utilities::open_SeqIO_object( file => "$outfile.embl",   format => "embl" );
@@ -612,16 +643,19 @@ sub make_ncbi_subtree {
 	my %tidnodes;
 	my $phylotree = Bio::Phylo::Forest::Tree->new();
 	my $ncbi_count = 0;
+	my $count=0;
+	
 	foreach my $tid (@taxonids) {
+	    debug "COULD NOT FIND : " .$tid ."\n" unless (defined($idnamemap{$tid}));
 		next unless(defined($merged->{$tid}) || defined($idnamemap{$tid}));	# ensure the id actually exists in NCBI's db
 		next if ( $tid eq "" );
 		$ncbi_count++;
 		my @children;
 		while ( defined($tid) ) {
-
+		    
 			# check if we've already seen this one
 			last if ( defined( $tidnodes{$tid} ) );
-
+			#debug "ADDING $tid\n";
 			# process any merging that may have been done
 			my @mtid;
 			push( @mtid, $tid );
@@ -643,8 +677,10 @@ sub make_ncbi_subtree {
 				if ( defined( $parentid )  && defined( $tidnodes{$parentid} ) ){
 					$newnode = Bio::Phylo::Forest::Node->new( -parent => $tidnodes{$parentid}, -name => $mnode ) ;
 				}else{
+				    
 					$newnode = Bio::Phylo::Forest::Node->new( -name => $mnode );
 				}
+				$count++;
 				$tidnodes{$mnode} = $newnode;
 
 				# add all children to the new node
@@ -661,6 +697,8 @@ sub make_ncbi_subtree {
 		}
 	}	
 	# if there's something in the tree, write it out
+	debug "NCBI COUNT : $ncbi_count\n";
+	debug "Making $count Nodes\n";
 	if($ncbi_count>0){
 		my $TREEOUT = ps_open( ">$out_file" );
 		print $TREEOUT $phylotree->to_newick( "-nodelabels" => 1 );
@@ -1367,7 +1405,8 @@ sub join_trees {
 	# then apply 16s constraints to protein
 #	my $constraint_tree = get_fasttree_tre_filename( marker => "concat", dna => 0, updated => 1, pruned => 1 );
 #	make_constrained_tree( constraint_marker => "concat", constraint_tree => $constraint_tree,   target_marker => "16s_reps_bac", marker_dir => $marker_dir, constraint_pruned => 1, target_pruned => 0 );
-	my $tctree = get_fasttree_tre_filename( marker => "16s_reps_bac", dna => 0, updated => 1, pruned => 0 ) . ".constrained";
+#	my $tctree = get_fasttree_tre_filename( marker => "16s_reps_bac", dna => 0, updated => 1, pruned => 0 ) . ".constrained";
+	my $tctree = get_fasttree_tre_filename( marker => "16s_reps_bac", dna => 0, updated => 1, pruned => 0 );
 	print "Using $tctree to provide constraints for concat\n";
 	make_constrained_tree( constraint_marker => "16s_reps_bac", constraint_tree => $tctree, target_marker => "concat",       marker_dir => $marker_dir, constraint_pruned => 0, target_pruned => 1, copy_tree=>1 );
 
@@ -1459,10 +1498,30 @@ sub make_pplacer_packages_with_taxonomy {
 sub package_markers {
 	my %args = @_;
 	my $marker_dir = $args{marker_directory}|| miss("marker_directory");
+	my $base_marker_dir = $args{base_marker_directory}|| miss("base_marker_directory");
 	my @markerlist = Phylosift::Utilities::gather_markers();
 	unshift( @markerlist, "concat" );
+	
+	# first collect the base markers
 	foreach my $marker (@markerlist) {
+		# copy the base marker into our directory 
+		`cp -r $base_marker_dir/$marker/ $marker_dir`;
+		if($marker =~ /PMPROK/){
+			`cp $base_marker_dir/$marker.faa $marker_dir`;
+			`cp $base_marker_dir/$marker.ali $marker_dir`;
+			`cp $base_marker_dir/$marker.final.tre $marker_dir`;
+			`cp $base_marker_dir/$marker.ncbimap $marker_dir`;
+			`cp $base_marker_dir/$marker.stk $marker_dir`;
+			`cp $base_marker_dir/$marker.hmm $marker_dir`;
+			`cp $base_marker_dir/$marker.trimfinal $marker_dir`;
+			`cp $base_marker_dir/$marker.trimfinal.fasta $marker_dir`;
+			`cp $base_marker_dir/$marker.stock.hmm $marker_dir`;
+			`cp $base_marker_dir/$marker.seed.stock $marker_dir`;
+		}
+	}
 
+	# then move various files into place
+	foreach my $marker (@markerlist) {
 		for ( my $dna = 0 ; $dna < 2 ; $dna++ ) {    # zero for aa, one for dna
 			my $pack = get_marker_package( marker => $marker, dna => $dna, updated => 1 );
 			# move in reps
