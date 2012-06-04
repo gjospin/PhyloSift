@@ -174,7 +174,7 @@ sub write_out
 	{
 	   if ($line =~ /^>/)
 	   {
-	    print($ofh, @record) if @record > 1;
+	    print $ofh @record if @record > 1;
 	    @record = ();
 	   }
 	   push (@record, $line);
@@ -182,7 +182,7 @@ sub write_out
 	   next if length($tmp) < 1;
 	   next unless $line =~ /\S/;
 	}
-	print($ofh, @record) if @record > 1; # prints anything left to output file
+	print $ofh @record if @record > 1; # prints anything left to output file
 	close $ifh;
 	close $ofh;
     }
