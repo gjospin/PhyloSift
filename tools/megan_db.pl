@@ -243,7 +243,9 @@ sub get_gi
 sub write_final_hax0rz
 {
     my $gref = shift;
-
+    my %checkgi = ();
+    my $defined = 0;
+    
     open my $fh, "<", "hax0rz.fasta" or die "Couldn't open your stupid hacked fasta: $!";
     open my $ofh, ">", "hax0rz_final.fasta" or die "Couldn't write that stupid fasta: $!";
 
@@ -252,18 +254,34 @@ sub write_final_hax0rz
         my $line = $_;
 
         if ($line =~ /^>\w+/)
-        {
-            if ($line =~/^>([a-zA-Z]{1,3}\d+)/)
+	{
+            if ($line =~ /^>([a-zA-Z]{1,3}\d+)/)
             {
-                print "Header is $1\n";
+             	print "Header is $1\n";
+                my $g = $$gref{$1};
 
-                print "Header should be >gi\|$$gref{$1}\n";
-                print $ofh ">gi|$$gref{$1}\n";
-            }else{
-                print $ofh "$line";
+                print "Header should be >gi\|$g\n";
+		if (! defined $checkgi{$g})
+                {
+                    $checkgi{$g} = 1;
+                    $defined = 0;
+                    print $ofh ">gi|$g\n";
+                }else{
+                    $defined = 1;
+                }
+            }elsif ($line =~ /^>gi\|(\d+)/)
+            {
+                if (! defined $checkgi{$1})
+                {
+                    $checkgi{$1} = 1;
+                    $defined = 0;
+                    print $ofh "$line";
+                }else{
+                    $defined = 1;
+                }
             }
         }else{
-            print $ofh "$line";
+            print $ofh "$line" unless $defined == 1;
         }
     }
 
