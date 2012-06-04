@@ -3,34 +3,35 @@
 #$ -cwd
 #$ -V
 # Author: Eric Lowe
-# Usage: perl megan_db.pl [input file] [knockout file] [gi file]
+# Usage: perl megan_db.pl [knockout file] [gi file]
 # Script to create a custom db for MEGAN
 # Extreme work in progress
 
 use strict; use warnings;
 
-my $kofile = shift;
-my $gifile = shift;
+my $kofile = shift; # file of knockout taxids
+my $gifile = shift; # file of gb accession to gi accession
 
-# get an array with ko id's from subroutine
+# get a hash with ko id's from subroutine
 my %taxid = ();
 get_koed($kofile, \%taxid);
-
+# list of directories to search for files
 my @dirs = qw( ebi ncbi_draft );
-my $n = @dirs;
+my $n = @dirs; # number of directories in list
 
-list_files(\%taxid, \@dirs, $n);
-my @fnames = values %taxid;
-my %koedfiles = ();
-hash_kos(\@fnames, \%koedfiles);
+list_files(\%taxid, \@dirs, $n); # get the list of appropriate files
+my @fnames = values %taxid; # array of filenames we don't want to include
+my %koedfiles = (); # hash of files to be knocked out
+hash_kos(\@fnames, \%koedfiles); # defines a hash with keys of files to be knocked out
 
-last_push(\%koedfiles);
+last_push(\%koedfiles); # begins the first writing out, calls a subroutine that checks if file
+                        # is to be used or not, writes to hax0rz.fasta
+                        
+my %nhash = (); # hash of gb accessions and related gi accessions to replace headers
+hax0rz_fix(\%nhash); # finds headers to fix
 
-my %nhash = ();
-hax0rz_fix(\%nhash);
-
-get_gi($gifile, \%nhash);
-write_final_hax0rz(\%nhash);
+get_gi($gifile, \%nhash); # finds appropriate gi to replace gb accession
+write_final_hax0rz(\%nhash); # writes final file with correct headers
 
 exit;
 
@@ -181,6 +182,7 @@ sub write_out
 	   next if length($tmp) < 1;
 	   next unless $line =~ /\S/;
 	}
+	print($ofh, @record) if @record > 1; # prints anything left to output file
 	close $ifh;
 	close $ofh;
     }
