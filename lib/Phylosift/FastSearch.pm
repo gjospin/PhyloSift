@@ -138,9 +138,29 @@ sub run_search {
 			) unless $completed_chunk;
 		}
 		print $RUNINFO "Chunk $chunkI completed\n" unless $completed_chunk;
+		debug "Debug lvl : $Phylosift::Utilities::debuglevel\n";
+		clean_chunk_directory(self=>$self, chunk=>$chunkI) if !$self->{"keep_search"};
 		last if $finished;
 	}
 	return $self;
+}
+=head2 clean_search_directory
+	
+	Deleting the files from the blastDir for a specific chunk
+	Passing the chunk so this is ready in case PS moves towards running multiples chunks in parallel.
+
+=cut
+sub clean_chunk_directory{
+	my %args = @_;
+	my $self=  $args{self};
+	my $chunk = $args{chunk};
+	return if $Phylosift::Utilities::debuglevel >= 1; #Do not clean if debug is present
+	my $remove_aa = "rm ".$self->{"blastDir"}. "/*.aa.$chunk*";
+	my $remove_ffn = "rm ".$self->{"blastDir"}. "/*.ffn.$chunk*";
+	debug("Cleaning the Search directory for chunk $chunk\n");
+	my @array_to_delete = glob($self->{"blastDir"}. "/*.ffn.$chunk*");
+	`$remove_aa`; #deletes the aa files
+	`$remove_ffn` if defined(@array_to_delete); #added check to prevent an error when using AA sequences;
 }
 
 =head2 has_chunk_completed
@@ -314,6 +334,7 @@ sub launch_searches {
 
  #	debug "TESTING" . $args{readtype}->{paired};
  #	$BOWTIE2_R2_PIPE = ps_open(">$bowtie2_r2_pipe") if $args{readtype}->{paired};
+ 	debug "Opening $reads_file\n";
 	my $READS_PIPE    = ps_open("+>$reads_file");
 	my $LAST_RNA_PIPE = ps_open(">$last_rna_pipe");
 

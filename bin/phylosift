@@ -96,6 +96,7 @@ Options Available at this time :
    --config=<file>       Provides a custom configuration file to Phylosift
    --output=<dir>        Specifies an output directory other than PStemp
    --debug               Prints debugging messages
+   --keep_search         Keeps the blastDir files (Default: Delete the blastDir files after every chunk)
 
 ~;
 
@@ -125,6 +126,7 @@ GetOptions(
 	"extended"        => \$ps->{"extended"},            #Should the full extended set of markers be used?
 	"config=s"        => \$ps->{"configuration"},       #custom config file
 	"remove_dup"      => \$ps->{"remove_dup"},  #removes duplicate taxons when using build_marker
+	"keep_search"    => \$ps->{"keep_search"}, #prevents the files from the bastDir from being deleted after each chunk has completed
 	"h"               => \$help,                #prints the usage part of the README file
 	"help"            => \$help,                #same as -h
 	"debug"           => \$my_debug,            #print debugging messages?

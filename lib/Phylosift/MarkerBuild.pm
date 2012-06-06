@@ -115,9 +115,9 @@ sub build_marker {
 		my $id_taxon_map   = $target_dir . "/" . $core . ".gene_map";
 		my $ncbi_sub_tree  = $target_dir . "/" . $core . ".subtree";
 		debug("Using the mapping stuff\n");
-
+		debug("taxit create -a \"Guillaume Jospin\" -d \"simple package for reconciliation only\" -l temp -f $clean_aln -t $fasttree_file -s $tree_log_file -P $target_dir/temp_ref");
 		#make dummy placement reference package
-`taxit create -a "Guillaume Jospin" -d "simple package for reconciliation only" -l temp -f $clean_aln -t $fasttree_file -s $tree_log_file -Y FastTree -P $target_dir/temp_ref`
+`taxit create -a "Guillaume Jospin" -d "simple package for reconciliation only" -l temp -f $clean_aln -t $fasttree_file -s $tree_log_file -P $target_dir/temp_ref`
 		  unless -e "target_dir/temp_ref";
 
 		#make a dummy jplace file
@@ -152,7 +152,7 @@ sub build_marker {
 
 #use taxit to create a new reference package required for running PhyloSift
 #needed are : 1 alignment file, 1 representatives fasta file, 1 hmm profile, 1 tree file, 1 log tree file.
-`cd "$target_dir";taxit create -c -d "Creating a reference package for PhyloSift for the $core marker" -l "$core" -f "$clean_aln" -t "$target_dir/$core.tree" -s "$target_dir/$core.log" -Y FastTree -P "$core"`;
+`cd "$target_dir";taxit create -c -d "Creating a reference package for PhyloSift for the $core marker" -l "$core" -f "$clean_aln" -t "$target_dir/$core.tree" -s "$target_dir/$core.log" -P "$core"`;
 
 	`rm "$target_dir/$core.pda"`;
 	`rm "$target_dir/$core.tree"`;

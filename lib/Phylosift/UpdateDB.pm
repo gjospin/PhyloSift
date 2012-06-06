@@ -1113,7 +1113,7 @@ sub reconcile_with_ncbi {
 #\$ -S /bin/bash
 
 rm -rf $aa_package
-taxit create -a "Aaron Darling" -d "simple package for reconciliation only" -l \$1 -f $aa_fasta -t $aa_tre -s $aa_log -Y FastTree -P $aa_package
+taxit create -a "Aaron Darling" -d "simple package for reconciliation only" -l \$1 -f $aa_fasta -t $aa_tre -s $aa_log -P $aa_package
 pplacer -c $aa_package -p $aa_tmpread.fasta
 # readconciler uses a pplacer tree from a .jplace file to parse out the branch numbers
 mangler.pl < $aa_tmpread.jplace > $aa_tmpread.jplace.mangled
@@ -1419,14 +1419,14 @@ EOF
 
 		# finally, make a pplacer package with the constrained tree
 		my $taxit_cl =
-	"taxit create -a \"Aaron Darling\" -d \"topology-constrained marker $target_marker\" -l $target_marker -f $target_alignment_amended -t $target_constrained_tree -s $target_constrained_log -Y FastTree -P $target_marker.constrained";
+	"taxit create -a \"Aaron Darling\" -d \"topology-constrained marker $target_marker\" -l $target_marker -f $target_alignment_amended -t $target_constrained_tree -s $target_constrained_log -P $target_marker.constrained";
 		system($taxit_cl);
 		unlink($constraint_splits);
 	}else{
 
 		# make a pplacer package with the renamed tree
 		my $taxit_cl =
-	"taxit create -a \"Aaron Darling\" -d \"topology-constrained marker $target_marker\" -l $target_marker -f $target_alignment_amended -t $renamed_tree -Y FastTree -P $target_marker.constrained";
+	"taxit create -a \"Aaron Darling\" -d \"topology-constrained marker $target_marker\" -l $target_marker -f $target_alignment_amended -t $renamed_tree -P $target_marker.constrained";
 		system($taxit_cl);		
 	}
 }
