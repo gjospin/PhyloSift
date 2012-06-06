@@ -125,6 +125,7 @@ GetOptions(
 	"extended"        => \$ps->{"extended"},            #Should the full extended set of markers be used?
 	"config=s"        => \$ps->{"configuration"},       #custom config file
 	"remove_dup"      => \$ps->{"remove_dup"},  #removes duplicate taxons when using build_marker
+	"clean_search"    => \$ps->{"clean_search"}, #removes the files from the bastDir after each chunk has completed
 	"h"               => \$help,                #prints the usage part of the README file
 	"help"            => \$help,                #same as -h
 	"debug"           => \$my_debug,            #print debugging messages?
