@@ -138,7 +138,8 @@ sub run_search {
 			) unless $completed_chunk;
 		}
 		print $RUNINFO "Chunk $chunkI completed\n" unless $completed_chunk;
-		clean_chunk_directory(self=>$self, chunk=>$chunkI) if $self->{"clean_search"};
+		debug "Debug lvl : $Phylosift::Utilities::debuglevel\n";
+		clean_chunk_directory(self=>$self, chunk=>$chunkI) if !$self->{"keep_search"};
 		last if $finished;
 	}
 	return $self;
@@ -153,11 +154,13 @@ sub clean_chunk_directory{
 	my %args = @_;
 	my $self=  $args{self};
 	my $chunk = $args{chunk};
+	return if $Phylosift::Utilities::debuglevel >= 1; #Do not clean if debug is present
 	my $remove_aa = "rm ".$self->{"blastDir"}. "/*.aa.$chunk*";
 	my $remove_ffn = "rm ".$self->{"blastDir"}. "/*.ffn.$chunk*";
 	debug("Cleaning the Search directory for chunk $chunk\n");
-	system($remove_aa); #deletes the aa files
-	system($remove_ffn); #deletes the ffn files
+	my @array_to_delete = glob($self->{"blastDir"}. "/*.ffn.$chunk*");
+	`$remove_aa`; #deletes the aa files
+	`$remove_ffn` if defined(@array_to_delete); #added check to prevent an error when using AA sequences;
 }
 
 =head2 has_chunk_completed
