@@ -192,6 +192,39 @@ sub get_ncbi_finished_genomes {
 	}
 }
 
+sub get_ncbi_wgs_genomes {
+	my %args = @_;
+	my $directory = $args{directory} || miss("directory");
+	`mkdir -p "$directory"`;
+
+	# First download all finished bacterial genomes
+	# then for each genome, concatenate all replicons into a FastA file
+	# Name the FastA file with the organism and its taxon ID.
+	chdir($directory);
+	my $ncbi_wget_cmd = "wget -m --continue --timeout=20 --limit-size=25000000 --accept=gbff.gz ftp://ftp.ncbi.nih.gov/genbank/wgs/";
+
+#	`$ncbi_wget_cmd`;
+	my $FINDER = ps_open( "find ftp.ncbi.nih.gov/genbank/wgs -name \"*.gz\" |" );
+	while ( my $line = <$FINDER> ) {
+		next if $line =~ /\.mstr\.gbff\.gz/;
+		chomp $line;
+		`gunzip $line`;
+		$line =~ s/\.gz//g;
+		my $orgname = $1 if $line =~ /wgs\.(....)\./;
+		my $taxid = get_taxid_from_gbk( file => $line );
+		my $fasta_name = "$orgname.$taxid.fasta";
+		if ( -e $fasta_name && ( stat($fasta_name) )[9] > ( stat($line) )[9] ) {
+			print STDERR "Already have $fasta_name\n";
+			last;
+		}
+		my $seq_out = Phylosift::Utilities::open_SeqIO_object( file => ">$fasta_name", format => "FASTA" );
+		my $seq_in = Phylosift::Utilities::open_SeqIO_object( file => "$line", format => "genbank" );
+		while ( my $inseq = $seq_in->next_seq ) {
+			$seq_out->write_seq($inseq);
+		}
+	}
+}
+
 sub get_ncbi_draft_genomes {
 	my %args = @_;
 	my $directory = $args{directory} || miss("directory");
@@ -249,12 +282,12 @@ sub find_new_genomes {
 		chomp $genome;
 		next unless $genome =~ /\.fasta/;
 		my $gbase = basename $genome;
-		print STDERR "Looking for $gbase\n";
-		if ( -e "$results_dir/$gbase/alignDir/concat.trim.fasta" ) {
-			my $ctime = ( stat("$results_dir/$gbase/alignDir/concat.trim.fasta") )[9];
+		print STDERR "Looking for $results_dir/$gbase/alignDir/concat.fasta\n";
+		if ( -e "$results_dir/$gbase/alignDir/concat.fasta" && -s "$results_dir/$gbase/alignDir/concat.fasta" > 0 ) {
+			my $ctime = ( stat("$results_dir/$gbase/alignDir/concat.fasta") )[9];
 			my $mtime = ( stat($genome) )[9];
-#			push( @{$files}, $genome ) if ( $ctime < $mtime );
-			push( @{$files}, $genome );
+			push( @{$files}, $genome ) if ( $ctime < $mtime );
+#			push( @{$files}, $genome );
 			print STDERR "Found up-to-date $gbase\n" if ( $ctime >= $mtime );
 		} else {
 			push( @{$files}, $genome );
@@ -285,6 +318,10 @@ export PATH=\$PATH:/home/koadman/development/PhyloSift/bin/
 export PERL5LIB=\$HOME/lib/perl5:/home/koadman/development/PhyloSift/lib
 WORKDIR=/state/partition1/koadman/phylosift/\$JOB_ID
 mkdir -p \$WORKDIR
+if [ \$? -gt 0 ]; then
+    WORKDIR=/data/scratch/koadman/phylosift/\$JOB_ID
+	mkdir -p \$WORKDIR
+fi
 cd \$WORKDIR
 phylosift search $params --isolate --besthit \$1
 phylosift align $params --isolate --besthit \$1
@@ -340,13 +377,13 @@ sub concat_marker_files {
 	my $catline = join( " ", @$cfref );
 	my $fasta = get_fasta_filename(marker=>$marker, updated=>1);
 	`cat $catline $cat_ch "$local_directory/$fasta"`;
-	$catline =~ s/\.trim\.fasta/\.trim\.fna\.fasta/g;
+	$catline =~ s/\.fasta$/\.codon\.fasta/g;
 	if ( Phylosift::Utilities::is_protein_marker( marker => $marker ) ) {
 		my $codon_fasta = get_fasta_filename(marker=>$marker, updated=>1, dna=>1);
 		`cat $catline $cat_ch "$local_directory/$codon_fasta"`;
 	}
 	unless($marker eq "concat"){
-		$catline =~ s/\.trim\.fna\.fasta/\.unmasked/g;
+		$catline =~ s/\.codon\.fasta$/\.unmasked/g;
 		my $reps = get_reps_filename( marker => $marker, updated => 1 );
 		`cat $catline $cat_ch "$local_directory/$reps"`;
 	}
@@ -380,7 +417,7 @@ sub collate_markers {
 	# NFS is slooooow...
 	print STDERR "Working with " . scalar(@markerlist) . " markers\n";
 	print STDERR "Listing all files in results dir\n";
-	my @alldata = `find "$local_directory" -name "*.trim.fasta"`;
+	my @alldata = `find "$local_directory" -name "*.fasta"`;
 	print STDERR "Found " . scalar(@alldata) . " files\n";
 	unshift( @markerlist, "concat" );
 	foreach my $marker (@markerlist) {
@@ -389,7 +426,7 @@ sub collate_markers {
 		# find all alignments with this marker
 		my @catfiles = ();
 		foreach my $file (@alldata) {
-			next unless $file =~ /(.+\.fasta)\/alignDir\/$marker.trim.fasta/;
+			next unless $file =~ /(.+\.fasta)\/alignDir\/$marker.fasta/;
 			my $genome = $1;
 			my $taxon = $1 if $genome =~ /\.(\d+)\.fasta/;
 			next if( defined($taxon) && defined($ko_list{$taxon}));
@@ -965,7 +1002,8 @@ sub pd_prune_markers {
 
 	# prune distance is different for AA and DNA
 	# these distances are in substitutions per site
-	my %PRUNE_DISTANCE = ( 0 => 0.01, 1 => 0.003 );
+#	my %PRUNE_DISTANCE = ( 0 => 0.01, 1 => 0.003 );
+	my %PRUNE_DISTANCE = ( 0 => 0.000001, 1 => 0.003 );	# try leaving all but the totally identical taxa in to make jplace comparison possible
 	my $REPS_DISTANCE  = 0.05;                                  # reps can be further diverged since we care only about similarity search and not read placement
 	my @markerlist     = Phylosift::Utilities::gather_markers();
 	unshift( @markerlist, "concat" );
@@ -1066,6 +1104,7 @@ sub reconcile_with_ncbi {
 		my $aa_ids      = get_marker_geneids( marker => '$1', dna => $dna, updated => 1, sub_marker=>$sub_marker );
 		my $aa_tmpread  = get_marker_package( marker => '$1', dna => $dna, updated => 1, sub_marker=>$sub_marker ).".tmpread";
 		my $aa_ncbi_tre = get_marker_ncbi_subtree( marker => '$1', dna => $dna, updated => 1, sub_marker=>$sub_marker );
+		my $ncbi_tre = get_marker_ncbi_subtree( marker => '$1', dna => $dna, updated => 1, pruned=>$pruned );
 		my $RECONCILESCRIPT = ps_open( ">$script" );
 		print $RECONCILESCRIPT <<EOF;
 #!/bin/sh
@@ -1078,6 +1117,7 @@ taxit create -a "Aaron Darling" -d "simple package for reconciliation only" -l \
 pplacer -c $aa_package -p $aa_tmpread.fasta
 # readconciler uses a pplacer tree from a .jplace file to parse out the branch numbers
 mangler.pl < $aa_tmpread.jplace > $aa_tmpread.jplace.mangled
+/home/koadman/development/PhyloSift/tools/make_ncbi_subtree.pl $ncbi_tre /share/eisen-d2/amphora2/markers \$1 1 $pruned $dna
 readconciler $aa_ncbi_tre $aa_tmpread.jplace.mangled $aa_ids $aa_taxonmap
 rm $aa_tmpread.jplace $aa_tmpread.jplace.mangled $aa_tmpread.fasta
 EOF
@@ -1094,10 +1134,9 @@ EOF
 		next unless -e $marker_fasta;
 		next if $marker =~ /^PMPROK/;	# skip these since they all go in the concat
 		my $taxa = filter_marker_gene_ids(marker=>$marker, updated=>1, pruned=>$pruned, dna=>0);
-		my $ncbi_tre = get_marker_ncbi_subtree( marker => $marker, dna => 0, updated => 1, pruned=>$pruned );
-		print STDERR "making ncbi subtree for $marker\n";
-		my $success = make_ncbi_subtree(out_file=>$ncbi_tre, taxon_ids=>$taxa);
-		if($success){
+		print STDERR "working on marker $marker\n";
+#		my $success = make_ncbi_subtree(out_file=>$ncbi_tre, taxon_ids=>$taxa);
+#		if($success){
 			# create some read files for pplacer to place so we can get its jplace
 			create_temp_read_fasta( file => get_marker_package( marker=>$marker, updated=>1), aln_file => $marker_fasta);
 	
@@ -1105,7 +1144,7 @@ EOF
 			# run reconciliation on them
 			my @marray = ($marker);
 			qsub_job(script=>$aa_script, job_ids=>\@jobids, script_args=>\@marray );
-		}
+#		}
 
 		for(my $group_id=1; ; $group_id++){
 			my $subalignment = get_fasta_filename( marker => $marker, dna => 1, updated => 1, pruned => 0, sub_marker => $group_id );
@@ -1116,13 +1155,14 @@ EOF
 			create_temp_read_fasta( file => get_marker_package( marker=>$marker, updated=>1, dna=>1, sub_marker=>$group_id), aln_file => get_fasta_filename( marker => $marker, updated => 1, dna => 1, sub_marker=>$group_id) );
 			my $taxa = filter_marker_gene_ids(marker=>$marker, updated=>1, dna=>1, pruned=>0, sub_marker=>$group_id);
 			my $ncbi_tre = get_marker_ncbi_subtree( marker => $marker, dna => 1, updated => 1, pruned=>0, sub_marker=>$group_id );
-			my $success = make_ncbi_subtree(out_file=>$ncbi_tre, taxon_ids=>$taxa);
+			my $success = -f $ncbi_tre && -s $ncbi_tre > 0;
+#			make_ncbi_subtree(out_file=>$ncbi_tre, taxon_ids=>$taxa);
 			# only do the reconciliation if there were NCBI tree nodes to reconcile with
-			if($success){
+#			if($success){
 				debug "Submitting reconciliation job for $marker codon sub $group_id\n";
 				my @marray = ($marker,$group_id);
 				qsub_job(script=>$codon_script, job_ids=>\@jobids, script_args=>\@marray );
-			}
+#			}
 		}
 	}
 	wait_for_jobs( job_ids => \@jobids );
