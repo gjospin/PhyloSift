@@ -47,6 +47,12 @@ sub build_marker {
 	);
 	my $target_dir = $marker_dir . "/$core";
 
+	# check that taxit is available
+	my $taxit = Phylosift::Utilities::get_program_path( prog_name => "taxit" );
+	if( $taxit eq "" ){
+		croak("Error: you must install pplacer's taxtastic and its dependencies prior to building markers. See https://github.com/fhcrc/taxtastic for more information.\n")
+	}
+
 	#$target_dir = $self->{"fileDir"};
 	if ( -e $target_dir && !$force ) {
 		croak
