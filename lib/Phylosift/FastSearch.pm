@@ -175,9 +175,7 @@ sub has_chunk_completed {
 	my $chunk    = $args{chunk};
 	my $run_file = Phylosift::Utilities::get_run_info_file(self=>$self);
 	my $grep     = `grep "Chunk $chunk completed" $run_file`;
-	#debug "Chunk Grep : $grep";
 	return 1 if defined $grep && length($grep)>0;
-	debug "Grep is not defined or empty, returning 0 for Chunk $chunk\n";
 	return 0;
 }
 
