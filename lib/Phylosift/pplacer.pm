@@ -61,7 +61,7 @@ sub pplacer {
 		next if($marker =~ /PMPROK/ && $self->{"updated"});
 		my $read_alignment_file = $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta( marker => Phylosift::Utilities::get_marker_basename(marker=>$marker), chunk => $chunk );
 		next unless -e $read_alignment_file;
-		my $options = $marker eq "concat" ? "--groups 10" : "";
+		my $options = $marker eq "concat" ? "--groups 15" : "";
 		$options .= "--mmap-file abracadabra" if ($marker =~ /18s/);  # FIXME: this should be based on the number of seqs in the tree.
 		$options .= "--mmap-file abracadabra" if ($marker =~ /16s/);
 		my $place_file = place_reads(self=>$self, marker=>$marker, dna=>0, chunk => $chunk, reads=>$read_alignment_file, options=>$options);
@@ -305,12 +305,19 @@ sub place_reads{
 	`mv "$jplace" "$self->{"treeDir"}"` if ( -e $jplace );
 	return unless -e $self->{"treeDir"} . "/$jplace";
 
-	unless($dna || !$self->{"updated"} && Phylosift::Utilities::is_protein_marker(marker=>$marker)){
-		load_submarkers();
-		if(keys(%submarker_map)>0){
-			make_submarker_placements(self=>$self, marker=>$marker, chunk=>$chunk, place_file=>$self->{"treeDir"} . "/$jplace");
-		}
+	# if we're on the concat marker, create a single jplace with all reads for use with multisample metrics 
+	if($marker eq "concat"){
+		my $sample_jplace = $self->{"fileDir"}."/".$self->{"fileName"}.".jplace";
+		`cp $self->{"treeDir"}/$jplace $sample_jplace` unless -f $sample_jplace;
+		`$Phylosift::Utilities::guppy merge -o $sample_jplace $self->{"treeDir"}/$jplace $sample_jplace`;
 	}
+
+#	unless($dna || !$self->{"updated"} && Phylosift::Utilities::is_protein_marker(marker=>$marker)){
+#		load_submarkers();
+#		if(keys(%submarker_map)>0){
+#			make_submarker_placements(self=>$self, marker=>$marker, chunk=>$chunk, place_file=>$self->{"treeDir"} . "/$jplace");
+#		}
+#	}
 	
 	unless($self->{"simple"}){
 		# skip this if a simple summary if desired since it's slow.
