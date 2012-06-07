@@ -1586,6 +1586,20 @@ sub package_markers {
 		}
 
 	}
+	
+	# clean up some stuff that really shouldn't be packaged
+	system("rm -f *.fasttree.log");
+	system("rm -f *.updated*fasta");
+	system("rm -f *.reps.clean");
+	system("rm -f *.updated.reps");
+	system("rm -f *.updated*geneids");
+	system("rm -f core.*");
+	system("rm -f *.tmpread.jplace");
+	system("rm -f *.ncbi_subtree");
+	system("mv ncbi_tree.updated.tre safekeeping");
+	system("rm -f *.updated*tre");
+	system("mv safekeeping ncbi_tree.updated.tre");
+	
 	chdir( $marker_dir . "/../" );
 	system("pwd");
 	my @timerval = localtime();
