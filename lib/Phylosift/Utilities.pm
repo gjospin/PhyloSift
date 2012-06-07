@@ -286,6 +286,7 @@ sub marker_update_check {
 		
 	debug "Skipping check for marker updates on server\n" if $self->{"disable_update_check"};
 	return if $self->{"disable_update_check"};	# bail out if we're not supposed to be here
+	return if defined($Phylosift::Settings::marker_update_check) && $Phylosift::Settings::marker_update_check == 0;
 	$url =~ s/\/\//\//g;
 	$url =~ s/http:/http:\//g;
 	my ( $content_type, $document_length, $modified_time, $expires, $server ) = head($url);
