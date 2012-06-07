@@ -141,7 +141,7 @@ sub run_search {
 		print $RUNINFO "Chunk $chunkI completed\n" unless $completed_chunk;
 		debug "Debug lvl : $Phylosift::Utilities::debuglevel\n";
 		clean_chunk_directory(self=>$self, chunk=>$chunkI) if !$self->{"keep_search"};
-		last if $finished || $chunkI >= $self->{"chunk"};
+		last if $finished || (defined($self->{"chunk"}) && $chunkI >= $self->{"chunk"});
 	}
 	return $self;
 }
