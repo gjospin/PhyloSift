@@ -97,6 +97,8 @@ Options Available at this time :
    --output=<dir>        Specifies an output directory other than PStemp
    --debug               Prints debugging messages
    --keep_search         Keeps the blastDir files (Default: Delete the blastDir files after every chunk)
+   --chunk=<Number>      Only run a set number of chunks
+   --chunk_size=<Number> Run so many sequences per chunk
 
 ~;
 
@@ -127,6 +129,8 @@ GetOptions(
 	"config=s"        => \$ps->{"configuration"},       #custom config file
 	"remove_dup"      => \$ps->{"remove_dup"},  #removes duplicate taxons when using build_marker
 	"keep_search"    => \$ps->{"keep_search"}, #prevents the files from the bastDir from being deleted after each chunk has completed
+	"chunk=i"          => \$ps->{"chunk"},       #sets the number of chunks to be run
+	"chunk_size=i"     => \$ps->{"chunk_size"},   #sets the number of sequences to run per chunk
 	"h"               => \$help,                #prints the usage part of the README file
 	"help"            => \$help,                #same as -h
 	"debug"           => \$my_debug,            #print debugging messages?
