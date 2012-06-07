@@ -161,7 +161,7 @@ sub clean_chunk_directory{
 	debug("Cleaning the Search directory for chunk $chunk\n");
 	my @array_to_delete = glob($self->{"blastDir"}. "/*.ffn.$chunk*");
 	`$remove_aa`; #deletes the aa files
-	`$remove_ffn` if defined(@array_to_delete); #added check to prevent an error when using AA sequences;
+	`$remove_ffn` if @array_to_delete; #added check to prevent an error when using AA sequences;
 }
 
 =head2 has_chunk_completed
