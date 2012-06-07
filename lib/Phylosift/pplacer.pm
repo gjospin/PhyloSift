@@ -60,7 +60,7 @@ sub pplacer {
 		# the PMPROK markers are contained in the concat above
 		next if($marker =~ /PMPROK/ && $self->{"updated"});
 		my $read_alignment_file = $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta( marker => Phylosift::Utilities::get_marker_basename(marker=>$marker), chunk => $chunk );
-		next unless -e $read_alignment_file;
+		next unless -e $read_alignment_file && -s $read_alignment_file > 0;
 		my $options = $marker eq "concat" ? "--groups 15" : "";
 		$options .= "--mmap-file abracadabra" if ($marker =~ /18s/);  # FIXME: this should be based on the number of seqs in the tree.
 		$options .= "--mmap-file abracadabra" if ($marker =~ /16s/);
