@@ -65,6 +65,7 @@ sub pplacer {
 		$options .= "--mmap-file abracadabra" if ($marker =~ /18s/);  # FIXME: this should be based on the number of seqs in the tree.
 		$options .= "--mmap-file abracadabra" if ($marker =~ /16s/);
 		my $place_file = place_reads(self=>$self, marker=>$marker, dna=>0, chunk => $chunk, reads=>$read_alignment_file, options=>$options);
+		unlink("abracadabra") if $options =~ /abracadabra/;	# remove the mmap file created by pplacer
 		# if we're chunked, merge this with the main jplace
 		
 		#chunk merging needs to move to summarize.pm
@@ -304,7 +305,7 @@ sub place_reads{
 	`mv "$jplace" "$self->{"treeDir"}"` if ( -e $jplace );
 	return unless -e $self->{"treeDir"} . "/$jplace";
 
-	unless($dna || !$self->{"updated"}){
+	unless($dna || !$self->{"updated"} && Phylosift::Utilities::is_protein_marker(marker=>$marker)){
 		load_submarkers();
 		if(keys(%submarker_map)>0){
 			make_submarker_placements(self=>$self, marker=>$marker, chunk=>$chunk, place_file=>$self->{"treeDir"} . "/$jplace");
