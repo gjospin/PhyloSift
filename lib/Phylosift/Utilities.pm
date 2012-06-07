@@ -283,6 +283,9 @@ sub marker_update_check {
 	my $self        = $args{self};
 	my $url         = $args{url};
 	my $marker_path = $args{dir};
+		
+	debug "Skipping check for marker updates on server\n" if $self->{"disable_update_check"};
+	return if $self->{"disable_update_check"};	# bail out if we're not supposed to be here
 	$url =~ s/\/\//\//g;
 	$url =~ s/http:/http:\//g;
 	my ( $content_type, $document_length, $modified_time, $expires, $server ) = head($url);
