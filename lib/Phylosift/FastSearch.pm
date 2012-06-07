@@ -77,7 +77,8 @@ sub run_search {
 
 	# use bigger chunks if not on extended markers
 	$CHUNK_MAX_SEQS = 1000000 unless $self->{"extended"};
-
+	$CHUNK_MAX_SEQS = $self->{"chunk_size"} if defined($self->{"chunk_size"});
+	debug "Chunk size set to $CHUNK_MAX_SEQS\n";
 	# check what kind of input was provided
 	my $type =
 	  Phylosift::Utilities::get_sequence_input_type( $self->{"readsFile"} );
@@ -140,7 +141,7 @@ sub run_search {
 		print $RUNINFO "Chunk $chunkI completed\n" unless $completed_chunk;
 		debug "Debug lvl : $Phylosift::Utilities::debuglevel\n";
 		clean_chunk_directory(self=>$self, chunk=>$chunkI) if !$self->{"keep_search"};
-		last if $finished;
+		last if $finished || (defined($self->{"chunk"}) && $chunkI >= $self->{"chunk"});
 	}
 	return $self;
 }
@@ -489,7 +490,7 @@ sub demux_sequences {
 		}
 		$lastal_index++;
 		$lastal_index = $lastal_index % $lastal_threads;
-		last if ( $seq_count > $CHUNK_MAX_SEQS );
+		last if ( $seq_count >= $CHUNK_MAX_SEQS );
 	}
 	foreach my $LAST_PIPE (@LAST_PIPE_ARRAY) {
 		close($LAST_PIPE);

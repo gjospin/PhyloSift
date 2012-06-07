@@ -80,7 +80,7 @@ Person C$^{1,\ast}$
 \\
 \bf{3} Department. of Medical Microbiology and Immunology, University of California-Davis, California, United States of America
 \\
-$\ast$ E-mail: Corresponding aarondarling@ucdavis.edu
+$\ast$ E-mail: aarondarling@ucdavis.edu
 \end{flushleft}
 
 % Please keep the abstract between 250 and 300 words
@@ -93,11 +93,42 @@ blahdeeblah, blah blah
 
 \section*{Introduction}
 
-We follow in the footsteps of the great Martin Wu and Jonathan Eisen~\cite{WuEisen2008}.
+The emerging practice of metagenomics has for the first time offered a glimpse of the genetic structure of uncultured microbial communities.
+In its current form however, metagenomics destroys some of the most valuable information present in a sample: genetic linkage.
+In nearly all metagenomic sample processing methods, cells from the microbial community are lysed together to obtain the DNA.
+This practice causes DNA from many different cells to mix together, so that the cellular compartmentalization of individual genotypes is lost.
+Long chromosome-scale DNA fragments are then typically sheared by mechanical or enzymatic means into fragments small enough processing with current sequencing chemistries. 
+The resulting sequenced fragments are usually less than 1Kbp (though sometimes 10-20kbp). 
+The shearing further destroys genetic linkage information, because information on how the short fragments were arranged into chromosome-scale molecules is lost.
+
+Improved sample-processing workflows might preserve the genetic linkage information of a microbial community through the sequencing process.
+Single-cell genomics offers an alternative to the standard metagenomics workflow that preserves information about the compartmentalization of genetic material into cells. 
+However, single-cell genomics currently presents its own challenges associated with isolating individual cells certain types of samples and amplifying the {DNA} from a single cell to attain the minimum quantity required for sequencing. 
+Furthermore, single-cell genomics has extensive equipment requirements and is highly sensitive to contamination by foreign DNA, requiring rigorous laboratory and reagent decontamination.
+
+Given the current limitations of metagenomics, practitioners resort to computational methods to reconstruct the genetic architecture of a microbial community after sequencing.
+Computational methods have demonstrated promise for metagenomic analysis and a wide range of approaches have been explored.
+Approaches to infer genetic linkage in metagenomes usually address one or more of the following problems:
+\begin{itemize}
+\item Taxonomic classification of sequences
+\item Community structure and organism relative abundance estimation
+\item Assigning sequences to bins that correspond to some meaningful group (Binning)
+\end{itemize}
+Each of these problems are inter-related and many methods address two or more of these at once.
+\textit{Question: should we define each of these problems?}
+
+Molecular evolution, the joint processes of reproduction with mutation and natural selection acting on mutations, provides the primary signal for most read classification methods.
+As species diverge, differences such as nucleotide substitutions, insertions, deletions, and genomic rearrangements accumulate in their genomes, and these differences can be leveraged to infer a sequence's origin in a mixed metagenomic sample.
+
+In the present manuscript, we introduce a new method for reconstructing the genetic architecture of a metagenomic sample and for comparison of community structure among multiple related samples.
+The new method leverages explicitly phylogenetic models of molecular evolution. 
+We contribute an open-source implementation of the method that has been engineered for ease-of-use on 64-bit Linux and Mac platforms.
+Finally, we compare the features and performance of the new method to some related methods to provide readers with insight into when use of the new method is and is not appropriate.
+
 
 \subsection*{Previous work}
-Microbial ecology is a burgeoning field, we focus here on shotgun metagenome sequencing approaches and 
-do not discuss analysis methods for amplicon sequencing data such as QIIME and others. 
+Metagenomics is a burgeoning field, we focus here on shotgun metagenome sequencing approaches and 
+do not discuss analysis methods for other aspects of microbial ecology such as amplicon sequencing data such as QIIME and others. 
 \subsubsection*{Whole metagenome binning}
 - composition classifiers
   - TACOA~\cite{Diaz2009}, PhyloPythia 1 \& 2\cite{Patil2011},Eu-Detect\cite{Mohammed2011},ProViDE~\cite{Ghosh2011}

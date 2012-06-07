@@ -29,3 +29,5 @@
 #
 $ps_threads="";
 
+# can be used to disable the marker update check and download at startup
+# $marker_update_check=0;
