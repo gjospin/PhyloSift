@@ -208,6 +208,7 @@ sub summarize {
 					my $qweight = $place->{nm}->[0]->[1];
 
 					$sequence_markers{$qname}{$marker} = 1;
+					debug "Found $qname in marker $marker\n";
 
 					# for each placement edge in the placement record
 					for ( my $j = 0 ; $j < @{ $place->{p} } ; $j++ ) {
