@@ -374,7 +374,6 @@ sub launch_searches {
 reads a sequence file and streams it out to named pipes
 
 =cut
-
 sub demux_sequences {
 	my %args                 = @_;
 	my $BOWTIE2_PIPE1        = $args{bowtie2_pipe1} || miss("bowtie2_pipe1");
@@ -387,10 +386,10 @@ sub demux_sequences {
 	my @LAST_PIPE_ARRAY      = @{$last_array_reference};
 	my $F1IN                 = $args{FILE1};
 	my $F2IN                 = $args{FILE2};
+	my $paired               = $self->{"paired"};
 	my @lines1;
 	my @lines2;
-	$lines1[0] = <$F1IN>;
-	$lines2[0] = <$F2IN> if defined($F2IN);
+
 	my $lastal_index   = 0;
 	my $lastal_threads = scalar(@LAST_PIPE_ARRAY);
 	my $completed_chunk = has_chunk_completed(self=> $self , chunk=> $chunk);
@@ -398,9 +397,10 @@ sub demux_sequences {
 	my $seq_count = 0;
 	my $seq_size  = 0;
 
-	# scan up to the next sequence
-	while ( defined( $lines1[0] ) && $lines1[0] !~ /^>/ && $lines1[0] !~ /^@/ )
-	{
+	if(defined($self->{"stashed_lines"})){
+		$lines1[0] = $self->{"stashed_lines"}[0];
+		$lines2[0] = $self->{"stashed_lines"}[1] if defined($self->{"stashed_lines"}[1]);
+	}else{
 		$lines1[0] = <$F1IN>;
 		$lines2[0] = <$F2IN> if defined($F2IN);
 	}
@@ -416,28 +416,32 @@ sub demux_sequences {
 				$lines1[$i] = <$F1IN>;
 				$lines2[$i] = <$F2IN> if defined($F2IN);
 			}
+			if($paired && !defined($F2IN)){
+				for ( my $i = 0 ; $i < 4 ; $i++ ) {
+					$lines2[$i] = <$F1IN>;
+				}
+			}
 
 			# send the reads to bowtie
 			print $BOWTIE2_PIPE1 @lines1 unless $completed_chunk;
-			print $BOWTIE2_PIPE1 @lines2 if defined($F2IN) && !$completed_chunk;
-
+			print $BOWTIE2_PIPE1 @lines2 if @lines2 && !$completed_chunk;
 			#			print $BOWTIE2_PIPE2 @lines2 if defined($F2IN);
 
 			#
 			# send the reads to lastal (convert to fasta)
 			$lines1[0] =~ s/^@/>/g;
-			$lines2[0] =~ s/^@/>/g if defined($F2IN);
+			$lines2[0] =~ s/^@/>/g if @lines2;
 
 			# some FastQ use . instead of N (wtf?)
 			$lines1[1] =~ s/\./N/g;
-			$lines2[1] =~ s/\./N/g if defined($F2IN);
+			$lines2[1] =~ s/\./N/g if @lines2;
 			print $last_pipe $lines1[0] . $lines1[1] unless $completed_chunk;
-			print $last_pipe $lines2[0] . $lines2[1] if defined($F2IN) && !$completed_chunk;
+			print $last_pipe $lines2[0] . $lines2[1] if @lines2 && !$completed_chunk;
 
 	#
 	# send the reads to the reads file in fasta format to write candidates later
 			print $READS_PIPE $lines1[0] . $lines1[1] unless $completed_chunk;
-			print $READS_PIPE $lines2[0] . $lines2[1] if defined($F2IN) && !$completed_chunk;
+			print $READS_PIPE $lines2[0] . $lines2[1] if @lines2 && !$completed_chunk;
 
 			#
 			# prepare for next loop iter
@@ -501,6 +505,12 @@ sub demux_sequences {
 	close($LAST_RNA_PIPE);
 	close($READS_PIPE);
 	debug "Octopus handed out $seq_count sequences\n";
+	
+	# if there is more sequence, save the header we currently have for later
+	if(defined($lines1[0])){
+		$self->{"stashed_lines"}[0] = $lines1[0];
+		$self->{"stashed_lines"}[1] = $lines2[0] if defined($lines2[0]);
+	}
 
 	# return 1 if we've processed all the data, zero otherwise
 	return 0 if defined( $lines1[0] );
