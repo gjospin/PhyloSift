@@ -204,15 +204,11 @@ sub summarize {
 				# for each placement record
 				for ( my $i = 0 ; $i < @{ $json_data->{placements} } ; $i++ ) {
 					my $place   = $json_data->{placements}->[$i];
-					my $qname   = $place->{nm}->[0]->[0];
-					my $qweight = $place->{nm}->[0]->[1];
-
-					$sequence_markers{$qname}{$marker} = 1;
-					debug "Found $qname in marker $marker\n";
 
 					# for each placement edge in the placement record
 					for ( my $j = 0 ; $j < @{ $place->{p} } ; $j++ ) {
 						my $edge = $place->{p}->[$j]->[0];
+						my $edge_mass = $place->{p}->[$j]->[2];
 
 						if ( !defined( $markerncbimap->{$edge} ) ) {
 
@@ -237,18 +233,18 @@ sub summarize {
 							for ( my $k = 0 ; $k < @{ $place->{nm} } ; $k++ ) {
 								my $qname   = $place->{nm}->[$k]->[0];
 								my $qweight = $place->{nm}->[$k]->[1];
+								$sequence_markers{$qname}{$marker} = 1;
 								$placements{$qname} = ()
 								  unless defined( $placements{$qname} );
 								$placements{$qname}{$taxon_id} = 0
 								  unless
 									defined( $placements{$qname}{$taxon_id} );
 								$placements{$qname}{$taxon_id} +=
-								  $qweight / $mapcount;
+								  $edge_mass * $qweight / $mapcount;
 								$ncbireads{$taxon} = 0
 								  unless defined $ncbireads{$taxon};
 								$ncbireads{$taxon} +=
-								  $qweight /
-								  $mapcount
+								  $edge_mass * $qweight / $mapcount
 								  ; # split the p.p. across the possible edge mappings
 							}
 						}
