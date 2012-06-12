@@ -66,10 +66,6 @@ sub pplacer {
 		$options .= "--mmap-file abracadabra" if ($marker =~ /16s/);
 		my $place_file = place_reads(self=>$self, marker=>$marker, dna=>0, chunk => $chunk, reads=>$read_alignment_file, options=>$options);
 		unlink("abracadabra") if $options =~ /abracadabra/;	# remove the mmap file created by pplacer
-		# if we're chunked, merge this with the main jplace
-		
-		#chunk merging needs to move to summarize.pm
-		#merge_chunk(chunk => $chunk, place_file=>$place_file); 
 	}
 	if ( defined($chunk) && $self->{"mode"} eq "all" ) {
 		Phylosift::Summarize::summarize( self => $self, marker_reference => $markRef , chunk=>$chunk  );
@@ -308,16 +304,21 @@ sub place_reads{
 	# if we're on the concat marker, create a single jplace with all reads for use with multisample metrics 
 	if($marker eq "concat"){
 		my $sample_jplace = $self->{"fileDir"}."/".$self->{"fileName"}.".jplace";
-		`cp $self->{"treeDir"}/$jplace $sample_jplace` unless -f $sample_jplace;
-		`$Phylosift::Utilities::guppy merge -o $sample_jplace $self->{"treeDir"}/$jplace $sample_jplace`;
+		my $sample_jplace_naming = $self->{"fileDir"}."/".$self->{"fileName"}.".naming.jplace";
+		my $markermapfile = Phylosift::Utilities::get_marker_taxon_map(self=>$self, marker=>$marker, dna=>$dna, sub_marker=>$submarker);
+		return unless -e $markermapfile;	# can't summarize if there ain't no mappin'!
+		my $taxonmap = Phylosift::Summarize::read_taxonmap(file=>$markermapfile);
+		name_taxa_in_jplace( self => $self, input => $self->{"treeDir"} . "/$jplace", output => $sample_jplace_naming, taxonmap=>$taxonmap );
+		`$Phylosift::Utilities::guppy merge -o $sample_jplace $sample_jplace_naming $sample_jplace` if -f $sample_jplace;
+		`cp $sample_jplace_naming $sample_jplace` unless -f $sample_jplace;
 	}
 
-#	unless($dna || !$self->{"updated"} && Phylosift::Utilities::is_protein_marker(marker=>$marker)){
-#		load_submarkers();
-#		if(keys(%submarker_map)>0){
-#			make_submarker_placements(self=>$self, marker=>$marker, chunk=>$chunk, place_file=>$self->{"treeDir"} . "/$jplace");
-#		}
-#	}
+	unless($dna || !$self->{"updated"} && Phylosift::Utilities::is_protein_marker(marker=>$marker)){
+		load_submarkers();
+		if(keys(%submarker_map)>0){
+			make_submarker_placements(self=>$self, marker=>$marker, chunk=>$chunk, place_file=>$self->{"treeDir"} . "/$jplace");
+		}
+	}
 	
 	unless($self->{"simple"}){
 		# skip this if a simple summary if desired since it's slow.
