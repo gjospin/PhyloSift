@@ -59,7 +59,7 @@ my $align_fraction = 0.5
   ; # at least this amount of min[length(query),length(marker)] must align to be considered a hit
 my $align_fraction_isolate =
   0.8;    # use this align_fraction when in isolate mode on long sequences
-my @markers;
+my %markers;
 my %markerNuc = ();
 my %markerLength;
 
@@ -67,8 +67,8 @@ sub run_search {
 	my %args       = @_;
 	my $self       = $args{self} || miss("self");
 	my $markersRef = $args{marker_reference} || miss("marker_reference");
-	@markers = @{$markersRef};
-
+	%markers = map{ $_ => 1 } @{$markersRef};
+	debug "USING ".keys(%markers)."\n";
 	my $position = rindex( $self->{"readsFile"}, "/" );
 	$self->{"readsFile"} =~ m/(\w+)\.?(\w*)$/;
 
@@ -549,7 +549,7 @@ sub demux_sequences {
 sub read_marker_lengths {
 	my %args = @_;
 	my $self = $args{self};
-	foreach my $marker (@markers) {
+	foreach my $marker (keys(%markers)) {
 		$markerLength{$marker} = Phylosift::Utilities::get_marker_length(
 			self   => $self,
 			marker => $marker
@@ -720,6 +720,8 @@ sub get_hits_contigs {
 		# get the marker name
 		my @marker = split( /\_\_/, $subject );    # this is soooo ugly
 		my $markerName = $marker[0];
+		next unless (exists $markers{$markerName});
+		
 
 		# running on long reads or an assembly
 		# allow each region of a sequence to have a top hit
@@ -825,7 +827,7 @@ sub get_hits {
 		}
 		my $markerName =
 		  get_marker_name( subject => $subject, search_type => $searchtype );
-
+		next unless (exists $markers{$markerName});
 #parse once to get the top score for each marker (if isolate is ON, assume best hit comes first)
 		if ( $self->{"isolate"} ) {
 
@@ -883,6 +885,7 @@ sub get_hits_sam {
 		next if $fields[2] eq "*";    # no hit
 		my $marker_name =
 		  get_marker_name( subject => $fields[2], search_type => "sam" );
+		next unless (exists $markers{$marker_name});
 		my $query = $fields[0];
 		my $score = $fields[4];
 		my $cigar = $fields[5];
