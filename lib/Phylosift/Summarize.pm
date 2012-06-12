@@ -271,6 +271,9 @@ sub summarize {
 		$placecount += $unclassifiable{$qname}
 		  if defined( $unclassifiable{$qname} );
 
+		# determine the different unique names used for this molecule (e.g. /1 and /2 for paired reads)
+		my %unique_names;
+
 		# normalize to probability distribution
 		foreach my $taxon_id (
 			sort { $placements{$qname}{$b} <=> $placements{$qname}{$a} }
@@ -287,6 +290,9 @@ sub summarize {
 				$placements{$qname}{$taxon_id} /=
 				  @{ $self->{"read_names"}{$qname} };
 				foreach my $name_ref ( @{ $self->{"read_names"}{$qname} } ) {
+					$unique_names{$name_ref}=1;
+				}
+				foreach my $name_ref( keys(%unique_names) ) {
 					print $SEQUENCETAXA
 					  "$name_ref\t$taxon_id\t$taxon_level\t$taxon_name\t"
 					  . $placements{$qname}{$taxon_id} . "\t"
@@ -295,7 +301,7 @@ sub summarize {
 				}
 			}
 		}
-		foreach my $name_ref ( @{ $self->{"read_names"}{$qname} } ) {
+		foreach my $name_ref( keys(%unique_names) ) {
 			if ( defined( $unclassifiable{$qname} ) ) {
 				print $SEQUENCETAXA
 				  "$name_ref\tUnknown\tUnknown\tUnclassifiable\t"
@@ -315,7 +321,7 @@ sub summarize {
 			$taxon_level = "Unknown" unless defined($taxon_level);
 			$taxon_name  = "Unknown" unless defined($taxon_name);
 			if ( exists $self->{"read_names"}{$qname} ) {
-				foreach my $name_ref ( @{ $self->{"read_names"}{$qname} } ) {
+				foreach my $name_ref( keys(%unique_names) ) {
 					print $SEQUENCESUMMARY
 					  "$name_ref\t$taxon_id\t$taxon_level\t$taxon_name\t"
 					  . $readsummary->{$taxon_id} . "\t"
