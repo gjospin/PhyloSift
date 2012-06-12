@@ -483,7 +483,7 @@ sub demux_sequences {
 				}
 			}
 			#adding /1 and /2 to reads if the IDs are the same
-			if(defined($lines2[0]) ){
+			if(defined($lines2[0])){
 				$lines1[0] =~ m/^(\S+)/;
 				my $id1 = $1;
 				$lines2[0] =~ m/^(\S+)/;
@@ -493,7 +493,6 @@ sub demux_sequences {
 					$lines2[0] =~ s/^(\S+)/$1\/2/g;
 				}
 			}
-			print $lines1[0]. $lines2[0];
 			if ( length( $lines1[1] ) > 1000
 				|| ( defined($F2IN) && length( $lines2[1] ) > 1000 ) )
 			{
