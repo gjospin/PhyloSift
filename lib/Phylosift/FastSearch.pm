@@ -421,6 +421,17 @@ sub demux_sequences {
 					$lines2[$i] = <$F1IN>;
 				}
 			}
+			#adding /1 and /2 to reads if the IDs are the same
+			if(defined($lines2[0]) ){
+				$lines1[0] =~ m/^(\S+)/;
+				my $id1 = $1;
+				$lines2[0] =~ m/^(\S+)/;
+				my $id2 = $1;
+				if($id1 eq $id2){
+					$lines1[0] =~ s/^(\S+)/$1\/1/g;
+					$lines2[0] =~ s/^(\S+)/$1\/2/g;
+				}
+			}
 
 			# send the reads to bowtie
 			print $BOWTIE2_PIPE1 @lines1 unless $completed_chunk;
@@ -462,6 +473,24 @@ sub demux_sequences {
 				while ( $newline2 = <$F2IN> ) {
 					last if $newline2 =~ /^>/;
 					$lines2[1] .= $newline2;
+				}
+			}
+			if($paired && !defined($F2IN)){
+				@lines2 = ( $newline1, "" );
+				while ( $newline1 = <$F1IN> ) {
+					last if $newline1 =~ /^>/;
+					$lines1[1] .= $newline1;
+				}
+			}
+			#adding /1 and /2 to reads if the IDs are the same
+			if(defined($lines2[0])){
+				$lines1[0] =~ m/^(\S+)/;
+				my $id1 = $1;
+				$lines2[0] =~ m/^(\S+)/;
+				my $id2 = $1;
+				if($id1 eq $id2){
+					$lines1[0] =~ s/^(\S+)/$1\/1/g;
+					$lines2[0] =~ s/^(\S+)/$1\/2/g;
 				}
 			}
 			if ( length( $lines1[1] ) > 1000
@@ -1094,6 +1123,9 @@ sub write_candidates {
 			close($FILE_OUT);
 		}
 	}
+	%markerNuc=();
+	%contig_hits =();
+	%markerHits = ();
 }
 
 =head2 prep_and_clean
