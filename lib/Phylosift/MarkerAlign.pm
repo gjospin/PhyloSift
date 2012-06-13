@@ -129,13 +129,13 @@ sub gather_chunky_markers {
 	my $type              = $args{type};
 	my $seed              = $self->{"blastDir"} . "/*.*.candidate.aa." . $chunk . ".*";
 	my @candidate_markers = glob("$seed");
-	my @markers           = ();
+	my %unique_markers;
 	foreach my $line (@candidate_markers) {
 		$line =~ m/\/blastDir\/([^\/\.]+)\.\S+.candidate/;
 		my $mark = Phylosift::Utilities::get_marker_fullname( marker => $1 );
-		push( @markers, $mark ) if defined($mark) && length($mark) > 0;
+		$unique_markers{$mark} = 1 if defined($mark) && length($mark) > 0;
 	}
-	return @markers;
+	return keys(%unique_markers);
 }
 
 =head2 directoryPrepAndClean
