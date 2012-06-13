@@ -633,6 +633,7 @@ sub sum_taxon_levels {
 sub get_taxon_info {
 	my %args = @_;
 	my $in = $args{taxon} || miss("taxon");
+	read_ncbi_taxon_name_map;
 	read_ncbi_taxonomy_structure();
 	if ( $in =~ /^\d+$/ ) {
 
