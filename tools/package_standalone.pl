@@ -100,6 +100,15 @@ chdir("HTTP-Message-6.03");
 `mv blib/lib/HTTP/ ../PhyloSift/lib/`;
 chdir("..");
 
+`curl -LO http://search.cpan.org/CPAN/authors/id/G/GA/GAAS/HTTP-Date-6.02.tar.gz`;
+`tar xzf HTTP-Date-6.02.tar.gz`;
+chdir("HTTP-Date-6.02");
+`perl Makefile.PL`;
+`make`;
+`mv blib/lib/HTTP/ ../PhyloSift/lib/`;
+chdir("..");
+
+
 # add Version.pm
 `curl -LO http://search.cpan.org/CPAN/authors/id/J/JP/JPEACOCK/version-0.95.tar.gz`;
 `tar xzf version-0.95.tar.gz`;
