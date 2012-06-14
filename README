@@ -97,9 +97,21 @@ following command :
 
 == Usage ==
 
+PhyloSift currently accepts input data in the following file formats:
+
+* FASTA
+* paired FASTA (specify paired data by using the -paired  flag)
+* interleaved paired FASTA (specify paired data by using the -paired  flag)
+* FASTQ (same as FASTA but with quality scores; this file type is the standard output from Illumina platforms)
+* interleaved FASTQ (same as FASTA but with quality scores)
+* .gz (any of the above file types compressed using gzip)
+* .bz (any of the above file types compressed using bzip)
+
+PhyloSift can be executed by running the following command:
+
 $ phylosift <Mode> <options> <sequence_file>
 
-   sequence_file needs to be in fasta format
+   sequence_file needs to be in an accepted format
 
 $ phylosift <Mode> <options> --paired <sequence_file_1> <sequence_file_2>
 
