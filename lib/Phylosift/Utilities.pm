@@ -784,7 +784,7 @@ sub get_decorated_marker_name {
 	my $base = $args{base} || 0;
 	$name = get_marker_basename(marker=>$name) if $base;
 	$name .= ".codon"   if $dna;
-	$name .= ".updated" if $updated || $args{self}->{"updated"};
+	$name .= ".updated" if ($updated || $args{self}->{"updated"}) && !$args{self}->{"extended"};
 	# rna markers don't get pruned
 	$name .= ".sub".$sub_marker if defined($sub_marker);
 	return $name;
