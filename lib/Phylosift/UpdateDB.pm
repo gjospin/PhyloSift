@@ -1004,7 +1004,7 @@ sub pd_prune_markers {
 	# prune distance is different for AA and DNA
 	# these distances are in substitutions per site
 #	my %PRUNE_DISTANCE = ( 0 => 0.01, 1 => 0.003 );
-	my %PRUNE_DISTANCE = ( 0 => 0.000001, 1 => 0.003 );	# try leaving all but the totally identical taxa in to make jplace comparison possible
+	my %PRUNE_DISTANCE = ( 0 => 0.001, 1 => 0.003 );	# try leaving all but the totally identical taxa in to make jplace comparison possible
 	my $REPS_DISTANCE  = 0.05;                                  # reps can be further diverged since we care only about similarity search and not read placement
 	my @markerlist     = Phylosift::Utilities::gather_markers();
 	unshift( @markerlist, "concat" );
@@ -1090,6 +1090,8 @@ sub reconcile_with_ncbi {
 	my $marker_dir  = $args{marker_directory} || miss("marker_directory");
 	my $pruned      = $args{pruned} || miss("pruned");
 	
+	my $p_orig = $pruned;
+	chdir $marker_dir;
 	my $aa_script   = "/tmp/ps_reconcile.sh";
 	my $codon_script = "/tmp/ps_reconcile_codon.sh";
 	for(my $dna=0; $dna<2; $dna++){
@@ -1105,7 +1107,6 @@ sub reconcile_with_ncbi {
 		my $aa_ids      = get_marker_geneids( marker => '$1', dna => $dna, updated => 1, sub_marker=>$sub_marker );
 		my $aa_tmpread  = get_marker_package( marker => '$1', dna => $dna, updated => 1, sub_marker=>$sub_marker ).".tmpread";
 		my $aa_ncbi_tre = get_marker_ncbi_subtree( marker => '$1', dna => $dna, updated => 1, sub_marker=>$sub_marker );
-		my $ncbi_tre = get_marker_ncbi_subtree( marker => '$1', dna => $dna, updated => 1, pruned=>$pruned );
 		my $RECONCILESCRIPT = ps_open( ">$script" );
 		print $RECONCILESCRIPT <<EOF;
 #!/bin/sh
@@ -1118,34 +1119,33 @@ taxit create -a "Aaron Darling" -d "simple package for reconciliation only" -l \
 pplacer -c $aa_package -p $aa_tmpread.fasta
 # readconciler uses a pplacer tree from a .jplace file to parse out the branch numbers
 mangler.pl < $aa_tmpread.jplace > $aa_tmpread.jplace.mangled
-/home/koadman/development/PhyloSift/tools/make_ncbi_subtree.pl $ncbi_tre /share/eisen-d2/amphora2/markers \$1 1 $pruned $dna
+/home/koadman/development/PhyloSift/tools/make_ncbi_subtree.pl $aa_ncbi_tre $marker_dir \$1 1 $pruned $dna $sub_marker
 readconciler $aa_ncbi_tre $aa_tmpread.jplace.mangled $aa_ids $aa_taxonmap
 rm $aa_tmpread.jplace $aa_tmpread.jplace.mangled $aa_tmpread.fasta
 EOF
 		close($RECONCILESCRIPT);
 		`chmod 755 $script`;
 	}
+	$pruned = $p_orig;
 
 	my @markerlist = Phylosift::Utilities::gather_markers();
 	unshift( @markerlist, "concat" );
 	my @jobids;
 
 	foreach my $marker (@markerlist) {
-		my $marker_fasta = get_fasta_filename( marker => $marker, updated => 1);
+		my $marker_fasta = get_fasta_filename( marker => $marker, updated => 1, pruned=>$pruned);
+		print STDERR "Couldnt find $marker_fasta\n" unless -e $marker_fasta;
 		next unless -e $marker_fasta;
 		next if $marker =~ /^PMPROK/;	# skip these since they all go in the concat
 		my $taxa = filter_marker_gene_ids(marker=>$marker, updated=>1, pruned=>$pruned, dna=>0);
 		print STDERR "working on marker $marker\n";
-#		my $success = make_ncbi_subtree(out_file=>$ncbi_tre, taxon_ids=>$taxa);
-#		if($success){
-			# create some read files for pplacer to place so we can get its jplace
-			create_temp_read_fasta( file => get_marker_package( marker=>$marker, updated=>1), aln_file => $marker_fasta);
-	
-	
-			# run reconciliation on them
-			my @marray = ($marker);
-			qsub_job(script=>$aa_script, job_ids=>\@jobids, script_args=>\@marray );
-#		}
+		# create some read files for pplacer to place so we can get its jplace
+		create_temp_read_fasta( file => get_marker_package( marker=>$marker, updated=>1), aln_file => $marker_fasta);
+
+
+		# run reconciliation on them
+		my @marray = ($marker);
+		qsub_job(script=>$aa_script, job_ids=>\@jobids, script_args=>\@marray );
 
 		for(my $group_id=1; ; $group_id++){
 			my $subalignment = get_fasta_filename( marker => $marker, dna => 1, updated => 1, pruned => 0, sub_marker => $group_id );
@@ -1157,13 +1157,9 @@ EOF
 			my $taxa = filter_marker_gene_ids(marker=>$marker, updated=>1, dna=>1, pruned=>0, sub_marker=>$group_id);
 			my $ncbi_tre = get_marker_ncbi_subtree( marker => $marker, dna => 1, updated => 1, pruned=>0, sub_marker=>$group_id );
 			my $success = -f $ncbi_tre && -s $ncbi_tre > 0;
-#			make_ncbi_subtree(out_file=>$ncbi_tre, taxon_ids=>$taxa);
-			# only do the reconciliation if there were NCBI tree nodes to reconcile with
-#			if($success){
-				debug "Submitting reconciliation job for $marker codon sub $group_id\n";
-				my @marray = ($marker,$group_id);
-				qsub_job(script=>$codon_script, job_ids=>\@jobids, script_args=>\@marray );
-#			}
+			debug "Submitting reconciliation job for $marker codon sub $group_id\n";
+			my @marray = ($marker,$group_id);
+			qsub_job(script=>$codon_script, job_ids=>\@jobids, script_args=>\@marray );
 		}
 	}
 	wait_for_jobs( job_ids => \@jobids );
@@ -1240,7 +1236,7 @@ sub make_codon_submarkers {
 	# this is the maximum distance in amino acid substitutions per site that are allowed
 	# on any branch of the tree relating members of a group
 	# TODO: tune this value
-	my $max_aa_branch_distance = 0.15;
+	my $max_aa_branch_distance = 0.2;
 	my ($idtref, $mtiref) = read_gene_ids( file => "$marker_dir/".get_gene_id_file(dna=>0) );
 	my %id_to_taxon = %$idtref;
 	my %marker_taxon_to_id = %$mtiref;
