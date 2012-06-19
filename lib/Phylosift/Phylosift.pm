@@ -198,32 +198,20 @@ sub run {
 	}
 	debug "MODE :: " . $self->{"mode"} . "\n";
 
-	#	if ( $self->{"mode"} eq 'align' || $self->{"mode"} eq 'all' ) {
-	if ( $self->{"mode"} eq 'align' ) {
-		$self = run_marker_align(
-			self   => $self,
+	if( defined($self->{"start_chunk"}) && defined($self->{"chunks"})){
+		for(my $c=$self->{"start_chunk"}; $c < $self->{"start_chunk"} + $self->{"chunks"}; $c++){
+			run_later_stages(self   => $self,
+				cont   => $continue,
+				marker => \@markers,
+				chunk => $c);
+		}
+	}else{
+		run_later_stages(self   => $self,
 			cont   => $continue,
-			marker => \@markers
-		);
-	}
-
-	#	if ( $self->{"mode"} eq 'placer' || $self->{"mode"} eq 'all' ) {
-	if ( $self->{"mode"} eq 'placer' ) {
-		croak
-"No marker gene hits found in the input data. Unable to reconstruct phylogeny and taxonomy."
-		  if ( scalar(@markers) == 0 );
-		$self =
-		  run_pplacer( self => $self, cont => $continue, marker => \@markers );
+			marker => \@markers);
 	}
 
 	#	if ( $self->{"mode"} eq 'summary' || $self->{"mode"} eq 'all' ) {
-	if ( $self->{"mode"} eq 'summary' ) {
-		$self = taxonomy_assignments(
-			self   => $self,
-			cont   => $continue,
-			marker => \@markers
-		);
-	}
 	if ( $self->{"mode"} eq 'benchmark' ) {
 		$self = benchmark( self => $self );
 		exit;
@@ -274,6 +262,20 @@ sub run {
 			reads       => $ARGV[3]
 		);
 	}
+}
+
+sub run_later_stages {
+	my %args = @_;		
+	my $self = $args{self} || miss("self");
+	if ( $self->{"mode"} eq 'align' ) {
+		$self = run_marker_align(@_);
+	}		
+	if ( $self->{"mode"} eq 'placer' ) {
+		$self = run_pplacer( @_ );
+	}
+	if ( $self->{"mode"} eq 'summary' ) {
+		$self = taxonomy_assignments(@_);
+	}	
 }
 
 =head2 read_phylosift_config
@@ -442,10 +444,12 @@ sub taxonomy_assignments {
 	my $self        = $args{self} || miss("self");
 	my $continue    = $args{cont};
 	my $markListRef = $args{marker} || miss("marker");
+	my $chunk       = $args{chunk};
 	Phylosift::Utilities::start_timer( name => "taxonomy assignments" );
 	Phylosift::Summarize::summarize(
 		self             => $self,
-		marker_reference => $markListRef
+		marker_reference => $markListRef,
+		chunk => $chunk
 	);
 	Phylosift::Utilities::end_timer( name => "taxonomy assignments" );
 	return $self;
@@ -486,11 +490,13 @@ sub run_pplacer {
 	my $self        = $args{self} || miss("self");
 	my $continue    = $args{cont} || 0;
 	my $markListRef = $args{marker} || miss("marker");
+	my $chunk       = $args{chunk};
 	debug "PPLACER MARKS @{$markListRef}\n";
 	Phylosift::Utilities::start_timer( name => "runPPlacer" );
 	Phylosift::pplacer::pplacer(
 		self             => $self,
-		marker_reference => $markListRef
+		marker_reference => $markListRef,
+		chunk            => $chunk
 	);
 	Phylosift::Utilities::end_timer( name => "runPPlacer" );
 	return $self;
@@ -508,6 +514,7 @@ sub run_marker_align {
 	my $self     = $args{self} || miss("self");
 	my $continue = $args{cont} || 0;
 	my $markRef  = $args{marker} || miss("marker");
+	my $chunk       = $args{chunk};
 	Phylosift::Utilities::start_timer( name => "Alignments" );
 
 	#clearing the alignment directory if needed
@@ -518,7 +525,8 @@ sub run_marker_align {
 	my $threadNum = 1;
 	Phylosift::MarkerAlign::MarkerAlign(
 		self             => $self,
-		marker_reference => $markRef
+		marker_reference => $markRef,
+		chunk            => $chunk
 	);
 
 #    Phylosift::BeastInterface::Export(self=>$self, marker_reference=>$markRef, output_file=>$self->{"fileDir"}."/beast.xml");

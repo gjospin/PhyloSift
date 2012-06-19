@@ -115,8 +115,12 @@ sub run_search {
 	  ps_open( ">>" . Phylosift::Utilities::get_run_info_file( self => $self ) );
 
 	# launch the searches
+	my $start_chunk = defined($self->{"start_chunk"}) ? $self->{"start_chunk"} : 1;
 	for ( my $chunkI = 1 ; ; $chunkI++ ) {
 		my $completed_chunk = has_chunk_completed(self=> $self , chunk=> $chunkI);
+		$completed_chunk = 1 if $start_chunk > $chunkI;
+		# need to run this even if chunk is done so that we advance through the input file
+		# TODO: don't launch lastal or bowtie unless really needed
 		my $finished = launch_searches(
 			self     => $self,
 			readtype => $type,
@@ -126,7 +130,7 @@ sub run_search {
 			FILE1    => $F1IN,
 			FILE2    => $F2IN
 		  );
-		if ( $self->{"mode"} eq "all" || $self->{"continue"} ) {
+		if ( !$completed_chunk && ($self->{"mode"} eq "all" || $self->{"continue"}) ) {
 
 	# fire up the next step!
 	# TODO: make this a call to a function "chunk_done" in main Phylosift module
@@ -136,12 +140,12 @@ sub run_search {
 				self             => $self,
 				marker_reference => $markersRef,
 				chunk            => $chunkI
-			) unless $completed_chunk;
+			);
 		}
 		print $RUNINFO "Chunk $chunkI completed\n" unless $completed_chunk;
 		debug "Debug lvl : $Phylosift::Utilities::debuglevel\n";
 		clean_chunk_directory(self=>$self, chunk=>$chunkI) if !$self->{"keep_search"};
-		last if $finished || (defined($self->{"chunk"}) && $chunkI >= $self->{"chunk"});
+		last if $finished || (defined($self->{"chunks"}) && ($chunkI - $start_chunk + 1) >= $self->{"chunks"});
 	}
 	return $self;
 }
