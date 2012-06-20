@@ -311,6 +311,7 @@ sub place_reads{
 		name_taxa_in_jplace( self => $self, input => $self->{"treeDir"} . "/$jplace", output => $sample_jplace_naming, taxonmap=>$taxonmap );
 		`$Phylosift::Utilities::guppy merge -o $sample_jplace $sample_jplace_naming $sample_jplace` if -f $sample_jplace;
 		`cp $sample_jplace_naming $sample_jplace` unless -f $sample_jplace;
+		`rm $sample_jplace_naming`;
 	}
 
 	unless($dna || !$self->{"updated"} && Phylosift::Utilities::is_protein_marker(marker=>$marker)){
