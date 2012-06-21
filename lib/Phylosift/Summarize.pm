@@ -131,7 +131,7 @@ NCBI taxonomy
 # keep a hash counting up all the read placements
 # make this File-scope so anonymous functions below can see it
 my %ncbireads;
-my %ncbi_summary;
+my %ncbi_summary;	# used for krona output
 
 sub summarize {
 	my %args    = @_;
@@ -287,8 +287,8 @@ sub summarize {
 			$self->{"read_names"}{$qname} = [$qname]
 			  unless defined( $self->{"read_names"}{$qname} );
 			if ( exists $self->{"read_names"}{$qname} ) {
-				$placements{$qname}{$taxon_id} /=
-				  @{ $self->{"read_names"}{$qname} };
+#				$placements{$qname}{$taxon_id} /=
+#				  @{ $self->{"read_names"}{$qname} };
 				foreach my $name_ref ( @{ $self->{"read_names"}{$qname} } ) {
 					$unique_names{$name_ref}=1;
 				}
@@ -350,6 +350,7 @@ sub merge_sequence_taxa {
 	my $taxa_seed  = $self->{"fileDir"} . "/sequence_taxa.*.txt";
 	my @taxa_files = glob("$taxa_seed");
 	my %placements = ();
+	my %placement_markers = ();
 	my %unclassifiable;    # {sequenceID}=mass
 	foreach my $taxa_file (@taxa_files) {
 
@@ -369,6 +370,9 @@ sub merge_sequence_taxa {
 			}
 			else {
 				$placements{$read_id}{$taxon_id} = $prob;
+				for(my $i=5; $i<@line; $i++){
+					$placement_markers{$read_id}{$line[$i]}=1;
+				}
 			}
 		}
 		close($TAXAIN);
@@ -376,12 +380,16 @@ sub merge_sequence_taxa {
 
 	# make a summary of total reads at each taxonomic level
 	# this gets used later in krona output
+	my %all_summary;
+	my %concat_summary;
 	foreach my $qname ( keys(%placements) ) {
 		my $readsummary = sum_taxon_levels( placements => $placements{$qname} );
 		foreach my $taxon_id ( keys(%$readsummary) ) {
-			$ncbi_summary{$taxon_id} = 0
-			  unless defined( $ncbi_summary{$taxon_id} );
-			$ncbi_summary{$taxon_id} += $readsummary->{$taxon_id};
+			$all_summary{$taxon_id} = 0 unless defined( $all_summary{$taxon_id} );
+			$all_summary{$taxon_id} += $readsummary->{$taxon_id};
+			next unless defined($placement_markers{$qname}{"concat"});
+			$concat_summary{$taxon_id} = 0 unless defined( $concat_summary{$taxon_id} );
+			$concat_summary{$taxon_id} += $readsummary->{$taxon_id};
 		}
 	}
 
@@ -439,7 +447,12 @@ sub merge_sequence_taxa {
 
 		# skip this if only a simple summary is desired (it's slow)
 		debug "Generating krona\n";
-		krona_report( self => $self );
+		%ncbi_summary = %concat_summary;
+		krona_report( self => $self, file=>$self->{"fileName"}.".html" );
+		%ncbi_summary = ();
+		%ncbi_summary = %all_summary;
+		krona_report( self => $self, file=>$self->{"fileName"}.".allmarkers.html" );
+		`ln -s $self->{"fileName"}.html krona.html`;
 	}
 }
 
@@ -449,8 +462,9 @@ my $KRONA_THRESHOLD = 0.01;
 sub krona_report {
 	my %args = @_;
 	my $self = $args{self} || miss("self");
+	my $file = $args{file} || "krona.html";
 
-	my $OUTPUT = IO::File->new( ">" . $self->{"fileDir"} . "/krona.html" );
+	my $OUTPUT = IO::File->new( ">" . $self->{"fileDir"} . "/$file" );
 	print $OUTPUT <<EOF
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
