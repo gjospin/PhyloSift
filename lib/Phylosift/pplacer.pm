@@ -313,7 +313,10 @@ sub place_reads{
 		`cp $sample_jplace_naming $sample_jplace` unless -f $sample_jplace;
 	}
 
-	unless($dna || !$self->{"updated"} && Phylosift::Utilities::is_protein_marker(marker=>$marker)){
+#	unless($dna || ($self->{"updated"} && Phylosift::Utilities::is_protein_marker(marker=>$marker))){
+	if(!$dna && $self->{"updated"} && Phylosift::Utilities::is_protein_marker(marker=>$marker)){
+	    debug "Placing on sub markers $marker\n";
+	    debug "$dna\t".$self->{"updated"}."\t". Phylosift::Utilities::is_protein_marker(marker=>$marker)."\n";
 		load_submarkers();
 		if(keys(%submarker_map)>0){
 			make_submarker_placements(self=>$self, marker=>$marker, chunk=>$chunk, place_file=>$self->{"treeDir"} . "/$jplace");
