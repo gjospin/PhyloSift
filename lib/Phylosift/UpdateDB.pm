@@ -696,11 +696,11 @@ sub make_ncbi_subtree {
 			#debug "ADDING $tid\n";
 			# process any merging that may have been done
 			my @mtid;
-			push( @mtid, $tid );
 			while ( defined( $merged->{$tid} ) ) {
 				$tid = $merged->{$tid};
-				push( @mtid, $tid );
+#				push( @mtid, $tid );
 			}
+			push( @mtid, $tid );
 
 			# create a new node & add to tree
 			my $parentid;
@@ -1069,6 +1069,8 @@ sub filter_marker_gene_ids{
 		chomp $line;
 		$aln_ids{$1}=1 if $line =~ />(.+)/;
 	}
+	my $merged = Phylosift::Summarize::read_merged_nodes();
+	
 	
 
 	my $IDS = ps_open(get_gene_id_file(dna => $dna));
@@ -1077,8 +1079,9 @@ sub filter_marker_gene_ids{
 		chomp $line;
 		my ( $m, $taxon, $uniqueid ) = split( /\t/, $line );
 		next unless defined($aln_ids{$uniqueid});
+		$taxon = $merged->{$taxon} if defined($merged->{$taxon});
 		push(@taxon_ids, $taxon);
-		print $MARKER_IDS $line."\n";
+		print $MARKER_IDS "$m\t$taxon\t$uniqueid\n";
 	}
 	close($MARKER_IDS);	
 	return \@taxon_ids;
@@ -1104,7 +1107,7 @@ sub reconcile_with_ncbi {
 		my $aa_log      = get_fasttree_log_filename( marker => '$1', dna => $dna, updated => 1, pruned => $pruned, sub_marker=>$sub_marker );
 		my $aa_package  = get_marker_package( marker => '$1', dna => $dna, updated => 1, sub_marker=>$sub_marker );
 		my $aa_taxonmap = get_taxonmap_filename( marker => '$1', dna => $dna, updated => 1, sub_marker=>$sub_marker );
-		my $aa_ids      = get_marker_geneids( marker => '$1', dna => $dna, updated => 1, sub_marker=>$sub_marker, pruned=>$pruned );
+		my $aa_ids      = get_marker_geneids( marker => '$1', dna => $dna, updated => 1, sub_marker=>$sub_marker );
 		my $aa_tmpread  = get_marker_package( marker => '$1', dna => $dna, updated => 1, sub_marker=>$sub_marker ).".tmpread";
 		my $aa_ncbi_tre = get_marker_ncbi_subtree( marker => '$1', dna => $dna, updated => 1, sub_marker=>$sub_marker );
 		my $RECONCILESCRIPT = ps_open( ">$script" );
@@ -1121,7 +1124,7 @@ pplacer -c $aa_package -p $aa_tmpread.fasta
 mangler.pl < $aa_tmpread.jplace > $aa_tmpread.jplace.mangled
 /home/koadman/development/PhyloSift/tools/make_ncbi_subtree.pl $aa_ncbi_tre $marker_dir \$1 1 $pruned $dna $sub_marker
 readconciler $aa_ncbi_tre $aa_tmpread.jplace.mangled $aa_ids $aa_taxonmap
-rm $aa_tmpread.jplace $aa_tmpread.jplace.mangled $aa_tmpread.fasta
+# rm $aa_tmpread.jplace $aa_tmpread.jplace.mangled $aa_tmpread.fasta
 EOF
 		close($RECONCILESCRIPT);
 		`chmod 755 $script`;
@@ -1145,7 +1148,8 @@ EOF
 
 		# run reconciliation on them
 		my @marray = ($marker);
-		qsub_job(script=>$aa_script, job_ids=>\@jobids, script_args=>\@marray );
+		my $qsub_args = $marker eq "concat" ? "-l mem_free=20G" : "";
+		qsub_job(script=>$aa_script, qsub_args => $qsub_args, job_ids=>\@jobids, script_args=>\@marray );
 
 		for(my $group_id=1; ; $group_id++){
 			my $subalignment = get_fasta_filename( marker => $marker, dna => 1, updated => 1, pruned => 0, sub_marker => $group_id );
