@@ -60,11 +60,15 @@ sub pplacer {
 		# the PMPROK markers are contained in the concat above
 		next if($marker =~ /PMPROK/ && $self->{"updated"});
 		my $read_alignment_file = $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta( marker => Phylosift::Utilities::get_marker_basename(marker=>$marker), chunk => $chunk );
-		next unless -e $read_alignment_file;
-		my $options = $marker eq "concat" ? "--groups 10" : "";
+		next unless -e $read_alignment_file && -s $read_alignment_file > 0;
+		my $options = $marker eq "concat" ? "--groups 15" : "";
+		$options .= "--mmap-file abracadabra" if ($marker =~ /18s/);  # FIXME: this should be based on the number of seqs in the tree.
+		$options .= "--mmap-file abracadabra" if ($marker =~ /16s/);
 		my $place_file = place_reads(self=>$self, marker=>$marker, dna=>0, chunk => $chunk, reads=>$read_alignment_file, options=>$options);
-		# if we're chunked, merge this with the main jplace
-		merge_chunk(chunk => $chunk, place_file=>$place_file);
+		unlink("abracadabra") if $options =~ /abracadabra/;	# remove the mmap file created by pplacer
+	}
+	if ( defined($chunk) && $self->{"mode"} eq "all" ) {
+		Phylosift::Summarize::summarize( self => $self, marker_reference => $markRef , chunk=>$chunk  );
 	}
 }
 
@@ -297,7 +301,23 @@ sub place_reads{
 	`mv "$jplace" "$self->{"treeDir"}"` if ( -e $jplace );
 	return unless -e $self->{"treeDir"} . "/$jplace";
 
-	unless($dna || !$self->{"updated"}){
+	# if we're on the concat marker, create a single jplace with all reads for use with multisample metrics 
+	if($marker eq "concat"){
+		my $sample_jplace = $self->{"fileDir"}."/".$self->{"fileName"}.".jplace";
+		my $sample_jplace_naming = $self->{"fileDir"}."/".$self->{"fileName"}.".naming.jplace";
+		my $markermapfile = Phylosift::Utilities::get_marker_taxon_map(self=>$self, marker=>$marker, dna=>$dna, sub_marker=>$submarker);
+		return unless -e $markermapfile;	# can't summarize if there ain't no mappin'!
+		my $taxonmap = Phylosift::Summarize::read_taxonmap(file=>$markermapfile);
+		name_taxa_in_jplace( self => $self, input => $self->{"treeDir"} . "/$jplace", output => $sample_jplace_naming, taxonmap=>$taxonmap );
+		`$Phylosift::Utilities::guppy merge -o $sample_jplace $sample_jplace_naming $sample_jplace` if -f $sample_jplace;
+		`cp $sample_jplace_naming $sample_jplace` unless -f $sample_jplace;
+		`rm $sample_jplace_naming`;
+	}
+
+#	unless($dna || ($self->{"updated"} && Phylosift::Utilities::is_protein_marker(marker=>$marker))){
+	if(!$dna && $self->{"updated"} && Phylosift::Utilities::is_protein_marker(marker=>$marker)){
+	    debug "Placing on sub markers $marker\n";
+	    debug "$dna\t".$self->{"updated"}."\t". Phylosift::Utilities::is_protein_marker(marker=>$marker)."\n";
 		load_submarkers();
 		if(keys(%submarker_map)>0){
 			make_submarker_placements(self=>$self, marker=>$marker, chunk=>$chunk, place_file=>$self->{"treeDir"} . "/$jplace");
@@ -307,7 +327,14 @@ sub place_reads{
 	unless($self->{"simple"}){
 		# skip this if a simple summary if desired since it's slow.
 		debug "Naming taxa in marker $marker\n";
-		name_taxa_in_jplace( self => $self, input => $self->{"treeDir"} . "/$jplace", output => $self->{"treeDir"} . "/$jplace" );
+
+		# read the tree edge to taxon map for this marker
+		my $markermapfile = Phylosift::Utilities::get_marker_taxon_map(self=>$self, marker=>$marker, dna=>$dna, sub_marker=>$submarker);
+		return unless -e $markermapfile;	# can't summarize if there ain't no mappin'!
+		my $taxonmap = Phylosift::Summarize::read_taxonmap(file=>$markermapfile);
+
+		# rename nodes
+		name_taxa_in_jplace( self => $self, input => $self->{"treeDir"} . "/$jplace", output => $self->{"treeDir"} . "/$jplace", taxonmap=>$taxonmap );
 	}
 	return $self->{"treeDir"} . "/$jplace" unless defined($covref);
 	debug "Weighting sequences in $marker\n";
@@ -387,6 +414,7 @@ sub name_taxa_in_jplace {
 	my $self   = $args{self} || miss("self");
 	my $input  = $args{input} || miss("input");
 	my $output = $args{output} || miss("output");
+	my $taxonmap = $args{taxonmap} || miss("taxonmap");
 
 	# read in the taxon name map
 	my $namemap = read_name_map();
@@ -403,7 +431,7 @@ sub name_taxa_in_jplace {
 	
 	# get rid of the leaf numbers and some other mumbo jumbo
 	$tree_string =~ s/^\s+\"//g;
-	$tree_string =~ s/\{\d+?\}//g;
+	$tree_string =~ s/:(.+?)(\{\d+?\})/$2:$1/g;
 	$tree_string =~ s/\"\,$//g;
 	my $tree = Bio::Phylo::IO->parse(
 									  '-string' => $tree_string,
@@ -413,12 +441,26 @@ sub name_taxa_in_jplace {
 	foreach my $node ( @{ $tree->get_entities } ) {
 
 		my $name = $node->get_name;
-		next unless defined $namemap->{$name};
-		my @data = Phylosift::Summarize::get_taxon_info( taxon => $namemap->{$name} );
-		my $ncbi_name = Phylosift::Summarize::tree_name( name => $data[0] );
-		$node->set_name($ncbi_name);
+		$name =~ s/\{\d+?\}//g;
+		if(defined($namemap->{$name})){
+			my @data = Phylosift::Summarize::get_taxon_info( taxon => $namemap->{$name} );
+			my $ncbi_name = Phylosift::Summarize::tree_name( name => $data[0] );
+			$node->set_name($ncbi_name);
+			next;
+		}
+		# this might be an internal node. try to get a taxon group ID and name from the taxon map
+		$name = $node->get_name;
+		my $edge_id = $1 if $name =~ /\{(\d+?)\}/; 						
+		next unless defined($taxonmap->{$edge_id});
+		my $node_name="";
+		foreach my $tid(@{$taxonmap->{$edge_id}}){
+			my @data = Phylosift::Summarize::get_taxon_info( taxon => $tid );
+			my $ncbi_name = Phylosift::Summarize::tree_name( name => $data[0] );
+			$node_name .= "_$ncbi_name"."_";
+		}
+		$node->set_name($node_name);
 	}
-	$json_data->{tree} = unparse( '-phylo' => $tree, '-format' => 'newick' );
+	$json_data->{tree} = unparse( '-phylo' => $tree, '-format' => 'newick', '-nodelabels' => 1 );
 	$JPLACEFILE = ps_open( ">$output" );
 	print $JPLACEFILE encode_json($json_data);
 	close $JPLACEFILE;

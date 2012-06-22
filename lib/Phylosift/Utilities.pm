@@ -283,6 +283,10 @@ sub marker_update_check {
 	my $self        = $args{self};
 	my $url         = $args{url};
 	my $marker_path = $args{dir};
+		
+	debug "Skipping check for marker updates on server\n" if $self->{"disable_update_check"};
+	return if $self->{"disable_update_check"};	# bail out if we're not supposed to be here
+	return if defined($Phylosift::Settings::marker_update_check) && $Phylosift::Settings::marker_update_check == 0;
 	$url =~ s/\/\//\//g;
 	$url =~ s/http:/http:\//g;
 	my ( $content_type, $document_length, $modified_time, $expires, $server ) = head($url);
@@ -780,7 +784,7 @@ sub get_decorated_marker_name {
 	my $base = $args{base} || 0;
 	$name = get_marker_basename(marker=>$name) if $base;
 	$name .= ".codon"   if $dna;
-	$name .= ".updated" if $updated || $args{self}->{"updated"};
+	$name .= ".updated" if ($updated || $args{self}->{"updated"}) && !$args{self}->{"extended"};
 	# rna markers don't get pruned
 	$name .= ".sub".$sub_marker if defined($sub_marker);
 	return $name;
@@ -877,8 +881,9 @@ given by markerName
 sub get_read_placement_file {
 	my %args   = @_;
 	my $marker = $args{marker};
+	my $chunk = $args{chunk};
 	my $decorated = get_decorated_marker_name(%args, base=>1);
-	return "$decorated.jplace";
+	return "$decorated.$chunk.jplace";
 }
 
 =head2 get_trimfinal_marker_file
@@ -1386,6 +1391,7 @@ sub index_marker_db {
 }
 
 =head2 gather_markers
+=over
 
 =item *
 
@@ -1709,6 +1715,18 @@ sub unalign_sequences {
 	close($FILEOUT);
 	return $seq_count;
 }
+
+=head2 get_run_info_file
+
+returns the path to the run_info_file
+
+=cut
+sub get_run_info_file {
+	my %args = @_;
+	my $self = $args{self} || miss("PS object");
+	return $self->{"fileDir"}."/run_info.txt";
+}
+
 
 =head1 AUTHOR
 

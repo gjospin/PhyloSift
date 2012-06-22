@@ -65,6 +65,15 @@ chdir("Locale-Maketext-1.19");
 `mv blib/lib/Locale/ ../PhyloSift/lib/`;
 chdir("..");
 
+# Locale::Maketext::Simple 
+`curl -LO http://search.cpan.org/CPAN/authors/id/J/JE/JESSE/Locale-Maketext-Simple-0.21.tar.gz`;
+`tar xvzf Locale-Maketext-Simple-0.21.tar.gz`;
+chdir("Locale-Maketext-Simple-0.21");
+`perl Makefile.PL`;
+`make`;
+`mv blib/lib/Locale/Maketext/* ../PhyloSift/lib/Locale/Maketext/`;
+chdir("..");
+
 # XML::Writer
 `curl -LO http://search.cpan.org/CPAN/authors/id/J/JO/JOSEPHW/XML-Writer-0.615.tar.gz`;
 `tar xzf XML-Writer-0.615.tar.gz`;
@@ -91,17 +100,25 @@ chdir("HTTP-Message-6.03");
 `mv blib/lib/HTTP/ ../PhyloSift/lib/`;
 chdir("..");
 
+`curl -LO http://search.cpan.org/CPAN/authors/id/G/GA/GAAS/HTTP-Date-6.02.tar.gz`;
+`tar xzf HTTP-Date-6.02.tar.gz`;
+chdir("HTTP-Date-6.02");
+`perl Makefile.PL`;
+`make`;
+`mv blib/lib/HTTP/ ../PhyloSift/lib/`;
+chdir("..");
+
+
 # add Version.pm
 `curl -LO http://search.cpan.org/CPAN/authors/id/J/JP/JPEACOCK/version-0.95.tar.gz`;
 `tar xzf version-0.95.tar.gz`;
 chdir("version-0.95");
-`perl Makefile.PL`;
+`perl Makefile.PL --perl_only`;
 `make`;
 
 # put these in "legacy" because we only want to use them if the perl version is ancient -- including them breaks newer perls
-`mkdir -p ../PhyloSift/legacy/arch/auto`;
 `mv blib/lib/version* ../PhyloSift/legacy/`;
-`mv blib/arch/auto/version ../PhyloSift/legacy/arch/auto/`;
+
 chdir("..");
 
 # package everything up and datestamp it

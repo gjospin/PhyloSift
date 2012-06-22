@@ -21,7 +21,6 @@ Phylosift::MarkerAlign - Subroutines to align reads to marker HMMs
 Version 0.01
 
 =cut
-
 our $VERSION = '0.01';
 
 =head1 SYNOPSIS
@@ -54,7 +53,6 @@ if you don't export anything, such as for a purely object-oriented module.
 =head2 MarkerAlign
 
 =cut
-
 my $minAlignedResidues = 20;
 
 sub MarkerAlign {
@@ -131,13 +129,13 @@ sub gather_chunky_markers {
 	my $type              = $args{type};
 	my $seed              = $self->{"blastDir"} . "/*.*.candidate.aa." . $chunk . ".*";
 	my @candidate_markers = glob("$seed");
-	my @markers           = ();
+	my %unique_markers;
 	foreach my $line (@candidate_markers) {
 		$line =~ m/\/blastDir\/([^\/\.]+)\.\S+.candidate/;
 		my $mark = Phylosift::Utilities::get_marker_fullname( marker => $1 );
-		push( @markers, $mark ) if defined($mark) && length($mark) > 0;
+		$unique_markers{$mark} = 1 if defined($mark) && length($mark) > 0;
 	}
-	return @markers;
+	return keys(%unique_markers);
 }
 
 =head2 directoryPrepAndClean
@@ -452,7 +450,7 @@ sub alignAndMask {
 			}
 			if ( -e $candidate_short ) {
 				my $cmalign =
-				    "$Phylosift::Utilities::cmalign -q -l --dna --tau 1e-20 "
+				    "$Phylosift::Utilities::cmalign -q -l --dna --mxsize 2500 --tau 1e-20 "
 				  . Phylosift::Utilities::get_marker_cm_file( self => $self, marker => $marker )
 				  . " $candidate_short | ";
 				debug "Running $cmalign\n";
@@ -609,6 +607,7 @@ merge alignments by combining sequences from paired end reads.
 If aligned columns do not match an X will be used for amino acids and a N will be used for nucleotides
 if a residue will always win over a gap
 =cut
+
 sub merge_alignment {
 	my %args     = @_;
 	my $self     = $args{self};
@@ -776,5 +775,4 @@ See http://dev.perl.org/licenses/ for more information.
 
 
 =cut
-
 1;    # End of Phylosift::MarkerAlign.pm

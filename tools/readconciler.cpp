@@ -390,6 +390,8 @@ void reconcile( PhyloTree< TreeNode >& reftree, string treefile, unordered_multi
 	//			cout << "found edge " << pg.edge_array[i].first << "\n";
 				mapout << edgenum_map[pg.edge_array[i].first] << "\t" << refnodename << endl;
 			}
+		}else{
+			cerr << "Mapping too ambiguous for node " << i << endl;
 		}
 //		if(pg_splitlist[i].count() == 1)
 //			return;

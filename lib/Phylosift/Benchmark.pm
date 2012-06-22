@@ -8,7 +8,7 @@ use Phylosift::Utilities;
 
 =head1 SUBROUTINES/METHODS
 
-=Head2 benchmark_illumina
+=head2 benchmark_illumina
 
 WARNING: The input file must have the correct format to run the benchmark
 Reads the input file looking for taxonomic origins in the read headers and 
@@ -73,28 +73,25 @@ sub read_seq_summary {
 
 	#reading and storing information from the sequence_taxa.txt file
 	while (<$FILE_IN>) {
-		if ( $_ =~ m/^(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)$/ ) {
-			my $read           = $1;
-			my $taxPlacement   = $4;
-			my $probability    = $5;
-			my @taxPlacementID = Phylosift::Summarize::get_taxon_info(taxon=>$2);
-			
-			$read =~ s/\\.+//g;	# get rid of bioperl garbage
+		next if $_ =~ /^#/;
+		my ($read, $tid, $rank, $taxPlacement, $probability) = split(/\t/,$_);
+		my @taxPlacementID = Phylosift::Summarize::get_taxon_info(taxon=>$tid);
+					
+		$read =~ s/\\.+//g;	# get rid of bioperl garbage
 
-			#	    print "TaxPlacement : $2\t $taxPlacementID[0]\t\n";
-			my @readAncestor = get_ancestor_array(tax_id=> $taxPlacementID[2] );
+		#	    print "TaxPlacement : $2\t $taxPlacementID[0]\t\n";
+		my @readAncestor = get_ancestor_array(tax_id=> $taxPlacementID[2] );
 
-			#	    print $read." $taxPlacementID[1]\t$taxPlacementID[2]:\t@readAncestor\n";
-			my $rank = $taxPlacementID[1];
+		#	    print $read." $taxPlacementID[1]\t$taxPlacementID[2]:\t@readAncestor\n";
+		$rank = $taxPlacementID[1];
 
-			#keep only the top hits for all ranks for each Read
-			my @array = ( $probability, $taxPlacementID[2], scalar(@readAncestor) );
-			if ( !exists $topReadScore{$read} || $topReadScore{$read}->[0] < $probability ) {
-				print STDERR "Replacing prob" if exists( $topReadScore{$read} );
-				$topReadScore{$read} = \@array;
-			}
-			$allPlacedScore{$read}{$taxPlacement} = \@array;
+		#keep only the top hits for all ranks for each Read
+		my @array = ( $probability, $taxPlacementID[2], scalar(@readAncestor) );
+		if ( !exists $topReadScore{$read} || $topReadScore{$read}->[0] < $probability ) {
+			print STDERR "Replacing prob" if exists( $topReadScore{$read} );
+			$topReadScore{$read} = \@array;
 		}
+		$allPlacedScore{$read}{$taxPlacement} = \@array;
 	}
 	close($FILE_IN);
 	

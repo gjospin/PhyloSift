@@ -76,16 +76,29 @@ Mode : Only execute a specific step in the pipeline
         evaluates a benchmark on the simulated data.
 
 Options Available at this time :
-   -h --help             Prints the usage section of the README
+   -h, --help            Prints the usage section of the README
+   -f                    Overrides a previous Phylosift run, if applicable
    --custom <file>       Reads a custom marker list from a file otherwise use all the markers from the markers directory
-   --threaded=<number>  Runs Blast and Hmmer using the number of processors specified
-                        (DEFAULT : 1)
+   --threaded=<number>   Runs Blast and Hmmer using the number of processors specified
+                         (DEFAULT : 1)
+   --extended            Uses the extended set of markers
    --clean               Cleans the temporary files created by Phylosift (NOT YET IMPLEMENTED)
    --paired              Looks for 2 input files (paired end sequencing) in FastQ format.
-                        Reversing the sequences for the second file listed
-                        and appending to the corresponding pair from the first file listed.
+                         Reversing the sequences for the second file listed
+                         and appending to the corresponding pair from the first file listed.
    --continue            Enables the pipeline to continue to subsequent steps when not using the 'all' mode
    --isolate             Use this mode if you are running data from an Isolate genome
+   --simple              Creates a simple taxonomic summary of the output; no Krona output
+   --besthit             When there are multiple hits to the same read, keeps only the best hit to that read
+   --updated             Use the set of updated markers instead of stock markers
+   --marker_url=<url>    Phylosift will use markers available from the url provided
+   --coverage=<file>     Provides a contig/scaffold coverage file to Phylosift
+   --config=<file>       Provides a custom configuration file to Phylosift
+   --output=<dir>        Specifies an output directory other than PStemp
+   --debug               Prints debugging messages
+   --keep_search         Keeps the blastDir files (Default: Delete the blastDir files after every chunk)
+   --chunk=<Number>      Only run a set number of chunks
+   --chunk_size=<Number> Run so many sequences per chunk
 
 ~;
 
@@ -112,8 +125,14 @@ GetOptions(
 	"coverage=s"      => \$ps->{"coverage"},            #provides a contig/scaffold coverage file
 	"updated_markers=i" => \$ps->{"updated"},             #Indicates if Phylosift uses the updated versions of the Markers.
 	"marker_url=s"      => \$ps->{"marker_url"},          # an alternate address to retrieve markers from
-	"extended"        => \$ps->{"extended"},  #Should the full extended set of markers be used?
+	"extended"        => \$ps->{"extended"},            #Should the full extended set of markers be used?
 	"config=s"        => \$ps->{"configuration"},       #custom config file
+	"remove_dup"      => \$ps->{"remove_dup"},  #removes duplicate taxons when using build_marker
+	"keep_search"    => \$ps->{"keep_search"}, #prevents the files from the bastDir from being deleted after each chunk has completed
+	"disable_updates" => \$ps->{"disable_update_check"}, # don't check for or download marker updates
+	"start_chunk=i"          => \$ps->{"start_chunk"},       #sets the chunk to start with
+	"chunks=i"          => \$ps->{"chunks"},       #sets the number of chunks to be run
+	"chunk_size=i"     => \$ps->{"chunk_size"},   #sets the number of sequences to run per chunk
 	"h"               => \$help,                #prints the usage part of the README file
 	"help"            => \$help,                #same as -h
 	"debug"           => \$my_debug,            #print debugging messages?
