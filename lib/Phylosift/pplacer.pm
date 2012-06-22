@@ -62,8 +62,8 @@ sub pplacer {
 		my $read_alignment_file = $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta( marker => Phylosift::Utilities::get_marker_basename(marker=>$marker), chunk => $chunk );
 		next unless -e $read_alignment_file && -s $read_alignment_file > 0;
 		my $options = $marker eq "concat" ? "--groups 15" : "";
-		$options .= "--mmap-file abracadabra" if ($marker =~ /18s/);  # FIXME: this should be based on the number of seqs in the tree.
-		$options .= "--mmap-file abracadabra" if ($marker =~ /16s/);
+		$options .= " --mmap-file abracadabra " if ($marker =~ /18s/);  # FIXME: this should be based on the number of seqs in the tree.
+		$options .= " --mmap-file abracadabra " if ($marker =~ /16s/ || $marker eq "concat");
 		my $place_file = place_reads(self=>$self, marker=>$marker, dna=>0, chunk => $chunk, reads=>$read_alignment_file, options=>$options);
 		unlink("abracadabra") if $options =~ /abracadabra/;	# remove the mmap file created by pplacer
 	}
