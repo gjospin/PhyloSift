@@ -56,13 +56,15 @@ sub prep_simulation {
 	debug "getting genome list\n";
 	my $taxon_genome_files = find_taxon_genome_files(self=>$self, genomes => $genomes_dir);
 
+	my $new_genomes = pick_new_genomes(genomes => $genomes_dir, wgs_dir => "/share/eisen-d2/amphora2/ncbi_wgs/ftp.ncbi.nih.gov/genbank/wgs/");
+
 	debug "found ".scalar(keys(%$taxon_genome_files))." genomes\n";
 
 	# this reads in a list of genomes ordered by PD contribution
 	my @genome_ids = get_genome_ids_from_pda( self => $self, rep_file => $rep_file, gene_map => "$marker_dir/gene_ids.aa.txt" );
 	debug "Got ".scalar(@genome_ids)." genomes from PDA\n";
 	debug "picking simulation genomes\n";
-	my ( $knockouts) = knockout_genomes( self => $self, list => \@genome_ids, pick_number => $pick_number, taxon_genome_files=>$taxon_genome_files );
+	my ( $knockouts) = knockout_genomes( self => $self, list => \@genome_ids, new_genomes => $new_genomes, pick_number => $pick_number, taxon_genome_files=>$taxon_genome_files );
 	debug "knockouts $knockouts\n";
 	my $ko_genome_file  = $self->{"fileDir"} . "/knockout.genomes";
 	my %gen_files        = ( top => $ko_genome_file );
@@ -266,6 +268,34 @@ sub get_genome_ids_from_pda {
 	return @taxa;
 }
 
+# /share/eisen-d2/amphora2/ncbi_wgs/ftp.ncbi.nih.gov/genbank/wgs/
+
+sub pick_new_genomes
+{
+	my %args = @_;
+	my $genomes_dir = $args{genomes} || miss("Genomes Directory");
+	my $wgs_dir = $args{wgs_dir} || miss("WGS Directory");
+	my %new_genomes = ();	
+	my $LSSER = ps_open("ls -1 $genomes_dir |");
+	my %taxon_file_map;
+	while( my $line = <$LSSER>){
+		chomp $line;
+		my ($wgs_id, $taxon_id) = ($1, $2) if $line =~ /(....)\.(\d+)\.fasta$/;
+		my $gbff = "$wgs_dir/wgs.$wgs_id.1.gbff";
+		$gbff = "$wgs_dir/wgs.$wgs_id.gbff" unless -e $gbff;
+		next unless -e $gbff;
+		my $WGS_IN = ps_open($gbff);
+		my $fline = <$WGS_IN>;
+		my @dat = split(/\s+/,$fline);
+		my @date = split(/-/, $dat[7]);
+		next unless $date[2] >= 2012;
+		next unless $date[1] eq "APR" || $date[1] eq "MAY" || $date[1] eq "JUN"  || $date[1] eq "MAR";
+		$new_genomes{$taxon_id} = 1;
+	}
+	print STDERR "Found ".scalar(keys(%new_genomes))." new genomes\n";
+	return \%new_genomes;
+}
+
 =head2 knockout_genomes
 
 	Prints 2 files in the fileDir for the PS object
@@ -280,6 +310,7 @@ sub knockout_genomes() {
 	my $list_ref     = $args{list} || miss("Genome list reference");
 	my $num_picked   = $args{pick_number} || 10;
 	my $taxon_genome_files = $args{taxon_genome_files};
+	my $new_genomes = $args{new_genomes};
 	my @list         = @{$list_ref};
 	my $list_length  = scalar(@list);
 	my $ko_name      = $self->{"fileDir"} . "/grinder_knockouts.txt";
@@ -290,28 +321,32 @@ sub knockout_genomes() {
 	my %ko_taxa;
 	my $abund_sum=0;
 	my $nummer = $num_picked;
-	my $new_genomes = pick_new_genomes();
 	my $use_maxpd = 0;
 	
 	$num_picked *= 2 unless $use_maxpd;	# gawd this is ugly.
 
-	for ( my $i = 0 ; $i < $num_picked/2 ; ) {
-		# pick one from the maxpd set
-		my $rand_index = int( rand( scalar(@top_array) - 1 ) );
-		my $rand_taxon  = $top_array[$rand_index];
-		$top_array[$rand_index] = $list[$nummer++];
-			debug "picked $rand_taxon, i $i\n";
-		next unless defined($taxon_genome_files->{$rand_taxon}); # don't add this one unless its available
-		$ko_taxa{$rand_taxon}=rand(1000);	# assign a uniformly random abundance
-		$abund_sum += $ko_taxa{$rand_taxon};
-		splice( @top_array, $rand_index, 1 );	# remove this one so it doesn't get resampled
-		$i++;
-	}
-	for ( my $i = $num_picked/2 ; $i < $num_picked ; ) {
+#	for ( my $i = 0 ; $i < $num_picked/2 ; ) {
+#		# pick one from the maxpd set
+#		my $rand_index = int( rand( scalar(@top_array) - 1 ) );
+#		my $rand_taxon  = $top_array[$rand_index];
+#		$top_array[$rand_index] = $list[$nummer++];
+#			debug "picked $rand_taxon, i $i\n";
+#		next unless defined($taxon_genome_files->{$rand_taxon}); # don't add this one unless its available
+#		$ko_taxa{$rand_taxon}=rand(1000);	# assign a uniformly random abundance
+#		$abund_sum += $ko_taxa{$rand_taxon};
+#		splice( @top_array, $rand_index, 1 );	# remove this one so it doesn't get resampled
+#		$i++;
+#	}
+#	for ( my $i = $num_picked/2 ; $i < $num_picked ; ) {
+	my @newgenomes = keys(%$new_genomes);
+	for ( my $i = 0 ; $i < $num_picked ; ) {
 		# pick one uniformly at random
-		my $rand_taxon = $list[ int( rand($list_length) ) ];
+#		my $rand_taxon = $list[ int( rand($list_length) ) ];
+		my $rand_taxon = $newgenomes[ int(rand(@newgenomes)) ];
 		debug "picked $rand_taxon, i $i\n";
 		croak("ran out of genomes, relax your constraints!") if $nummer == @list;
+		print "$rand_taxon not found on disk " unless defined($taxon_genome_files->{$rand_taxon});
+		print "$rand_taxon not new " unless defined($new_genomes->{$rand_taxon});
 		next unless defined($taxon_genome_files->{$rand_taxon});	# is it available on disk?
 		next unless defined($new_genomes->{$rand_taxon});	# is it new enough?
 		next if defined($ko_taxa{$rand_taxon});	# do we already have this one?
@@ -407,13 +442,14 @@ sub find_neighborhoods {
 	foreach my $node(@target_nodes){
 		my $parent=$node;
 		my $p_len = $node->get_branch_length();
-		while($parent = $parent->get_parent()){
+		while(defined($parent->get_parent())){
+			$parent = $parent->get_parent();
 			last if $dvalid{$parent};
-			$p_len += $parent->get_branch_length();
+			$p_len += $parent->get_branch_length() if defined($parent->get_branch_length());
 		}
 		debug "dist to dvalid parent is $p_len\n";
 		# get distance from ancestor to grandpere
-		my $pp_len = $parent->get_branch_length();
+		my $pp_len = defined($parent->get_branch_length()) ? $parent->get_branch_length() : 0;
 		debug "pplen $pp_len\n";
 		# get distance to other valid child
 		my $c_dist=0;
@@ -422,7 +458,7 @@ sub find_neighborhoods {
 			my $new_c;
 			foreach my $child(@{ $c->get_children() }){
 				next unless defined($valid{$c});
-				$c_dist += $c->get_branch_length();
+				$c_dist += $c->get_branch_length() if defined($c->get_branch_length());
 				$new_c = $child;
 				last;
 			}
