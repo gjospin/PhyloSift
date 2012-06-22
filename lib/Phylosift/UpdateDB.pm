@@ -454,19 +454,19 @@ sub collate_markers {
 		my $fasta = get_fasta_filename(marker=>$marker, updated=>1);
 		next unless -e "$local_directory/$fasta";
 		fix_names_in_alignment( alignment => "$local_directory/$fasta" );
-		`mv "$local_directory/$fasta" "$marker_dir/$fasta"`;
+		`cp "$local_directory/$fasta" "$marker_dir/$fasta"`;
 		my $reps = get_reps_filename( marker => $marker, updated => 1 );
 		my $clean_reps = get_reps_filename( marker => $marker, updated => 1, clean => 1 );
 		if(-e "$local_directory/$reps" ){
 			clean_representatives(infile=>"$local_directory/$reps", outfile=>"$local_directory/$clean_reps" );
 			fix_names_in_alignment( alignment => "$local_directory/$clean_reps" );
-			`mv "$local_directory/$clean_reps" "$marker_dir/$clean_reps"`;
+			`cp "$local_directory/$clean_reps" "$marker_dir/$clean_reps"`;
 		}
 		
 		my $codon_fasta = get_fasta_filename(marker=>$marker, updated=>1,dna=>1);
 		next unless -e "$local_directory/$codon_fasta";
 		fix_names_in_alignment( alignment => "$local_directory/$codon_fasta" );
-		`mv "$local_directory/$codon_fasta" "$marker_dir/$codon_fasta"`;
+		`cp "$local_directory/$codon_fasta" "$marker_dir/$codon_fasta"`;
 	}
 }
 
@@ -660,7 +660,7 @@ sub make_ncbi_tree_from_update {
 		my ( $marker, $taxon, $uniqueid ) = split( /\t/, $line );
 		push( @taxonids, $taxon ) if $taxon =~ /^\d+$/;
 	}
-	make_ncbi_subtree(out_file=>"ncbi_tree.updated.tre", taxon_ids=>\@taxonids);
+	make_ncbi_subtree(out_file=>"$markerdir/ncbi_tree.updated.tre", taxon_ids=>\@taxonids);
 }
 
 sub make_ncbi_subtree {
@@ -1104,7 +1104,7 @@ sub reconcile_with_ncbi {
 		my $aa_log      = get_fasttree_log_filename( marker => '$1', dna => $dna, updated => 1, pruned => $pruned, sub_marker=>$sub_marker );
 		my $aa_package  = get_marker_package( marker => '$1', dna => $dna, updated => 1, sub_marker=>$sub_marker );
 		my $aa_taxonmap = get_taxonmap_filename( marker => '$1', dna => $dna, updated => 1, sub_marker=>$sub_marker );
-		my $aa_ids      = get_marker_geneids( marker => '$1', dna => $dna, updated => 1, sub_marker=>$sub_marker );
+		my $aa_ids      = get_marker_geneids( marker => '$1', dna => $dna, updated => 1, sub_marker=>$sub_marker, pruned=>$pruned );
 		my $aa_tmpread  = get_marker_package( marker => '$1', dna => $dna, updated => 1, sub_marker=>$sub_marker ).".tmpread";
 		my $aa_ncbi_tre = get_marker_ncbi_subtree( marker => '$1', dna => $dna, updated => 1, sub_marker=>$sub_marker );
 		my $RECONCILESCRIPT = ps_open( ">$script" );
@@ -1593,9 +1593,11 @@ sub package_markers {
 	system("rm -f core.*");
 	system("rm -f *.tmpread.jplace");
 	system("rm -f *.ncbi_subtree");
-	system("mv ncbi_tree.updated.tre safekeeping");
+	system("mv ncbi_tree.updated.tre ncbi.safekeeping");
+	system("mv concat.updated.tre concat.safekeeping");
 	system("rm -f *.updated*tre");
-	system("mv safekeeping ncbi_tree.updated.tre");
+	system("mv concat.safekeeping concat.updated.tre");
+	system("mv ncbi.safekeeping ncbi_tree.updated.tre");
 	
 	chdir( $marker_dir . "/../" );
 	system("pwd");
