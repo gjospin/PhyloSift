@@ -444,7 +444,7 @@ sub merge_sequence_taxa {
 		%ncbi_summary = ();
 		%ncbi_summary = %all_summary;
 		krona_report( self => $self, file=>$self->{"fileName"}.".allmarkers.html" );
-		`ln -s $self->{"fileName"}.html krona.html`;
+		`ln -s $self->{"fileDir"}/$self->{"fileName"}.html $self->{"fileDir"}/krona.html`;
 	}
 }
 
