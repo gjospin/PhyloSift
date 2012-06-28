@@ -97,18 +97,18 @@ The emerging practice of metagenomics has for the first time offered a glimpse o
 In its current form however, metagenomics destroys some of the most valuable information present in a sample: genetic linkage.
 In nearly all metagenomic sample processing methods, cells from the microbial community are lysed together to obtain the DNA.
 This practice causes DNA from many different cells to mix together, so that the cellular compartmentalization of individual genotypes is lost.
-Long chromosome-scale DNA fragments are then typically sheared by mechanical or enzymatic means into fragments small enough processing with current sequencing chemistries. 
+Long chromosome-scale DNA fragments are then typically broken by mechanical or enzymatic means into fragments small enough for processing with current sequencing chemistries. 
 The resulting sequenced fragments are usually less than 1Kbp (though sometimes 10-20kbp). 
 The shearing further destroys genetic linkage information, because information on how the short fragments were arranged into chromosome-scale molecules is lost.
 
 Improved sample-processing workflows might preserve the genetic linkage information of a microbial community through the sequencing process.
-Single-cell genomics offers an alternative to the standard metagenomics workflow that preserves information about the compartmentalization of genetic material into cells. 
-However, single-cell genomics currently presents its own challenges associated with isolating individual cells certain types of samples and amplifying the {DNA} from a single cell to attain the minimum quantity required for sequencing. 
+High throughput single-cell genomics (e.g. applied to thousands of cells) offers an alternative to the standard metagenomics workflow that preserves information about the compartmentalization of genetic material into cells. 
+However, single-cell genomics currently presents its own challenges associated with isolating individual cells from certain types of samples and amplifying the {DNA} from a single cell to attain the minimum quantity required for sequencing. 
 Furthermore, single-cell genomics has extensive equipment requirements and is highly sensitive to contamination by foreign DNA, requiring rigorous laboratory and reagent decontamination.
 
 Given the current limitations of metagenomics, practitioners resort to computational methods to reconstruct the genetic architecture of a microbial community after sequencing.
 Computational methods have demonstrated promise for metagenomic analysis and a wide range of approaches have been explored.
-Approaches to infer genetic linkage in metagenomes usually address one or more of the following problems:
+Metagenome linkage analysis usually addresses one or more of the following problems:
 \begin{itemize}
 \item Taxonomic classification of sequences
 \item Community structure and organism relative abundance estimation
@@ -117,13 +117,13 @@ Approaches to infer genetic linkage in metagenomes usually address one or more o
 Each of these problems are inter-related and many methods address two or more of these at once.
 \textit{Question: should we define each of these problems?}
 
-Molecular evolution, the joint processes of reproduction with mutation and natural selection acting on mutations, provides the primary signal for most read classification methods.
+Molecular evolution, the joint processes of DNA replication with mutation and natural selection acting on those mutations, provides the primary signal for most read classification methods.
 As species diverge, differences such as nucleotide substitutions, insertions, deletions, and genomic rearrangements accumulate in their genomes, and these differences can be leveraged to infer a sequence's origin in a mixed metagenomic sample.
 
 In the present manuscript, we introduce a new method for reconstructing the genetic architecture of a metagenomic sample and for comparison of community structure among multiple related samples.
 The new method leverages explicitly phylogenetic models of molecular evolution. 
 We contribute an open-source implementation of the method that has been engineered for ease-of-use on 64-bit Linux and Mac platforms.
-Finally, we compare the features and performance of the new method to some related methods to provide readers with insight into when use of the new method is and is not appropriate.
+Finally, we compare the features of the new method to some related methods to provide readers with insight into when use of the new method is and is not appropriate.
 
 
 \subsection*{Previous work}
@@ -137,24 +137,80 @@ do not discuss analysis methods for other aspects of microbial ecology such as a
 \subsubsection*{Estimating community composition from metagenomes}
       - AMPHORA\cite{WuEisen2008}, MLTreeMap\cite{Stark2010}, others?
       - MetaPHlan (under review)
+      - EMIRGE\cite{Miller2011}
+\subsubsection*{Amplicon analysis methods}
+Many community composition methods rely on amplicon sequencing. 
+The analysis methods are different to metagenomics in many ways.
+This is a very mature area with too many methods to list.
 
 % You may title this section "Methods" or "Models". 
 % "Models" is not a valid title for PLoS ONE authors. However, PLoS ONE
 % authors may use "Analysis" 
 \section*{Methods or Design and Implementation}
 
-\subsection*{Detailed PhyloSift workflow}
-Stream computing
+PhyloSift implements a method for analyzing microbial community structure directly from metagenome sequence data.
+Figure~\ref{fig:overview} gives an overview of the analysis workflow as executed when analyzing a metagenomic sample.
+The analysis can be decomposed into four stages: 1. searching input sequences for identity to a database of known reference gene families, 2. adding input sequences to a multiple alignment with reference genes, 3. placement of input sequences onto a phylogeny of reference genes, and 4. generation of taxonomic summaries. We now describe the details of each step along with our design decisions and rationale.
+ 
+
+\subsection*{Detailed PhyloSift client workflow}
 \subsubsection*{Sequence identity search}
-Process sequence (reads or assembly) to identify similarity to marker genes
-      - Evaluated BLAST~\cite{Altschul1997}, BLAST+~\cite{Camacho2009}, RAPsearch2~\cite{Zhao2011}, LAST~\cite{Kiełbasa2011}, bowtie2~\cite{Langmead2009}. Picked LAST, bowtie2.
+This first step in a PhyloSift analysis aims to identify regions of the input sequences that may be homologous to gene families in the reference database.
+Input sequences to this step can be of any length ranging from short 30nt next-generation sequence reads to fully assembled genomes.
+Recognized input formats include FastA and FastQ (paired, unpaired, phred33, phred64, and/or interleaved pairing), and these can optionally be supplied as bzip2 or gzip compressed data files. 
+Amino acid input sequences can also be processed.
+
+PhyloSift uses LAST~\cite{Kiełbasa2011} and bowtie2~\cite{Langmead2009} for sequence similarity search against the reference databases.
+We evaluated many possible search algorithms and implementations before finally selecting LAST and bowtie2. 
+Other options we evaluated were BLAST~\cite{Altschul1997}, BLAST+~\cite{Camacho2009}, and RAPsearch2~\cite{Zhao2011}.
+Given the large volume of sequence data that must be processed, a key evaluation criterion was algorithm efficiency both in CPU time and memory requirements. 
+A second criterion is the ability to perform six-frame translated searches of DNA sequence against an amino acid database with the possibility to tolerate frame-shift errors in the sequence.
+Among the evaluated methods, BLAST and BLAST+ were slowest (data not shown) and frameshift detection was non-functional in the version of BLAST+ we obtained from NCBI. We excluded these from futher consideration.
+RAPsearch2 was much more computationally efficient than either BLAST or BLAST+, but the version we obtained could not process sequences > 1kbp and did not support frameshift detection.
+In our testing, LAST was able to process sequence data as quickly as RAPsearch2 (e.g. orders of magnitude more quickly than BLAST) and supports both frameshift detection and input sequences of arbitrary length.
+LAST also supports all three of the primary search types we require: DNA vs. DNA, DNA vs. AA, and AA vs. AA.
+We also evaluated bowtie2, a program typically used for mapping reads to a reference genome, for the purpose of screening reads against a database of noncoding RNA sequences (currently 16S and 18S).
+Relative to LAST, bowtie2 is able to identify similarity to the RNA database sequences much more quickly.
+Therefore we implemented bowtie2 to search short sequences against the RNA databases and LAST for all other search types.
+One minor shortcoming of LAST is that current versions do not support multithreaded parallelism.
+PhyloSift implements optional process-level parallelism at this stage by spawning multiple LAST searches against the protein database.
+
+One feature of reference gene family sequences being searched at this stage bears special mention.
+During database construction (described elsewhere) a subset of representative sequences are selected from each gene family to be searched at this stage.
+These representatives are chosen to span the phylogenetic diversity of the gene family without including closely related sequences (see Section~\ref{sec:dbupdate}).
+This is important because part of LAST's fast heuristic to identify candidate regions to align involves eliminating redundant and repetitive $k$-mers from the search space~\cite{Kiełbasa2011}.
+A database constructed with all sequences (and not just divergent representatives) could in principle reduce sensitivity in aligning reads to those database sequences.
+
+The result of this stage is a set of candidate amino acid sequences that are similar to each gene family in the database and (if DNA was used as input) the corresponding untranslated DNA sequences.
+
 \subsubsection*{Alignment to reference multiple alignment}
-      - reverse translation to DNA when possible
+Prior this stage all input sequence regions with putative homology to reference gene families have been identified and extracted.
+In this stage, each candidate sequence is added to an amino acid multiple sequence alignment of the reference gene family.
+If the input sequences were {DNA}, a codon multiple sequence alignment congruent to the amino acid alignment is also generated.
+
+PhyloSift applies the \texttt{hmmalign} program from the HMMER 3.0 software~\cite{hmmer3} to add the candidate sequences to reference multiple sequence alignments.
+During construction of the PhyloSift reference database (described elsewhere) a profile-HMM is generated from a multiple alignment of the gene family reference sequences.
+When processing candidate sequences, PhyloSift then uses the profile-HMM to map the input sequence to the reference multiple alignment using maximal sensitivity settings (\texttt{hmmalign --max}).
+We acknowledge that application of a profile-HMM to align sequences
+
+Finally, PhyloSift concatenates the alignments of the 40 elite markers to a single multiple sequence alignment.
+
 \subsubsection*{Placement on a phylogenetic reference tree}
 
+At this stage, aligned input sequences are placed onto a phylogenetic tree of the reference sequences.
+PhyloSift employs pplacer~\cite{Matsen2010} for this task.
+pplacer does some neat stuff.
+
+
 \subsubsection*{Taxonomic summary of read placements}
+At this final stage of analysis, PhyloSift summarizes the phylogenetic placements in a human-friendly format.
+Converting numbers to names, this is the stuff that microbiome dreams (and programmer nightmares) are made of.
+
       - taxonomic summary
       - other summaries
+
+\subsubsection*{Parallelism and stream computing}
+
 \subsubsection*{Comparison among samples}
 
 \subsection*{PhyloSift database update workflow}
@@ -227,10 +283,10 @@ Funding from Dept. of Homeland Security, DOE.
 %\end{figure}
 \begin{figure}[hp]
 \begin{center}
+\includegraphics[width=4in]{figures/Phylosift_overview_vector.pdf}
 \end{center}
-\caption{\textbf{A really pretty picture.} As you can see, the curves in this image are stunning.
-Pick your jaw up off the floor, this ain't no joke.}
-\label{fig:the_first_figure}
+\caption{\textbf{PhyloSift client workflow.} This workflow is applied to the user's sequence data.}
+\label{fig:overview}
 \end{figure}
 
 \clearpage
