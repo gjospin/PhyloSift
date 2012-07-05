@@ -9,11 +9,9 @@ use Carp;
 use Phylosift::Phylosift;
 use Phylosift::Utilities qw(:all);
 use Phylosift::MarkerAlign;
+use Phylosift::Settings;
 use File::Basename;
 use POSIX qw(ceil floor);
-use constant FLANKING_LENGTH => 150;
-my $CHUNK_MAX_SEQS = 20000;
-my $CHUNK_MAX_SIZE = 10000000;
 
 =head1 NAME
 
@@ -53,12 +51,12 @@ if you don't export anything, such as for a purely object-oriented module.
 
 =cut
 
-my $bestHitsBitScoreRange =
-  30;    # all hits with a bit score within this amount of the best will be used
-my $align_fraction = 0.5
-  ; # at least this amount of min[length(query),length(marker)] must align to be considered a hit
-my $align_fraction_isolate =
-  0.8;    # use this align_fraction when in isolate mode on long sequences
+my $best_hits_bit_score_range = $Phylosift::Settings::best_hits_bit_score_range;
+  # all hits with a bit score within this amount of the best will be used
+my $align_fraction = $Phylosift::Settings::align_fraction;
+  # at least this amount of min[length(query),length(marker)] must align to be considered a hit
+my $align_fraction_isolate = $Phylosift::Settings::align_fraction_isolate;
+  # use this align_fraction when in isolate mode on long sequences
 my %markers;
 my %markerNuc = ();
 my %markerLength;
@@ -72,13 +70,13 @@ sub run_search {
 	my $position = rindex( $self->{"readsFile"}, "/" );
 	$self->{"readsFile"} =~ m/(\w+)\.?(\w*)$/;
 
-	# set align_fraction appropriately
-	$align_fraction = $align_fraction_isolate if ( $self->{"isolate"} );
+	#setting default values for the module
+	set_default_values(self=>$self);
 
-	# use bigger chunks if not on extended markers
-	$CHUNK_MAX_SEQS = 1000000 unless $self->{"extended"};
-	$CHUNK_MAX_SEQS = $self->{"chunk_size"} if defined($self->{"chunk_size"});
-	debug "Chunk size set to $CHUNK_MAX_SEQS\n";
+	# set align_fraction appropriately
+	$align_fraction = $align_fraction_isolate if ( $Phylosift::Settings::isolate );
+
+	
 	# check what kind of input was provided
 	my $type =
 	  Phylosift::Utilities::get_sequence_input_type( $self->{"readsFile"} );
@@ -100,9 +98,9 @@ sub run_search {
 	my $searchtype = "blast";
 	my $contigs    = 0;
 	$contigs = 1
-	  if ( defined( $self->{"coverage"} )
+	  if ( defined( $Phylosift::Settings::coverage )
 		&& $type->{seqtype} ne "protein"
-		&& ( !defined $self->{"isolate"} || $self->{"isolate"} != 1 ) );
+		&& ( !defined $Phylosift::Settings::isolate || $Phylosift::Settings::isolate != 1 ) );
 
 	# open the input file(s)
 	my $F1IN =
@@ -115,7 +113,7 @@ sub run_search {
 	  ps_open( ">>" . Phylosift::Utilities::get_run_info_file( self => $self ) );
 
 	# launch the searches
-	my $start_chunk = defined($self->{"start_chunk"}) ? $self->{"start_chunk"} : 1;
+	my $start_chunk = defined($Phylosift::Settings::start_chunk) ? $Phylosift::Settings::start_chunk : 1;
 	for ( my $chunkI = 1 ; ; $chunkI++ ) {
 		my $completed_chunk = has_chunk_completed(self=> $self , chunk=> $chunkI);
 		$completed_chunk = 1 if $start_chunk > $chunkI;
@@ -144,11 +142,36 @@ sub run_search {
 		}
 		print $RUNINFO "Chunk $chunkI completed\n" unless $completed_chunk;
 		debug "Debug lvl : $Phylosift::Utilities::debuglevel\n";
-		clean_chunk_directory(self=>$self, chunk=>$chunkI) if !$self->{"keep_search"};
-		last if $finished || (defined($self->{"chunks"}) && ($chunkI - $start_chunk + 1) >= $self->{"chunks"});
+		clean_chunk_directory(self=>$self, chunk=>$chunkI) if !$Phylosift::Settings::keep_search;
+		last if $finished || (defined($Phylosift::Settings::chunks) && ($chunkI - $start_chunk + 1) >= $Phylosift::Settings::chunks);
 	}
 	return $self;
 }
+
+=head2 set_default_values
+
+	Set the necessary default values for this module if they haven't been read in by the RC file.
+
+=cut
+
+sub set_default_values{
+	my %args = @_;
+	my $self = $args{self};
+	Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::CHUNK_MAX_SEQS,value=>20000); #small chunks if doing extended markers
+	Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::CHUNK_MAX_SEQS,value=>1000000, force=>1) unless $Phylosift::Settings::extended;
+	Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::CHUNK_MAX_SIZE,value=>10000000);
+	Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::lastal_evalue,value=>"-e75");
+	Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::lastal_rna_evalue,value=>"-e300");
+	Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::bowtie_quiet,value=>"--quiet --sam-nohead --sam-nosq");
+	Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::bowtie_maxins,value=>"--maxins 1000");
+	Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::bowtie_aln,value=>"--local");
+	Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::max_hit_overlap,value=>10);
+	Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::discard_length,value=>30);
+	Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::best_hits_bit_score_range,value=>30);
+	Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::align_fraction,value=>0.5);
+	Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::align_fraction_isolate,value=>0.8);
+}
+
 =head2 clean_search_directory
 	
 	Deleting the files from the blastDir for a specific chunk
@@ -208,7 +231,7 @@ sub launch_searches {
 	$bowtie2_r2_pipe = $dir . "/bowtie2_r2.pipe" if $readtype->{paired};
 	debug "Making fifos\n";
 	my @last_pipe_array = ();
-	for ( my $i = 0 ; $i <= $self->{"threads"} - 1 ; $i++ ) {
+	for ( my $i = 0 ; $i <= $Phylosift::Settings::threads - 1 ; $i++ ) {
 		push( @last_pipe_array, $dir . "/last_$i.pipe" );
 		`mkfifo "$dir/last_$i.pipe"`;
 	}
@@ -229,7 +252,7 @@ sub launch_searches {
 		$last_rna_pipe   = "/dev/null";
 	}
 	my @children;
-	for ( my $count = 1 ; $count <= $self->{"threads"} + $rna_procs ; $count++ )
+	for ( my $count = 1 ; $count <= $Phylosift::Settings::threads + $rna_procs ; $count++ )
 	{
 		my $pid = fork();
 		if ($pid) {
@@ -243,7 +266,7 @@ sub launch_searches {
 			# child processes will search sequences
 			my $hitstream;
 			my $candidate_type = ".$count";
-			if ( $count <= $self->{"threads"} ) {
+			if ( $count <= $Phylosift::Settings::threads ) {
 				$hitstream = lastal_table(
 					self       => $self,
 					query_file => $last_pipe_array[ $count - 1 ],
@@ -251,7 +274,7 @@ sub launch_searches {
 				);
 				$candidate_type = ".lastal";
 			}
-			elsif ( $count == $self->{"threads"} + 1 ) {
+			elsif ( $count == $Phylosift::Settings::threads + 1 ) {
 
 				if ( !-e Phylosift::Utilities::get_bowtie2_db( self => $self )
 					. ".prj" )
@@ -269,7 +292,7 @@ sub launch_searches {
 				}
 				$candidate_type = ".lastal.rna";
 			}
-			elsif ( $count == $self->{"threads"} + 2 ) {
+			elsif ( $count == $Phylosift::Settings::threads + 2 ) {
 
 				#exit the thread if the bowtie DB does not exit
 				if ( !-e Phylosift::Utilities::get_bowtie2_db( self => $self )
@@ -297,7 +320,7 @@ sub launch_searches {
 				$candidate_type = ".rna";
 			}
 			my $hitsref;
-			if ( $count == $self->{"threads"} + 2 ) {
+			if ( $count == $Phylosift::Settings::threads + 2 ) {
 				$hitsref =
 				  get_hits_sam( self => $self, HITSTREAM => $hitstream );
 
@@ -390,7 +413,7 @@ sub demux_sequences {
 	my @LAST_PIPE_ARRAY      = @{$last_array_reference};
 	my $F1IN                 = $args{FILE1};
 	my $F2IN                 = $args{FILE2};
-	my $paired               = $self->{"paired"};
+	my $paired               = $Phylosift::Settings::paired;
 	my @lines1;
 	my @lines2;
 
@@ -527,7 +550,7 @@ sub demux_sequences {
 		}
 		$lastal_index++;
 		$lastal_index = $lastal_index % $lastal_threads;
-		last if ( $seq_count >= $CHUNK_MAX_SEQS );
+		last if ( $seq_count >= $Phylosift::Settings::CHUNK_MAX_SEQS );
 	}
 	foreach my $LAST_PIPE (@LAST_PIPE_ARRAY) {
 		close($LAST_PIPE);
@@ -577,7 +600,7 @@ sub lastal_table {
 	$last_opts = "-F15" if $readtype->{seqtype} eq "dna";
 	my $db = Phylosift::Utilities::get_lastal_db( self => $self );
 	my $lastal_cmd =
-	  "$Phylosift::Utilities::lastal $last_opts -e75 -f0 $db \"$query_file\" |";
+	  "$Phylosift::Settings::lastal $last_opts $Phylosift::Settings::lastal_evalue -f0 $db \"$query_file\" |";
 	debug "Running $lastal_cmd";
 	my $HISTREAM = ps_open($lastal_cmd);
 	return $HISTREAM;
@@ -596,7 +619,7 @@ sub lastal_table_rna {
 	my $query_file = $args{query_file} || miss("query_file");
 	my $db         = Phylosift::Utilities::get_bowtie2_db( self => $self );
 	my $lastal_cmd =
-	  "$Phylosift::Utilities::lastal -e300 -f0 $db \"$query_file\" |";
+	  "$Phylosift::Settings::lastal $Phylosift::Settings::lastal_rna_evalue -f0 $db \"$query_file\" |";
 	debug "Running $lastal_cmd";
 	my $HISTREAM = ps_open($lastal_cmd);
 	return $HISTREAM;
@@ -615,9 +638,9 @@ sub bowtie2 {
 	my $readtype = $args{readtype} || miss("readtype");
 	debug "INSIDE bowtie2\n";
 	my $bowtie2_cmd =
-	    "$Phylosift::Utilities::bowtie2align -x "
+	    "$Phylosift::Settings::bowtie2align -x "
 	  . Phylosift::Utilities::get_bowtie2_db( self => $self )
-	  . " --quiet --sam-nohead --sam-nosq --maxins 1000 --local ";
+	  . " $Phylosift::Settings::bowtie_quiet --maxins $Phylosift::Settings::bowtie_maxins $Phylosift::Settings::bowtie_aln ";
 	$bowtie2_cmd .= " -f " if $args{readtype}->{format} eq "fasta";
 
 	#	if ( $args{readtype}->{paired} ) {
@@ -682,7 +705,7 @@ sub get_hits_contigs {
 # value is an array of arrays, each one has [marker,bit_score,left-end,right-end,suffix]
 	my %contig_hits;
 	my %contig_top_bitscore;
-	my $max_hit_overlap = 10;
+	my $max_hit_overlap = $Phylosift::Settings::max_hit_overlap;
 
 	# return empty if there is no data
 	return \%contig_hits unless defined( fileno $HITSTREAM );
@@ -833,7 +856,7 @@ sub get_hits {
 		  get_marker_name( subject => $subject, search_type => $searchtype );
 		next unless (exists $markers{$markerName});
 #parse once to get the top score for each marker (if isolate is ON, assume best hit comes first)
-		if ( $self->{"isolate"} ) {
+		if ( $Phylosift::Settings::isolate ) {
 
 		   # running on a genome assembly, allow only 1 hit per marker (TOP hit)
 			if ( !defined( $markerTopScores{$markerName} )
@@ -842,9 +865,9 @@ sub get_hits {
 				$markerTopScores{$markerName} = $bitScore;
 			}
 			my @hitdata = [ $markerName, $bitScore, $query_start, $query_end ];
-			if (  !$self->{"besthit"}
+			if (  !$Phylosift::Settings::besthit
 				&& $markerTopScores{$markerName} <
-				$bitScore + $bestHitsBitScoreRange )
+				$bitScore + $best_hits_bit_score_range)
 			{
 				push( @{ $contig_hits{$query} }, @hitdata );
 			}
@@ -919,7 +942,7 @@ sub get_hits_sam {
 		$query_lend = length( $fields[9] ) - $query_lend
 		  if ( $fields[1] & 0x10 );
 		$query_lend = $query_lend - $qlen if ( $fields[1] & 0x10 );
-		next if $qlen < 30;    # don't trust anything shorter than 30nt
+		next if $qlen < $Phylosift::Settings::discard_length;    
 
 		# running on short reads, just do one marker per read
 		$topScore{$query} = 0 unless exists $topScore{$query};
@@ -982,6 +1005,7 @@ sub write_candidates {
 	my $chunk      = $args{chunk}      || miss("chunk");
 	my %contig_hits = %$contigHitsRef;
 	my %markerHits;
+	my $align_fraction = $Phylosift::Settings::align_fraction;
 	debug "ReadsFile:  $self->{\"readsFile\"}" . "\n";
 	my $seqin = Phylosift::Utilities::open_SeqIO_object( file => $reads_file );
 
@@ -1024,7 +1048,7 @@ sub write_candidates {
 			my $new_seq;
 			$new_seq = substr( $seq->seq, $start, $end - $start );
 			my $new_id = $seq->id;
-			$new_id .= "_p$suff" if ( $self->{"isolate"} );
+			$new_id .= "_p$suff" if ( $Phylosift::Settings::isolate );
 
 			#if we're working from DNA then need to translate to protein
 			if ( $self->{"dna"} && $type !~ /\.rna/ ) {
@@ -1153,7 +1177,7 @@ sub prep_and_clean {
 	my $self = $args{self} || miss("self");
 
 	#create a directory for the Reads file being processed.
-	`mkdir "$self->{"fileDir"}"`  unless ( -e $self->{"fileDir"} );
+	`mkdir "$Phylosift::Settings::file_dir"`  unless ( -e $Phylosift::Settings::file_dir );
 	`mkdir "$self->{"blastDir"}"` unless ( -e $self->{"blastDir"} );
 	return $self;
 }

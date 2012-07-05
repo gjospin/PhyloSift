@@ -211,7 +211,7 @@ sub generate_id_to_taxonid_map {
 	}
 
 	#removing any taxon that was seen more than once
-	if ( $self->{remove_dup} ) {
+	if ( $Phylosift::Settings::remove_dup ) {
 		debug "Removing duplicate Taxons\n";
 		foreach my $key ( sort ( keys(%return_hash) ) ) {
 			if ( $return_hash{$key} > 1 ) {
@@ -252,7 +252,7 @@ sub generate_hmm {
 	my %args      = @_;
 	my $file_name = $args{file_name} || miss("file_name");
 	my $hmm_name  = $args{hmm_name} || miss("hmm_name");
-	`$Phylosift::Utilities::hmmbuild --informat afa "$hmm_name" "$file_name"`;
+	`$Phylosift::Settings::hmmbuild --informat afa "$hmm_name" "$file_name"`;
 }
 
 =head2 hmmalign_to_model
@@ -271,7 +271,7 @@ sub hmmalign_to_model {
 	my ( $core_name, $path, $ext ) = fileparse( $sequence_file, qr/\.[^.]*$/ );
 
 	my $ALNOUT = ps_open(">$target_dir/$core_name.aln");
-	my $ALNIN  = ps_open("$Phylosift::Utilities::hmmalign --mapali $ref_ali --trim --outformat afa $hmm_profile $sequence_file |");
+	my $ALNIN  = ps_open("$Phylosift::Settings::hmmalign --mapali $ref_ali --trim --outformat afa $hmm_profile $sequence_file |");
 	my $s     = 0;
 	while ( my $line = <$ALNIN> ) {
 		if ( $line =~ /^>/ ) {
@@ -333,11 +333,11 @@ sub generate_fasttree {
 	my %type = %{ Phylosift::Utilities::get_sequence_input_type($aln_file) };
 	if ( $type{seqtype} eq "dna" ) {
 		debug "DNA alignment detected\n";
-`$Phylosift::Utilities::fasttree -nt -gtr -log "$target_dir/$core.log" "$aln_file" > "$target_dir/$core.tree" 2> /dev/null`;
+`$Phylosift::Settings::fasttree -nt -gtr -log "$target_dir/$core.log" "$aln_file" > "$target_dir/$core.tree" 2> /dev/null`;
 	}
 	else {
 		debug "NOT DNA detected\n";
-`$Phylosift::Utilities::fasttree -log "$target_dir/$core.log" "$aln_file" > "$target_dir/$core.tree" 2> /dev/null`;
+`$Phylosift::Settings::fasttree -log "$target_dir/$core.log" "$aln_file" > "$target_dir/$core.tree" 2> /dev/null`;
 	}
 	return ( "$target_dir/$core.tree", "$target_dir/$core.log" );
 }
@@ -371,7 +371,7 @@ sub get_representatives_from_tree {
 #pda doesn't seem to want to run if $taxa_count is the number of leaves. Decrementing to let pda do the search.
 	$taxa_count--;
 	my $pda_cmd =
-"cd \"$target_dir\";$Phylosift::Utilities::pda -g -k $taxa_count -minlen $cutoff \"$tree_file\" \"$target_dir/$core.pda\"";
+"cd \"$target_dir\";$Phylosift::Settings::pda -g -k $taxa_count -minlen $cutoff \"$tree_file\" \"$target_dir/$core.pda\"";
 	`$pda_cmd`;
 	return "$target_dir/$core.pda";
 }
