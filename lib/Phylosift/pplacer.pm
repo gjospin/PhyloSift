@@ -130,8 +130,8 @@ my %submarker_map;
 sub load_submarkers {
 	my %args  = @_;
 	return if %submarker_map;
-	return unless -e "$Phylosift::Utilities::marker_dir/submarkers.txt";
-	my $SUBS = ps_open("$Phylosift::Utilities::marker_dir/submarkers.txt");
+	return unless -e "$Phylosift::Settings::marker_dir/submarkers.txt";
+	my $SUBS = ps_open("$Phylosift::Settings::marker_dir/submarkers.txt");
 	while(my $line = <$SUBS>){
 		chomp $line;
 		my @data = split(/\t/,$line);

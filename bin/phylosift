@@ -8,6 +8,7 @@ BEGIN { push(@INC, "$Bin/../lib") }
 use Getopt::Long;
 use Phylosift::Phylosift;
 use Carp;
+use Phylosift::Settings;
 use Phylosift::Utilities qw(debug);
 use POSIX;
 my $pair             = 0;
@@ -105,6 +106,11 @@ Options Available at this time :
 # set default values
 Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::threads, value=> 1);
 Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::updated, value=> 1);
+Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::force, value=> "0");
+Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::continue, value=> "0");
+Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::custom, value=> "");
+Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::isolate, value=> 0);
+
 
 my $ps = new Phylosift::Phylosift();
 for(my $i=0;$i<scalar(@ARGV);$i++){
@@ -144,7 +150,7 @@ GetOptions(
 	"help"            => \$Phylosift::Settings::help, #same as -h
 	"debug"           => \$Phylosift::Settings::my_debug, #print debugging messages?
 ) || die $usage;
-if ( $Phylosift::Settings::help != 0 ) {
+if ( defined($Phylosift::Settings::help) && $Phylosift::Settings::help != 0 ) {
 	print $usage. "\n";
 	die "End of Help message\n";
 }

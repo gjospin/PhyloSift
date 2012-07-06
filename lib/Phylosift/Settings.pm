@@ -22,9 +22,9 @@ Version 0.01
 
 sub set_default {
 	my %args  = @_;
-	my $param = $args{parameter} || miss("parameter");
-	my $value = $args{value}|| miss("value");
-	my $force = $args{force}||0;
+	my $param = $args{parameter} || Phylosift::Utilities::miss("parameter");
+	my $value = $args{value};
+	my $force = $args{force} || 0;
 	if ( !defined(${$param}) ) {
 		${$param} = $value;
 	}elsif($force){

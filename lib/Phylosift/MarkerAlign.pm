@@ -130,6 +130,7 @@ sub set_default_values{
 	my $self = $args{self};
 	Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::min_aligned_residues,value=>20);
 	Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::rna_split_size,value=>500);
+	debug "Setting gap_character\n";
 	Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::gap_character,value=>"-");
 	Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::hmmsearch_evalue,value=>10);
 	Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::hmmsearch_options,value=>"--max");
@@ -361,8 +362,8 @@ sub writeAlignedSeq {
 	print $UNMASKEDOUT ">$prev_name\n$orig_seq\n" if defined($UNMASKEDOUT);
 }
 use constant CODONSIZE => 3;
-my $GAP      = $Phylosift::Settings::gap_character;
-my $CODONGAP = $GAP x CODONSIZE;
+#my $GAP      = $Phylosift::Settings::gap_character;
+#my $CODONGAP = $GAP x CODONSIZE;
 
 =head2 aa_to_dna_aln
 Function based on BioPerl's aa_to_dna_aln. This one has been modified to preserve . characters and upper/lower casing of the protein
@@ -372,6 +373,8 @@ sequence during reverse translation. Needed to mask out HMM aligned sequences.
 sub aa_to_dna_aln {
 	my %args = @_;
 	my ( $aln, $dnaseqs ) = ( $args{aln}, $args{dna_seqs} );
+	my $GAP      = $Phylosift::Settings::gap_character;
+	my $CODONGAP = $GAP x CODONSIZE;
 	unless (    defined $aln
 			 && ref($aln)
 			 && $aln->isa('Bio::Align::AlignI') )
