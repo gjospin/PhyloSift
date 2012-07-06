@@ -53,7 +53,7 @@ sub pplacer {
 	directoryPrepAndClean( self => $self );
 	# if we have a coverage map then weight the placements
 	my $covref;
-	if ( defined( $Phylosift::Settings::coverage ) ) {
+	if ( defined( $Phylosift::Settings::coverage ) && $Phylosift::Settings::coverage ne ""  ) {
 		$covref = Phylosift::Summarize::read_coverage( file => $Phylosift::Settings::coverage );
 	}
 	unshift(@{$markRef},'concat'); #adds the concatenation to the list of markers

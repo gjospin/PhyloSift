@@ -5,6 +5,7 @@ use File::Basename;
 use Bio::SeqIO;
 use Carp;
 use Phylosift::Summarize;
+use Phylosift::Settings;
 use Phylosift::Utilities;
 use Bio::Phylo::IO qw(parse unparse);
 use LWP::Simple;
@@ -975,7 +976,7 @@ sub prune_marker {
 		return;
 	}
 
-	#	my $prune_cmd = "$Phylosift::Utilities::pda -k 20000 -g -minlen $args{distance} $args{tre} $args{tre}.pruning.log";
+	#	my $prune_cmd = "$Phylosift::Settings::pda -k 20000 -g -minlen $args{distance} $args{tre} $args{tre}.pruning.log";
 	my $prune_cmd = "pda -k 20000 -g -minlen $distance $tre $tre.pruning.log";
 	system("$prune_cmd");
 

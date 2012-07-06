@@ -55,26 +55,26 @@ $ncbi_url = "http://edhar.genomecenter.ucdavis.edu/~koadman/ncbi.tgz";
 #
 # Command line
 #
-$force    = 0;       #overrides a previous run otherwise stop
-$file_dir = undef; #Directory for output
-$paired   = 0;    # used for paired fastQ input split in 2 different files OR interleaved
-$custom = undef; #need a file containing the marker names to use without extensions ** marker names shouldn't contain '_'
-$continue = 0; #when a mode different than all is used, continue the rest of Phylosift after the section specified by the mode is finished
+#$force    = 1;       #overrides a previous run otherwise stop
+#$file_dir = ""; #Directory for output
+#$paired   = 1;    # used for paired fastQ input split in 2 different files OR interleaved
+#$custom = ""; #need a file containing the marker names to use without extensions ** marker names shouldn't contain '_'
+#$continue = 0; #when a mode different than all is used, continue the rest of Phylosift after the section specified by the mode is finished
 $threads = 1;    #allows PS to use the number of threads specified
-$simple  = 0; # generate only a simple text taxonomic summary, no krona, no taxon names in jplace
-$isolate  = 0;    #use when processing one or more isolate genomes
-$besthit  = 0;    #should we keep only the best hit when there are multiple?
-$coverage = 0;    #provides a contig/scaffold coverage file
-$updated  = 1;    #Indicates if Phylosift uses the updated versions of the Markers.
-$marker_url    = undef;    # an alternate address to retrieve markers from
-$extended      = 0;        #Should the full extended set of markers be used?
-$remove_dup    = 0;        #removes duplicate taxons when using build_marker
-$keep_search   = 0; #prevents the files from the bastDir from being deleted after each chunk has completed
-$start_chunk          = 1;       #sets the chunk to start with
-$chunks               = undef;   #sets the number of chunks to be run
-$chunk_size = 1000000;    #sets the number of sequences to run per chunk
-$my_debug   = 0;          #print debugging messages?
-$disable_update_check=1; # can be used to disable the marker update check and download at startup
+#$simple  = 0; # generate only a simple text taxonomic summary, no krona, no taxon names in jplace
+#$isolate  = 0;    #use when processing one or more isolate genomes
+#$besthit  = 0;    #should we keep only the best hit when there are multiple?
+#$coverage = 0;    #provides a contig/scaffold coverage file
+#$updated  = 1;    #Indicates if Phylosift uses the updated versions of the Markers.
+#$marker_url    = undef;    # an alternate address to retrieve markers from
+#$extended      = 0;        #Should the full extended set of markers be used?
+#$remove_dup    = 1;        #removes duplicate taxons when using build_marker
+#$keep_search   = 0; #prevents the files from the bastDir from being deleted after each chunk has completed
+#$start_chunk          = 1;       #sets the chunk to start with
+#$chunks               = undef;   #sets the number of chunks to be run
+#$chunk_size = 1000000;    #sets the number of sequences to run per chunk
+#$my_debug   = 0;          #print debugging messages?
+#$disable_update_check=1; # can be used to disable the marker update check and download at startup
 
 #
 #FastSearch default parameters

@@ -159,7 +159,7 @@ sub programChecks {
 		return 1;
 	}
 	else {
-		`$Phylosift::Settings::pplacer--version` =~ m/v1.1.alpha(\d+)/;
+		`$Phylosift::Settings::pplacer --version` =~ m/v1.1.alpha(\d+)/;
 		if ( $1 < 10 ) {
 
  # pplacer was found but the version doesn't match the one tested with Phylosift
@@ -1626,7 +1626,6 @@ sub gather_markers {
 	my $force_gather = $args{force_gather} || 0;
 	my $path         = $args{path} || $Phylosift::Settings::marker_dir;
 	my @marks        = ();
-
 	# try to use a marker list file if it exists
 	if ( !defined($marker_file) && !$force_gather ) {
 		$marker_file = "$path/marker_list.txt" if -e "$path/marker_list.txt";
@@ -1634,7 +1633,7 @@ sub gather_markers {
 
 	#create a file with a list of markers called markers.list
 	if ( defined($marker_file) && -f $marker_file && $marker_file ne "" ) {
-		debug "Using a marker list file\n";
+		debug "Using a marker list file $marker_file\n";
 
 		#gather a custom list of makers, list convention is 1 marker per line
 		my $MARKERS_IN = ps_open($marker_file);

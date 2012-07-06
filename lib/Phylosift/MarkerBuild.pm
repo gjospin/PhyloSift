@@ -53,7 +53,7 @@ sub build_marker {
 		croak("Error: you must install pplacer's taxtastic and its dependencies prior to building markers. See https://github.com/fhcrc/taxtastic for more information.\n")
 	}
 
-	#$target_dir = $self->{"fileDir"};
+	#$target_dir = $Phylosift::Settings::file_dir;
 	if ( -e $target_dir && !$force ) {
 		croak
 "Marker already exists in $marker_dir. Delete Marker and restart the marker build.\nUse -f to force an override of the previous marker.\nUsage:\n>phylosift build_marker -f aln_file cutoff\n";
@@ -166,7 +166,7 @@ sub build_marker {
 	`rm "$clean_aln"`;
 	`mv "$target_dir/$core"/* "$target_dir"`;
 	`rm -rf "$target_dir/$core"`;
-	`rm -rf "$self->{"fileDir"}"`;
+	`rm -rf "$Phylosift::Settings::file_dir"`;
 }
 
 =head2 generate_id_to_taxonid_map
