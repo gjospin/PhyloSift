@@ -157,8 +157,9 @@ sub run_search {
 sub set_default_values{
 	my %args = @_;
 	my $self = $args{self};
-	Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::CHUNK_MAX_SEQS,value=>20000); #small chunks if doing extended markers
-	Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::CHUNK_MAX_SEQS,value=>1000000, force=>1) unless $Phylosift::Settings::extended;
+	my $default_chunk_size = 200000;
+	$default_chunk_size = 1000000 if $Phylosift::Settings::extended;
+	Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::CHUNK_MAX_SEQS,value=>$default_chunk_size);
 	Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::CHUNK_MAX_SIZE,value=>10000000);
 	Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::lastal_evalue,value=>"-e75");
 	Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::lastal_rna_evalue,value=>"-e300");
