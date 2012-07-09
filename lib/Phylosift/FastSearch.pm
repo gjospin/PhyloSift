@@ -158,13 +158,13 @@ sub set_default_values{
 	my %args = @_;
 	my $self = $args{self};
 	my $default_chunk_size = 200000;
-	$default_chunk_size = 1000000 if $Phylosift::Settings::extended;
+	$default_chunk_size = 1000000 if !defined($Phylosift::Settings::extended) || !$Phylosift::Settings::extended;
 	Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::CHUNK_MAX_SEQS,value=>$default_chunk_size);
 	Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::CHUNK_MAX_SIZE,value=>10000000);
 	Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::lastal_evalue,value=>"-e75");
 	Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::lastal_rna_evalue,value=>"-e300");
 	Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::bowtie_quiet,value=>"--quiet --sam-nohead --sam-nosq");
-	Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::bowtie_maxins,value=>"--maxins 1000");
+	Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::bowtie_maxins,value=>"1000");
 	Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::bowtie_aln,value=>"--local");
 	Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::max_hit_overlap,value=>10);
 	Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::discard_length,value=>30);

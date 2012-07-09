@@ -463,13 +463,13 @@ sub merge_sequence_taxa {
 }
 
 my $xml;
-my $KRONA_THRESHOLD = $Phylosift::Settings::krona_threshold;
+
 
 sub krona_report {
 	my %args = @_;
 	my $self = $args{self} || miss("self");
 	my $file = $args{file} || "krona.html";
-
+	my $KRONA_THRESHOLD = $Phylosift::Settings::krona_threshold;
 	my $OUTPUT = IO::File->new( ">" . $Phylosift::Settings::file_dir . "/$file" );
 	print $OUTPUT <<EOF
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">

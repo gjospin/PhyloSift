@@ -79,57 +79,57 @@ $disable_update_check=1; # can be used to disable the marker update check and do
 #
 #FastSearch default parameters
 #
-$CHUNK_MAX_SEQS = 20000;
-$CHUNK_MAX_SIZE = 10000000;
+#$CHUNK_MAX_SEQS = 20000;
+#$CHUNK_MAX_SIZE = 10000000;
 
 #lastal parameters
-$lastal_evalue = "-e75";
+#$lastal_evalue = "-e75";
 
 #lastal rna parameters
-$lastal_rna_evalue = "-e300";
+#$lastal_rna_evalue = "-e300";
 
 #bowtie2 parameters
-$bowtie_quiet = "--quiet --sam-nohead --sam-nosq";
-$bowtie_maxins = "1000";
-$bowtie_aln = "--local";
+#$bowtie_quiet = "--quiet --sam-nohead --sam-nosq";
+#$bowtie_maxins = "1000";
+#$bowtie_aln = "--local";
 
 #hit parsing parameters
-$max_hit_overlap = 10;
-$discard_length = 30; # don't trust anything shorter than 30nt
-$best_hits_bit_score_range = 30; # all hits with a bit score within this amount of the best will be used
+#$max_hit_overlap = 10;
+#$discard_length = 30; # don't trust anything shorter than 30nt
+#$best_hits_bit_score_range = 30; # all hits with a bit score within this amount of the best will be used
 $align_fraction = 0.5; # at least this amount of min[length(query),length(marker)] must align to be considered a hit
 $align_fraction_isolate = 0.8; # use this align_fraction when in isolate mode on long sequences
 
 #
 # MarkerAlign default parameters
 #
-$min_aligned_residues=50;
-$rna_split_size = 500; #sequences longer than this value will undergo the long sequence pipeline
-$gap_character = "-";
+#$min_aligned_residues=50;
+#$rna_split_size = 500; #sequences longer than this value will undergo the long sequence pipeline
+#$gap_character = "-";
 
 #hmmsearch
-$hmmsearch_evalue = 10;
-$hmmsearch_options = "--max";
+#$hmmsearch_evalue = 10;
+#$hmmsearch_options = "--max";
 
 #hmmalign
 
 #cmalign
-$cm_align_long_tau = "1e-6";
-$cm_align_long_mxsize = "2500";
-$cm_align_long_ali = "";
-$cm_align_short_tau = "1e-20";
-$cm_align_short_mxsize = "2500";
-$cm_align_short_ali = "-l";
+#$cm_align_long_tau = "1e-6";
+#$cm_align_long_mxsize = "2500";
+#$cm_align_long_ali = "";
+#$cm_align_short_tau = "1e-20";
+#$cm_align_short_mxsize = "2500";
+#$cm_align_short_ali = "-l";
 
 #
 # pplacer.pm
 #
-$pplacer_groups = 15;
-$pplacer_verbosity = 0;
-$max_submarker_dist = 0.15;
-$min_submarker_prob = 0.35;
+#$pplacer_groups = 15;
+#$pplacer_verbosity = 0;
+#$max_submarker_dist = 0.15;
+#$min_submarker_prob = 0.35;
 
 #
 # Summarize
 #
-$krona_threshold = 0.01;
+#$krona_threshold = 0.01;

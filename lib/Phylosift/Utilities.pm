@@ -469,6 +469,7 @@ sub data_checks {
 		data_name => "ncbi",
 		data_path => $Phylosift::Settings::ncbi_path
 	));
+	debug "DIR : $Phylosift::Settings::ncbi_dir\n";
 	my ( $content_type, $document_length, $modified_time, $expires, $server ) =
 	  head("$Phylosift::Settings::ncbi_url");
 	if ( -x $Phylosift::Settings::ncbi_dir ) {
