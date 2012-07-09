@@ -470,7 +470,7 @@ sub alignAndMask {
 			my $fasta = "";
 			if ( -e $candidate_long ) {
 				my $cmalign =
-				    "$Phylosift::Utilities::cmalign -q --dna --mxsize $Phylosift::Settings::cm_align_long_mxsize --tau $Phylosift::Settings::cm_align_long_tau "
+				    "$Phylosift::Settings::cmalign -q --dna --mxsize $Phylosift::Settings::cm_align_long_mxsize --tau $Phylosift::Settings::cm_align_long_tau "
 				  . Phylosift::Utilities::get_marker_cm_file( self => $self, marker => $marker )
 				  . " $candidate_long | ";
 				debug "Running $cmalign\n";
@@ -479,7 +479,7 @@ sub alignAndMask {
 			}
 			if ( -e $candidate_short ) {
 				my $cmalign =
-				    "$Phylosift::Utilities::cmalign -q $Phylosift::Settings::cm_align_short_ali --dna --mxsize $Phylosift::Settings::cm_align_short_mxsize --tau $Phylosift::Settings::cm_align_short_tau "
+				    "$Phylosift::Settings::cmalign -q $Phylosift::Settings::cm_align_short_ali --dna --mxsize $Phylosift::Settings::cm_align_short_mxsize --tau $Phylosift::Settings::cm_align_short_tau "
 				  . Phylosift::Utilities::get_marker_cm_file( self => $self, marker => $marker )
 				  . " $candidate_short | ";
 				debug "Running $cmalign\n";
