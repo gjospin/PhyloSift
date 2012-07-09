@@ -7,6 +7,7 @@ use Bio::AlignIO;
 use Phylosift::Phylosift;
 use Phylosift::Utilities qw(:all);
 use Phylosift::Summarize;
+use Phylosift::Settings;
 use Bio::Phylo::IO qw(parse unparse);
 use Bio::AlignIO;
 use File::Basename;
@@ -52,16 +53,16 @@ sub pplacer {
 	directoryPrepAndClean( self => $self );
 	# if we have a coverage map then weight the placements
 	my $covref;
-	if ( defined( $self->{"coverage"} ) ) {
-		$covref = Phylosift::Summarize::read_coverage( file => $self->{"coverage"} );
+	if ( defined( $Phylosift::Settings::coverage ) && $Phylosift::Settings::coverage ne ""  ) {
+		$covref = Phylosift::Summarize::read_coverage( file => $Phylosift::Settings::coverage );
 	}
 	unshift(@{$markRef},'concat'); #adds the concatenation to the list of markers
 	foreach my $marker ( @{$markRef} ) {
 		# the PMPROK markers are contained in the concat above
-		next if($marker =~ /PMPROK/ && $self->{"updated"});
+		next if($marker =~ /PMPROK/ && $Phylosift::Settings::updated);
 		my $read_alignment_file = $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta( marker => Phylosift::Utilities::get_marker_basename(marker=>$marker), chunk => $chunk );
 		next unless -e $read_alignment_file && -s $read_alignment_file > 0;
-		my $options = $marker eq "concat" ? "--groups 15" : "";
+		my $options = $marker eq "concat" ? "--groups $Phylosift::Settings::pplacer_groups" : "";
 		$options .= " --mmap-file abracadabra " if ($marker =~ /18s/);  # FIXME: this should be based on the number of seqs in the tree.
 		$options .= " --mmap-file abracadabra " if ($marker =~ /16s/ || $marker eq "concat");
 		my $place_file = place_reads(self=>$self, marker=>$marker, dna=>0, chunk => $chunk, reads=>$read_alignment_file, options=>$options);
@@ -70,6 +71,20 @@ sub pplacer {
 	if ( defined($chunk) && $self->{"mode"} eq "all" ) {
 		Phylosift::Summarize::summarize( self => $self, marker_reference => $markRef , chunk=>$chunk  );
 	}
+}
+
+=head2 set_default_values
+
+set_default_values for all the parameters in this module
+
+=cut
+sub set_default_values{
+	my %args = @_;
+	my $self = $args{self};
+	Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::pplacer_groups,value=>15);
+	Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::pplacer_verbosity,value=>0);
+	Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::max_submarker_dist,value=>0.15);
+	Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::min_submarker_prob,value=>0.35);	
 }
 
 sub merge_chunk {
@@ -115,8 +130,8 @@ my %submarker_map;
 sub load_submarkers {
 	my %args  = @_;
 	return if %submarker_map;
-	return unless -e "$Phylosift::Utilities::marker_dir/submarkers.txt";
-	my $SUBS = ps_open("$Phylosift::Utilities::marker_dir/submarkers.txt");
+	return unless -e "$Phylosift::Settings::marker_dir/submarkers.txt";
+	my $SUBS = ps_open("$Phylosift::Settings::marker_dir/submarkers.txt");
 	while(my $line = <$SUBS>){
 		chomp $line;
 		my @data = split(/\t/,$line);
@@ -187,8 +202,8 @@ sub find_submarker_reads {
 	# submarker criteria:
 	# send a read to a submarker if at least X % of its placement probability mass is within distance Y of submarker members
 	# 
-	my $max_submarker_dist = 0.15;	# rough guesstimate -- could use tuning
-	my $min_submarker_prob = 0.35;	# rough guesstimate
+	my $max_submarker_dist = $Phylosift::Settings::max_submarker_dist;	# rough guesstimate -- could use tuning
+	my $min_submarker_prob = $Phylosift::Settings::min_submarker_prob;	# rough guesstimate
 	
 	# for each placed read, find its probability mass near submarkers and assign to a submarker
 	# if appropriate
@@ -283,16 +298,16 @@ sub place_reads{
 	my $marker_package = Phylosift::Utilities::get_marker_package( self => $self, marker => $marker, dna => $dna, sub_marker=>$submarker );
 	unless(-d $marker_package ){
 		# try not updated
-		if($self->{"updated"}){
-			$self->{"updated"}=0;
+		if($Phylosift::Settings::updated){
+			$Phylosift::Settings::updated=0;
 			$marker_package = Phylosift::Utilities::get_marker_package( self => $self, marker => $marker, dna => $dna, sub_marker=>$submarker );
-			$self->{"updated"}=1;
+			$Phylosift::Settings::updated=1;
 		}
 		unless(-d $marker_package ){
 			croak("Marker: $marker\nPackage: $marker_package\nPackage does not exist\nPlacement without a marker package is no longer supported");
 		}
 	}
-	my $pp = "$Phylosift::Utilities::pplacer $options --verbosity 0 -j ".$self->{"threads"}." -c $marker_package \"$reads\"";
+	my $pp = "$Phylosift::Settings::pplacer $options --verbosity $Phylosift::Settings::pplacer_verbosity -j ".$Phylosift::Settings::threads." -c $marker_package \"$reads\"";
 	debug "Running $pp\n";
 	system($pp);
 	
@@ -303,18 +318,18 @@ sub place_reads{
 
 	# if we're on the concat marker, create a single jplace with all reads for use with multisample metrics 
 	if($marker eq "concat"){
-		my $sample_jplace = $self->{"fileDir"}."/".$self->{"fileName"}.".jplace";
-		my $sample_jplace_naming = $self->{"fileDir"}."/".$self->{"fileName"}.".naming.jplace";
+		my $sample_jplace = $Phylosift::Settings::file_dir."/".$self->{"fileName"}.".jplace";
+		my $sample_jplace_naming = $Phylosift::Settings::file_dir."/".$self->{"fileName"}.".naming.jplace";
 		my $markermapfile = Phylosift::Utilities::get_marker_taxon_map(self=>$self, marker=>$marker, dna=>$dna, sub_marker=>$submarker);
 		return unless -e $markermapfile;	# can't summarize if there ain't no mappin'!
 		my $taxonmap = Phylosift::Summarize::read_taxonmap(file=>$markermapfile);
 		name_taxa_in_jplace( self => $self, input => $self->{"treeDir"} . "/$jplace", output => $sample_jplace_naming, taxonmap=>$taxonmap );
-		`$Phylosift::Utilities::guppy merge -o $sample_jplace $sample_jplace_naming $sample_jplace` if -f $sample_jplace;
+		`$Phylosift::Settings::guppy merge -o $sample_jplace $sample_jplace_naming $sample_jplace` if -f $sample_jplace;
 		`cp $sample_jplace_naming $sample_jplace` unless -f $sample_jplace;
 		`rm $sample_jplace_naming`;
 	}
 
-	if(!$dna && $self->{"updated"} && Phylosift::Utilities::is_protein_marker(marker=>$marker)){
+	if(!$dna && $Phylosift::Settings::updated && Phylosift::Utilities::is_protein_marker(marker=>$marker)){
 	    debug "Placing on sub markers $marker\n";
 		load_submarkers();
 		if(keys(%submarker_map)>0){
@@ -322,7 +337,7 @@ sub place_reads{
 		}
 	}
 	
-	unless($self->{"simple"}){
+	unless($Phylosift::Settings::simple){
 		# skip this if a simple summary if desired since it's slow.
 		debug "Naming taxa in marker $marker\n";
 
@@ -383,7 +398,7 @@ sub directoryPrepAndClean {
 	my $self = $args{self} || miss("self");
 	
 	#create a directory for the Reads file being processed.
-	`mkdir "$self->{"fileDir"}"` unless ( -e $self->{"fileDir"} );
+	`mkdir "$Phylosift::Settings::file_dir"` unless ( -e $Phylosift::Settings::file_dir );
 	`mkdir "$self->{"treeDir"}"` unless ( -e $self->{"treeDir"} );
 }
 

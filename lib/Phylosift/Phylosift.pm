@@ -14,6 +14,7 @@ use Phylosift::MarkerAlign;
 use Phylosift::pplacer;
 use Phylosift::Summarize;
 use Phylosift::FastSearch;
+use Phylosift::Settings;
 use Phylosift::Benchmark;
 use Phylosift::BeastInterface;
 use Phylosift::Comparison;
@@ -34,17 +35,13 @@ sub new {
 	$self->{"mode"}        = undef;
 	$self->{"readsFile"}   = undef;
 	$self->{"readsFile_2"} = undef;
-	$self->{"fileDir"}     = undef;
 	$self->{"blastDir"}    = undef;
 	$self->{"alignDir"}    = undef;
 	$self->{"treeDir"}     = undef;
 	$self->{"dna"}         = undef;
-	$self->{"updated"}     = 1;
-	$self->{"coverage"}    = undef;
-	$self->{"isolate"}     = 0;
-	$self->{"threads"}     = 1;
 	my %temp_hash = ();
 	$self->{"read_names"} = \%temp_hash;
+	read_phylosift_config( self => $self );
 	bless($self);
 	return $self;
 }
@@ -71,13 +68,13 @@ sub initialize {
 	$self->{"readsFile"}   = $readsFile;
 	$self->{"readsFile_2"} = $readsFile_2;
 
-	unless ( defined( $self->{"fileDir"} ) ) {
-		$self->{"fileDir"} =
+	unless ( defined( $Phylosift::Settings::file_dir ) ) {
+		$Phylosift::Settings::file_dir =
 		  $self->{"workingDir"} . "/PS_temp/" . $self->{"fileName"};
 	}
-	$self->{"blastDir"} = $self->{"fileDir"} . "/blastDir";
-	$self->{"alignDir"} = $self->{"fileDir"} . "/alignDir";
-	$self->{"treeDir"}  = $self->{"fileDir"} . "/treeDir";
+	$self->{"blastDir"} = $Phylosift::Settings::file_dir . "/blastDir";
+	$self->{"alignDir"} = $Phylosift::Settings::file_dir . "/alignDir";
+	$self->{"treeDir"}  = $Phylosift::Settings::file_dir . "/treeDir";
 	$self->{"dna"}      = 0;
 	%{ $self->{"read_names"} } = ();
 	return $self;
@@ -153,7 +150,7 @@ sub run {
 	debug "force : $force\n";
 	Phylosift::Utilities::print_citations();
 	start_timer( name => "START" );
-	read_phylosift_config( self => $self );
+	#read_phylosift_config( self => $self );
 	run_program_check( self => $self );
 	Phylosift::Utilities::data_checks( self => $self )
 	  ;        # unless $self->{"mode"} eq 'sim';
@@ -165,15 +162,15 @@ sub run {
 	  unless $self->{"mode"} eq 'index';
 	$self->{"readsFile"} =
 	  prep_isolate_files( self => $self, file => $self->{"readsFile"} )
-	  if $self->{"isolate"} == 1;
+	  if $Phylosift::Settings::isolate == 1;
 
 	# Forcing usage of updated markers
-	debug "Using updated markers\n" if $self->{"updated"};
+	debug "Using updated markers\n" if $Phylosift::Settings::updated;
 	my @markers = Phylosift::Utilities::gather_markers(
 		self        => $self,
 		marker_file => $custom
 	);
-	if ( $self->{"extended"} ) {
+	if ( $Phylosift::Settings::extended ) {
 		@markers = Phylosift::Utilities::gather_markers(
 			self => $self,
 			path => $Phylosift::Utilities::markers_extended_dir
@@ -198,8 +195,8 @@ sub run {
 	}
 	debug "MODE :: " . $self->{"mode"} . "\n";
 
-	if( defined($self->{"start_chunk"}) && defined($self->{"chunks"})){
-		for(my $c=$self->{"start_chunk"}; $c < $self->{"start_chunk"} + $self->{"chunks"}; $c++){
+	if( defined($Phylosift::Settings::start_chunk) && defined($Phylosift::Settings::chunks)){
+		for(my $c=$Phylosift::Settings::start_chunk; $c < $Phylosift::Settings::start_chunk + $Phylosift::Settings::chunks; $c++){
 			run_later_stages(self   => $self,
 				cont   => $continue,
 				marker => \@markers,
@@ -236,14 +233,14 @@ sub run {
 			allow_missing_hmm => 1
 		  )
 		  if -d $Phylosift::Utilities::markers_extended_dir
-			  && $self->{"extended"};
+			  && $Phylosift::Settings::extended;
 		Phylosift::Utilities::index_marker_db(
 			self    => $self,
 			markers => \@extended_markers,
 			path    => $Phylosift::Utilities::markers_extended_dir
 		  )
 		  if -d $Phylosift::Utilities::markers_extended_dir
-			  && $self->{"extended"};
+			  && $Phylosift::Settings::extended;
 	}
 	if ( $self->{"mode"} eq 'build_marker' ) {
 		Phylosift::MarkerBuild::build_marker(
@@ -287,7 +284,7 @@ sub run_later_stages {
 sub read_phylosift_config {
 	my %args          = @_;
 	my $self          = $args{self} || miss("self");
-	my $custom_config = $self->{"configuration"};
+	my $custom_config = $Phylosift::Settings::configuration;
 
 	# first get the install prefix of this script
 	my $scriptpath = dirname($0);
@@ -304,6 +301,8 @@ sub read_phylosift_config {
 		do "$ENV{HOME}/.phylosiftrc";
 		do $custom_config if defined $custom_config;
 	}
+	#apply the command line parameters to override the RC files
+	
 	return $self;
 }
 
@@ -380,7 +379,7 @@ sub prep_isolate_files {
 	my %args        = @_;
 	my $self        = $args{self} || miss("self");
 	my $file        = $args{file} || miss("file");
-	my $OUTFILE     = ps_open( ">" . $self->{"fileDir"} . "/isolates.fasta" );
+	my $OUTFILE     = ps_open( ">" . $Phylosift::Settings::file_dir . "/isolates.fasta" );
 	my $ISOLATEFILE = ps_open($file);
 	debug "Operating on isolate file $file\n";
 	print $OUTFILE ">" . basename($file) . "\n";
@@ -391,7 +390,7 @@ sub prep_isolate_files {
 	close $ISOLATEFILE;
 	close $OUTFILE;
 	$self->{"readsFile"} = "isolates.fasta";
-	return $self->{"fileDir"} . "/isolates.fasta";
+	return $Phylosift::Settings::file_dir . "/isolates.fasta";
 }
 
 =head2 directoryPrep
@@ -410,14 +409,14 @@ sub directory_prep {
 	#remove the directory from a previous run
 	if ( $force && $self->{"mode"} eq 'all' || $self->{"mode"} eq 'sim' ) {
 		debug( "deleting an old run\n", 0 );
-		`rm -rf "$self->{"fileDir"}"`;
+		`rm -rf "$Phylosift::Settings::file_dir"`;
 	}
-	elsif ( -e $self->{"fileDir"} && $self->{"mode"} eq 'all' ) {
+	elsif ( -e $Phylosift::Settings::file_dir && $self->{"mode"} eq 'all' ) {
 		if ( !$continue ) {
 			croak(
 "A previous run was found using the same file name aborting the current run\n"
 				  . "Either delete that run from "
-				  . $self->{"fileDir"}
+				  . $Phylosift::Settings::file_dir
 				  . ", or force overwrite with the -f command-line option\n" );
 		}
 		else {
@@ -426,7 +425,7 @@ sub directory_prep {
 	}
 
 	#create a directory for the Reads file being processed.
-	`mkdir -p "$self->{"fileDir"}"`  unless ( -e $self->{"fileDir"} );
+	`mkdir -p "$Phylosift::Settings::file_dir"`  unless ( -e $Phylosift::Settings::file_dir );
 	`mkdir -p "$self->{"blastDir"}"` unless ( -e $self->{"blastDir"} );
 	`mkdir -p "$self->{"alignDir"}"` unless ( -e $self->{"alignDir"} );
 	`mkdir -p "$self->{"treeDir"}"`  unless ( -e $self->{"treeDir"} );
@@ -529,7 +528,7 @@ sub run_marker_align {
 		chunk            => $chunk
 	);
 
-#    Phylosift::BeastInterface::Export(self=>$self, marker_reference=>$markRef, output_file=>$self->{"fileDir"}."/beast.xml");
+#    Phylosift::BeastInterface::Export(self=>$self, marker_reference=>$markRef, output_file=>$Phylosift::Settings::file_dir."/beast.xml");
 	Phylosift::Utilities::end_timer( name => "Alignments" );
 	return $self;
 }

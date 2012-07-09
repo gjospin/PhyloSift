@@ -2,6 +2,7 @@ package Phylosift::Summarize;
 use warnings;
 use strict;
 use FindBin;
+use Phylosift::Settings;
 use Phylosift::Utilities qw(:all);
 use Carp;
 use Bio::Phylo;
@@ -53,7 +54,7 @@ my %idnamemap;
 
 sub read_ncbi_taxon_name_map {
 	return ( \%nameidmap, \%idnamemap ) if %nameidmap;
-	my $ncbidir = $Phylosift::Utilities::ncbi_dir;
+	my $ncbidir = $Phylosift::Settings::ncbi_dir;
 	my $TAXIDS  = ps_open("$ncbidir/names.dmp");
 	while ( my $line = <$TAXIDS> ) {
 		chomp $line;
@@ -79,7 +80,7 @@ my %parent;
 sub read_ncbi_taxonomy_structure {
 	return \%parent if %parent;
 	debug "Reading NCBI taxonomy\n";
-	my $ncbidir      = $Phylosift::Utilities::ncbi_dir;
+	my $ncbidir      = $Phylosift::Settings::ncbi_dir;
 	my $TAXSTRUCTURE = ps_open("$ncbidir/nodes.dmp");
 	while ( my $line = <$TAXSTRUCTURE> ) {
 		chomp $line;
@@ -123,6 +124,18 @@ sub read_taxonmap {
 	return \%markerncbimap;
 }
 
+
+=head2 set_default_values
+
+set_default_values for all the parameters in this module
+
+=cut
+sub set_default_values{
+	my %args = @_;
+	my $self = $args{self};
+	Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::krona_threshold,value=>0.01);
+}
+
 =head2 summarize
 Reads the .place files containing Pplacer read placements and maps them onto the
 NCBI taxonomy
@@ -139,14 +152,15 @@ sub summarize {
 	my $chunk   = $args{chunk} || miss("chunk");
 	my $markRef = $args{marker_reference}
 	  || miss("marker_reference");    # list of the markers we're using
+	set_default_values(self=>$self);
 	read_ncbi_taxon_name_map();
 	read_ncbi_taxonomy_structure();
-	my $markerdir = $Phylosift::Utilities::marker_dir;
+	my $markerdir = $Phylosift::Settings::marker_dir;
 
 	# try to read a contig coverage file if it exists
 	my %coverage;
-	if ( defined $self->{"coverage"} ) {
-		my $covref = read_coverage( file => $self->{"coverage"} );
+	if ( defined $Phylosift::Settings::coverage ) {
+		my $covref = read_coverage( file => $Phylosift::Settings::coverage );
 		%coverage = %$covref;
 	}
 
@@ -157,7 +171,7 @@ sub summarize {
 	my %unclassifiable;      # {sequenceID}=mass
 	my %sequence_markers;    # {sequenceID}=[markers hit]
 	my %weights;             #{sequenceID}{taxonID} = weight
-	unshift( @{$markRef}, "concat" ) if $self->{"updated"};
+	unshift( @{$markRef}, "concat" ) if $Phylosift::Settings::updated;
 	for ( my $dna = 0 ; $dna < 2 ; $dna++ ) {
 
 		foreach my $marker ( @{$markRef} ) {
@@ -186,7 +200,7 @@ sub summarize {
 						chunk  => $chunk
 					  )
 					  . ".cov"
-				) if ( defined $self->{"coverage"} );
+				) if ( defined $Phylosift::Settings::coverage );
 				my $sub;
 				$sub = $1 if $placeFile =~ /\.sub(\d+)\./;
 
@@ -250,9 +264,9 @@ sub summarize {
 
 	# also write out the taxon assignments for sequences
 	my $SEQUENCETAXA =
-	  ps_open( ">" . $self->{"fileDir"} . "/sequence_taxa.$chunk.txt" );
+	  ps_open( ">" . $Phylosift::Settings::file_dir . "/sequence_taxa.$chunk.txt" );
 	my $SEQUENCESUMMARY =
-	  ps_open( ">" . $self->{"fileDir"} . "/sequence_taxa_summary.$chunk.txt" );
+	  ps_open( ">" . $Phylosift::Settings::file_dir . "/sequence_taxa_summary.$chunk.txt" );
 	foreach my $qname ( keys(%placements) ) {
 
 		# sum up all placements for this sequence, use to normalize
@@ -339,7 +353,7 @@ sub summarize {
 sub merge_sequence_taxa {
 	my %args       = @_;
 	my $self       = $args{self} || miss("PS Object");
-	my $taxa_seed  = $self->{"fileDir"} . "/sequence_taxa.*.txt";
+	my $taxa_seed  = $Phylosift::Settings::file_dir . "/sequence_taxa.*.txt";
 	my @taxa_files = glob("$taxa_seed");
 	my %placements = ();
 	my %placement_markers = ();
@@ -385,7 +399,7 @@ sub merge_sequence_taxa {
 		}
 	}
 
-	my $TAXAOUT = ps_open( ">" . $self->{"fileDir"} . "/taxasummary.txt" );
+	my $TAXAOUT = ps_open( ">" . $Phylosift::Settings::file_dir . "/taxasummary.txt" );
 
 	# write unclassifiable
 	my $unclass_total = 0;
@@ -420,7 +434,7 @@ sub merge_sequence_taxa {
 # write the taxa with 90% highest posterior density, assuming each read is an independent observation
 	my $taxasum = 0;
 	my $TAXAHPDOUT =
-	  ps_open( ">" . $self->{"fileDir"} . "/taxa_90pct_HPD.txt" );
+	  ps_open( ">" . $Phylosift::Settings::file_dir . "/taxa_90pct_HPD.txt" );
 	foreach
 	  my $taxon ( sort { $ncbireads{$b} <=> $ncbireads{$a} } keys %ncbireads )
 	{
@@ -435,7 +449,7 @@ sub merge_sequence_taxa {
 	close($TAXAHPDOUT);
 
 	#Need to move this to the merge summary function
-	unless ( $self->{"simple"} ) {
+	unless ( $Phylosift::Settings::simple ) {
 
 		# skip this if only a simple summary is desired (it's slow)
 		debug "Generating krona\n";
@@ -444,19 +458,19 @@ sub merge_sequence_taxa {
 		%ncbi_summary = ();
 		%ncbi_summary = %all_summary;
 		krona_report( self => $self, file=>$self->{"fileName"}.".allmarkers.html" );
-		`ln -s $self->{"fileDir"}/$self->{"fileName"}.html $self->{"fileDir"}/krona.html`;
+		`ln -s $Phylosift::Settings::file_dir/$self->{"fileName"}.html $Phylosift::Settings::file_dir/krona.html`;
 	}
 }
 
 my $xml;
-my $KRONA_THRESHOLD = 0.01;
+my $KRONA_THRESHOLD = $Phylosift::Settings::krona_threshold;
 
 sub krona_report {
 	my %args = @_;
 	my $self = $args{self} || miss("self");
 	my $file = $args{file} || "krona.html";
 
-	my $OUTPUT = IO::File->new( ">" . $self->{"fileDir"} . "/$file" );
+	my $OUTPUT = IO::File->new( ">" . $Phylosift::Settings::file_dir . "/$file" );
 	print $OUTPUT <<EOF
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
@@ -492,7 +506,7 @@ EOF
 
 	# FIXME: work with other taxonomy trees
 	my $taxonomy = Bio::Phylo::IO->parse(
-		'-file'   => "$Phylosift::Utilities::marker_dir/ncbi_tree.updated.tre",
+		'-file'   => "$Phylosift::Settings::marker_dir/ncbi_tree.updated.tre",
 		'-format' => 'newick',
 	)->first;
 
@@ -562,7 +576,7 @@ sub print_run_info {
 	  . join(
 		"$newline",
 		Phylosift::Utilities::get_marker_version(
-			path => $Phylosift::Utilities::marker_dir
+			path => $Phylosift::Settings::marker_dir
 		)
 	  ) . "$newline";
 }
@@ -598,7 +612,7 @@ sub write_confidence_intervals {
 			push( @{ $samples{$key} }, $sample[ $kI++ ] );
 		}
 	}
-	my $TAXA_CONF = ps_open( ">" . $self->{"fileDir"} . "/taxaconfidence.txt" );
+	my $TAXA_CONF = ps_open( ">" . $Phylosift::Settings::file_dir . "/taxaconfidence.txt" );
 	foreach my $key ( keys(%samples) ) {
 		my @svals = @{ $samples{$key} };
 		my @sorted = sort { $a <=> $b } @svals;
@@ -732,7 +746,7 @@ my %merged;
 sub read_merged_nodes {
 	return \%merged if %merged;
 	debug "Reading merged ncbi nodes\n";
-	my $MERGED = ps_open("$Phylosift::Utilities::ncbi_dir/merged.dmp");
+	my $MERGED = ps_open("$Phylosift::Settings::ncbi_dir/merged.dmp");
 	while ( my $line = <$MERGED> ) {
 		chomp $line;
 		my @vals = split( /\s+\|\s*/, $line );

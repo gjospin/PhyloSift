@@ -8,6 +8,7 @@ BEGIN { push(@INC, "$Bin/../lib") }
 use Getopt::Long;
 use Phylosift::Phylosift;
 use Carp;
+use Phylosift::Settings;
 use Phylosift::Utilities qw(debug);
 use POSIX;
 my $pair             = 0;
@@ -102,47 +103,59 @@ Options Available at this time :
 
 ~;
 
-my $ps = new Phylosift::Phylosift();
-
 # set default values
-$ps->{"threads"} = 1;
-$ps->{"updated"} = 1;
+Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::threads, value=> 1);
+Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::updated, value=> 1);
+Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::force, value=> "0");
+Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::continue, value=> "0");
+Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::custom, value=> "");
+Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::isolate, value=> 0);
+
+
+my $ps = new Phylosift::Phylosift();
+for(my $i=0;$i<scalar(@ARGV);$i++){
+	if($ARGV[$i] eq "--config"){
+		if(!-e $ARGV[$i+1]){
+			croak "Cannot read custom configuration file.\n Aborting\n";
+		}else{
+			$Phylosift::Settings::custom = $ARGV[$i+1];
+		}
+	}
+}
+
 my @args = @ARGV;
 $ps->{"ARGV"}=\@args;	# copy unmodified ARGV here.
 
 GetOptions(
-	"output=s"   => \$ps->{"fileDir"}, # directory for output
-	"clean"      => \$clean,
-	"paired"     => \$ps->{"paired"},        # used for paired fastQ input split in 2 different files OR interleaved 
-	"custom=s"   => \$custom,      #need a file containing the marker names to use without extensions ** marker names shouldn't contain '_'
-	"f"          => \$force,       #overrides a previous run otherwise stop
-	"continue"   => \$continue,    #when a mode different than all is used, continue the rest of Phylosift after the section specified by the mode is finished
-	"threaded=i" => \$ps->{"threads"},
-	"simple"     => \$ps->{"simple"},	# generate only a simple text taxonomic summary, no krona, no taxon names in jplace
-	"isolate"    => \$ps->{"isolate"},     #use when processing one or more isolate genomes
-	"reverse"         => \$ps->{"reverseTranslate"},    #use to output the reverse translation of the AA alignments
-	"besthit"         => \$ps->{"besthit"},             #should we keep only the best hit when there are multiple?
-	"coverage=s"      => \$ps->{"coverage"},            #provides a contig/scaffold coverage file
-	"updated_markers=i" => \$ps->{"updated"},             #Indicates if Phylosift uses the updated versions of the Markers.
-	"marker_url=s"      => \$ps->{"marker_url"},          # an alternate address to retrieve markers from
-	"extended"        => \$ps->{"extended"},            #Should the full extended set of markers be used?
-	"config=s"        => \$ps->{"configuration"},       #custom config file
-	"remove_dup"      => \$ps->{"remove_dup"},  #removes duplicate taxons when using build_marker
-	"keep_search"    => \$ps->{"keep_search"}, #prevents the files from the bastDir from being deleted after each chunk has completed
-	"disable_updates" => \$ps->{"disable_update_check"}, # don't check for or download marker updates
-	"start_chunk=i"          => \$ps->{"start_chunk"},       #sets the chunk to start with
-	"chunks=i"          => \$ps->{"chunks"},       #sets the number of chunks to be run
-	"chunk_size=i"     => \$ps->{"chunk_size"},   #sets the number of sequences to run per chunk
-	"h"               => \$help,                #prints the usage part of the README file
-	"help"            => \$help,                #same as -h
-	"debug"           => \$my_debug,            #print debugging messages?
+	"output=s"   => \$Phylosift::Settings::file_dir, # directory for output
+	"paired"     => \$Phylosift::Settings::paired, # used for paired fastQ input split in 2 different files OR interleaved 
+	"custom=s"   => \$Phylosift::Settings::custom, #need a file containing the marker names to use without extensions ** marker names shouldn't contain '_'
+	"f"          => \$Phylosift::Settings::force, #overrides a previous run otherwise stop
+	"continue"   => \$Phylosift::Settings::continue, #when a mode different than all is used, continue the rest of Phylosift after the section specified by the mode is finished
+	"threaded=i" => \$Phylosift::Settings::threads, 
+	"simple"     => \$Phylosift::Settings::simple, # generate only a simple text taxonomic summary, no krona, no taxon names in jplace
+	"isolate"    => \$Phylosift::Settings::isolate, #use when processing one or more isolate genomes
+	"besthit"         => \$Phylosift::Settings::besthit, #should we keep only the best hit when there are multiple?
+	"coverage=s"      => \$Phylosift::Settings::coverage, #provides a contig/scaffold coverage file
+	"updated_markers=i" => \$Phylosift::Settings::updated, #Indicates if Phylosift uses the updated versions of the Markers.
+	"marker_url=s"      => \$Phylosift::Settings::marker_url, # an alternate address to retrieve markers from
+	"extended"        => \$Phylosift::Settings::extended, #Should the full extended set of markers be used?
+	"config=s"        => \$Phylosift::Settings::configuration, #custom config file
+	"remove_dup"      => \$Phylosift::Settings::remove_dup, #removes duplicate taxons when using build_marker
+	"keep_search"    => \$Phylosift::Settings::keep_search, #prevents the files from the bastDir from being deleted after each chunk has completed
+	"disable_updates" => \$Phylosift::Settings::disable_update_check, # don't check for or download marker updates
+	"start_chunk=i"          => \$Phylosift::Settings::start_chunk, #sets the chunk to start with
+	"chunks=i"          => \$Phylosift::Settings::chunks, #sets the number of chunks to be run
+	"h"               => \$Phylosift::Settings::help, #prints the usage part of the README file
+	"help"            => \$Phylosift::Settings::help, #same as -h
+	"debug"           => \$Phylosift::Settings::my_debug, #print debugging messages?
 ) || die $usage;
-if ( $help != 0 ) {
+if ( defined($Phylosift::Settings::help) && $Phylosift::Settings::help != 0 ) {
 	print $usage. "\n";
 	die "End of Help message\n";
 }
 
-$Phylosift::Utilities::debuglevel = $my_debug;
+$Phylosift::Utilities::debuglevel = $Phylosift::Settings::my_debug;
 debug("@ARGV\n");
 if ( scalar(@ARGV) < 1 ) {
 	croak $usage ;
@@ -172,6 +185,6 @@ if( $ARGV[0] eq 'sim'){
 		$ps = $ps->initialize( mode => $ARGV[0], file_1 => $ARGV[1]) ;
 	}
 }
-debug "FORCE: " . $force . "\n";
-debug "Continue : " . $continue . "\n";
-$ps->run( force=>$force, custom=>$custom, cont=>$continue );
+debug "FORCE: " . $Phylosift::Settings::force . "\n";
+debug "Continue : " . $Phylosift::Settings::continue . "\n";
+$ps->run( force=>$Phylosift::Settings::force, custom=>$Phylosift::Settings::custom, cont=>$Phylosift::Settings::continue );
