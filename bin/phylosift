@@ -69,7 +69,7 @@ Mode : Only execute a specific step in the pipeline
   placer - run pplacer on the results from the align step
   summary - run the taxonomy assignment steps
   index - indexes the various databases needed for Rapsearch, Bowtie and Blast
-  build_maker - creates a reference package from a multiple alignment file
+  build_marker - creates a reference package from a multiple alignment file
   sim - Picks random genomes from the concatenated reference tree, 
         knocks the selected genomes out of the marker DB, 
         runs PS on the generated reads from the selected genomes (in different formats).
