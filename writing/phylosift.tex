@@ -28,6 +28,7 @@
 %\usepackage{setspace} 
 %\doublespacing
 
+\newcommand{\argmin}{\operatornamewithlimits{argmin}}
 
 % Text layout
 \topmargin 0.0cm
@@ -261,8 +262,46 @@ PhyloSift's database update mechanism incorporates some basic quality control me
 \subsubsection*{Acquire new genome data}
 The PhyloSift database update module maintains a local repository of all known and processed genomes.
 When a new update is initiated, the database update module identifies any new genomes available in the NCBI finished, NCBI draft, NCBI WGS, and EBI viral, organelle, bacterial, archaeal, and eukaryal databases. 
-\subsubsection*{Run PhyloSift workflow on each genome}
+\subsubsection*{Gene family search and alignment workflow on each genome}
+In this stage, we run the search and alignment stages of the previously described PhyloSift client workflow for each new genome.
+After this stage, the regions from each new genome that are highly similar to gene families in the database are identified, extracted, and aligned using the family's profile HMM.
+A complete multiple alignment for each family is then created by adding the aligned regions from each genome to a single multiple alignment file.
+Because each region has been aligned to the same profile HMM (or covarion model) and non-aligning sites in the query genome removed, generation of a new multiple alignment is a simple matter of concatenating the individual alignments.
+
+Codon alignments are also generated for each protein-coding gene family at this stage.
+\subsubsection*{Phylogenetic inference}
+The next step of database update involves constructing a phylogenetic tree for each gene family.
+Currently PhyloSift employs FastTree 2.1~\cite{PriceFastTree} to generate approximate maximum likelihood trees for this task.
+
+PhyloSift also infers trees on codon alignments. 
+
+\subsubsection*{Selection of representatives for similarity search}
+The PhyloSift client workflow uses LAST and bowtie2 to search for similarity between input sequences and reference sequences.
+During the database update the set of reference sequences is updated to include representatives of any newly sequenced genomes.
+The selection of representatives is guided by the phylogenetic tree inferred in the previous step.
+A set of sequences is selected that maximizes phylogenetic diversity of the set without including any sequence pairs separated by fewer than X amino acid substitutions per site.
+Here X is a configurable variable with default value 0.05.
+
 \subsubsection*{Taxonomic reconciliation}
+Many of the data sources for new genomes provide a taxonomic identifier for the genome that places it in the NCBI Taxonomy.
+Throughout the database update process, the associations between taxon ID and individual sequences are maintained.
+The tips of reconstructed phylogenies can therefore have some or all nodes annotated with the taxon ID associated with that tip.
+Given this information, PhyloSift generates a mapping of edges (e.g. the edge above each node) in the gene tree phylogeny to edges in the taxonomic tree.
+To do so, we first compute the split (bipartition) encoding of the gene tree and the taxonomic tree.
+A tree's split encoding is simply the set of splits encoded by each edge in the tree, where the split for edge $i$ is a binary vector $S_i = \{s_{i,1}...s_{i,n}\}, s_{i,j} \in \{0,1\}$.
+Here $n$ is the number of leaf nodes shared by the two trees.
+For convenience, we denote the split encoding for the gene tree as $S^{(G)}$ and use $S^{(T)}$ for the taxonomic tree.
+Then for each edge $i$ in the gene tree, we compute its mapping $M_i$ to taxonomic tree edges as:
+$$
+M_i = \argmin_{S_j \in S^{(T)}} H(S^{(G)}_i, S_j)
+$$
+Where $H(\cdot,\cdot)$ is defined as the Hamming distance among equal-length binary vectors.
+We note that there may be many possible edges in $S^{(T)}$ with equally minimal Hamming distance to an edge $i$ in $S^{(G)}$.
+In this case $M_i$ includes all of these edges, and so $M_i \subseteq S^{(T)}$ and $|M_i| \geq 1$.
+In the client workflow when assigning placement probability mass to names, the placement mass on edge $S^{(G)}_i$ is divided equally among the taxonomic groups associated with $M_i$.
+Finally, we discard highly ambiguous mappings where $|M_i|>y$. 
+Here $y$ is an ad-hoc threshold with a default value of 30.
+These gene tree edges are labeled ``Unclassifiable'' due to their extreme topological discordance with the NCBI taxonomy.
 
 \subsubsection*{Custom gene families}
 
