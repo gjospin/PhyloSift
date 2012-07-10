@@ -74,7 +74,7 @@ $threads = 1;    #allows PS to use the number of threads specified
 #$chunks               = undef;   #sets the number of chunks to be run
 #$chunk_size = 1000000;    #sets the number of sequences to run per chunk
 #$my_debug   = 0;          #print debugging messages?
-$disable_update_check=1; # can be used to disable the marker update check and download at startup
+#$disable_update_check=1; # can be used to disable the marker update check and download at startup
 
 #
 #FastSearch default parameters
