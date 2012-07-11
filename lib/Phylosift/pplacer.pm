@@ -49,7 +49,7 @@ sub pplacer {
 	my $self    = $args{self} || miss("self");
 	my $markRef = $args{marker_reference} || miss("marker_reference");
 	my $chunk   = $args{chunk};
-	
+	set_default_values(self=>$self);
 	directoryPrepAndClean( self => $self );
 	# if we have a coverage map then weight the placements
 	my $covref;
@@ -82,7 +82,7 @@ sub set_default_values{
 	my %args = @_;
 	my $self = $args{self};
 	Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::pplacer_groups,value=>15);
-	Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::pplacer_verbosity,value=>0);
+	Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::pplacer_verbosity,value=>"0");
 	Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::max_submarker_dist,value=>0.15);
 	Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::min_submarker_prob,value=>0.35);	
 }
@@ -333,7 +333,7 @@ sub place_reads{
 	    debug "Placing on sub markers $marker\n";
 		load_submarkers();
 		if(keys(%submarker_map)>0){
-			make_submarker_placements(self=>$self, marker=>$marker, chunk=>$chunk, place_file=>$self->{"treeDir"} . "/$jplace");
+			make_submarker_placements(self=>$self, marker=>$marker, chunk=>$chunk, place_file=>$self->{"treeDir"} . "/$jplace") if $self->{"dna"};
 		}
 	}
 	
