@@ -177,7 +177,7 @@ One minor shortcoming of LAST is that current versions do not support multithrea
 PhyloSift implements optional process-level parallelism at this stage by spawning multiple LAST searches against the protein database.
 
 One feature of reference gene family sequences being searched at this stage bears special mention.
-During database construction (described elsewhere) a subset of representative sequences are selected from each gene family to be searched at this stage.
+During database construction (described elsewhere) a representative subset of all available sequences are selected from each gene family to be searched at this stage.
 These representatives are chosen to span the phylogenetic diversity of the gene family without including closely related sequences (see Section~\ref{sec:dbupdate}).
 This is important because part of LAST's fast heuristic to identify candidate regions to align involves eliminating redundant and repetitive $k$-mers from the search space~\cite{Kiełbasa2011}.
 A database constructed with all sequences (and not just divergent representatives) could in principle reduce sensitivity in aligning reads to those database sequences.
@@ -223,6 +223,9 @@ Any particular edge in the gene tree may be mapped to many equally optimal locat
 PhyloSift distributes the placed seqeunce's mass equally among all optimal locations.
 
 Finally, PhyloSift reports the summarized taxonomy probability mass distribution in a variety of formats.
+
+\subsubsection*{Visual presentation of taxonomic summary}
+
 For easy visualization and exploratory data analysis, PhyloSift produces Krona plots~\cite{krona} showing taxonomic probability mass in the 40 elite gene families, and a separate krona plot showing taxonomic probability mass distribution summed across the elite families and all other families.
 
 Figure~\ref{fig:kronaplots} provide an example of PhyloSift's krona reports.
@@ -303,13 +306,20 @@ Finally, we discard highly ambiguous mappings where $|M_i|>y$.
 Here $y$ is an ad-hoc threshold with a default value of 30.
 These gene tree edges are labeled ``Unclassifiable'' due to their extreme topological discordance with the NCBI taxonomy.
 
-\subsubsection*{Custom gene families}
+\subsection*{Custom gene families}
+
+PhyloSift also supports the addition of custom gene families to its database.
+To add a gene family to the database, a multiple sequence alignment must be provided.
+Optionally, a table mapping each sequence identifier in the alignment and its NCBI taxon ID may also be provided.
+Given these inputs, PhyloSift will construct a phylogenetic tree, create a pruned set of representative sequences for similarity searching, construct a profile HMM for alignment, and if taxon info was provided will also compute a reconciliation between the gene tree and taxonomy.
+The tree-building and reconciliation steps follows the approach outlined above in the PhyloSift database update workflow, with the exception that codon alignments are not generated.
+The resulting data is called a package, and is copied into the user's PhyloSift database.
+The new package will be automatically included in any future runs of the PhyloSift client workflow.
 
 % Results and Discussion can be combined.
 \section*{Results}
 
 
-\subsection*{look Ma, I'm famous}
 
 \subsection*{Simulated data}
     - How they were generated
@@ -324,9 +334,12 @@ RMSD or other metric?
 Bacteria, Arch, Eukarya, viral
 
 \subsection*{Application to a real dataset}
- (which one?)
 
-\subsection*{PhyloSift crushes its former self}
+To understand how community structure analysis with PhyloSift compares to similar analysis based on 16s rRNA amplicon sequencing we study a recently published human microbiome dataset where samples were sequenced both by a 16s amplicon and a shotgun metagenome approach~\cite{Yugocrazy2012}.
+In that study, fecal material was collected from infants and adults at diverse geographical locations and subjected to sequencing.
+Over 600 samples were sequenced using the 16S amplicon protocol.
+Of those 110 were also subjected to metagenomic shotgun sequencing using 454 pyrosequencing chemistry.
+Here we apply PhyloSift to the 110 metagenomic samples and conduct a community structure comparison among the samples.
 
 
 \section*{Discussion}
