@@ -168,7 +168,7 @@ Given the large volume of sequence data that must be processed, a key evaluation
 A second criterion is the ability to perform six-frame translated searches of DNA sequence against an amino acid database with the possibility to tolerate frame-shift errors in the sequence.
 Among the evaluated methods, BLAST and BLAST+ were slowest (data not shown) and frameshift detection was non-functional in the version of BLAST+ we obtained from NCBI. We excluded these from futher consideration.
 RAPsearch2 was much more computationally efficient than either BLAST or BLAST+, but the version we obtained could not process sequences > 1kbp and did not support frameshift detection.
-In our testing, LAST was able to process sequence data as quickly as RAPsearch2 (e.g. orders of magnitude more quickly than BLAST) and supports both frameshift detection and input sequences of arbitrary length.
+ In our testing, LAST was able to process sequence data as quickly as RAPsearch2 (e.g. orders of magnitude more quickly than BLAST) and supports both frameshift detection and input sequences of arbitrary length.
 LAST also supports all three of the primary search types we require: DNA vs. DNA, DNA vs. AA, and AA vs. AA.
 We also evaluated bowtie2, a program typically used for mapping reads to a reference genome, for the purpose of screening reads against a database of noncoding RNA sequences (currently 16S and 18S).
 Relative to LAST, bowtie2 is able to identify similarity to the RNA database sequences much more quickly.
@@ -185,7 +185,7 @@ A database constructed with all sequences (and not just divergent representative
 The result of this stage is a set of candidate amino acid sequences that are similar to each gene family in the database and (if DNA was used as input) the corresponding untranslated DNA sequences.
 
 \subsubsection*{Alignment to reference multiple alignment}
-Prior this stage all input sequence regions with putative homology to reference gene families have been identified and extracted.
+Prior to this stage all input sequence regions with putative homology to reference gene families have been identified and extracted.
 In this stage, each candidate sequence is added to an amino acid multiple sequence alignment of the reference gene family.
 If the input sequences were {DNA}, a codon multiple sequence alignment congruent to the amino acid alignment is also generated.
 
@@ -220,7 +220,7 @@ When analyzing unassembled reads sequence weights are typically always 1, when a
 
 PhyloSift parses each of the jplace files and uses the gene-tree/taxonomy reconciliation to convert probability mass over read placements into a probability mass over the taxonomy, summing these masses over all reads and gene families.
 Any particular edge in the gene tree may be mapped to many equally optimal locations in the taxonomy.
-PhyloSift distributes the placed seqeunce's mass equally among all optimal locations.
+PhyloSift distributes the placed sequence's mass equally among all optimal locations.
 
 Finally, PhyloSift reports the summarized taxonomy probability mass distribution in a variety of formats.
 For easy visualization and exploratory data analysis, PhyloSift produces Krona plots~\cite{krona} showing taxonomic probability mass in the 40 elite gene families, and a separate krona plot showing taxonomic probability mass distribution summed across the elite families and all other families.
