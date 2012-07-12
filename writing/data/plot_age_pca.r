@@ -13,8 +13,15 @@ color_legend <- function(x, y, xlen, ylen, main, tiks){
 
 
 pdf("age_pca.pdf",width=5,height=5)
-plot(aller$V2,aller$V3,pch=16,col=colors[trunc(1 + 12*meta$Age.of.host..years.[match(aller$V1,as.integer(meta$MG.RAST.ID))])],xlab="PC1 (59.9%)",ylab="PC2 (15.2%)")
+ages <- trunc(1 + 12*meta$Age.of.host..years.[match(aller$V1,as.integer(meta$MG.RAST.ID))])
+logages <- log(ages)
+scaler <- (max(ages[!is.na(ages)])/max(logages[!is.na(ages)]))
+logages <- logages * scaler
+plot(aller$V2,aller$V3,pch=16,col=colors[logages+1],xlab="PC1 (59.9%)",ylab="PC2 (15.2%)")
 
-color_legend( -6.5, 3.5, 3.5, 1.5, "age in years:", c(0,15,30,45,60))
+legvec <- c(0,180,360,540,720)
+legvec <- legvec / scaler
+legvec <- exp(legvec)
+color_legend( -6.5, 3.5, 3.5, 1.5, "age in months:", trunc(legvec)-1)
 dev.off()
 
