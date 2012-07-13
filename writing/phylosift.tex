@@ -189,7 +189,7 @@ Prior to this stage all input sequence regions with putative homology to referen
 In this stage, each candidate sequence is added to an amino acid multiple sequence alignment of the reference gene family.
 If the input sequences were {DNA}, a codon multiple sequence alignment congruent to the amino acid alignment is also generated.
 
-PhyloSift applies the \texttt{hmmalign} program from the HMMER 3.0 software~\cite{hmmer3} to add the candidate sequences to reference multiple sequence alignments.
+PhyloSift applies the \texttt{hmmalign} program from the HMMER 3.0 software~\cite{Eddy2011} to add the candidate sequences to reference multiple sequence alignments.
 During construction of the PhyloSift reference database (described elsewhere) a profile-HMM is generated from a multiple alignment of the gene family reference sequences.
 When processing candidate sequences, PhyloSift then uses the profile-HMM to map the input sequence to the reference multiple alignment using maximal sensitivity settings (\texttt{hmmalign --max}).
 We acknowledge that application of a profile-HMM to align highly divergent sequences suffers some documented shortcomings, and this is one avenue for future improvement of PhyloSift~\cite{Loytynoja2012}.
@@ -226,7 +226,7 @@ Finally, PhyloSift reports the summarized taxonomy probability mass distribution
 
 \subsubsection*{Visual presentation of taxonomic summary}
 
-For easy visualization and exploratory data analysis, PhyloSift produces Krona plots~\cite{krona} showing taxonomic probability mass in the 40 elite gene families, and a separate krona plot showing taxonomic probability mass distribution summed across the elite families and all other families.
+For easy visualization and exploratory data analysis, PhyloSift produces Krona plots~\cite{Ondov2011} showing taxonomic probability mass in the 40 elite gene families, and a separate krona plot showing taxonomic probability mass distribution summed across the elite families and all other families.
 
 Figure~\ref{fig:kronaplots} provide an example of PhyloSift's krona reports.
 
@@ -244,7 +244,7 @@ PhyloSift includes the guppy program from pplacer, which in addition to Edge PCA
 
 \subsection*{Gene families used by PhyloSift}
 
-The standard PhyloSift database includes a set of 40 gene families previously identified as nearly universal among bacteria and archaea and in single-copy~\cite{DongyingMarkers}.
+The standard PhyloSift database includes a set of 40 gene families previously identified as nearly universal among bacteria and archaea and in single-copy~\cite{Wu2012}.
 In other work we have demonstrated that phylogenetic trees reconstructed on individual genes in this set are generally consistent with each other~\cite{Lang2012}, suggesting that concatenating alignments of these families will yield a valid and more powerful estimate of their phylogenetic history.
 During the database update process (described below), these gene families are automatically extended to include putative homologs from eukarya and some viruses with large genomes such as the Mimivirus.
 Most small viral genomes lack homologs of these gene families.
@@ -257,7 +257,7 @@ In addition to the elite 40 families, the PhyloSift database also includes four 
 \item \textbf{Viral gene families}
 \end{itemize}
 
-\subsection*{PhyloSift database update workflow}
+\subsection*{PhyloSift database update workflow}\label{sec:dbupdate}
 An integral component of PhyloSift is an automated means to update the gene family database with newly sequenced genomes.
 Genome databases continue to grow quickly, with dozens of new genome sequences becoming available every week.
 The quality of these genomes can be highly variable, ranging from low-quality drafts to nearly finished sequence.
@@ -274,7 +274,7 @@ Because each region has been aligned to the same profile HMM (or covarion model)
 Codon alignments are also generated for each protein-coding gene family at this stage.
 \subsubsection*{Phylogenetic inference}
 The next step of database update involves constructing a phylogenetic tree for each gene family.
-Currently PhyloSift employs FastTree 2.1~\cite{PriceFastTree} to generate approximate maximum likelihood trees for this task.
+Currently PhyloSift employs FastTree 2.1~\cite{Price2010} to generate approximate maximum likelihood trees for this task.
 
 PhyloSift also infers trees on codon alignments. 
 
@@ -335,11 +335,41 @@ Bacteria, Arch, Eukarya, viral
 
 \subsection*{Application to human microbiome data}
 
-To understand how community structure analysis with PhyloSift compares to similar analysis based on 16s rRNA amplicon sequencing we study a recently published human microbiome dataset where samples were sequenced both by a 16s amplicon and a shotgun metagenome approach~\cite{Yugocrazy2012}.
+To understand how community structure analysis with PhyloSift compares to similar analysis based on 16s rRNA amplicon sequencing we study a recently published human microbiome dataset where samples were sequenced both by a 16s amplicon and a shotgun metagenome approach~\cite{Yatsunenko2012}.
 In that study, fecal material was collected from infants and adults at diverse geographical locations and subjected to sequencing.
 Over 600 samples were sequenced using the 16S amplicon protocol.
 Of those 110 were also subjected to metagenomic shotgun sequencing using 454 pyrosequencing chemistry.
 Here we apply PhyloSift to the 110 metagenomic samples and conduct a community structure comparison among the samples.
+
+PhyloSift processed each of the 110 samples, requiring an average of 35 minutes CPU time per sample.
+The majority of CPU time is spent in phylogenetic placement of reads.
+These samples have 154,485 non-human sequence reads on average, for an average of 52 Mbp of sequence data per sample.
+
+We then conducted Edge Principal Components Analysis (PCA) using the reads placed onto the phylogeny of elite gene families.
+Edge PCA identifies the combination of phylogenetic lineages that explain the greatest extent of variation in the microbial communities in each sample.
+The resulting PCA plot is shown in Figure~\ref{fig:agepca}, with each sample colored according to the age of the human host at the time of sampling.
+The PCA reveals a strong association between age and microbial community structure.
+This relationship was also identified by Yastunenko \textit{et al} using 16s rRNA analysis on a set of $>$600 samples which included the 110 studied here.
+
+The nature of edge PCA lends itself to an intuitive inspection of the phylogenetic lineages explaining the difference in community structures.
+PhyloSift, in combination with pplacer's guppy program and the Archaeopteryx tree viewer, can produce a visualization of the lineages most strongly associated with each principal component.
+Figure~\ref{fig:pcaphylo} shows this visualization for the edge PCA analysis of 110 fecal metagenome communities.
+In that figure, lineages are thickened proportionally to their contribution to the principal component, and are colored according to whether they increase (red) or decrease (turqoise) in abundance along the principal component axis.
+As we can see from Figure~\ref{fig:pcaphylo} left, the first principal component is defined by an increase in Ruminococcacae, Clostridiales, and Bacteroides, with a decrease in Bifidobacteria. 
+The association with age suggests that as communities develop in aging children, the Bifidobacteria become less abundant and members of those other lineages grow in abundance.
+The analysis of Yatsunenko \textit{et al} on 16s rRNA data also identified age-associated increases in Ruminococcacae and Bacteroides and a decrease in Bifidobacteria.
+
+Whereas the first principal component agrees strongly with the analysis reported by Yastunenko \textit{et al}, the second principal component appears to identify a previously unreported aspect of variation in these samples.
+Extreme samples on the 2nd principal component (PC2) are very young infants whose fecal microbiota appear to be dominated not by Bifidobacteria, but instead by members of the genus Enterobacter and family Lactobacillales (see Figure~\ref{fig:pcaphylo}, right).
+One possible explanation for this observation may be an association with breast-feeding status of the infants.
+However, inspection of publicly available metadata did not reveal any clear assocation of PC2 with breastfeeding status or other recorded metadata.
+One possible explanation for why the current analysis identifies this dimension of community structure variation is that the set of 110 samples we analyzed does not include many of the adult samples from disparate geographical locations analyzed by Yatsunenko \textit{et al}.
+Geography and age were associated with most variation in their analysis of $>$600 samples, and the 110 metagenome samples are primarily from infants and do not equally represent that variation.
+We note that members of the Lactobacillales are abundant in the human vaginal tract, however no metadata on vaginal versus caesarian birth was available for these samples.
+
+PhyloSift also provides a means to visualize the relative abundance of taxonomic groups present in a sample.
+We show two such plots for the samples 
+
 
 
 \section*{Discussion}
@@ -347,6 +377,10 @@ Here we apply PhyloSift to the 110 metagenomic samples and conduct a community s
   - Advantages to the approach taken by PhyloSift
   - Disadvantages
     - many
+
+The analysis of human fecal microbial communities we describe was possible with only 50 Mbp median depth of coverage per sample.
+Current Illumina HiSeq 2000 instruments generate 38 Gbp per lane, suggesting that up to 760 samples could be processed in a single Illumina lane and yield similar findings.
+Based on current Illumina sequencing service provider costs this suggests large metagenome surveys could be conducted for as little as to \$2.50 to \$5 per sample in sequencing costs.
 
 
 \subsection*{Limitations and scope}
@@ -383,7 +417,8 @@ Funding from Dept. of Homeland Security, DOE.
 %\end{figure}
 \begin{figure}[hp]
 \begin{center}
-\includegraphics[width=4in]{figures/Phylosift_overview_vector.pdf}
+%\includegraphics[trim=0 5.25in 0.5in 1.25in,clip,width=6.5in]{figures/Phylosift_overview_vector.pdf}
+\includegraphics[width=6.5in]{figures/Phylosift_overview_vector.pdf}
 \end{center}
 \caption{\textbf{PhyloSift client workflow.} This workflow is applied to the user's sequence data.}
 \label{fig:overview}
@@ -394,15 +429,23 @@ Funding from Dept. of Homeland Security, DOE.
 \includegraphics[width=4in]{figures/age_pca.pdf}
 \end{center}
 \caption{\textbf{Edge PCA analysis of human fecal samples.} 110 metagenomic samples were processed using PhyloSift and their community composition compared using Edge PCA.}
-\label{fig:overview}
+\label{fig:agepca}
 \end{figure}
 
 \begin{figure}[hp]
 \begin{center}
-\includegraphics[width=6.5in]{figures/all_prettylike.pdf}
+\includegraphics[width=6in]{figures/both_prettylike_b2b.pdf}
 \end{center}
-\caption{\textbf{Lineages contributing variation to Principal Component 1 in human fecal samples.} 110 metagenomic samples were processed using PhyloSift and their community composition compared using Edge PCA~\cite{MatsenEvans2012}. Lineages that decrease in abundance along PC1 are shown in turquoise color, those increasing in abundance are shown in red. Edge width is proportional to the change in abundance. Remaining lineages in the phylogeny of bacteria, archaea, eukarya, and some viruses are shown in light gray.}
-\label{fig:overview}
+\caption{\textbf{Lineages contributing variation in human fecal sample community structure.} 110 metagenomic samples were processed using PhyloSift and their community composition compared using Edge PCA~\cite{Matsen2012}. Lineages that decrease in abundance along the principal component axis are shown in turquoise color, those increasing in abundance are shown in red. Edge width is proportional to the change in abundance. Remaining lineages in the phylogeny of bacteria, archaea, eukarya, and some viruses are shown in light gray. PC1 shown at left, PC2 at right.}
+\label{fig:pcaphylo}
+\end{figure}
+
+\begin{figure}[hp]
+\begin{center}
+\includegraphics[width=6.5in]{figures/krona_two.pdf}
+\end{center}
+\caption{\textbf{Taxonomic visualization of two human gut samples.} Data analyzed by PhyloSift, visualized by Krona.}
+\label{fig:kronaplots}
 \end{figure}
 
 \clearpage
