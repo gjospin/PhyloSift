@@ -373,7 +373,6 @@ We show two such plots for the samples
 
 
 \section*{Discussion}
-  - Fundamental limits to computational methods -- resolving linkage among polymorphisms in a population
   - Advantages to the approach taken by PhyloSift
   - Disadvantages
     - many
@@ -384,6 +383,7 @@ Based on current Illumina sequencing service provider costs this suggests large 
 
 
 \subsection*{Limitations and scope}
+  - Fundamental limits to computational methods -- resolving linkage among polymorphisms in a population
 
 
 \subsection*{Future work}
@@ -437,6 +437,14 @@ Funding from Dept. of Homeland Security, DOE.
 \includegraphics[width=6in]{figures/both_prettylike_b2b.pdf}
 \end{center}
 \caption{\textbf{Lineages contributing variation in human fecal sample community structure.} 110 metagenomic samples were processed using PhyloSift and their community composition compared using Edge PCA~\cite{Matsen2012}. Lineages that decrease in abundance along the principal component axis are shown in turquoise color, those increasing in abundance are shown in red. Edge width is proportional to the change in abundance. Remaining lineages in the phylogeny of bacteria, archaea, eukarya, and some viruses are shown in light gray. PC1 shown at left, PC2 at right.}
+\label{fig:pcaphylo}
+\end{figure}
+
+\begin{figure}[hp]
+\begin{center}
+\includegraphics[width=4in]{figures/phylo_diversity.pdf}
+\end{center}
+\caption{\textbf{Relationship betwen fecal community phylogenetic diversity and host age.} 110 metagenomic samples were processed using PhyloSift and their phylogenetic diversity analyzed using two metrics. Unweighted phylogenetic diversity simply measures the total branch length of the reference tree covered by placed reads from a sample. Abundance-weighted phylogenetic diversity adjusts these values by the abundance of each lineage in the sample. In both cases, a log-linear relationship between host age and fecal community phylogenetic diversity can be observed.}
 \label{fig:pcaphylo}
 \end{figure}
 
