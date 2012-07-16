@@ -98,12 +98,17 @@ sub build_marker {
 		target_directory => $target_dir
 	) unless -e "$target_dir/$core.tree";
 
-	#need to generate representatives using PDA
-	my $rep_file = get_representatives_from_tree(
-		tree             => $fasttree_file,
-		target_directory => $target_dir,
-		cutoff           => $cutoff
-	) unless -e "$target_dir/$core.pda";
+	if($seq_count > 10 ){
+		#need to generate representatives using PDA
+		my $rep_file = get_representatives_from_tree(
+			tree             => $fasttree_file,
+			target_directory => $target_dir,
+			cutoff           => $cutoff
+		) unless -e "$target_dir/$core.pda";
+	}else{
+		#use all the sequences for representatives
+		`cp $fasta_file $target_dir/$core.rep`;
+	}
 
 #need to read the representatives picked by PDA and generate a representative fasta file
 	my $rep_fasta = get_fasta_from_pda_representatives(
@@ -111,7 +116,7 @@ sub build_marker {
 		target_dir      => $target_dir,
 		fasta_reference => $fasta_file,
 		id_map          => \%id_map
-	) unless -e "$target_dir/$core.rep";
+	) unless -e "$target_dir/$core.rep" || !-e "$target_dir/$core.pda";
 	if ( defined $mapping ) {
 		my $tmp_jplace     = $target_dir . "/" . $core . ".tmpread.jplace";
 		my $mangled_jplace = $tmp_jplace . ".mangled";
@@ -158,7 +163,7 @@ sub build_marker {
 #needed are : 1 alignment file, 1 representatives fasta file, 1 hmm profile, 1 tree file, 1 log tree file.
 `cd "$target_dir";taxit create -c -d "Creating a reference package for PhyloSift for the $core marker" -l "$core" -f "$clean_aln" -t "$target_dir/$core.tree" -s "$target_dir/$core.log" -P "$core"`;
 
-	`rm "$target_dir/$core.pda"`;
+	`rm "$target_dir/$core.pda"` if -e "$target_dir/$core.pda";
 	`rm "$target_dir/$core.tree"`;
 	`rm "$target_dir/$core.log"`;
 	`rm "$target_dir/$core.aln"`;
