@@ -219,27 +219,27 @@ sub run {
 	if ( $self->{"mode"} eq 'index' ) {
 		@markers = Phylosift::Utilities::gather_markers(
 			self              => $self,
-			path              => $Phylosift::Utilities::marker_dir,
+			path              => $Phylosift::Settings::marker_dir,
 			allow_missing_hmm => 1
 		);
 		Phylosift::Utilities::index_marker_db(
 			self    => $self,
 			markers => \@markers,
-			path    => $Phylosift::Utilities::marker_dir
+			path    => $Phylosift::Settings::marker_dir
 		);
 		my @extended_markers = Phylosift::Utilities::gather_markers(
 			self              => $self,
-			path              => $Phylosift::Utilities::markers_extended_dir,
+			path              => $Phylosift::Settings::markers_extended_dir,
 			allow_missing_hmm => 1
 		  )
-		  if -d $Phylosift::Utilities::markers_extended_dir
+		  if -d $Phylosift::Settings::markers_extended_dir
 			  && $Phylosift::Settings::extended;
 		Phylosift::Utilities::index_marker_db(
 			self    => $self,
 			markers => \@extended_markers,
-			path    => $Phylosift::Utilities::markers_extended_dir
+			path    => $Phylosift::Settings::markers_extended_dir
 		  )
-		  if -d $Phylosift::Utilities::markers_extended_dir
+		  if -d $Phylosift::Settings::markers_extended_dir
 			  && $Phylosift::Settings::extended;
 	}
 	if ( $self->{"mode"} eq 'build_marker' ) {
