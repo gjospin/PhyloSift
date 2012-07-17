@@ -11,3 +11,7 @@ my @subs = qw( initialize getReadsFile run read_phylosift_config run_program_che
 
 use_ok( 'Phylosift::Phylosift', @subs );
 
+#use_ok( 'Phylosift::Phylosift' );
+
+#my $ps = Phylosift->new( );
+#isa_ok( $ps, 'Phylosift::Phylosift' );

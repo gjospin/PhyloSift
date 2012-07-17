@@ -1730,7 +1730,8 @@ sub get_sequence_input_type {
 			}
 		}
 		elsif ($sequence) {
-			$sequence =~ s/[-\.]//g;    #removing gaps from the sequences
+			#$sequence =~ s/[-\.]//g;    #removing gaps from the sequences
+			$line =~ s/[-\.]//g;
 			$counter  += length($line) - 1;
 			$dnacount += $line =~ tr/[ACGTNacgtn]//;
 			$allcount += length($line) - 1;
@@ -1740,6 +1741,7 @@ sub get_sequence_input_type {
 	}
 	close($FILE);
 	$maxfound = $counter > $maxfound ? $counter : $maxfound;
+	debug "DNACOUNT : $dnacount \t ALLCOUNT : $allcount \t threshold : ".$allcount*0.75."\n";
 	$type{seqtype} = "protein" if ( $dnacount < $allcount * 0.75 );
 	$type{seqtype} = "dna"
 	  if ( $type{format} eq "fastq" );    # nobody using protein fastq (yet)

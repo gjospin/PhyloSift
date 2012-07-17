@@ -6,3 +6,4 @@ use strict; use warnings;
 use Test::More tests => 2;
 use_ok( 'Phylosift::Utilities' ) or exit;
 use_ok( 'Phylosift::Summarize' ) or exit;
+
