@@ -50,7 +50,7 @@ if you don't export anything, such as for a purely object-oriented module.
 =head2 RunBlast
 
 =cut
-
+set_default_values();
 my $best_hits_bit_score_range = $Phylosift::Settings::best_hits_bit_score_range;
   # all hits with a bit score within this amount of the best will be used
 my $align_fraction = $Phylosift::Settings::align_fraction;
@@ -71,7 +71,7 @@ sub run_search {
 	$self->{"readsFile"} =~ m/(\w+)\.?(\w*)$/;
 
 	#setting default values for the module
-	set_default_values(self=>$self);
+	#set_default_values(self=>$self);
 
 	# set align_fraction appropriately
 	$align_fraction = $align_fraction_isolate if ( $Phylosift::Settings::isolate );
@@ -156,7 +156,6 @@ sub run_search {
 
 sub set_default_values{
 	my %args = @_;
-	my $self = $args{self};
 	my $default_chunk_size = 200000;
 	$default_chunk_size = 1000000 if !defined($Phylosift::Settings::extended) || !$Phylosift::Settings::extended;
 	Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::CHUNK_MAX_SEQS,value=>$default_chunk_size);

@@ -11,6 +11,7 @@ use IO::File;
 use XML::Writer;
 use JSON;
 
+set_default_values();
 if ( $^O =~ /arwin/ ) {
 	use lib "$FindBin::Bin/osx/darwin-thread-multi-2level/";
 }
@@ -44,7 +45,7 @@ if you don't export anything, such as for a purely object-oriented module.
 
 my %nameidmap;
 my %idnamemap;
-
+my %ncbi_summary; #used for krona output
 =head2 read_ncbi_taxon_name_map
 
 # read the NCBI taxon names
@@ -144,7 +145,7 @@ NCBI taxonomy
 # keep a hash counting up all the read placements
 # make this File-scope so anonymous functions below can see it
 my %ncbireads;
-my %ncbi_summary;	# used for krona output
+
 
 sub summarize {
 	my %args    = @_;
@@ -152,7 +153,7 @@ sub summarize {
 	my $chunk   = $args{chunk} || miss("chunk");
 	my $markRef = $args{marker_reference}
 	  || miss("marker_reference");    # list of the markers we're using
-	set_default_values(self=>$self);
+	#set_default_values(self=>$self);
 	read_ncbi_taxon_name_map();
 	read_ncbi_taxonomy_structure();
 	my $markerdir = $Phylosift::Settings::marker_dir;
@@ -175,7 +176,6 @@ sub summarize {
 	for ( my $dna = 0 ; $dna < 2 ; $dna++ ) {
 
 		foreach my $marker ( @{$markRef} ) {
-
 			# don't bother with this one if there's no read placements
 			my $sub_mark;
 			$sub_mark = "*" if $dna;
@@ -187,11 +187,12 @@ sub summarize {
 				sub_marker => $sub_mark,
 				chunk      => $chunk
 			  );
+			debug "PLACEfile : $place_base\n";
 			my @place_files;
 			@place_files = glob($place_base)
 			  if $dna;    # need to glob on all submarkers if in DNA
 			push( @place_files, $place_base ) if $dna == 0 && -e $place_base;
-
+			
 			foreach my $placeFile (@place_files) {
 				my $PP_COVFILE = ps_open(
 					">"
@@ -208,13 +209,12 @@ sub summarize {
 				my $markermapfile = Phylosift::Utilities::get_marker_taxon_map(self=>$self, marker=>$marker, dna=>$dna, sub_marker=>$sub);
 				next unless -e $markermapfile;	# can't summarize if there ain't no mappin'!
 				my $markerncbimap = read_taxonmap(file=>$markermapfile);
-		
 				# then read & map the placement
 				my $JPLACEFILE = ps_open($placeFile);
 				my @treedata   = <$JPLACEFILE>;
 				close $JPLACEFILE;
 				my $json_data = decode_json( join( "", @treedata ) );
-
+				
 				# for each placement record
 				for ( my $i = 0 ; $i < @{ $json_data->{placements} } ; $i++ ) {
 					my $place   = $json_data->{placements}->[$i];
@@ -454,10 +454,10 @@ sub merge_sequence_taxa {
 		# skip this if only a simple summary is desired (it's slow)
 		debug "Generating krona\n";
 		%ncbi_summary = %concat_summary;
-		krona_report( self => $self, file=>$self->{"fileName"}.".html" );
+		krona_report( self => $self, file=>$self->{"fileName"}.".html" ) if scalar(keys(%ncbi_summary)) > 0;
 		%ncbi_summary = ();
 		%ncbi_summary = %all_summary;
-		krona_report( self => $self, file=>$self->{"fileName"}.".allmarkers.html" );
+		krona_report( self => $self, file=>$self->{"fileName"}.".allmarkers.html" )if scalar(keys(%all_summary)) > 0;
 		`ln -s $Phylosift::Settings::file_dir/$self->{"fileName"}.html $Phylosift::Settings::file_dir/krona.html`;
 	}
 }

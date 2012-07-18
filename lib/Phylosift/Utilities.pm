@@ -929,7 +929,7 @@ sub get_decorated_marker_name {
 	$name = get_marker_basename( marker => $name ) if $base;
 	$name .= ".codon" if $dna;
 	$name .= ".updated"
-	  if ( $updated || $args{self}->{"updated"} ) && !$args{self}->{"extended"};
+	  if ( $updated || $Phylosift::Settings::updated ) && !$Phylosift::Settings::extended;
 
 	# rna markers don't get pruned
 	$name .= ".sub" . $sub_marker if defined($sub_marker);
@@ -1741,7 +1741,6 @@ sub get_sequence_input_type {
 	}
 	close($FILE);
 	$maxfound = $counter > $maxfound ? $counter : $maxfound;
-	debug "DNACOUNT : $dnacount \t ALLCOUNT : $allcount \t threshold : ".$allcount*0.75."\n";
 	$type{seqtype} = "protein" if ( $dnacount < $allcount * 0.75 );
 	$type{seqtype} = "dna"
 	  if ( $type{format} eq "fastq" );    # nobody using protein fastq (yet)

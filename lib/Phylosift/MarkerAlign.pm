@@ -23,7 +23,7 @@ Version 0.01
 
 =cut
 our $VERSION = '0.01';
-
+set_default_values();
 =head1 SYNOPSIS
 
 Run HMMalign for a list of families from .candidate files located in $workingDir/PS_temp/Blast_run/
@@ -60,7 +60,6 @@ sub MarkerAlign {
 	my $self       = $args{self} || miss("self");
 	my $markersRef = $args{marker_reference} || miss("marker_reference");
 	my $chunk      = $args{chunk};
-	set_default_values(self=>$self);
 	if ( defined($chunk) ) {
 		my @allmarkers = gather_chunky_markers( self => $self, chunk => $chunk );
 		$markersRef = \@allmarkers;
@@ -130,7 +129,6 @@ sub set_default_values{
 	my $self = $args{self};
 	Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::min_aligned_residues,value=>20);
 	Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::rna_split_size,value=>500);
-	debug "Setting gap_character\n";
 	Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::gap_character,value=>"-");
 	Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::hmmsearch_evalue,value=>10);
 	Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::hmmsearch_options,value=>"--max");

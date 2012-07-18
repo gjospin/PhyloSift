@@ -24,7 +24,7 @@ Version 0.01
 
 =cut
 our $VERSION = '0.01';
-
+set_default_values();
 =head1 SYNOPSIS
 
 Runs Pplacer for all the markers in the list passed as input.
@@ -49,7 +49,6 @@ sub pplacer {
 	my $self    = $args{self} || miss("self");
 	my $markRef = $args{marker_reference} || miss("marker_reference");
 	my $chunk   = $args{chunk};
-	set_default_values(self=>$self);
 	directoryPrepAndClean( self => $self );
 	# if we have a coverage map then weight the placements
 	my $covref;

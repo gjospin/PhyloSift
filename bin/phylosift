@@ -111,6 +111,7 @@ Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::continue, val
 Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::custom, value=> "");
 Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::isolate, value=> 0);
 Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::my_debug, value=> 0);
+Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::besthit, value=> 0);
 
 my $ps = new Phylosift::Phylosift();
 for(my $i=0;$i<scalar(@ARGV);$i++){

@@ -131,7 +131,6 @@ if you don't export anything, such as for a purely object-oriented module.
     Runs the PhyloSift pipeline according to the functions passed as arguments
 
 =cut
-
 my $continue = 0;
 my ( $mode, $readsFile, $readsFile_2, $fileName, $fileDir, $blastDir, $alignDir,
 	$treeDir )
