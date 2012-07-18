@@ -97,10 +97,10 @@ sub build_marker {
 		alignment_file   => $clean_aln,
 		target_directory => $target_dir
 	) unless -e "$target_dir/$core.tree";
-
+	my $rep_file;
 	if($seq_count > 10 ){
 		#need to generate representatives using PDA
-		my $rep_file = get_representatives_from_tree(
+		$rep_file = get_representatives_from_tree(
 			tree             => $fasttree_file,
 			target_directory => $target_dir,
 			cutoff           => $cutoff
