@@ -119,7 +119,7 @@ for(my $i=0;$i<scalar(@ARGV);$i++){
 		if(!-e $ARGV[$i+1]){
 			croak "Cannot read custom configuration file.\n Aborting\n";
 		}else{
-			$Phylosift::Settings::custom = $ARGV[$i+1];
+			$Phylosift::Settings::configuration = $ARGV[$i+1];
 		}
 	}
 }
