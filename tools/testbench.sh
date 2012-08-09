@@ -28,17 +28,18 @@ then
     # but file can be anywhere.  Change as needed so that script finds gi_taxid_nucl.bin
     
     # Runs MEGAN from command line
-    MEGAN +g -x "load gi2taxfile='/home/elowe/Testing/gi_taxid_nucl.bin'; import blastfile='$1' fastafile='$file' meganfile='$meganfile'; collapse rank=Species; select rank=Species; export what=CSV format=readname_taxonid separator=comma file='$output'; quit;" 
+    MEGAN +g -x "load gi2taxfile='/home/elowe/Testing/gi_taxid_nucl.bin'; import blastfile='$1' fastafile='$file' meganfile='$meganfile' maxmatches=100 minscore=35.0 toppercent=10.0 winscore=0.0 minsupport=5 mincomplexity=0.3 useseed=true usekegg=true useidentityfilter=false blastformat=BLASTTAB; open file='$meganfile'; collapse rank=Species; select rank=Species; export what=CSV format=readname_taxonid separator=comma file='/home/elowe/$output'; quit;" 
 else
-    MEGAN +g -x "load gi2taxfile='/home/elowe/Testing/gi_taxid_nucl.bin'; import blastfile='$1' fastafile='$2' meganfile='$meganfile'; collapse rank=Species; select rank=Species; export what=CSV format=readname_taxonid separator=comma file='$output'; quit;" 
+    MEGAN +g -x "load gi2taxfile='/home/elowe/Testing/gi_taxid_nucl.bin'; import blastfile='$1' fastafile='$2' meganfile='$meganfile' maxmatches=100 minscore=35.0 toppercent=10.0 winscore=0.0 minsupport=5 mincomplexity=0.3 useseed=true usekegg=true useidentityfilter=false blastformat=BLASTTAB; open file='$meganfile'; collapse rank=Species; select rank=Species; export what=CSV format=readname_taxonid separator=comma file='/home/elowe/$output'; quit;" 
 fi # end of if statement
 
 # Calls megan_to_ps.pl, which is a perl script (included in Phylosift/tools/) that converts
 # MEGAN output to be similar to Phylosift output so that Phylosift Benchmark can be used
 # to compare MEGAN to PS.  Output is saved to sequence_taxa.txt in appropriate dir in 
 # PS_temp. 
-megan_to_ps.pl $output > PS_temp/$dirname/sequence_taxa.txt 
-
+megan_to_ps.pl $output > PS_temp/$dirname/sequence_taxa.txt
+# removes unnecessary beginning newline  
+sed 's/^\n//' PS_temp/$dirname/sequence_taxa.txt
 # Runs Phylosift benchmark
 PhyloSift/bin/phylosift benchmark $2 ~/megan_test 
 
