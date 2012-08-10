@@ -1,5 +1,7 @@
-#!perl
-use strict; use warnings;
+#! /usr/bin/perl
+# Author: Eric Lowe
+use strict; 
+use warnings;
 
 use Test::More qw(no_plan);
 

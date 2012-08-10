@@ -458,7 +458,6 @@ sub merge_sequence_taxa {
 		%ncbi_summary = ();
 		%ncbi_summary = %all_summary;
 		krona_report( self => $self, file=>$self->{"fileName"}.".allmarkers.html" )if scalar(keys(%all_summary)) > 0;
-		`ln -s $Phylosift::Settings::file_dir/$self->{"fileName"}.html $Phylosift::Settings::file_dir/krona.html`;
 	}
 }
 
