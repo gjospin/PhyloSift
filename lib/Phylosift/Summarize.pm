@@ -447,7 +447,8 @@ sub merge_sequence_taxa {
 		last if $taxasum >= $totalreads * 0.9;
 	}
 	close($TAXAHPDOUT);
-
+	Phylosift::Utilities::end_timer( name => "runSummarize" );
+	Phylosift::Utilities::start_timer( name => "runKrona" );
 	#Need to move this to the merge summary function
 	unless ( $Phylosift::Settings::simple ) {
 
@@ -459,6 +460,7 @@ sub merge_sequence_taxa {
 		%ncbi_summary = %all_summary;
 		krona_report( self => $self, file=>$self->{"fileName"}.".allmarkers.html" )if scalar(keys(%all_summary)) > 0;
 	}
+	Phylosift::Utilities::end_timer( name => "runKrona" );
 }
 
 my $xml;

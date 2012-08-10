@@ -113,6 +113,8 @@ sub MarkerAlign {
 
 	# if we're chunking, feed the chunk to the next step
 	if ( defined($chunk) && $self->{"mode"} eq "all" ) {
+		Phylosift::Utilities::end_timer( name => "runAlign" );
+		Phylosift::Utilities::start_timer( name => "runPplacer" );
 		Phylosift::pplacer::pplacer( self => $self, marker_reference => $markersRef, chunk => $chunk );
 	}
 	return $self;
@@ -601,7 +603,6 @@ sub alignAndMask {
 				merge_alignment( self => $self, alignment_file => $outputFastaDNA, type => 'DNA' );
 			}
 		}
-
 		# get rid of the process IDs -- they break concatenation
 		if ( $Phylosift::Settings::isolate ) {
 			strip_trailing_ids( alignment_file => $outputFastaAA );
@@ -642,6 +643,7 @@ sub merge_alignment {
 	my $type     = $args{type};
 	my %seqs     = ();
 	my $seq_IO   = Phylosift::Utilities::open_SeqIO_object( file => $ali_file );
+	debug("Merging $ali_file\n");
 	while ( my $seq = $seq_IO->next_seq() ) {
 		$seq->id =~ m/^(\S+)_(\d+)$/;
 		my $core = $1;
@@ -674,7 +676,7 @@ sub merge_alignment {
 	}
 
 	#print to the alignment file
-	my $FH = ps_open( ">" . $ali_file );
+	my $FH = ps_open( ">" . $ali_file."_2" );
 	foreach my $core ( keys %seqs ) {
 		print $FH ">" . $core . "\n" . $seqs{$core} . "\n";
 	}

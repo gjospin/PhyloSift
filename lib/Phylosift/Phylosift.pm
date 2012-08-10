@@ -258,6 +258,7 @@ sub run {
 			reads       => $ARGV[3]
 		);
 	}
+	Phylosift::Utilities::end_timer( name => "START" );
 }
 
 sub run_later_stages {

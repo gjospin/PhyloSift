@@ -68,6 +68,8 @@ sub pplacer {
 		unlink("abracadabra") if $options =~ /abracadabra/;	# remove the mmap file created by pplacer
 	}
 	if ( defined($chunk) && $self->{"mode"} eq "all" ) {
+		Phylosift::Utilities::end_timer( name => "runPplacer" );
+		Phylosift::Utilities::start_timer( name => "runSummarize" );
 		Phylosift::Summarize::summarize( self => $self, marker_reference => $markRef , chunk=>$chunk  );
 	}
 }

@@ -133,7 +133,8 @@ sub run_search {
 	# fire up the next step!
 	# TODO: make this a call to a function "chunk_done" in main Phylosift module
 	# that starts the next step
-
+			Phylosift::Utilities::end_timer( name => "runBlast" );
+			Phylosift::Utilities::start_timer( name => "runAlign" );
 			Phylosift::MarkerAlign::MarkerAlign(
 				self             => $self,
 				marker_reference => $markersRef,
