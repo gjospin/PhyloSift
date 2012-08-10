@@ -119,6 +119,7 @@ sub compute_top_place_precision {
 		$all_positive++;
 
 		my @ancArrayRead = get_ancestor_array( tax_id=>$topReadScore{$readID}->[1] );
+		next unless @ancArrayRead > 0;
 		my @tt           = Phylosift::Summarize::get_taxon_info(taxon=>$true_taxon);
 		my @firstTaxon   = Phylosift::Summarize::get_taxon_info( taxon=>$ancArrayRead[0] );
 #		print "Read $readID assigned to $firstTaxon[0], true $tt[0]\n";
