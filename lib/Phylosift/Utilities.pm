@@ -1632,7 +1632,7 @@ sub gather_markers {
 		$marker_file = "$path/marker_list.txt" if -e "$path/marker_list.txt";
 	}
 
-	#create a file with a list of markers called markers.list
+	#create a file with a list of markers called markers_list.txt
 	if ( defined($marker_file) && -f $marker_file && $marker_file ne "" ) {
 		debug "Using a marker list file $marker_file\n";
 
@@ -1652,6 +1652,7 @@ sub gather_markers {
 		my @files = <$path/*.faa>;
 		foreach my $file (@files) {
 			$file =~ m/\/(\w+).faa/;
+			$marker_lookup{ get_marker_basename( marker => $1 ) } = $1;
 			push( @marks, $1 );
 		}
 

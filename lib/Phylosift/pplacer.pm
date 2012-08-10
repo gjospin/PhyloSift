@@ -263,7 +263,6 @@ sub make_submarker_placements{
 	
 	# filter the codon alignment into subalignments
 	my $codon_file = $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta( marker => $marker, dna=>1, chunk => $chunk );
-	debug "Trying to read from $codon_file\n";
 	my $alnio = Bio::AlignIO->new(-file => $codon_file );
 	my $codon_aln = $alnio->next_aln;
 	foreach my $group( keys(%groups)){

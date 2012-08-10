@@ -23,6 +23,8 @@ Version 0.01
 
 =cut
 our $VERSION = '0.01';
+my @search_types = ( "", ".lastal" );
+my @search_types_rna = ( "", ".lastal.rna", ".rna" );
 set_default_values();
 =head1 SYNOPSIS
 
@@ -74,6 +76,7 @@ sub MarkerAlign {
 	# produce a concatenate alignment for the base marker package
 	unless ( $Phylosift::Settings::extended ) {
 		my @markeralignments = getPMPROKMarkerAlignmentFiles( self => $self, chunk => $chunk );
+		
 		my $outputFastaAA = $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta( marker => "concat", chunk => $chunk );
 
 		#		Phylosift::Utilities::concatenate_alignments(
@@ -189,8 +192,7 @@ sub directoryPrepAndClean {
 	}
 	return $self;
 }
-my @search_types = ( "", ".lastal" );
-my @search_types_rna = ( "", ".lastal.rna", ".rna" );
+
 
 sub split_rna_on_size {
 	my %args      = @_;
@@ -436,6 +438,7 @@ sub alignAndMask {
 	my $self    = $args{self} || miss("self");
 	my $markRef = $args{marker_reference} || miss("marker_reference");
 	my $chunk   = $args{chunk};
+	
 	for ( my $index = 0 ; $index < @{$markRef} ; $index++ ) {
 		my $marker         = ${$markRef}[$index];
 		my $refcount       = 0;
@@ -643,7 +646,6 @@ sub merge_alignment {
 	my $type     = $args{type};
 	my %seqs     = ();
 	my $seq_IO   = Phylosift::Utilities::open_SeqIO_object( file => $ali_file );
-	debug("Merging $ali_file\n");
 	while ( my $seq = $seq_IO->next_seq() ) {
 		$seq->id =~ m/^(\S+)_(\d+)$/;
 		my $core = $1;

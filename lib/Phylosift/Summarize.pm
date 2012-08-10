@@ -187,7 +187,6 @@ sub summarize {
 				sub_marker => $sub_mark,
 				chunk      => $chunk
 			  );
-			debug "PLACEfile : $place_base\n";
 			my @place_files;
 			@place_files = glob($place_base)
 			  if $dna;    # need to glob on all submarkers if in DNA
