@@ -68,7 +68,7 @@ sub initialize {
 	$self->{"readsFile"}   = $readsFile;
 	$self->{"readsFile_2"} = $readsFile_2;
 
-	unless ( defined( $Phylosift::Settings::file_dir ) ) {
+	unless ( defined($Phylosift::Settings::file_dir) ) {
 		$Phylosift::Settings::file_dir =
 		  $self->{"workingDir"} . "/PS_temp/" . $self->{"fileName"};
 	}
@@ -131,6 +131,7 @@ if you don't export anything, such as for a purely object-oriented module.
     Runs the PhyloSift pipeline according to the functions passed as arguments
 
 =cut
+
 my $continue = 0;
 my ( $mode, $readsFile, $readsFile_2, $fileName, $fileDir, $blastDir, $alignDir,
 	$treeDir )
@@ -149,15 +150,16 @@ sub run {
 	debug "force : $force\n";
 	Phylosift::Utilities::print_citations();
 	start_timer( name => "START" );
+
 	#read_phylosift_config( self => $self );
 	run_program_check( self => $self );
 	Phylosift::Utilities::data_checks( self => $self )
 	  ;        # unless $self->{"mode"} eq 'sim';
 	file_check( self => $self )
 	  unless $self->{"mode"} eq 'index'
-		  || $self->{"mode"} eq 'sim'
-		  || $self->{"mode"} eq 'build_marker';
-	directory_prep( self => $self, force => $force , cont=>$continue)
+	  || $self->{"mode"}     eq 'sim'
+	  || $self->{"mode"}     eq 'build_marker';
+	directory_prep( self => $self, force => $force, cont => $continue )
 	  unless $self->{"mode"} eq 'index';
 	$self->{"readsFile"} =
 	  prep_isolate_files( self => $self, file => $self->{"readsFile"} )
@@ -169,7 +171,7 @@ sub run {
 		self        => $self,
 		marker_file => $custom
 	);
-	if ( $Phylosift::Settings::extended ) {
+	if ($Phylosift::Settings::extended) {
 		@markers = Phylosift::Utilities::gather_markers(
 			self => $self,
 			path => $Phylosift::Utilities::markers_extended_dir
@@ -177,10 +179,12 @@ sub run {
 	}
 
 	debug "MODE :: " . $self->{"mode"} . "\n";
-	#changed > to >> so that we append to that file every time a run is restarted and we can keep track if there was a change in DB or in command
-	#Also it prevents the file from being clobbered every time a run is restarted.
+
+#changed > to >> so that we append to that file every time a run is restarted and we can keep track if there was a change in DB or in command
+#Also it prevents the file from being clobbered every time a run is restarted.
 	if ( $self->{"mode"} eq 'search' || $self->{"mode"} eq 'all' ) {
-		my $RUNINFO = ps_open(
+		my $RUNINFO =
+		  ps_open(
 			">>" . Phylosift::Utilities::get_run_info_file( self => $self ) );
 		Phylosift::Summarize::print_run_info(
 			self   => $self,
@@ -194,17 +198,30 @@ sub run {
 	}
 	debug "MODE :: " . $self->{"mode"} . "\n";
 
-	if( defined($Phylosift::Settings::start_chunk) && defined($Phylosift::Settings::chunks)){
-		for(my $c=$Phylosift::Settings::start_chunk; $c < $Phylosift::Settings::start_chunk + $Phylosift::Settings::chunks; $c++){
-			run_later_stages(self   => $self,
+	if (   defined($Phylosift::Settings::start_chunk)
+		&& defined($Phylosift::Settings::chunks) )
+	{
+		for (
+			my $c = $Phylosift::Settings::start_chunk ;
+			$c <
+			$Phylosift::Settings::start_chunk + $Phylosift::Settings::chunks ;
+			$c++
+		  )
+		{
+			run_later_stages(
+				self   => $self,
 				cont   => $continue,
 				marker => \@markers,
-				chunk => $c);
+				chunk  => $c
+			);
 		}
-	}else{
-		run_later_stages(self   => $self,
+	}
+	else {
+		run_later_stages(
+			self   => $self,
 			cont   => $continue,
-			marker => \@markers);
+			marker => \@markers
+		);
 	}
 
 	#	if ( $self->{"mode"} eq 'summary' || $self->{"mode"} eq 'all' ) {
@@ -219,6 +236,7 @@ sub run {
 		@markers = Phylosift::Utilities::gather_markers(
 			self              => $self,
 			path              => $Phylosift::Settings::marker_dir,
+			force_gather      => 1,
 			allow_missing_hmm => 1
 		);
 		Phylosift::Utilities::index_marker_db(
@@ -227,19 +245,20 @@ sub run {
 			path    => $Phylosift::Settings::marker_dir
 		);
 		my @extended_markers = Phylosift::Utilities::gather_markers(
-			self              => $self,
-			path              => $Phylosift::Settings::markers_extended_dir,
+			self => $self,
+			path => $Phylosift::Settings::markers_extended_dir,
+			force_gather      => 1,
 			allow_missing_hmm => 1
 		  )
 		  if -d $Phylosift::Settings::markers_extended_dir
-			  && $Phylosift::Settings::extended;
+		  && $Phylosift::Settings::extended;
 		Phylosift::Utilities::index_marker_db(
 			self    => $self,
 			markers => \@extended_markers,
 			path    => $Phylosift::Settings::markers_extended_dir
 		  )
 		  if -d $Phylosift::Settings::markers_extended_dir
-			  && $Phylosift::Settings::extended;
+		  && $Phylosift::Settings::extended;
 	}
 	if ( $self->{"mode"} eq 'build_marker' ) {
 		Phylosift::MarkerBuild::build_marker(
@@ -262,17 +281,17 @@ sub run {
 }
 
 sub run_later_stages {
-	my %args = @_;		
+	my %args = @_;
 	my $self = $args{self} || miss("self");
 	if ( $self->{"mode"} eq 'align' ) {
 		$self = run_marker_align(@_);
-	}		
+	}
 	if ( $self->{"mode"} eq 'placer' ) {
-		$self = run_pplacer( @_ );
+		$self = run_pplacer(@_);
 	}
 	if ( $self->{"mode"} eq 'summary' ) {
 		$self = taxonomy_assignments(@_);
-	}	
+	}
 }
 
 =head2 read_phylosift_config
@@ -301,8 +320,9 @@ sub read_phylosift_config {
 		do "$ENV{HOME}/.phylosiftrc";
 		do $custom_config if defined $custom_config;
 	}
+
 	#apply the command line parameters to override the RC files
-	
+
 	return $self;
 }
 
@@ -376,10 +396,11 @@ and isolate names in memory and using that at later stages of the pipeline
 =cut
 
 sub prep_isolate_files {
-	my %args        = @_;
-	my $self        = $args{self} || miss("self");
-	my $file        = $args{file} || miss("file");
-	my $OUTFILE     = ps_open( ">" . $Phylosift::Settings::file_dir . "/isolates.fasta" );
+	my %args    = @_;
+	my $self    = $args{self} || miss("self");
+	my $file    = $args{file} || miss("file");
+	my $OUTFILE =
+	  ps_open( ">" . $Phylosift::Settings::file_dir . "/isolates.fasta" );
 	my $ISOLATEFILE = ps_open($file);
 	debug "Operating on isolate file $file\n";
 	print $OUTFILE ">" . basename($file) . "\n";
@@ -400,10 +421,11 @@ sub prep_isolate_files {
 =cut
 
 sub directory_prep {
-	my %args  = @_;
-	my $self  = $args{self} || miss("self");
-	my $force = $args{force};
+	my %args     = @_;
+	my $self     = $args{self} || miss("self");
+	my $force    = $args{force};
 	my $continue = $args{cont};
+
 	#    print "FORCE DIRPREP   $force\t mode   ".$self->{"mode"}."\n";
 	#    exit;
 	#remove the directory from a previous run
@@ -420,12 +442,14 @@ sub directory_prep {
 				  . ", or force overwrite with the -f command-line option\n" );
 		}
 		else {
-			debug "Found directory already existing, continuing a previous run\n";
+			debug
+			  "Found directory already existing, continuing a previous run\n";
 		}
 	}
 
 	#create a directory for the Reads file being processed.
-	`mkdir -p "$Phylosift::Settings::file_dir"`  unless ( -e $Phylosift::Settings::file_dir );
+	`mkdir -p "$Phylosift::Settings::file_dir"`
+	  unless ( -e $Phylosift::Settings::file_dir );
 	`mkdir -p "$self->{"blastDir"}"` unless ( -e $self->{"blastDir"} );
 	`mkdir -p "$self->{"alignDir"}"` unless ( -e $self->{"alignDir"} );
 	`mkdir -p "$self->{"treeDir"}"`  unless ( -e $self->{"treeDir"} );
@@ -448,7 +472,7 @@ sub taxonomy_assignments {
 	Phylosift::Summarize::summarize(
 		self             => $self,
 		marker_reference => $markListRef,
-		chunk => $chunk
+		chunk            => $chunk
 	);
 	Phylosift::Utilities::end_timer( name => "taxonomy assignments" );
 	return $self;
@@ -513,7 +537,7 @@ sub run_marker_align {
 	my $self     = $args{self} || miss("self");
 	my $continue = $args{cont} || 0;
 	my $markRef  = $args{marker} || miss("marker");
-	my $chunk       = $args{chunk};
+	my $chunk    = $args{chunk};
 	Phylosift::Utilities::start_timer( name => "Alignments" );
 
 	#clearing the alignment directory if needed
