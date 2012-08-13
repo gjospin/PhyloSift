@@ -100,9 +100,9 @@ sub MarkerAlign {
 		);
 
 		# produce a concatenate with 16s + DNA alignments
-		push( @markeralignments, $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta( marker => "16s_reps_bac", chunk => $chunk ) );
-		push( @markeralignments, $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta( marker => "16s_reps_arc", chunk => $chunk ) );
-		push( @markeralignments, $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta( marker => "18s_reps",     chunk => $chunk ) );
+		push( @markeralignments, $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta( marker => "16s_reps_bac", chunk => $chunk ) ) if -e $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta( marker => "16s_reps_bac", chunk => $chunk );
+		push( @markeralignments, $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta( marker => "16s_reps_arc", chunk => $chunk ) ) if -e $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta( marker => "16s_reps_arc", chunk => $chunk );
+		push( @markeralignments, $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta( marker => "18s_reps",     chunk => $chunk ) ) if -e $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta( marker => "18s_reps", chunk => $chunk );
 		$output_fasta_DNA = $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta( marker => "concat16", dna => 1, chunk => $chunk );
 		concatenate_alignments(
 								self           => $self,
