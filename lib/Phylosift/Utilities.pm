@@ -817,9 +817,9 @@ sub is_protein_marker {
 	my $bname       = get_marker_basename( marker => $marker );
 
 	# only protein markers have HMMs
+	return 0 if ( -e "$marker_path/$marker/$bname.cm" );
 	return 1 if ( -e "$marker_path/$marker/$bname.hmm" );
 	return 1 if ( -e "$marker_path/$bname.hmm" );
-	return 0 if ( -e "$marker_path/$marker/$bname.cm" );
 	return 1;
 }
 
