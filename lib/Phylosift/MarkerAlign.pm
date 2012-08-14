@@ -413,17 +413,17 @@ sub alignAndMask {
 		my $stockholm_file = Phylosift::Utilities::get_marker_stockholm_file( self => $self, marker => $marker );
 		my $hmmalign       = "";
 		my @lines;
+		my $hmm_file = Phylosift::Utilities::get_marker_hmm_file( self => $self, marker => $marker, loc => 1 );
+		my $HMM = ps_open($hmm_file);
+		while ( my $line = <$HMM> ) {
+			if ( $line =~ /NSEQ\s+(\d+)/ ) {
+				$refcount = $1;
+				last;
+			}
+		}
 		if ( Phylosift::Utilities::is_protein_marker( marker => $marker ) ) {
 			my $new_candidate = Phylosift::Utilities::get_candidate_file( self => $self, marker => $marker, type => "", new => 1, chunk => $chunk );
 			next unless -e $new_candidate && -s $new_candidate > 0;
-			my $hmm_file = Phylosift::Utilities::get_marker_hmm_file( self => $self, marker => $marker, loc => 1 );
-			my $HMM = ps_open($hmm_file);
-			while ( my $line = <$HMM> ) {
-				if ( $line =~ /NSEQ\s+(\d+)/ ) {
-					$refcount = $1;
-					last;
-				}
-			}
 
 			# Align the hits to the reference alignment using Hmmer3
 			# pipe in the aligned sequences, trim them further, and write them back out
@@ -440,6 +440,7 @@ sub alignAndMask {
 			# use tau=1e-6 instead of default 1e-7 to reduce memory consumption to under 4GB
 			my $fasta = "";
 			if ( -e $candidate_long ) {
+				$refcount = 0;
 				my $cmalign =
 				    "$Phylosift::Utilities::cmalign -q --dna --mxsize 2500 --tau 1e-6 "
 				  . Phylosift::Utilities::get_marker_cm_file( self => $self, marker => $marker )
@@ -447,17 +448,23 @@ sub alignAndMask {
 				debug "Running $cmalign\n";
 				my $CMALIGN = ps_open($cmalign);
 				$fasta .= Phylosift::Utilities::stockholm2fasta( in => $CMALIGN );
+				@lines = split( /\n/, $fasta );
 			}
 			if ( -e $candidate_short ) {
-				my $cmalign =
-				    "$Phylosift::Utilities::cmalign -q -l --dna --mxsize 2500 --tau 1e-20 "
-				  . Phylosift::Utilities::get_marker_cm_file( self => $self, marker => $marker )
-				  . " $candidate_short | ";
-				debug "Running $cmalign\n";
-				my $CMALIGN = ps_open($cmalign);
-				$fasta .= Phylosift::Utilities::stockholm2fasta( in => $CMALIGN );
+				my $hmm_file = Phylosift::Utilities::get_marker_hmm_file( self => $self, marker => $marker, loc => 1 );
+				$hmmalign = "$Phylosift::Utilities::hmmalign --outformat afa --mapali " . $stockholm_file . " $hmm_file \"$candidate_short\" |";
+				debug "Running $hmmalign\n";
+				my $HMMALIGN = ps_open($hmmalign);
+				@lines = <$HMMALIGN>;
+
+#				my $cmalign =
+#				    "$Phylosift::Utilities::cmalign -q -l --dna --mxsize 2500 --tau 1e-20 "
+#				  . Phylosift::Utilities::get_marker_cm_file( self => $self, marker => $marker )
+#				  . " $candidate_short | ";
+#				debug "Running $cmalign\n";
+#				my $CMALIGN = ps_open($cmalign);
+#				$fasta .= Phylosift::Utilities::stockholm2fasta( in => $CMALIGN );
 			}
-			@lines = split( /\n/, $fasta );
 			next if @lines == 0;
 		}
 		my $mbname = Phylosift::Utilities::get_marker_basename( marker => $marker );
