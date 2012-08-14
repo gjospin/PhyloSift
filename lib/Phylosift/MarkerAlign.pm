@@ -647,8 +647,13 @@ sub merge_alignment {
 	my %seqs     = ();
 	my $seq_IO   = Phylosift::Utilities::open_SeqIO_object( file => $ali_file );
 	while ( my $seq = $seq_IO->next_seq() ) {
-		$seq->id =~ m/^(\S+)_(\d+)$/;
-		my $core = $1;
+	    my $core = "";
+	    if($seq->id =~ m/^(\S+)_(\d+)$/){
+		$core = $1;
+	    }else{
+		$seq->id =~ m/^(\S+)/;
+		$core = $1;
+	    }
 		$self->{"read_names"}{$core} = () if ( !exists $self->{"read_names"}{$core} );
 		push( @{ ${ $self->{"read_names"} }{$core} }, $self->{"read_names"}{ $seq->id }[0] )
 		  unless defined( @{ ${ $self->{"read_names"} }{$core} } ) && scalar( @{ ${ $self->{"read_names"} }{$core} } == 2 ); #both pairs have been added already
