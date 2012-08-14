@@ -18,19 +18,26 @@ dirname=`basename $2` # PS_temp directory name to look in for megan_to_ps.pl
 meganfile=`date +%m%d%y`_out.rma # MEGAN run output script named with date
 ext=`echo $2 | sed 's/.*\.//'` # Gets file extension, for checking if .fastq or .fa
 test='fastq' # variable for testing file extension
+# fasta file to use; note that sim_data1 is where my file is located, can be changed as needed
+# .fa file is required in the directory for script to run properly
+file=sim_data1/`basename $2 .fastq`.fa  
+
+if [ -e $meganfile ] ; # if MEGAN has been ran today, do less work
+then
+    echo -e "open file='$meganfile'\ncollapse rank=Species\nselect rank=Species\nexport what=CSV format=readname_taxonid separator=comma file='/home/elowe/$output'\nquit" > /home/elowe/meg_input.txt
+else # MEGAN has not been run today, do long run
+    echo -e "load gi2taxfile='/home/elowe/Testing/gi_taxid_nucl.bin'\nimport blastfile='$1' fastafile='$file' meganfile='$meganfile'\ncollapse rank=Species\nselect rank=Species\nexport what=CSV format=readname_taxonid separator=comma file='/home/elowe/$output'\nquit" > /home/elowe/meg_input.txt 
+fi # end of if statement
 
 if [ $ext == $test ] ; # if file extension is .fastq
 then
-    # fasta file to use; note that sim_data1 is where my file is located, can be changed as needed
-    # .fa file is required in the directory for script to run properly
-    file=sim_data1/`basename $2 .fastq`.fa  
     # gi_to_taxid lookup file must be supplied for proper usage.  Mine is located in /home/elowe/Testing
     # but file can be anywhere.  Change as needed so that script finds gi_taxid_nucl.bin
     
     # Runs MEGAN from command line
-    MEGAN +g -x "load gi2taxfile='/home/elowe/Testing/gi_taxid_nucl.bin'; import blastfile='$1' fastafile='$file' meganfile='$meganfile' maxmatches=100 minscore=35.0 toppercent=10.0 winscore=0.0 minsupport=5 mincomplexity=0.3 useseed=true usekegg=true useidentityfilter=false blastformat=BLASTTAB; open file='$meganfile'; collapse rank=Species; select rank=Species; export what=CSV format=readname_taxonid separator=comma file='/home/elowe/$output'; quit;" 
+    MEGAN +g < meg_input.txt 
 else
-    MEGAN +g -x "load gi2taxfile='/home/elowe/Testing/gi_taxid_nucl.bin'; import blastfile='$1' fastafile='$2' meganfile='$meganfile' maxmatches=100 minscore=35.0 toppercent=10.0 winscore=0.0 minsupport=5 mincomplexity=0.3 useseed=true usekegg=true useidentityfilter=false blastformat=BLASTTAB; open file='$meganfile'; collapse rank=Species; select rank=Species; export what=CSV format=readname_taxonid separator=comma file='/home/elowe/$output'; quit;" 
+    MEGAN +g < meg_input.txt
 fi # end of if statement
 
 # Calls megan_to_ps.pl, which is a perl script (included in Phylosift/tools/) that converts
