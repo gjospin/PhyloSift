@@ -5,14 +5,13 @@
 use strict;
 use warnings;
 
-use Test::More tests => 3;
+use Test::More tests => 2;
 
 BEGIN { use_ok( 'Phylosift::Settings' ); }
-require_ok('Phylosift::Settings');
 
 my $testParam;
 my $expected = 5;
 # should set default value of "parameter" to 5
-set_default(parameter=>\$testParam, value=>5);
+Phylosift::Settings::set_default(parameter=>\$testParam, value=>5);
 # tests if parameter is 5 by cmp_ok test
 cmp_ok($testParam, '==', $expected, 'value == 5');
