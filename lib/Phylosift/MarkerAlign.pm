@@ -647,7 +647,6 @@ sub merge_alignment {
 	my %seqs     = ();
 	my $seq_IO   = Phylosift::Utilities::open_SeqIO_object( file => $ali_file );
 	while ( my $seq = $seq_IO->next_seq() ) {
-	    debug "Looking at ".$seq->id."\n";
 		$seq->id =~ m/^(\S+)_(\d+)$/;
 		my $core = $1;
 		$self->{"read_names"}{$core} = () if ( !exists $self->{"read_names"}{$core} );

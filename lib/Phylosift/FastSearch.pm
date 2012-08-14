@@ -458,6 +458,20 @@ sub demux_sequences {
 				if($id1 eq $id2){
 					$lines1[0] =~ s/^(\S+)/$1\/1/g;
 					$lines2[0] =~ s/^(\S+)/$1\/2/g;
+				}elsif($id1 =~ m/\/(\d)$/ && $id2 !~ m/\/\d$/){
+                                    my $ending = $1;
+                                    if($ending ==1){
+                                        $lines2[0] =~ s/^(\S+)/$1\/2/g;
+                                    }elsif($ending ==2){
+                                        $lines2[0] =~ s/^(\S+)/$1\/1/g;
+                                    }
+                                }elsif($id1 !~ m/\/\d$/ && $id2 =~ m/\/(\d)$/ ){
+				    my $ending = $1;
+				    if($ending ==1){
+					$lines1[0] =~ s/^(\S+)/$1\/2/g;
+				    }elsif($ending ==2){
+					$lines1[0] =~ s/^(\S+)/$1\/1/g;
+				    }
 				}
 			}
 
