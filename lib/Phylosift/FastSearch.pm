@@ -1126,7 +1126,7 @@ sub write_candidates {
 			$markerHits{$markerHit} .= ">" . $new_id . "\n" . $new_seq . "\n";
 		}
 	}
-	debug "Got " . scalar( keys %markerHits ) . " hits\n";
+	debug "$type Got " . scalar( keys %markerHits ) . " markers with hits\n";
 
 	#write the read+ref_seqs for each markers in the list
 	foreach my $marker ( keys %markerHits ) {

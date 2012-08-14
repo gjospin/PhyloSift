@@ -467,9 +467,11 @@ sub name_taxa_in_jplace {
 		next unless defined($taxonmap->{$edge_id});
 		my $node_name="";
 		foreach my $tid(@{$taxonmap->{$edge_id}}){
+			#debug "TID: $tid\t";
 			my @data = Phylosift::Summarize::get_taxon_info( taxon => $tid );
-			my $ncbi_name = Phylosift::Summarize::tree_name( name => $data[0] );
-			$node_name .= "_$ncbi_name"."_";
+			#debug "$data[0]\n";
+			my $ncbi_name = Phylosift::Summarize::tree_name( name => $data[0] ) ;
+			$node_name .= "_$ncbi_name"."_" if defined $ncbi_name;
 		}
 		$node->set_name($node_name);
 	}
