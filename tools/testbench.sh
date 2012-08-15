@@ -13,8 +13,8 @@
 [ $# -ne 2 ] && { echo "usage: testbench.sh [blastfile] [fastafile]" ; exit 1; }
 
 # Declaration of file variables needed for I/O and usage
-output=`date +%m%d%y`.csv # MEGAN output .csv file with read ids and tax ids
 dirname=`basename $2` # PS_temp directory name to look in for megan_to_ps.pl
+output=$dirname.`date +%m%d%y`.csv # MEGAN output .csv file with read ids and tax ids
 meganfile=`date +%m%d%y`_out.rma # MEGAN run output script named with date
 ext=`echo $2 | sed 's/.*\.//'` # Gets file extension, for checking if .fastq or .fa
 test='fastq' # variable for testing file extension
