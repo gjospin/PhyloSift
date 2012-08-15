@@ -1383,11 +1383,16 @@ sub index_marker_db {
 	foreach my $marker (@markers) {
 		my $hmm_file = get_marker_hmm_file( self => $args{self}, marker => $marker );
 		next if -e $hmm_file;
-		my $cm_file = get_marker_cm_file( self => $args{self}, marker => $marker );
-		next if -e $cm_file;
-		my $stk_file = get_marker_stockholm_file( self => $args{self}, marker => $marker );
-		`$hmmbuild "$hmm_file" "$stk_file"`;
+		build_hmm(marker=>$marker);
 	}
+}
+
+sub build_hmm {
+	my %args        = @_;
+	my $marker = $args{marker} || miss("marker");	
+	my $hmm_file = get_marker_hmm_file( self => $args{self}, marker => $marker );
+	my $stk_file = get_marker_stockholm_file( self => $args{self}, marker => $marker );
+	`$hmmbuild "$hmm_file" "$stk_file"`;
 }
 
 =head2 gather_markers

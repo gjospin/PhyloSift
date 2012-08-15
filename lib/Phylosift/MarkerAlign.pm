@@ -414,6 +414,7 @@ sub alignAndMask {
 		my $hmmalign       = "";
 		my @lines;
 		my $hmm_file = Phylosift::Utilities::get_marker_hmm_file( self => $self, marker => $marker, loc => 1 );
+		Phylosift::Utilities::build_hmm(marker=>$marker) unless -e $hmm_file;
 		my $HMM = ps_open($hmm_file);
 		while ( my $line = <$HMM> ) {
 			if ( $line =~ /NSEQ\s+(\d+)/ ) {
@@ -456,14 +457,6 @@ sub alignAndMask {
 				debug "Running $hmmalign\n";
 				my $HMMALIGN = ps_open($hmmalign);
 				@lines = <$HMMALIGN>;
-
-#				my $cmalign =
-#				    "$Phylosift::Utilities::cmalign -q -l --dna --mxsize 2500 --tau 1e-20 "
-#				  . Phylosift::Utilities::get_marker_cm_file( self => $self, marker => $marker )
-#				  . " $candidate_short | ";
-#				debug "Running $cmalign\n";
-#				my $CMALIGN = ps_open($cmalign);
-#				$fasta .= Phylosift::Utilities::stockholm2fasta( in => $CMALIGN );
 			}
 			next if @lines == 0;
 		}
