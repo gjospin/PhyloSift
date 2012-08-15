@@ -45,7 +45,7 @@ fi # end of if statement
 # PS_temp. 
 megan_to_ps.pl $output > PS_temp/$dirname/sequence_taxa.txt
 # removes unnecessary beginning newline  
-sed 's/^\n//' PS_temp/$dirname/sequence_taxa.txt > PS_temp/$dirname/sequence_taxa.txt
+sed -i 's/^\n//' PS_temp/$dirname/sequence_taxa.txt
 # Runs Phylosift benchmark
 PhyloSift/bin/phylosift benchmark $2 ~/megan_test 
 
