@@ -113,7 +113,7 @@ sub MarkerAlign {
 		);
 		debug "AFTER concatenateALI\n";
 	}
-
+	compute_hits_summary(self=>$self, chunk=>$chunk);
 	# if we're chunking, feed the chunk to the next step
 	if ( defined($chunk) && $self->{"mode"} eq "all" ) {
 		Phylosift::Utilities::end_timer( name => "runAlign" );
@@ -122,6 +122,31 @@ sub MarkerAlign {
 	}
 	return $self;
 }
+
+=head2 compute_hits_summary
+
+	reads all candidate files and compiles hit numbers for each marker
+
+=cut
+sub compute_hits_summary{
+	my %args = @_;
+	my $chunk = $args{chunk} || miss("chunk");
+	my $self = $args{self} || miss("PS Object");
+	my $marker_hits_numbers_ref = Phylosift::Utilities::read_marker_summary(self => $self, path => $self->{"alignDir"} ) ;
+	my %marker_hits_numbers = %{$marker_hits_numbers_ref};
+	my @candidates = glob($self->{"alignDir"}. "/*.updated.$chunk.fasta");
+	foreach my $cand_file (@candidates){
+		next if $cand_file =~ m/codon/;
+		my $grep_cmd = "grep '>' -c $cand_file";
+		$cand_file =~ m/alignDir\/([^\.]+)/;
+		my $grep_results = `$grep_cmd`;
+		chomp($grep_results);
+		$marker_hits_numbers{$1} = 0 unless exists $marker_hits_numbers{$1};
+		$marker_hits_numbers{$1} += $grep_results;
+	}
+	Phylosift::Utilities::print_marker_summary(self => $self, path => $self->{"alignDir"}, summary=>\%marker_hits_numbers ) ;
+}
+
 
 =head2 set_default_values
 

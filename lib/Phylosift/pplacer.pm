@@ -470,7 +470,7 @@ sub name_taxa_in_jplace {
 			#debug "TID: $tid\t";
 			my @data = Phylosift::Summarize::get_taxon_info( taxon => $tid );
 			#debug "$data[0]\n";
-			next unless defined @data;
+			next unless defined $data[0];
 			my $ncbi_name = Phylosift::Summarize::tree_name( name => $data[0] ) ;
 			$node_name .= "_$ncbi_name"."_" if defined $ncbi_name;
 		}

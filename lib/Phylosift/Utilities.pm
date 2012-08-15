@@ -258,6 +258,51 @@ sub programChecks {
 	return 0;
 }
 
+=head2 read_marker_summary
+
+reads the marker_summary file from a specific directory
+
+=cut
+
+sub read_marker_summary{
+	my %args = @_;
+	my $self = $args{self} || miss("PS object");
+	my $directory = $args{path} || miss("marker_summary Path");
+	my %return_hash = ();
+	return \%return_hash unless -e "$directory/marker_summary.txt";
+	my $IN = ps_open($directory."/marker_summary.txt");
+	my $header = <$IN>; #read header line
+	while(<$IN>){
+		chomp($_);
+		my @line = split(/\t/,$_);
+		next if $line[0] eq 'total';
+		$return_hash{$line[0]} = $line[1];
+	}
+	return \%return_hash;
+}
+
+=head2 print_marker_summary
+
+reads the marker_summary file from a specific directory
+
+=cut
+
+sub print_marker_summary{
+	my %args = @_;
+	my $self = $args{self}|| miss("PS object");
+	my $dir = $args{path} || miss("marker_summary path");
+	my $summary_ref = $args{summary} || miss("Summary hash");
+	my $OUT = ps_open(">".$dir."/marker_summary.txt");
+	my %summary = %{$summary_ref};
+	my $total = 0;
+	foreach my $marker (sort keys %summary){
+		print $OUT $marker."\t".$summary{$marker}."\n" if $summary{$marker} > 0;
+		$total += $summary{$marker} unless $marker eq 'concat';
+	}
+	print $OUT "total\t$total\n";
+	close($OUT);
+}
+
 =head2 dataChecks
 
 Check for requisite PhyloSift marker datasets
