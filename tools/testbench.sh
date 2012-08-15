@@ -13,9 +13,9 @@
 [ $# -ne 2 ] && { echo "usage: testbench.sh [blastfile] [fastafile]" ; exit 1; }
 
 # Declaration of file variables needed for I/O and usage
-output=`date +%m%d%y`.csv # MEGAN output .csv file with read ids and tax ids
 dirname=`basename $2` # PS_temp directory name to look in for megan_to_ps.pl
-meganfile=`date +%m%d%y`_out.rma # MEGAN run output script named with date
+output=$dirname.`date +%m%d%y`.csv # MEGAN output .csv file with read ids and tax ids
+meganfile=$dirname.`date +%m%d%y`_out.rma # MEGAN run output script named with date
 ext=`echo $2 | sed 's/.*\.//'` # Gets file extension, for checking if .fastq or .fa
 test='fastq' # variable for testing file extension
 # fasta file to use; note that sim_data1 is where my file is located, can be changed as needed
@@ -45,7 +45,7 @@ fi # end of if statement
 # PS_temp. 
 megan_to_ps.pl $output > PS_temp/$dirname/sequence_taxa.txt
 # removes unnecessary beginning newline  
-sed 's/^\n//' PS_temp/$dirname/sequence_taxa.txt > PS_temp/$dirname/sequence_taxa.txt
+sed -i 's/^\n//' PS_temp/$dirname/sequence_taxa.txt
 # Runs Phylosift benchmark
 PhyloSift/bin/phylosift benchmark $2 ~/megan_test 
 
