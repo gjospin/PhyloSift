@@ -387,6 +387,9 @@ sub merge_sequence_taxa {
 	my %all_summary;
 	my %concat_summary;
 	my %unclassifiable;    # {sequenceID}=mass
+	my $unclass_total          = 0;
+	my %marker_number_hits     = ();
+	my %unclassifiable_markers = ();
 
 	foreach my $taxa_file (@taxa_files) {
 
@@ -403,6 +406,9 @@ sub merge_sequence_taxa {
 			my $marker_name  = $line[5];
 			if ( $taxon_id eq "Unknown" ) {
 				$unclassifiable{$read_id} = $prob;
+				for ( my $i = 5 ; $i < @line ; $i++ ) {
+					$unclassifiable_markers{$read_id}{ $line[$i] } = 1;
+				}
 			}
 			else {
 				$placements{$read_id}{$taxon_id} = $prob;
@@ -427,19 +433,56 @@ sub merge_sequence_taxa {
 				$concat_summary{$taxon_id} += $readsummary->{$taxon_id};
 			}
 		}
+
+		#gathering hit numbers per markers
+		foreach my $rid ( keys %unclassifiable_markers ) {
+			foreach my $mname ( keys %{ $unclassifiable_markers{$rid} } ) {
+				if ( exists $marker_number_hits{$mname} ) {
+					$marker_number_hits{$mname}++;
+				}
+				else {
+					$marker_number_hits{$mname} = 1;
+				}
+			}
+		}
+		foreach my $rid ( keys %placement_markers ) {
+			foreach my $mname ( keys %{ $placement_markers{$rid} } ) {
+				if ( exists $marker_number_hits{$mname} ) {
+					$marker_number_hits{$mname}++;
+				}
+				else {
+					$marker_number_hits{$mname} = 1;
+				}
+			}
+		}
+
+		# write unclassifiable
+
+		foreach my $u ( values(%unclassifiable) ) {
+			$unclass_total += $u;
+		}
+
 		close($TAXAIN);
-		%placements=();
-		%placement_markers=();
+		%placements             = ();
+		%placement_markers      = ();
+		%unclassifiable         = ();
+		%unclassifiable_markers = ();
 	}
 
+
+	my $MARKER_HITS =
+	  ps_open( ">" . $Phylosift::Settings::file_dir . "/marker_summary.txt" );
+	print $MARKER_HITS "Marker_name\tNumber of hits\n";
+	foreach my $mname (
+		sort { $marker_number_hits{$b} <=> $marker_number_hits{a} }
+		keys %marker_number_hits
+	  )
+	{
+		print $MARKER_HITS "$mname\t$marker_number_hits{$mname}\n";
+	}
+	close($MARKER_HITS);
 	my $TAXAOUT =
 	  ps_open( ">" . $Phylosift::Settings::file_dir . "/taxasummary.txt" );
-
-	# write unclassifiable
-	my $unclass_total = 0;
-	foreach my $u ( values(%unclassifiable) ) {
-		$unclass_total += $u;
-	}
 
 	# sort rest of taxa by descending abundance order
 	print $TAXAOUT "Unclassifiable\tUnknown\tUnknown\t$unclass_total\n";
