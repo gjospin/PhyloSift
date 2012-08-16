@@ -26,17 +26,18 @@ if [ -e $meganfile ] ; # if MEGAN has been ran today, do less work
 then
     echo -e "open file='$meganfile'\ncollapse rank=Species\nselect rank=Species\nexport what=CSV format=readname_taxonid separator=comma file='/home/elowe/$output'\nquit" > /home/elowe/meg_input.txt
 else # MEGAN has not been run today, do long run
-    # gi_to_taxid lookup file must be supplied for proper usage.  Mine is located in /home/elowe/Testing
-    # but file can be anywhere.  Change as needed so that script finds gi_taxid_nucl.bin
     echo -e "load gi2taxfile='/home/elowe/Testing/gi_taxid_nucl.bin'\nimport blastfile='$1' fastafile='$file' meganfile='$meganfile'\ncollapse rank=Species\nselect rank=Species\nexport what=CSV format=readname_taxonid separator=comma file='/home/elowe/$output'\nquit" > /home/elowe/meg_input.txt 
 fi # end of if statement
 
 if [ $ext == $test ] ; # if file extension is .fastq
 then
+    # gi_to_taxid lookup file must be supplied for proper usage.  Mine is located in /home/elowe/Testing
+    # but file can be anywhere.  Change as needed so that script finds gi_taxid_nucl.bin
+    
     # Runs MEGAN from command line
-    MEGAN +g < meg_input.txt 
+    MEGAN +g < meg_input.txt &&
 else
-    MEGAN +g < meg_input.txt
+    MEGAN +g < meg_input.txt &&
 fi # end of if statement
 
 # Calls megan_to_ps.pl, which is a perl script (included in Phylosift/tools/) that converts
@@ -47,6 +48,6 @@ megan_to_ps.pl $output > PS_temp/$dirname/sequence_taxa.txt
 # removes unnecessary beginning newline  
 sed -i 's/^\n//' PS_temp/$dirname/sequence_taxa.txt
 # Runs Phylosift benchmark
-PhyloSift/bin/phylosift benchmark $2 ~/megan_test 
+phylosift benchmark $2 ~/megan_test 
 
 # End of script
