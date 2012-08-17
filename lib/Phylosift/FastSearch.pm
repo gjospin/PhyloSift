@@ -57,6 +57,7 @@ my $align_fraction = $Phylosift::Settings::align_fraction;
   # at least this amount of min[length(query),length(marker)] must align to be considered a hit
 my $align_fraction_isolate = $Phylosift::Settings::align_fraction_isolate;
   # use this align_fraction when in isolate mode on long sequences
+my $quality_threshold = $Phylosift::Settings::quality_threshold;
 my %markers;
 my %markerNuc = ();
 my %markerLength;
@@ -196,6 +197,7 @@ sub set_default_values{
 	Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::best_hits_bit_score_range,value=>30);
 	Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::align_fraction,value=>0.5);
 	Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::align_fraction_isolate,value=>0.8);
+	Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::quality_threshold,value=>20);
 }
 
 =head2 clean_search_directory
@@ -402,6 +404,7 @@ sub launch_searches {
 		FILE1         => $FILE1,
 		FILE2         => $FILE2,
 		reads_pipe    => $READS_PIPE,
+		readtype      => $readtype,
 		chunk => $chunk,
 		self=>$self,
 	);
@@ -440,6 +443,7 @@ sub demux_sequences {
 	my $F1IN                 = $args{FILE1};
 	my $F2IN                 = $args{FILE2};
 	my $paired               = $Phylosift::Settings::paired;
+	my $readtype             = $args{readtype};
 	my @lines1;
 	my @lines2;
 
@@ -499,6 +503,10 @@ sub demux_sequences {
 				    }
 				}
 			}
+			
+			# quality trim the read(s)
+			qtrim_read(read=>\@lines1, quality=>$quality_threshold, readtype=>$readtype);
+			qtrim_read(read=>\@lines2, quality=>$quality_threshold, readtype=>$readtype) if defined($lines2[0]);
 
 			# send the reads to bowtie
 			print $BOWTIE2_PIPE1 @lines1 unless $completed_chunk;
@@ -611,6 +619,57 @@ sub demux_sequences {
 	# return 1 if we've processed all the data, zero otherwise
 	return 0 if defined( $lines1[0] );
 	return 1;
+}
+
+
+=head2 qtrim_read
+
+trims a fastq read to a particular quality score using Heng Li's algorithm from bwa.
+code based on SGA's implementation.
+
+=cut
+
+sub qtrim_read {
+	my %args = @_;
+	my $read = $args{read};	
+	my $q = $args{quality};	
+	my $readtype = $args{readtype};	
+
+	$q += 33 if $readtype->{qtype} eq "phred33";
+	$q += 64 if $readtype->{qtype} eq "phred64";
+
+	# Perform a soft-clipping of the sequence by removing low quality bases from the 
+	# 3' end using Heng Li's algorithm from bwa
+
+	my $seq = @$read[1];
+	chomp $seq;
+	my $qq = @$read[3];
+	chomp $qq;
+	my @qual = split(//, $qq);
+    my $endpoint = 0; # not inclusive
+    my $max = 0;
+    my $i = length($seq) - 1;
+    my $terminalScore = ord($qual[$i]);
+    # Only perform soft-clipping if the last base has qual less than $q
+	return if($terminalScore >= $q);
+
+	my $subSum = 0;
+    while($i >= 0)
+    {
+        my $ps = ord($qual[$i]);
+        my $score = $q - $ps;
+        $subSum += $score;
+        if($subSum > $max)
+        {
+            $max = $subSum;
+            $endpoint = $i;
+        }
+        $i--;
+    }
+
+    # Clip the read
+    @$read[1] = substr($seq, 0, $endpoint)."\n";
+    @$read[3] = substr(@$read[3], 0, $endpoint)."\n";
 }
 
 sub read_marker_lengths {
