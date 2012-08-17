@@ -68,6 +68,8 @@ sub pplacer {
 		unlink("abracadabra") if $options =~ /abracadabra/;	# remove the mmap file created by pplacer
 	}
 	if ( defined($chunk) && $self->{"mode"} eq "all" ) {
+		Phylosift::Utilities::end_timer( name => "runPplacer" );
+		Phylosift::Utilities::start_timer( name => "runSummarize" );
 		Phylosift::Summarize::summarize( self => $self, marker_reference => $markRef , chunk=>$chunk  );
 	}
 }
@@ -261,7 +263,6 @@ sub make_submarker_placements{
 	
 	# filter the codon alignment into subalignments
 	my $codon_file = $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta( marker => $marker, dna=>1, chunk => $chunk );
-	debug "Trying to read from $codon_file\n";
 	my $alnio = Bio::AlignIO->new(-file => $codon_file );
 	my $codon_aln = $alnio->next_aln;
 	foreach my $group( keys(%groups)){
@@ -466,9 +467,12 @@ sub name_taxa_in_jplace {
 		next unless defined($taxonmap->{$edge_id});
 		my $node_name="";
 		foreach my $tid(@{$taxonmap->{$edge_id}}){
+			#debug "TID: $tid\t";
 			my @data = Phylosift::Summarize::get_taxon_info( taxon => $tid );
-			my $ncbi_name = Phylosift::Summarize::tree_name( name => $data[0] );
-			$node_name .= "_$ncbi_name"."_";
+			#debug "$data[0]\n";
+			next unless defined $data[0];
+			my $ncbi_name = Phylosift::Summarize::tree_name( name => $data[0] ) ;
+			$node_name .= "_$ncbi_name"."_" if defined $ncbi_name;
 		}
 		$node->set_name($node_name);
 	}

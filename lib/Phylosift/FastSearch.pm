@@ -60,10 +60,9 @@ my $align_fraction_isolate = $Phylosift::Settings::align_fraction_isolate;
 my %markers;
 my %markerNuc = ();
 my %markerLength;
-
 sub run_search {
 	my %args       = @_;
-	my $self       = $args{self} || miss("self");
+	my $self       = $args{self} || miss("PS object");
 	my $markersRef = $args{marker_reference} || miss("marker_reference");
 	%markers = map{ $_ => 1 } @{$markersRef};
 	debug "USING ".keys(%markers)."\n";
@@ -93,6 +92,7 @@ sub run_search {
    # ensure databases and sequences are prepared for search
 	prep_and_clean( self => $self );
 
+	
 	#read_marker_lengths( self => $self );
 	# search reads/contigs against marker database
 	my $searchtype = "blast";
@@ -115,6 +115,8 @@ sub run_search {
 	# launch the searches
 	my $start_chunk = defined($Phylosift::Settings::start_chunk) ? $Phylosift::Settings::start_chunk : 1;
 	for ( my $chunkI = 1 ; ; $chunkI++ ) {
+		#reads the marker_summary.txt from blastDir
+		
 		my $completed_chunk = has_chunk_completed(self=> $self , chunk=> $chunkI);
 		$completed_chunk = 1 if $start_chunk > $chunkI;
 		# need to run this even if chunk is done so that we advance through the input file
@@ -128,12 +130,13 @@ sub run_search {
 			FILE1    => $F1IN,
 			FILE2    => $F2IN
 		  );
+		  compute_hits_summary(self=>$self, chunk=>$chunkI);
 		if ( !$completed_chunk && ($self->{"mode"} eq "all" || $self->{"continue"}) ) {
-
 	# fire up the next step!
 	# TODO: make this a call to a function "chunk_done" in main Phylosift module
 	# that starts the next step
-
+			Phylosift::Utilities::end_timer( name => "runBlast" );
+			Phylosift::Utilities::start_timer( name => "runAlign" );
 			Phylosift::MarkerAlign::MarkerAlign(
 				self             => $self,
 				marker_reference => $markersRef,
@@ -146,6 +149,29 @@ sub run_search {
 		last if $finished || (defined($Phylosift::Settings::chunks) && ($chunkI - $start_chunk + 1) >= $Phylosift::Settings::chunks);
 	}
 	return $self;
+}
+
+=head2 compute_hits_summary
+
+	reads all candidate files and compiles hit numbers for each marker
+
+=cut
+sub compute_hits_summary{
+	my %args = @_;
+	my $chunk = $args{chunk} || miss("chunk");
+	my $self = $args{self} || miss("PS Object");
+	my $marker_hits_numbers_ref = Phylosift::Utilities::read_marker_summary(self => $self, path => $self->{"blastDir"} ) ;
+	my %marker_hits_numbers = %{$marker_hits_numbers_ref};
+	my @candidates = glob($self->{"blastDir"}. "/*.aa.$chunk*");
+	foreach my $cand_file (@candidates){
+		my $grep_cmd = "grep '>' -c $cand_file";
+		$cand_file =~ m/blastDir\/([^\.]+)/;
+		my $grep_results = `$grep_cmd`;
+		chomp($grep_results);
+		$marker_hits_numbers{$1} = 0 unless exists $marker_hits_numbers{$1};
+		$marker_hits_numbers{$1} += $grep_results;
+	}
+	Phylosift::Utilities::print_marker_summary(self => $self, path => $self->{"blastDir"}, summary=>\%marker_hits_numbers ) ;
 }
 
 =head2 set_default_values
@@ -457,6 +483,20 @@ sub demux_sequences {
 				if($id1 eq $id2){
 					$lines1[0] =~ s/^(\S+)/$1\/1/g;
 					$lines2[0] =~ s/^(\S+)/$1\/2/g;
+				}elsif($id1 =~ m/\/(\d)$/ && $id2 !~ m/\/\d$/){
+                                    my $ending = $1;
+                                    if($ending ==1){
+                                        $lines2[0] =~ s/^(\S+)/$1\/2/g;
+                                    }elsif($ending ==2){
+                                        $lines2[0] =~ s/^(\S+)/$1\/1/g;
+                                    }
+                                }elsif($id1 !~ m/\/\d$/ && $id2 =~ m/\/(\d)$/ ){
+				    my $ending = $1;
+				    if($ending ==1){
+					$lines1[0] =~ s/^(\S+)/$1\/2/g;
+				    }elsif($ending ==2){
+					$lines1[0] =~ s/^(\S+)/$1\/1/g;
+				    }
 				}
 			}
 
@@ -1125,7 +1165,7 @@ sub write_candidates {
 			$markerHits{$markerHit} .= ">" . $new_id . "\n" . $new_seq . "\n";
 		}
 	}
-	debug "Got " . scalar( keys %markerHits ) . " hits\n";
+	debug "$type Got " . scalar( keys %markerHits ) . " markers with hits\n";
 
 	#write the read+ref_seqs for each markers in the list
 	foreach my $marker ( keys %markerHits ) {

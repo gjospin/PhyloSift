@@ -23,6 +23,8 @@ Version 0.01
 
 =cut
 our $VERSION = '0.01';
+my @search_types = ( "", ".lastal" );
+my @search_types_rna = ( "", ".lastal.rna", ".rna" );
 set_default_values();
 =head1 SYNOPSIS
 
@@ -74,6 +76,7 @@ sub MarkerAlign {
 	# produce a concatenate alignment for the base marker package
 	unless ( $Phylosift::Settings::extended ) {
 		my @markeralignments = getPMPROKMarkerAlignmentFiles( self => $self, chunk => $chunk );
+		
 		my $outputFastaAA = $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta( marker => "concat", chunk => $chunk );
 
 		#		Phylosift::Utilities::concatenate_alignments(
@@ -97,9 +100,9 @@ sub MarkerAlign {
 		);
 
 		# produce a concatenate with 16s + DNA alignments
-		push( @markeralignments, $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta( marker => "16s_reps_bac", chunk => $chunk ) );
-		push( @markeralignments, $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta( marker => "16s_reps_arc", chunk => $chunk ) );
-		push( @markeralignments, $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta( marker => "18s_reps",     chunk => $chunk ) );
+		push( @markeralignments, $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta( marker => "16s_reps_bac", chunk => $chunk ) ) if -e $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta( marker => "16s_reps_bac", chunk => $chunk );
+		push( @markeralignments, $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta( marker => "16s_reps_arc", chunk => $chunk ) ) if -e $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta( marker => "16s_reps_arc", chunk => $chunk );
+		push( @markeralignments, $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta( marker => "18s_reps",     chunk => $chunk ) ) if -e $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta( marker => "18s_reps", chunk => $chunk );
 		$output_fasta_DNA = $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta( marker => "concat16", dna => 1, chunk => $chunk );
 		concatenate_alignments(
 								self           => $self,
@@ -110,13 +113,40 @@ sub MarkerAlign {
 		);
 		debug "AFTER concatenateALI\n";
 	}
-
+	compute_hits_summary(self=>$self, chunk=>$chunk);
 	# if we're chunking, feed the chunk to the next step
 	if ( defined($chunk) && $self->{"mode"} eq "all" ) {
+		Phylosift::Utilities::end_timer( name => "runAlign" );
+		Phylosift::Utilities::start_timer( name => "runPplacer" );
 		Phylosift::pplacer::pplacer( self => $self, marker_reference => $markersRef, chunk => $chunk );
 	}
 	return $self;
 }
+
+=head2 compute_hits_summary
+
+	reads all candidate files and compiles hit numbers for each marker
+
+=cut
+sub compute_hits_summary{
+	my %args = @_;
+	my $chunk = $args{chunk} || miss("chunk");
+	my $self = $args{self} || miss("PS Object");
+	my $marker_hits_numbers_ref = Phylosift::Utilities::read_marker_summary(self => $self, path => $self->{"alignDir"} ) ;
+	my %marker_hits_numbers = %{$marker_hits_numbers_ref};
+	my @candidates = glob($self->{"alignDir"}. "/*.updated.$chunk.fasta");
+	foreach my $cand_file (@candidates){
+		next if $cand_file =~ m/codon/;
+		my $grep_cmd = "grep '>' -c $cand_file";
+		$cand_file =~ m/alignDir\/([^\.]+)/;
+		my $grep_results = `$grep_cmd`;
+		chomp($grep_results);
+		$marker_hits_numbers{$1} = 0 unless exists $marker_hits_numbers{$1};
+		$marker_hits_numbers{$1} += $grep_results;
+	}
+	Phylosift::Utilities::print_marker_summary(self => $self, path => $self->{"alignDir"}, summary=>\%marker_hits_numbers ) ;
+}
+
 
 =head2 set_default_values
 
@@ -187,8 +217,7 @@ sub directoryPrepAndClean {
 	}
 	return $self;
 }
-my @search_types = ( "", ".lastal" );
-my @search_types_rna = ( "", ".lastal.rna", ".rna" );
+
 
 sub split_rna_on_size {
 	my %args      = @_;
@@ -434,6 +463,7 @@ sub alignAndMask {
 	my $self    = $args{self} || miss("self");
 	my $markRef = $args{marker_reference} || miss("marker_reference");
 	my $chunk   = $args{chunk};
+	
 	for ( my $index = 0 ; $index < @{$markRef} ; $index++ ) {
 		my $marker         = ${$markRef}[$index];
 		my $refcount       = 0;
@@ -601,7 +631,6 @@ sub alignAndMask {
 				merge_alignment( self => $self, alignment_file => $outputFastaDNA, type => 'DNA' );
 			}
 		}
-
 		# get rid of the process IDs -- they break concatenation
 		if ( $Phylosift::Settings::isolate ) {
 			strip_trailing_ids( alignment_file => $outputFastaAA );
@@ -643,8 +672,13 @@ sub merge_alignment {
 	my %seqs     = ();
 	my $seq_IO   = Phylosift::Utilities::open_SeqIO_object( file => $ali_file );
 	while ( my $seq = $seq_IO->next_seq() ) {
-		$seq->id =~ m/^(\S+)_(\d+)$/;
-		my $core = $1;
+	    my $core = "";
+	    if($seq->id =~ m/^(\S+)_(\d+)$/){
+		$core = $1;
+	    }else{
+		$seq->id =~ m/^(\S+)/;
+		$core = $1;
+	    }
 		$self->{"read_names"}{$core} = () if ( !exists $self->{"read_names"}{$core} );
 		push( @{ ${ $self->{"read_names"} }{$core} }, $self->{"read_names"}{ $seq->id }[0] )
 		  unless defined( @{ ${ $self->{"read_names"} }{$core} } ) && scalar( @{ ${ $self->{"read_names"} }{$core} } == 2 ); #both pairs have been added already
