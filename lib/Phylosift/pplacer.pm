@@ -59,6 +59,7 @@ sub pplacer {
 	foreach my $marker ( @{$markRef} ) {
 		# the PMPROK markers are contained in the concat above
 		next if($marker =~ /PMPROK/ && $Phylosift::Settings::updated);
+		next if($marker =~ /DNGNGWU/ && $Phylosift::Settings::updated);
 		my $read_alignment_file = $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta( marker => Phylosift::Utilities::get_marker_basename(marker=>$marker), chunk => $chunk );
 		next unless -e $read_alignment_file && -s $read_alignment_file > 0;
 		my $options = $marker eq "concat" ? "--groups $Phylosift::Settings::pplacer_groups" : "";

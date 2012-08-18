@@ -723,7 +723,7 @@ sub getPMPROKMarkerAlignmentFiles {
 	my @markeralignments = ();
 	my @marker_list      = Phylosift::Utilities::gather_markers();
 	foreach my $marker (@marker_list) {
-		next unless $marker =~ /PMPROK/;
+		next unless $marker =~ /DNGNGWU/ || $marker =~ /PMPROK/;
 		push( @markeralignments,
 			  $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta( marker => $marker, chunk => $chunk, dna => $dna ) );
 	}
