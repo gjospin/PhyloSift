@@ -12,7 +12,6 @@ use Bio::Align::Utilities qw(:all);
 use Bio::TreeIO;
 use Bio::Tree::Tree;
 use POSIX ();
-use LWP::Simple;
 use Carp;
 use Cwd;
 require File::Fetch;
@@ -353,19 +352,28 @@ sub download_data {
 	my $destination = $args{destination};
 	`mkdir -p "$destination"`;
 
-  # FIXME this is insecure!
-  # but then again, so is just about every other line of code in this program...
-	my $ff = File::Fetch->new( uri => $url );
-	$ff->fetch( to => "$destination/.." );
-	debug "URL : $url\n";
-	$url =~ /\/(\w+)\.tgz/;
-	my $archive = $1;
-	debug "ARCHIVE : $archive\n";
-	if ( -e "$destination/.. " ) {
-		`rm -rf "$destination/.."`;
+	eval{
+		require File::Fetch;
+		File::Fetch->import();
+	};
+	if($@){
+		croak("Unable to load perl module File::Fetch. Can not download marker database.\nPlease use cpan to install File::Fetch or download and install the markers manually.\n");
+	}else{
+		
+	  # FIXME this is insecure!
+	  # but then again, so is just about every other line of code in this program...
+		my $ff = File::Fetch->new( uri => $url );
+		$ff->fetch( to => "$destination/.." );
+		debug "URL : $url\n";
+		$url =~ /\/(\w+)\.tgz/;
+		my $archive = $1;
+		debug "ARCHIVE : $archive\n";
+		if ( -e "$destination/.. " ) {
+			`rm -rf "$destination/.."`;
+		}
+		`cd "$destination/../" ; tar xzf $archive.tgz ; touch $archive`;
+		`rm "$destination/../$archive.tgz"`;
 	}
-	`cd "$destination/../" ; tar xzf $archive.tgz ; touch $archive`;
-	`rm "$destination/../$archive.tgz"`;
 }
 
 Phylosift::Settings::set_default(
@@ -396,50 +404,66 @@ sub marker_update_check {
 	return
 	  if defined($Phylosift::Settings::marker_update_check)
 	  && $Phylosift::Settings::marker_update_check == 0;
+
+	eval{
+		require LWP::Simple;
+		LWP::Simple->import();
+	};
+	my $result = $@;
+	my $get_new_markers = 0;
+	my $modified_time = 0;
 	$url =~ s/\/\//\//g;
 	$url =~ s/http:/http:\//g;
-	my ( $content_type, $document_length, $modified_time, $expires, $server ) =
-	  head($url);
-	debug "MARKER_PATH : " . $marker_path . "\nURL : $url\n";
-	my $get_new_markers = 0;
 
-	if ( -x $marker_path ) {
-		my ( $m_url, $m_timestamp ) =
-		  get_marker_version( path => $marker_path );
-		if ( defined($m_url) ) {
-			$m_url =~ s/\/\//\//g;
-			$m_url =~ s/http:/http:\//g;
-			debug "TEST LOCAL :" . localtime($m_timestamp) . "\n";
-			if ( !defined($modified_time) ) {
-				warn
-"Warning: unable to connect to marker update server, please check your internet connection\n";
+	unless($result){
+
+		my ( $content_type, $document_length, $modified, $expires, $server ) =
+		  head($url);
+		$modified_time = $modified;
+		debug "MARKER_PATH : " . $marker_path . "\nURL : $url\n";
+	
+		if ( -x $marker_path ) {
+			my ( $m_url, $m_timestamp ) =
+			  get_marker_version( path => $marker_path );
+			if ( defined($m_url) ) {
+				$m_url =~ s/\/\//\//g;
+				$m_url =~ s/http:/http:\//g;
+				debug "TEST LOCAL :" . localtime($m_timestamp) . "\n";
+				if ( !defined($modified_time) ) {
+					warn
+	"Warning: unable to connect to marker update server, please check your internet connection\n";
+				}
+				elsif ( $modified_time > $m_timestamp ) {
+					debug "TEST REMOTE:" . localtime($modified_time) . "\n";
+					warn "Found newer version of the marker data\n";
+					$get_new_markers = 1;
+				}
+				elsif ( $url ne $m_url ) {
+					warn
+	"The marker update URL differs from the local marker DB copy, updating";
+					warn "local url $m_url\n";
+					warn "update url $url\n";
+					$get_new_markers = 1;
+				}
 			}
-			elsif ( $modified_time > $m_timestamp ) {
-				debug "TEST REMOTE:" . localtime($modified_time) . "\n";
-				warn "Found newer version of the marker data\n";
-				$get_new_markers = 1;
-			}
-			elsif ( $url ne $m_url ) {
-				warn
-"The marker update URL differs from the local marker DB copy, updating";
-				warn "local url $m_url\n";
-				warn "update url $url\n";
+			else {
+				warn "Marker version unknown, downloading markers\n";
 				$get_new_markers = 1;
 			}
 		}
 		else {
-			warn "Marker version unknown, downloading markers\n";
+			if ( !defined($modified_time) ) {
+				croak
+	"Marker data not found and unable to connect to marker update server, please check your phylosift configuration and internet connection!\n";
+			}
+			warn "Unable to find marker data!\n";
 			$get_new_markers = 1;
 		}
+	}else{
+		warn "Unable to check for updates because perl module LWP::Simple is not available. Please use cpan to install it.\n";
+		$get_new_markers = 1 unless -x $marker_path;
 	}
-	else {
-		if ( !defined($modified_time) ) {
-			croak
-"Marker data not found and unable to connect to marker update server, please check your phylosift configuration and internet connection!\n";
-		}
-		warn "Unable to find marker data!\n";
-		$get_new_markers = 1;
-	}
+	
 	if ($get_new_markers) {
 		warn "Downloading from $url\n";
 		download_data( url => $url, destination => $marker_path );

@@ -7,6 +7,7 @@ use Carp;
 use Phylosift::Summarize;
 use Phylosift::Settings;
 use Phylosift::Utilities;
+use Phylosift::MarkerBuild;
 use Bio::Phylo::IO qw(parse unparse);
 use LWP::Simple;
 
@@ -661,91 +662,7 @@ sub make_ncbi_tree_from_update {
 		my ( $marker, $taxon, $uniqueid ) = split( /\t/, $line );
 		push( @taxonids, $taxon ) if $taxon =~ /^\d+$/;
 	}
-	make_ncbi_subtree(out_file=>"$markerdir/ncbi_tree.updated.tre", taxon_ids=>\@taxonids);
-}
-
-sub make_ncbi_subtree {
-	my %args        = @_;
-	my $out_file   = $args{out_file} || miss("out_file");
-	my $tidref      = $args{taxon_ids} || miss("taxon_ids");
-
-	my @taxonids = @$tidref;
-	
-	my ($nimref, $inmref) = Phylosift::Summarize::read_ncbi_taxon_name_map();
-	my %nameidmap = %$nimref; 
-	my %idnamemap  = %$inmref;
-	my $parent = Phylosift::Summarize::read_ncbi_taxonomy_structure();
-	debug "ncbi tree has lots of nodes\n";
-	my $merged = Phylosift::Summarize::read_merged_nodes();
-	debug "Read a bunch of merged nodes\n";
-
-	my %tidnodes;
-	my $phylotree = Bio::Phylo::Forest::Tree->new();
-	my $ncbi_count = 0;
-	my $count=0;
-	
-	foreach my $tid (@taxonids) {
-	    debug "COULD NOT FIND : " .$tid ."\n" unless (defined($idnamemap{$tid}));
-		next unless(defined($merged->{$tid}) || defined($idnamemap{$tid}));	# ensure the id actually exists in NCBI's db
-		next if ( $tid eq "" );
-		$ncbi_count++;
-		my @children;
-		while ( defined($tid) ) {
-		    
-			# check if we've already seen this one
-			last if ( defined( $tidnodes{$tid} ) );
-			#debug "ADDING $tid\n";
-			# process any merging that may have been done
-			my @mtid;
-			while ( defined( $merged->{$tid} ) ) {
-				$tid = $merged->{$tid};
-#				push( @mtid, $tid );
-			}
-			push( @mtid, $tid );
-
-			# create a new node & add to tree
-			my $parentid;
-			$parentid = $parent->{$tid}->[0] unless $tid == 1;
-			if ( !defined($parentid) && $tid != 1) {
-				print STDERR "Could not find parent for $tid\n";
-				exit;
-			}
-			my $newnode;
-			my @new_children;
-			foreach my $mnode (@mtid) {
-				if ( defined( $parentid )  && defined( $tidnodes{$parentid} ) ){
-					$newnode = Bio::Phylo::Forest::Node->new( -parent => $tidnodes{$parentid}, -name => $mnode ) ;
-				}else{
-				    
-					$newnode = Bio::Phylo::Forest::Node->new( -name => $mnode );
-				}
-				$count++;
-				$tidnodes{$mnode} = $newnode;
-
-				# add all children to the new node
-				foreach my $child (@children) {
-					$newnode->set_child($child);
-				}
-				$phylotree->insert($newnode);
-				push( @new_children, $newnode );
-			}
-
-			# continue traversal toward root
-			$tid      = $parentid;
-			@children = @new_children;
-		}
-	}	
-	# if there's something in the tree, write it out
-	debug "NCBI COUNT : $ncbi_count\n";
-	debug "Making $count Nodes\n";
-	if($ncbi_count>0){
-		my $TREEOUT = ps_open( ">$out_file" );
-		print $TREEOUT $phylotree->to_newick( "-nodelabels" => 1 );
-		close $TREEOUT;
-		return 1; # success
-	}
-	debug "NOTHING IN THE TREE\n";
-	return 0; # no tree!
+	Phylosift::MarkerBuild::make_ncbi_subtree(out_file=>"$markerdir/ncbi_tree.updated.tre", taxon_ids=>\@taxonids);
 }
 
 sub get_marker_name_base {
@@ -917,29 +834,6 @@ sub fix_names_in_alignment {
 	close $INALN;
 	close $OUTALN;
 	`mv "$alignment.fixed" "$alignment"`;
-}
-
-=head2 create_temp_read_fasta
-
-reads a fasta file and writes 1 read/sequence to the output file specified
-
-=cut
-
-sub create_temp_read_fasta {
-	my %args = @_;
-	my $file = $args{file} || miss("file");
-	my $aln_file = $args{aln_file} || miss("aln_file");
-	my $TMPREAD = ps_open( ">$file.tmpread.fasta" );
-	debug "creating tmpread $file.tmpread.fasta\n";
-	
-	print $TMPREAD ">blahblahblah\n";
-	my $ALNIN = ps_open( "$aln_file" );
-	my $line = <$ALNIN>;
-	while ( $line = <$ALNIN> ) {
-		last if $line =~ /^>/;
-		print $TMPREAD $line;
-	}
-	return $file.".tmpread.fasta";
 }
 
 sub filter_fasta {
@@ -1140,11 +1034,11 @@ EOF
 		my $marker_fasta = get_fasta_filename( marker => $marker, updated => 1, pruned=>$pruned);
 		print STDERR "Couldnt find $marker_fasta\n" unless -e $marker_fasta;
 		next unless -e $marker_fasta;
-		next if $marker =~ /^PMPROK/;	# skip these since they all go in the concat
+		next if $marker =~ /^PMPROK/ || $marker =~ /^DNGNGWU/;	# skip these since they all go in the concat
 		my $taxa = filter_marker_gene_ids(marker=>$marker, updated=>1, pruned=>$pruned, dna=>0);
 		print STDERR "working on marker $marker\n";
 		# create some read files for pplacer to place so we can get its jplace
-		create_temp_read_fasta( file => get_marker_package( marker=>$marker, updated=>1), aln_file => $marker_fasta);
+		Phylosift::MarkerBuild::create_temp_read_fasta( file => get_marker_package( marker=>$marker, updated=>1), aln_file => $marker_fasta);
 
 
 		# run reconciliation on them
@@ -1158,7 +1052,7 @@ EOF
 			my $mtime = ( stat($subalignment) )[9];
 			last unless $mtime > 1332510000;
 
-			create_temp_read_fasta( file => get_marker_package( marker=>$marker, updated=>1, dna=>1, sub_marker=>$group_id), aln_file => get_fasta_filename( marker => $marker, updated => 1, dna => 1, sub_marker=>$group_id) );
+			Phylosift::MarkerBuild::create_temp_read_fasta( file => get_marker_package( marker=>$marker, updated=>1, dna=>1, sub_marker=>$group_id), aln_file => get_fasta_filename( marker => $marker, updated => 1, dna => 1, sub_marker=>$group_id) );
 			my $taxa = filter_marker_gene_ids(marker=>$marker, updated=>1, dna=>1, pruned=>0, sub_marker=>$group_id);
 			my $ncbi_tre = get_marker_ncbi_subtree( marker => $marker, dna => 1, updated => 1, pruned=>0, sub_marker=>$group_id );
 			my $success = -f $ncbi_tre && -s $ncbi_tre > 0;
@@ -1548,18 +1442,18 @@ sub package_markers {
 	foreach my $marker (@markerlist) {
 		# copy the base marker into our directory 
 		`cp -r $base_marker_dir/$marker/ $marker_dir`;
-		if($marker =~ /PMPROK/){
-			`cp $base_marker_dir/$marker.faa $marker_dir`;
-			`cp $base_marker_dir/$marker.ali $marker_dir`;
-			`cp $base_marker_dir/$marker.final.tre $marker_dir`;
-			`cp $base_marker_dir/$marker.ncbimap $marker_dir`;
-			`cp $base_marker_dir/$marker.stk $marker_dir`;
-			`cp $base_marker_dir/$marker.hmm $marker_dir`;
-			`cp $base_marker_dir/$marker.trimfinal $marker_dir`;
-			`cp $base_marker_dir/$marker.trimfinal.fasta $marker_dir`;
-			`cp $base_marker_dir/$marker.stock.hmm $marker_dir`;
-			`cp $base_marker_dir/$marker.seed.stock $marker_dir`;
-		}
+#		if($marker =~ /PMPROK/){
+#			`cp $base_marker_dir/$marker.faa $marker_dir`;
+#			`cp $base_marker_dir/$marker.ali $marker_dir`;
+#			`cp $base_marker_dir/$marker.final.tre $marker_dir`;
+#			`cp $base_marker_dir/$marker.ncbimap $marker_dir`;
+#			`cp $base_marker_dir/$marker.stk $marker_dir`;
+#			`cp $base_marker_dir/$marker.hmm $marker_dir`;
+#			`cp $base_marker_dir/$marker.trimfinal $marker_dir`;
+#			`cp $base_marker_dir/$marker.trimfinal.fasta $marker_dir`;
+#			`cp $base_marker_dir/$marker.stock.hmm $marker_dir`;
+#			`cp $base_marker_dir/$marker.seed.stock $marker_dir`;
+#		}
 	}
 
 	# then move various files into place

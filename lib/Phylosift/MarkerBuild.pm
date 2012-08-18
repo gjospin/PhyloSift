@@ -2,7 +2,6 @@ package Phylosift::MarkerBuild;
 use Cwd;
 use Carp;
 use Phylosift::Utilities qw(:all);
-use Phylosift::UpdateDB;
 use File::Basename;
 
 =head1 NAME
@@ -130,7 +129,7 @@ sub build_marker {
 		  unless -e "target_dir/temp_ref";
 
 		#make a dummy jplace file
-		my $tmpread_file = Phylosift::UpdateDB::create_temp_read_fasta(
+		my $tmpread_file = create_temp_read_fasta(
 			file     => "$target_dir/$core",
 			aln_file => $clean_aln
 		) unless -e "$target_dir/$core.tmpread.fasta";
@@ -148,7 +147,7 @@ sub build_marker {
 		);
 		my @taxon_array = keys(%taxon_hash);
 		debug "TAXON_ARRAY " . scalar(@taxon_array) . "\n";
-		Phylosift::UpdateDB::make_ncbi_subtree(
+		make_ncbi_subtree(
 			out_file  => $ncbi_sub_tree,
 			taxon_ids => \@taxon_array
 		);
@@ -173,6 +172,114 @@ sub build_marker {
 	`rm -rf "$target_dir/$core"`;
 	`rm -rf "$Phylosift::Settings::file_dir"`;
 }
+
+=head2 create_temp_read_fasta
+
+reads a fasta file and writes 1 read/sequence to the output file specified
+
+=cut
+
+sub create_temp_read_fasta {
+	my %args = @_;
+	my $file = $args{file} || miss("file");
+	my $aln_file = $args{aln_file} || miss("aln_file");
+	my $TMPREAD = ps_open( ">$file.tmpread.fasta" );
+	debug "creating tmpread $file.tmpread.fasta\n";
+	
+	print $TMPREAD ">blahblahblah\n";
+	my $ALNIN = ps_open( "$aln_file" );
+	my $line = <$ALNIN>;
+	while ( $line = <$ALNIN> ) {
+		last if $line =~ /^>/;
+		print $TMPREAD $line;
+	}
+	return $file.".tmpread.fasta";
+}
+
+sub make_ncbi_subtree {
+	my %args        = @_;
+	my $out_file   = $args{out_file} || miss("out_file");
+	my $tidref      = $args{taxon_ids} || miss("taxon_ids");
+
+	my @taxonids = @$tidref;
+	
+	my ($nimref, $inmref) = Phylosift::Summarize::read_ncbi_taxon_name_map();
+	my %nameidmap = %$nimref; 
+	my %idnamemap  = %$inmref;
+	my $parent = Phylosift::Summarize::read_ncbi_taxonomy_structure();
+	debug "ncbi tree has lots of nodes\n";
+	my $merged = Phylosift::Summarize::read_merged_nodes();
+	debug "Read a bunch of merged nodes\n";
+
+	my %tidnodes;
+	my $phylotree = Bio::Phylo::Forest::Tree->new();
+	my $ncbi_count = 0;
+	my $count=0;
+	
+	foreach my $tid (@taxonids) {
+	    debug "COULD NOT FIND : " .$tid ."\n" unless (defined($idnamemap{$tid}));
+		next unless(defined($merged->{$tid}) || defined($idnamemap{$tid}));	# ensure the id actually exists in NCBI's db
+		next if ( $tid eq "" );
+		$ncbi_count++;
+		my @children;
+		while ( defined($tid) ) {
+		    
+			# check if we've already seen this one
+			last if ( defined( $tidnodes{$tid} ) );
+			#debug "ADDING $tid\n";
+			# process any merging that may have been done
+			my @mtid;
+			while ( defined( $merged->{$tid} ) ) {
+				$tid = $merged->{$tid};
+#				push( @mtid, $tid );
+			}
+			push( @mtid, $tid );
+
+			# create a new node & add to tree
+			my $parentid;
+			$parentid = $parent->{$tid}->[0] unless $tid == 1;
+			if ( !defined($parentid) && $tid != 1) {
+				print STDERR "Could not find parent for $tid\n";
+				exit;
+			}
+			my $newnode;
+			my @new_children;
+			foreach my $mnode (@mtid) {
+				if ( defined( $parentid )  && defined( $tidnodes{$parentid} ) ){
+					$newnode = Bio::Phylo::Forest::Node->new( -parent => $tidnodes{$parentid}, -name => $mnode ) ;
+				}else{
+				    
+					$newnode = Bio::Phylo::Forest::Node->new( -name => $mnode );
+				}
+				$count++;
+				$tidnodes{$mnode} = $newnode;
+
+				# add all children to the new node
+				foreach my $child (@children) {
+					$newnode->set_child($child);
+				}
+				$phylotree->insert($newnode);
+				push( @new_children, $newnode );
+			}
+
+			# continue traversal toward root
+			$tid      = $parentid;
+			@children = @new_children;
+		}
+	}	
+	# if there's something in the tree, write it out
+	debug "NCBI COUNT : $ncbi_count\n";
+	debug "Making $count Nodes\n";
+	if($ncbi_count>0){
+		my $TREEOUT = ps_open( ">$out_file" );
+		print $TREEOUT $phylotree->to_newick( "-nodelabels" => 1 );
+		close $TREEOUT;
+		return 1; # success
+	}
+	debug "NOTHING IN THE TREE\n";
+	return 0; # no tree!
+}
+
 
 =head2 generate_id_to_taxonid_map
 
