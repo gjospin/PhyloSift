@@ -14,7 +14,6 @@ use Bio::Tree::Tree;
 use POSIX ();
 use Carp;
 use Cwd;
-require File::Fetch;
 
 if ( $^O =~ /arwin/ ) {
 	use lib "$FindBin::Bin/../osx/darwin-thread-multi-2level/";
