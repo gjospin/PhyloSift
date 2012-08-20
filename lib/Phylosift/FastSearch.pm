@@ -76,10 +76,11 @@ sub run_search {
 	# set align_fraction appropriately
 	$align_fraction = $align_fraction_isolate if ( $Phylosift::Settings::isolate );
 
-	
+	my $input_file = $self->{stdin} ? "STDIN" : $self->{"readsFile"};
+	my $F1IN = Phylosift::Utilities::open_sequence_file( file => $input_file );
 	# check what kind of input was provided
 	my $type =
-	  Phylosift::Utilities::get_sequence_input_type( $self->{"readsFile"} );
+	  Phylosift::Utilities::get_sequence_input_type( $F1IN );
 	$self->{"dna"} =
 	  $type->{seqtype} eq "protein" ? 0 : 1;   # Is the input protein sequences?
 	debug "Input type is $type->{seqtype}, $type->{format}\n";
@@ -104,8 +105,6 @@ sub run_search {
 		&& ( !defined $Phylosift::Settings::isolate || $Phylosift::Settings::isolate != 1 ) );
 
 	# open the input file(s)
-	my $F1IN =
-	  Phylosift::Utilities::open_sequence_file( file => $self->{"readsFile"} );
 	my $F2IN;
 	$F2IN =
 	  Phylosift::Utilities::open_sequence_file( file => $self->{"readsFile_2"} )
@@ -425,6 +424,28 @@ sub launch_searches {
 	return $finished;
 }
 
+=head2 get_next_line
+
+Read a line from an array-buffered input stream. 
+If there a line is available in the buffer then it is returned and the buffer index is incremented.
+Otherwise the next line from the input stream is returned. 
+
+=cut
+sub get_next_line {
+	my %args = @_;
+	my $buffer = $args{buffer} || miss("buffer");
+	my $buffer_index = $args{buffer_index};
+	my $FILE = $args{FILE} || miss("FILE");
+	my $line;
+	if(defined(@$buffer[$$buffer_index])){
+		$line = @$buffer[$$buffer_index];
+		@$buffer[$$buffer_index++] = undef;
+	}else{
+		$line = <$FILE>;
+	}
+	return $line;
+}
+
 =head2 demux_sequences
 
 reads a sequence file and streams it out to named pipes
@@ -453,12 +474,13 @@ sub demux_sequences {
 	# the following two variables track how far we are through a chunk
 	my $seq_count = 0;
 	my $seq_size  = 0;
-
+	my $buffer_index = 0;
+	
 	if(defined($self->{"stashed_lines"})){
 		$lines1[0] = $self->{"stashed_lines"}[0];
 		$lines2[0] = $self->{"stashed_lines"}[1] if defined($self->{"stashed_lines"}[1]);
 	}else{
-		$lines1[0] = <$F1IN>;
+		$lines1[0] = get_next_line( buffer => $readtype->{buffer}, buffer_index => \$buffer_index, FILE => $F1IN );
 		$lines2[0] = <$F2IN> if defined($F2IN);
 	}
 
@@ -470,12 +492,12 @@ sub demux_sequences {
 			#
 			# FASTQ format
 			for ( my $i = 1 ; $i < 4 ; $i++ ) {
-				$lines1[$i] = <$F1IN>;
+				$lines1[$i] = get_next_line( buffer => $readtype->{buffer}, buffer_index => \$buffer_index, FILE => $F1IN );
 				$lines2[$i] = <$F2IN> if defined($F2IN);
 			}
 			if($paired && !defined($F2IN)){
 				for ( my $i = 0 ; $i < 4 ; $i++ ) {
-					$lines2[$i] = <$F1IN>;
+					$lines2[$i] = get_next_line( buffer => $readtype->{buffer}, buffer_index => \$buffer_index, FILE => $F1IN );
 				}
 			}
 			#adding /1 and /2 to reads if the IDs are the same
@@ -531,7 +553,7 @@ sub demux_sequences {
 
 			#
 			# prepare for next loop iter
-			$lines1[0] = <$F1IN>;
+			$lines1[0] = get_next_line( buffer => $readtype->{buffer}, buffer_index => \$buffer_index, FILE => $F1IN );
 			$lines2[0] = <$F2IN> if defined($F2IN);
 		}
 		elsif ( $lines1[0] =~ /^>/ ) {
@@ -539,7 +561,7 @@ sub demux_sequences {
 			#
 			# FASTA format
 			my $newline1;
-			while ( $newline1 = <$F1IN> ) {
+			while ( $newline1 = get_next_line( buffer => $readtype->{buffer}, buffer_index => \$buffer_index, FILE => $F1IN ) ) {
 				last if $newline1 =~ /^>/;
 				$lines1[1] .= $newline1;
 			}
@@ -552,7 +574,7 @@ sub demux_sequences {
 			}
 			if($paired && !defined($F2IN)){
 				@lines2 = ( $newline1, "" );
-				while ( $newline1 = <$F1IN> ) {
+				while ( $newline1 = get_next_line( buffer => $readtype->{buffer}, buffer_index => \$buffer_index, FILE => $F1IN ) ) {
 					last if $newline1 =~ /^>/;
 					$lines1[1] .= $newline1;
 				}
@@ -620,7 +642,6 @@ sub demux_sequences {
 	return 0 if defined( $lines1[0] );
 	return 1;
 }
-
 
 =head2 qtrim_read
 

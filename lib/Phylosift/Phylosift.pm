@@ -335,6 +335,7 @@ sub read_phylosift_config {
 sub file_check {
 	my %args = @_;
 	my $self = $args{self} || miss("self");
+	return $self if $self->{stdin};
 	if ( !-e $self->{"readsFile"} ) {
 		croak( $self->{"readsFile"} . "  was not found \n" );
 	}

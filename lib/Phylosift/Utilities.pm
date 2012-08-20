@@ -1479,6 +1479,9 @@ sub open_sequence_file {
 	elsif ( $file =~ /\.bz2$/ ) {
 		$F1IN = ps_open("bzcat \"$file\" |");
 	}
+	elsif ( $file eq "STDIN" ) {
+		$F1IN = *STDIN;
+	}
 	else {
 		$F1IN = ps_open($file);
 	}
@@ -1753,6 +1756,7 @@ sub gather_markers {
 	return @marks;
 }
 
+
 =head2 get_sequence_input_type
 
 Checks whether input is FastA, FastQ, which quality type (33 or 64), and DNA or AA
@@ -1761,9 +1765,8 @@ Returns a hash reference with the values 'seqtype', 'format', and 'qtype' popula
 =cut
 
 sub get_sequence_input_type {
-	my $file = shift;
+	my $FILE = shift;
 	my %type;
-	my $FILE       = open_sequence_file( file => $file );
 	my $counter    = 0;
 	my $maxfound   = 0;
 	my $dnacount   = 0;
@@ -1775,8 +1778,10 @@ sub get_sequence_input_type {
 	my $sequence = 1;
 	my $minq     =
 	  255;    # minimum fastq quality score (for detecting phred33/phred64)
+	my @lines;
 
 	while ( my $line = <$FILE> ) {
+		push(@lines, $line);
 		if ( $line =~ /^>/ ) {
 			$maxfound = $counter > $maxfound ? $counter : $maxfound;
 			$counter = 0;
@@ -1807,8 +1812,9 @@ sub get_sequence_input_type {
 		}
 		$line_count++;
 		last if ( $line_count > 1000 );
+		last if ( $counter > 100000 );
 	}
-	close($FILE);
+
 	$maxfound = $counter > $maxfound ? $counter : $maxfound;
 	$type{seqtype} = "protein" if ( $dnacount < $allcount * 0.75 );
 	$type{seqtype} = "dna"
@@ -1817,6 +1823,7 @@ sub get_sequence_input_type {
 	$type{qtype} = "phred64" if $minq < 255;
 	$type{qtype} = "phred33" if $minq < 64;
 	$type{paired} = 0;    # TODO: detect interleaved read pairing
+	$type{buffer} = \@lines;	# a copy of all lines read in case we're streaming
 	return \%type;
 }
 
