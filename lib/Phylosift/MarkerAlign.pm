@@ -567,7 +567,10 @@ sub alignAndMask {
 		close $ALIOUT;
 
 		my $type = $self->{readtype};
-		$type = Phylosift::Utilities::get_sequence_input_type( $self->{"readsFile"} ) unless defined $type;
+		unless( defined($type) ){
+			my $reads_file = ps_open($self->{"readsFile"});
+			$type = Phylosift::Utilities::get_sequence_input_type( $reads_file ) unless defined $type;
+		}
 		if ( $type->{seqtype} ne "protein" && Phylosift::Utilities::is_protein_marker( marker => $marker ) ) {
 
 			# do we need to output a nucleotide alignment in addition to the AA alignment?
@@ -649,6 +652,7 @@ sub alignAndMask {
 sub strip_trailing_ids {
 	my %args     = @_;
 	my $ali_file = $args{alignment_file};
+	return unless -f $ali_file;
 	my $ALI_IN   = ps_open($ali_file);
 	my @ali      = <$ALI_IN>;
 	my $ALI_OUT  = ps_open( ">" . $ali_file );
