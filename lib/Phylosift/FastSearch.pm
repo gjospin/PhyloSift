@@ -81,6 +81,7 @@ sub run_search {
 	# check what kind of input was provided
 	my $type =
 	  Phylosift::Utilities::get_sequence_input_type( $F1IN );
+	$self->{readtype} = $type;
 	$self->{"dna"} =
 	  $type->{seqtype} eq "protein" ? 0 : 1;   # Is the input protein sequences?
 	debug "Input type is $type->{seqtype}, $type->{format}\n";

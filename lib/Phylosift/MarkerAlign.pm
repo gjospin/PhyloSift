@@ -130,11 +130,12 @@ sub MarkerAlign {
 =cut
 sub compute_hits_summary{
 	my %args = @_;
-	my $chunk = $args{chunk} || miss("chunk");
+	my $chunk = $args{chunk};
 	my $self = $args{self} || miss("PS Object");
+	$chunk = defined $chunk ? ".$chunk" : "";
 	my $marker_hits_numbers_ref = Phylosift::Utilities::read_marker_summary(self => $self, path => $self->{"alignDir"} ) ;
 	my %marker_hits_numbers = %{$marker_hits_numbers_ref};
-	my @candidates = glob($self->{"alignDir"}. "/*.updated.$chunk.fasta");
+	my @candidates = glob($self->{"alignDir"}. "/*.updated$chunk.fasta");
 	foreach my $cand_file (@candidates){
 		next if $cand_file =~ m/codon/;
 		my $grep_cmd = "grep '>' -c $cand_file";
@@ -157,7 +158,8 @@ sub compute_hits_summary{
 sub set_default_values{
 	my %args = @_;
 	my $self = $args{self};
-	Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::min_aligned_residues,value=>20);
+	my $minres = $Phylosift::Settings::isolate && $Phylosift::Settings::besthit ? 40 : 20;
+	Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::min_aligned_residues,value=>$minres);
 	Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::rna_split_size,value=>500);
 	Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::gap_character,value=>"-");
 	Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::hmmsearch_evalue,value=>10);
@@ -168,8 +170,6 @@ sub set_default_values{
 	Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::cm_align_short_tau,value=>"1e-20");
 	Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::cm_align_short_mxsize,value=>"2500");
 	Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::cm_align_short_ali,value=>"-l");
-
-
 }
 
 
@@ -376,17 +376,14 @@ sub writeAlignedSeq {
 
 	#substitute all the non letter or number characters into _ in the IDs to avoid parsing issues in tree viewing programs or others
 	my $new_name = Phylosift::Summarize::tree_name( name => $prev_name );
+	#add a paralog ID if there was more than one good hit for this sequence
+	$new_name .= "_p$seq_count" if exists( $self->{"read_names"}{$new_name} );
 	$self->{"read_names"}{$new_name} = () if ( !exists $self->{"read_names"}{$new_name} );
 	push( @{ $self->{"read_names"}{$new_name} }, $prev_name );
 
-	#debug "KEEPING TRACK OF : ".${$self->{"read_names"}{$new_name}}[0]."\t changed into : $new_name\n";
-	$prev_name = $new_name;
-
-	#add a paralog ID if we're running in isolate mode and more than one good hit
-	#$prev_name .= "_p$seq_count" if $seq_count > 0 && $Phylosift::Settings::isolate;
 	#print the new trimmed alignment
-	print $OUTPUT ">$prev_name\n$prev_seq\n"      if defined($OUTPUT);
-	print $UNMASKEDOUT ">$prev_name\n$orig_seq\n" if defined($UNMASKEDOUT);
+	print $OUTPUT ">$new_name\n$prev_seq\n"      if defined($OUTPUT);
+	print $UNMASKEDOUT ">$new_name\n$orig_seq\n" if defined($UNMASKEDOUT);
 }
 use constant CODONSIZE => 3;
 #my $GAP      = $Phylosift::Settings::gap_character;
@@ -414,6 +411,7 @@ sub aa_to_dna_aln {
 	foreach my $seq ( $aln->each_seq ) {
 		my $aa_seqstr    = $seq->seq();
 		my $id           = $seq->display_id;
+		$id =~ s/_p\d+$//g; # FIXME!! this needs to use lookup table
 		my $dnaseq       = $dnaseqs->{$id} || $aln->throw( "cannot find " . $seq->display_id );
 		my $start_offset = ( $seq->start - 1 ) * CODONSIZE;
 		$dnaseq = $dnaseq->seq();
@@ -567,7 +565,9 @@ sub alignAndMask {
 		$seqCount -= $refcount;
 		close $UNMASKEDOUT;
 		close $ALIOUT;
-		my $type = Phylosift::Utilities::get_sequence_input_type( $self->{"readsFile"} );
+
+		my $type = $self->{readtype};
+		$type = Phylosift::Utilities::get_sequence_input_type( $self->{"readsFile"} ) unless defined $type;
 		if ( $type->{seqtype} ne "protein" && Phylosift::Utilities::is_protein_marker( marker => $marker ) ) {
 
 			# do we need to output a nucleotide alignment in addition to the AA alignment?
@@ -619,6 +619,10 @@ sub alignAndMask {
 			#removing the marker from the list if no sequences were added to the alignment file
 			warn "Masking or hmmsearch thresholds failed, removing $marker from the list\n";
 			splice @{$markRef}, $index--, 1;
+		}elsif( $seqCount > 1 && $Phylosift::Settings::unique ) {
+			unlink( $outputFastaAA );
+			unlink( $outputFastaDNA );
+			unlink( $self->{"alignDir"} . "/$mbname$chunky.unmasked" );
 		}
 
 		# check alignments so it merges sequences in case of paired end reads
