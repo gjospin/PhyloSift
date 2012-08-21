@@ -1,0 +1,33 @@
+h1 {
+  	text-align: center;
+  	color: #CA1E00;
+  	font-family: Helvetica Neue;
+}
+#logo {
+	text-align: center;
+	width: auto;
+	padding: 18px 0 34px 0;
+}
+#logo a{
+	color: #ca1e00;
+	font-size: 60px;
+	font-weight: 600;
+	text-decoration: none;
+	border-bottom: none;
+	letter-spacing: -2px;
+	text-rendering: optimizeLegibility;
+}
+#logo h2{
+	font-family: Arial;
+	font-size: 18px;
+	font-weight: 200;
+	padding: 0px 4px 0 0;
+}
+#input {
+	font-family: Arial;
+}
+#target {
+  	width: 400px;
+  	height: 300px;
+  	font-family: Arial;
+}
