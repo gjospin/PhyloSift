@@ -26,17 +26,19 @@
 			<h2>mining the global metagenome</h2>
 			</div>
 		</div>
-		<div id="input">
-			<label for="fileselect">Files to upload:</label>
-			<input id="fileupload" type="file" name="files[]" accept="fasta/fastq/fa" data-url="server/php/" multiple data-sequential-uploads="true">		</div>
-	
-		<!-- this picture is only temporary! -->
+		<form enctype-"multipart/form-data" action="ps_web.php" method="POST">
+			<input type="hidden" name="MAX_FILE_SIZE" value="1000000000" />
+			Upload file: <input name="userfile" type="file" />
+			<!-- this picture is only temporary! -->
 		<div id="target"><img src="http://dribbble.s3.amazonaws.com/users/1390/screenshots/246754/devmate.png"
-alt="PhylOctopus"><div id="submitbutton">
-			<button type="submit">Start Phylosifting</button>
-		</div><br>Or give your sequences to the PhylOctopus! (Coming soon)<br>
-		</div>
-
+alt="PhylOctopus">
+	<input type="submit" value="Start PhyloSifting" />
+	<br>Or give your sequences to the PhylOctopus! (Coming soon)<br>
+	</div>
+			
+		</form>
+	
+		
 		
 	</body>
 </html>
