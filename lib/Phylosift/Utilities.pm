@@ -996,9 +996,8 @@ sub get_decorated_marker_name {
 	my $base       = $args{base} || 0;
 	$name = get_marker_basename( marker => $name ) if $base;
 	$name .= ".codon" if $dna;
-	$name .= ".updated"
-	  if ( $updated || $Phylosift::Settings::updated ) && !$Phylosift::Settings::extended;
-
+	$name .= ".updated" 
+	  if ( $updated || $Phylosift::Settings::updated ) && !$Phylosift::Settings::extended && $name !~ /^1[68]s/;
 	# rna markers don't get pruned
 	$name .= ".sub" . $sub_marker if defined($sub_marker);
 	return $name;

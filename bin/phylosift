@@ -97,6 +97,7 @@ Options Available at this time :
    --config=<file>       Provides a custom configuration file to Phylosift
    --output=<dir>        Specifies an output directory other than PStemp
    --stdin               Read sequence input on standard input
+   --unique              Permit only a single hit between a marker and query sequence, discard any ambiguous hits
    --debug               Prints debugging messages
    --keep_search         Keeps the blastDir files (Default: Delete the blastDir files after every chunk)
    --chunk=<Number>      Only run a set number of chunks
@@ -148,6 +149,7 @@ GetOptions(
 	"disable_updates" => \$Phylosift::Settings::disable_update_check, # don't check for or download marker updates
 	"start_chunk=i"   => \$Phylosift::Settings::start_chunk, #sets the chunk to start with
 	"stdin"           => \$ps->{stdin}, #sets whether input is coming from stdin
+	"unique"          => \$Phylosift::Settings::unique, #should hits to a marker be unique?
 	"chunks=i"        => \$Phylosift::Settings::chunks, #sets the number of chunks to be run
 	"h"               => \$Phylosift::Settings::help, #prints the usage part of the README file
 	"help"            => \$Phylosift::Settings::help, #same as -h

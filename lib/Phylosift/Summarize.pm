@@ -195,7 +195,6 @@ sub summarize {
 			@place_files = glob($place_base)
 			  if $dna;    # need to glob on all submarkers if in DNA
 			push( @place_files, $place_base ) if $dna == 0 && -e $place_base;
-
 			foreach my $placeFile (@place_files) {
 				my $PP_COVFILE = ps_open(
 					">"
@@ -216,6 +215,7 @@ sub summarize {
 					dna        => $dna,
 					sub_marker => $sub
 				);
+				debug "MARKERFILE : $markermapfile\n";
 				next
 				  unless -e $markermapfile
 				  ;    # can't summarize if there ain't no mappin'!
