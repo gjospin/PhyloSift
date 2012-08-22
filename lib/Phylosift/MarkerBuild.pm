@@ -61,6 +61,7 @@ sub build_marker {
 		`mkdir "$target_dir"`;
 	}
 	my $fasta_file = "$target_dir/$core.fasta";
+	$aln_file = check_sequence_integrity(input=>$aln_file , output_dir=> $target_dir) ;
 	my $seq_count  = Phylosift::Utilities::unalign_sequences(
 		aln         => $aln_file,
 		output_path => $fasta_file
@@ -167,10 +168,44 @@ sub build_marker {
 	`rm "$target_dir/$core.log"`;
 	`rm "$target_dir/$core.aln"`;
 	`rm "$target_dir/$core.fasta"`;
+	`rm "$target_dir/$core.checked` if -e "$target_dir/$core.checked";
 	`rm "$clean_aln"`;
 	`mv "$target_dir/$core"/* "$target_dir"`;
 	`rm -rf "$target_dir/$core"`;
 	`rm -rf "$Phylosift::Settings::file_dir"`;
+}
+
+=head2 check_sequence_integrity
+
+Checks for characters in the input fasta file. Removes/changes characters accordingly. Exits PS if bad characters are found.
+
+=cut
+
+sub check_sequence_integrity{
+	my %args = @_;
+	my $file_input = $args{input} || miss("Input file to check");
+	my $output_dir = $args{output_dir} || miss("Output directory");
+	debug "Checking integrity on File $file_input\n";
+	my ( $core, $path, $ext ) = fileparse( $file_input, qr/\.[^.]*$/ );
+	my $type_ref = Phylosift::Utilities::get_sequence_input_type(ps_open($file_input));
+	my %type = %{$type_ref};
+	my $IN_HANDLE = ps_open($file_input);
+	my $OUT_HANDLE = ps_open(">$output_dir/$core.checked");
+	while(<$IN_HANDLE>){
+		if ($_ =~ m/^>/){
+			#do nothing
+		}elsif ($_ =~ m/\*/) {
+			if($type{seqtype} eq 'protein'){
+				$_ =~ s/\*/X/g;
+			}else{
+				croak("Input was detected as DNA and a bad character was found.\nTerminating.\n;");
+			}
+		}
+		print $OUT_HANDLE $_;
+	}
+	close($IN_HANDLE);
+	close($OUT_HANDLE);
+	return("$output_dir/$core.checked");
 }
 
 =head2 create_temp_read_fasta
@@ -442,7 +477,9 @@ sub generate_fasttree {
 	my $aln_file   = $args{alignment_file} || miss("alignment_file");
 	my $target_dir = $args{target_directory} || miss("target_directory");
 	my ( $core, $path, $ext ) = fileparse( $aln_file, qr/\.[^.]*$/ );
-	my %type = %{ Phylosift::Utilities::get_sequence_input_type($aln_file) };
+	my $FILEHANDLE = ps_open($aln_file);
+	my %type = %{ Phylosift::Utilities::get_sequence_input_type($FILEHANDLE) };
+	close($FILEHANDLE);
 	if ( $type{seqtype} eq "dna" ) {
 		debug "DNA alignment detected\n";
 `$Phylosift::Settings::fasttree -nt -gtr -log "$target_dir/$core.log" "$aln_file" > "$target_dir/$core.tree" 2> /dev/null`;
