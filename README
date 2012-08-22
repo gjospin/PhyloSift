@@ -232,7 +232,9 @@ Options Available at this time :
                         PS's default
 
    --debug              Prints debugging messages
-
+   
+   --disable_updates    Disables automated check and download Phylosift marker updates
+   
 == Requirements ==
 
 A 64bit operating system is required as the binaries packaged with the
