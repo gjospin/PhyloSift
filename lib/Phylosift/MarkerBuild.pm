@@ -168,7 +168,7 @@ sub build_marker {
 	`rm "$target_dir/$core.log"`;
 	`rm "$target_dir/$core.aln"`;
 	`rm "$target_dir/$core.fasta"`;
-	`rm "$target_dir/$core.checked` if -e "$target_dir/$core.checked";
+	`rm "$target_dir/$core.checked"` if -e "$target_dir/$core.checked";
 	`rm "$clean_aln"`;
 	`mv "$target_dir/$core"/* "$target_dir"`;
 	`rm -rf "$target_dir/$core"`;
