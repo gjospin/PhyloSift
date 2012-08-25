@@ -292,7 +292,7 @@ sub place_reads{
 			croak("Marker: $marker\nPackage: $marker_package\nPackage does not exist\nPlacement without a marker package is no longer supported");
 		}
 	}
-	my $pp = "$Phylosift::Utilities::pplacer $options --verbosity 0 -j ".$self->{"threads"}." -c $marker_package \"$reads\"";
+	my $pp = "cd $self->{\"treeDir\"};$Phylosift::Utilities::pplacer $options --verbosity 0 -j ".$self->{"threads"}." -c $marker_package \"$reads\"";
 	debug "Running $pp\n";
 	system($pp);
 	
