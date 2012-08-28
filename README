@@ -85,6 +85,14 @@ It may also be necessary to install several support packages,
 including BioPerl, Bio::Phylo, and others. BioPerl offers bioperl-live from github,
 we suggest installing other dependencies using cpan.
 
+== Dependency software ==
+
+PhyloSift depends on a number of external software modules, including BioPerl, Bio::Phylo, LWP::Simple, and others. 
+We make every attempt to package these up with phylosift whenever possible but every operating system is unique and there may be system-specific requirements that are not met. If you see messages from the perl interpreter suggesting that a module is missing, we suggest using the cpan system to install the missing dependency.
+
+To run build_marker mode, the installation of taxit and its dependent python modules is required. 
+taxit is available from: https://github.com/fhcrc/taxtastic
+
 == Updating PhyloSift ==
 
 If running PhyloSift from a packaged release (i.e., you chose the

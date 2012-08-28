@@ -1029,9 +1029,9 @@ sub is_protein_marker {
 	my $bname       = get_marker_basename( marker => $marker );
 
 	# only protein markers have HMMs
+	return 0 if ( -e "$marker_path/$marker/$bname.cm" );
 	return 1 if ( -e "$marker_path/$marker/$bname.hmm" );
 	return 1 if ( -e "$marker_path/$bname.hmm" );
-	return 0 if ( -e "$marker_path/$marker/$bname.cm" );
 	return 1;
 }
 
@@ -1667,13 +1667,16 @@ sub index_marker_db {
 		my $hmm_file =
 		  get_marker_hmm_file( self => $args{self}, marker => $marker );
 		next if -e $hmm_file;
-		my $cm_file =
-		  get_marker_cm_file( self => $args{self}, marker => $marker );
-		next if -e $cm_file;
-		my $stk_file =
-		  get_marker_stockholm_file( self => $args{self}, marker => $marker );
-		`$Phylosift::Settings::hmmbuild "$hmm_file" "$stk_file"`;
+		build_hmm(marker=>$marker);
 	}
+}
+
+sub build_hmm {
+	my %args        = @_;
+	my $marker = $args{marker} || miss("marker");	
+	my $hmm_file = get_marker_hmm_file( self => $args{self}, marker => $marker );
+	my $stk_file = get_marker_stockholm_file( self => $args{self}, marker => $marker );
+	`$hmmbuild "$hmm_file" "$stk_file"`;
 }
 
 =head2 gather_markers

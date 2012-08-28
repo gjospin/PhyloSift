@@ -468,17 +468,18 @@ sub alignAndMask {
 		my $stockholm_file = Phylosift::Utilities::get_marker_stockholm_file( self => $self, marker => $marker );
 		my $hmmalign       = "";
 		my @lines;
+		my $hmm_file = Phylosift::Utilities::get_marker_hmm_file( self => $self, marker => $marker, loc => 1 );
+		Phylosift::Utilities::build_hmm(marker=>$marker) unless -e $hmm_file;
+		my $HMM = ps_open($hmm_file);
+		while ( my $line = <$HMM> ) {
+			if ( $line =~ /NSEQ\s+(\d+)/ ) {
+				$refcount = $1;
+				last;
+			}
+		}
 		if ( Phylosift::Utilities::is_protein_marker( marker => $marker ) ) {
 			my $new_candidate = Phylosift::Utilities::get_candidate_file( self => $self, marker => $marker, type => "", new => 1, chunk => $chunk );
 			next unless -e $new_candidate && -s $new_candidate > 0;
-			my $hmm_file = Phylosift::Utilities::get_marker_hmm_file( self => $self, marker => $marker, loc => 1 );
-			my $HMM = ps_open($hmm_file);
-			while ( my $line = <$HMM> ) {
-				if ( $line =~ /NSEQ\s+(\d+)/ ) {
-					$refcount = $1;
-					last;
-				}
-			}
 
 			# Align the hits to the reference alignment using Hmmer3
 			# pipe in the aligned sequences, trim them further, and write them back out
@@ -495,6 +496,7 @@ sub alignAndMask {
 			# use tau=1e-6 instead of default 1e-7 to reduce memory consumption to under 4GB
 			my $fasta = "";
 			if ( -e $candidate_long ) {
+				$refcount = 0;
 				my $cmalign =
 				    "$Phylosift::Settings::cmalign -q --dna --mxsize $Phylosift::Settings::cm_align_long_mxsize --tau $Phylosift::Settings::cm_align_long_tau "
 				  . Phylosift::Utilities::get_marker_cm_file( self => $self, marker => $marker )
@@ -502,17 +504,15 @@ sub alignAndMask {
 				debug "Running $cmalign\n";
 				my $CMALIGN = ps_open($cmalign);
 				$fasta .= Phylosift::Utilities::stockholm2fasta( in => $CMALIGN );
+				@lines = split( /\n/, $fasta );
 			}
 			if ( -e $candidate_short ) {
-				my $cmalign =
-				    "$Phylosift::Settings::cmalign -q $Phylosift::Settings::cm_align_short_ali --dna --mxsize $Phylosift::Settings::cm_align_short_mxsize --tau $Phylosift::Settings::cm_align_short_tau "
-				  . Phylosift::Utilities::get_marker_cm_file( self => $self, marker => $marker )
-				  . " $candidate_short | ";
-				debug "Running $cmalign\n";
-				my $CMALIGN = ps_open($cmalign);
-				$fasta .= Phylosift::Utilities::stockholm2fasta( in => $CMALIGN );
+				my $hmm_file = Phylosift::Settings::get_marker_hmm_file( self => $self, marker => $marker, loc => 1 );
+				$hmmalign = "$Phylosift::Settings::hmmalign --outformat afa --mapali " . $stockholm_file . " $hmm_file \"$candidate_short\" |";
+				debug "Running $hmmalign\n";
+				my $HMMALIGN = ps_open($hmmalign);
+				@lines = <$HMMALIGN>;
 			}
-			@lines = split( /\n/, $fasta );
 			next if @lines == 0;
 		}
 		my $mbname = Phylosift::Utilities::get_marker_basename( marker => $marker );
@@ -681,13 +681,13 @@ sub merge_alignment {
 	my $seq_IO   = Phylosift::Utilities::open_SeqIO_object( file => $ali_file );
 	while ( my $seq = $seq_IO->next_seq() ) {
 	    my $core = "";
-	    if($seq->id =~ m/^(\S+)_(\d+)$/){
-		$core = $1;
-	    }else{
-		$seq->id =~ m/^(\S+)/;
-		$core = $1;
-	    }
-		$self->{"read_names"}{$core} = () if ( !exists $self->{"read_names"}{$core} );
+            if($seq->id =~ m/^(\S+)_(\d+)$/){
+                $core = $1;
+            }else{
+                $seq->id =~ m/^(\S+)/;
+                $core = $1;
+            }
+	    $self->{"read_names"}{$core} = () if ( !exists $self->{"read_names"}{$core} );
 		push( @{ ${ $self->{"read_names"} }{$core} }, $self->{"read_names"}{ $seq->id }[0] )
 		  unless defined( @{ ${ $self->{"read_names"} }{$core} } ) && scalar( @{ ${ $self->{"read_names"} }{$core} } == 2 ); #both pairs have been added already
 		if ( exists $seqs{$core} ) {
