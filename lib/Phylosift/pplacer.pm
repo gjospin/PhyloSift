@@ -66,7 +66,7 @@ sub pplacer {
 		$options .= " --mmap-file abracadabra " if ($marker =~ /18s/);  # FIXME: this should be based on the number of seqs in the tree.
 		$options .= " --mmap-file abracadabra " if ($marker =~ /16s/ || $marker eq "concat");
 		my $place_file = place_reads(self=>$self, marker=>$marker, dna=>0, chunk => $chunk, reads=>$read_alignment_file, options=>$options);
-		unlink("abracadabra") if $options =~ /abracadabra/;	# remove the mmap file created by pplacer
+		unlink("$self->{\"treeDir\"}/abracadabra") if $options =~ /abracadabra/;	# remove the mmap file created by pplacer
 	}
 	if ( defined($chunk) && $self->{"mode"} eq "all" ) {
 		Phylosift::Utilities::end_timer( name => "runPplacer" );
@@ -308,7 +308,7 @@ sub place_reads{
 			croak("Marker: $marker\nPackage: $marker_package\nPackage does not exist\nPlacement without a marker package is no longer supported");
 		}
 	}
-	my $pp = "$Phylosift::Settings::pplacer $options --verbosity $Phylosift::Settings::pplacer_verbosity -j ".$Phylosift::Settings::threads." -c $marker_package \"$reads\"";
+	my $pp = "cd $self->{\"treeDir\"}; $Phylosift::Settings::pplacer $options --verbosity $Phylosift::Settings::pplacer_verbosity -j ".$Phylosift::Settings::threads." -c $marker_package \"$reads\"";
 	debug "Running $pp\n";
 	system($pp);
 	
