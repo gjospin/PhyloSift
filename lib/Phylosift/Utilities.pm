@@ -1676,7 +1676,7 @@ sub build_hmm {
 	my $marker = $args{marker} || miss("marker");	
 	my $hmm_file = get_marker_hmm_file( self => $args{self}, marker => $marker );
 	my $stk_file = get_marker_stockholm_file( self => $args{self}, marker => $marker );
-	`$hmmbuild "$hmm_file" "$stk_file"`;
+	`$Phylosift::Settings::hmmbuild "$hmm_file" "$stk_file"`;
 }
 
 =head2 gather_markers

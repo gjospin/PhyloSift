@@ -507,7 +507,7 @@ sub alignAndMask {
 				@lines = split( /\n/, $fasta );
 			}
 			if ( -e $candidate_short ) {
-				my $hmm_file = Phylosift::Settings::get_marker_hmm_file( self => $self, marker => $marker, loc => 1 );
+				my $hmm_file = Phylosift::Utilities::get_marker_hmm_file( self => $self, marker => $marker, loc => 1 );
 				$hmmalign = "$Phylosift::Settings::hmmalign --outformat afa --mapali " . $stockholm_file . " $hmm_file \"$candidate_short\" |";
 				debug "Running $hmmalign\n";
 				my $HMMALIGN = ps_open($hmmalign);
