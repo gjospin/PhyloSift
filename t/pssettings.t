@@ -6,6 +6,8 @@ use strict;
 use warnings;
 
 use Test::More tests => 2;
+use Phylosift::Settings;
+use Phylosift::Utilities;
 
 BEGIN { use_ok( 'Phylosift::Settings' ); }
 
