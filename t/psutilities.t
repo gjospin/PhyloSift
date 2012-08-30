@@ -5,7 +5,6 @@ use warnings;
 
 use Test::More qw(no_plan);
 #use Test::Warn;
-BEGIN { chdir 't' if -d 't' }
 use lib '../lib';
 
 my @subs = qw(ps_open);

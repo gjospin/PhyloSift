@@ -8,7 +8,6 @@ use warnings;
 
 use Test::More qw(no_plan);
 #use Test::Warn;
-BEGIN { chdir 't' if -d 't' }
 use lib '../lib';
 
 BEGIN { use_ok( 'Phylosift::Phylosift' ) or exit; }
