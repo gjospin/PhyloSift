@@ -6,6 +6,9 @@ use strict;
 use warnings;
 
 use Test::More tests => 2;
+BEGIN { chdir 't' if -d 't' }
+use lib '../lib';
+use blib;
 
 my @subs = qw(set_default);
 BEGIN { use_ok( 'Phylosift::Settings', @subs ) or exit; }

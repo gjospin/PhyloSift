@@ -4,7 +4,10 @@ use strict;
 use warnings;
 
 use Test::More qw(no_plan);
-use Test::Warn;
+#use Test::Warn;
+BEGIN { chdir 't' if -d 't' }
+use lib '../lib';
+use blib;
 
 my @subs = qw(ps_open);
 BEGIN { use_ok( 'Phylosift::Utilities', @subs ) or exit; }
