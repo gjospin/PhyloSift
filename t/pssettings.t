@@ -6,6 +6,7 @@ use strict;
 use warnings;
 
 use Test::More tests => 2;
+
 my @subs = qw(set_default);
 BEGIN { use_ok( 'Phylosift::Settings', @subs ) or exit; }
 
@@ -15,3 +16,4 @@ my $expected = 5;
 set_default(parameter=> \$testParam, value=> 5);
 # tests if parameter is 5 by cmp_ok test
 cmp_ok($testParam, '==', $expected, 'value == 5');
+
