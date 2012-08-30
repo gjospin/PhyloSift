@@ -8,7 +8,7 @@ use warnings;
 
 use Test::More qw(no_plan);
 
-BEGIN { use_ok( 'Phylosift::Phylosift' ); }
+BEGIN { use_ok( 'Phylosift::Phylosift' ) or exit; }
 require_ok('Phylosift::Phylosift');
 
 #my $ps = Phylosift->new( );
