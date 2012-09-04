@@ -377,7 +377,8 @@ sub writeAlignedSeq {
 	#substitute all the non letter or number characters into _ in the IDs to avoid parsing issues in tree viewing programs or others
 	my $new_name = Phylosift::Summarize::tree_name( name => $prev_name );
 	#add a paralog ID if there was more than one good hit for this sequence
-	$new_name .= "_p$seq_count" if exists( $self->{"read_names"}{$new_name} );
+	my $randy = int(rand(2000000000));	# paralogs need to be unique so they are not merged later
+	$new_name .= "_p$seq_count.$randy" if exists( $self->{"read_names"}{$new_name} ) && $seq_count > 0;
 	$self->{"read_names"}{$new_name} = () if ( !exists $self->{"read_names"}{$new_name} );
 	push( @{ $self->{"read_names"}{$new_name} }, $prev_name );
 
@@ -411,7 +412,7 @@ sub aa_to_dna_aln {
 	foreach my $seq ( $aln->each_seq ) {
 		my $aa_seqstr    = $seq->seq();
 		my $id           = $seq->display_id;
-		$id =~ s/_p\d+$//g; # FIXME!! this needs to use lookup table
+		$id =~ s/_p\d+\.\d+$//g; # FIXME!! this needs to use lookup table
 		my $dnaseq       = $dnaseqs->{$id} || $aln->throw( "cannot find " . $seq->display_id );
 		my $start_offset = ( $seq->start - 1 ) * CODONSIZE;
 		$dnaseq = $dnaseq->seq();
