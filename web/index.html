@@ -1,0 +1,44 @@
+<html>
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"  "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+	<head>
+		<meta name="author" content="Eric Lowe" />
+		<meta name="description" content="Page to accept user-submitted files to be run by PhyloSift!"/>
+		<link rel="shortcut icon" href="favicon.ico" type="image/x-icon" />
+ 		<link rel=stylesheet href=ps_styles.css type=text/css />
+    		<title>Phylosift Web Interface</title>
+  	</head>
+	<body>
+		
+		<!-- PS specific javascript script here -->
+<!--  		<script type="text/javascript" src="/Users/Eric/Documents/phylojs.js"> </script>
+		<script type="text/javascript" src="/Users/Eric/Downloads/jquery.js"> </script>
+	
+		<script src="js/vendor/jquery.ui.widget.js"></script>
+	
+		<script src="js/jquery.iframe-transport.js"></script>
+	
+		<script src="js/jquery.fileupload.js"></script>
+  	-->
+  		<div class="header">
+  			<div id="logo">
+			<h1><a href="https://phylosift.wordpress.com">PhyloSift</a></h1>
+			<h2>mining the global metagenome</h2>
+			</div>
+		</div>
+		<form enctype-"multipart/form-data" action="ps_web.php" method="POST">
+			<input type="hidden" name="MAX_FILE_SIZE" value="1000000000" />
+			Upload file: <input name="userfile" type="file" />
+			<!-- this picture is only temporary! -->
+		<div id="target"><img src="http://dribbble.s3.amazonaws.com/users/1390/screenshots/246754/devmate.png"
+alt="PhylOctopus">
+	<input type="submit" value="Start PhyloSifting" />
+	<br>Or give your sequences to the PhylOctopus! (Coming soon)<br>
+	</div>
+			
+		</form>
+	
+		
+		
+	</body>
+</html>

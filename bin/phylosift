@@ -102,6 +102,7 @@ Options Available at this time :
    --keep_search         Keeps the blastDir files (Default: Delete the blastDir files after every chunk)
    --chunk=<Number>      Only run a set number of chunks
    --chunk_size=<Number> Run so many sequences per chunk
+   --disable_updates     Disables automated check and download of Phylosift marker updates
 
 ~;
 

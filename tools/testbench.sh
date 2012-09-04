@@ -1,6 +1,6 @@
 #! /bin/bash
 # Author: Eric Lowe
-# Usage: testbench.sh [blastfile] [fastafile]
+# Usage: testbench.sh [blastfile] [fastafile] [rank]
 # For now script requires either a .fa file for fasta file or a .fastq
 # with a copy converted to .fa in the same directory.  This is because MEGAN
 # only takes .fa, where Phylosift takes .fastq and .fa.  This script WILL NOT
@@ -10,7 +10,10 @@
 
 # Tests for correct number of arguments and prints usage statement before exiting
 # if incorrect number of args supplied
-[ $# -ne 2 ] && { echo "usage: testbench.sh [blastfile] [fastafile]" ; exit 1; }
+[ $# -ne 3 ] && { echo "usage: testbench.sh [blastfile] [fastafile] [rank]" ; exit 1; }
+
+# Tests for X Windowing system since MEGAN requires this to run properly
+[ "$DISPLAY" ] || { echo "Need to enable X Windowing!" ; exit 1; }
 
 # Declaration of file variables needed for I/O and usage
 dirname=`basename $2` # PS_temp directory name to look in for megan_to_ps.pl
@@ -22,8 +25,8 @@ test='fastq' # variable for testing file extension
 # .fa file is required in the directory for script to run properly
 
 if [ -e $meganfile ] ; # if MEGAN has been ran today, do less work
-then
-echo -e "open file='$meganfile'\ncollapse rank=Species\nselect rank=Species\nexport what=CSV format=readname_taxonid separator=comma file='/home/elowe/$output'\nquit" > /home/elowe/meg_input.txt
+then # rank is given on command line, first letter MUST be capital; i.e. Species or Subspecies
+echo -e "open file='$meganfile'\ncollapse rank=$3\nselect rank=$3\nexport what=CSV format=readname_taxonid separator=comma file='/home/elowe/$output'\nquit" > /home/elowe/meg_input.txt
 else # MEGAN has not been run today, do long run
     if [ $ext == $test ] ; # if file extension is .fastq
     then
@@ -43,10 +46,22 @@ MEGAN +g < meg_input.txt
 # MEGAN output to be similar to Phylosift output so that Phylosift Benchmark can be used
 # to compare MEGAN to PS.  Output is saved to sequence_taxa.txt in appropriate dir in 
 # PS_temp. 
-megan_to_ps.pl $output > PS_temp/$dirname/sequence_taxa.txt
+if [ -e PS_temp/$dirname/sequence_taxa.txt ] ; # if file exists
+then
+    megan_to_ps.pl $output > PS_temp/$dirname/sequence_taxa.txt
+else # make file so that script can run
+    touch PS_temp/$dirname/sequence_taxa.txt
+    megan_to_ps.pl $output > PS_temp/$dirname/sequence_taxa.txt
+fi
+
 # removes unnecessary beginning newline  
 sed -i 's/^\n//' PS_temp/$dirname/sequence_taxa.txt
 # Runs Phylosift benchmark
-phylosift benchmark $2 ~/megan_test 
-
+if [ -s PS_temp/$dirname/sequence_taxa.txt ] ; # if file exists and is not empty
+then
+    phylosift benchmark $2 ~/megan_test 
+else # file exists but is empty
+    echo "Something went wrong!"
+    exit 1
+fi
 # End of script
