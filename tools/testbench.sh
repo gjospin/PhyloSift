@@ -26,17 +26,17 @@ test='fastq' # variable for testing file extension
 
 if [ -e $meganfile ] ; # if MEGAN has been ran today, do less work
 then # rank is given on command line, first letter MUST be capital; i.e. Species or Subspecies
-echo -e "open file='$meganfile'\ncollapse rank=$3\nselect rank=$3\nexport what=CSV format=readname_taxonid separator=comma file='/home/elowe/$output'\nquit" > /home/elowe/meg_input.txt
+echo -e "open file='$meganfile'\ncollapse rank=$3\nselect nodes=all\nexport what=CSV format=readname_taxonid separator=comma file='/home/elowe/$output'\nquit" > /home/elowe/meg_input.txt
 else # MEGAN has not been run today, do long run
     if [ $ext == $test ] ; # if file extension is .fastq
     then
         file=sim_data1/`basename $2 .fastq`.fa
         # gi_to_taxid lookup file must be supplied for proper usage.  Mine is located in /home/elowe/Testing
         # but file can be anywhere.  Change as needed so that script finds gi_taxid_nucl.bin
-        echo -e "load gi2taxfile='/home/elowe/Testing/gi_taxid_nucl.bin'\nimport blastfile='$1' fastafile='$file' meganfile='$meganfile'\ncollapse rank=Species\nselect rank=Species\nexport what=CSV format=readname_taxonid separator=comma file='/home/elowe/$output'\nquit" > /home/elowe/meg_input.txt
+        echo -e "load gi2taxfile='/home/elowe/Testing/gi_taxid_nucl.bin'\nimport blastfile='$1' fastafile='$file' meganfile='$meganfile'\ncollapse rank=$3\nselect nodes=all\nexport what=CSV format=readname_taxonid separator=comma file='/home/elowe/$output'\nquit" > /home/elowe/meg_input.txt
     else
         file=$dirname
-        echo -e "load gi2taxfile='/home/elowe/Testing/gi_taxid_nucl.bin'\nimport blastfile='$1' fastafile='$file' meganfile='$meganfile'\ncollapse rank=Species\nselect rank=Species\nexport what=CSV format=readname_taxonid separator=comma file='/home/elowe/$output'\nquit" > /home/elowe/meg_input.txt
+        echo -e "load gi2taxfile='/home/elowe/Testing/gi_taxid_nucl.bin'\nimport blastfile='$1' fastafile='$file' meganfile='$meganfile'\ncollapse rank=$3\nselect nodes=all\nexport what=CSV format=readname_taxonid separator=comma file='/home/elowe/$output'\nquit" > /home/elowe/meg_input.txt
     fi # end of if file extension is .fastq   
 fi # end of if MEGAN has been run today
 

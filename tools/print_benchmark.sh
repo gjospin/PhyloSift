@@ -5,8 +5,8 @@ mg='mg'
 # declare associative array path
 declare -A path
 path=([psunif]="/home/elowe/sim_data1/knockoutunif_ill_fastq-reads.fastq" [mgunif]="/home/elowe/sim_data1/knockoutunif_ill_fastq-reads_megan.fastq" [psexp]="/home/elowe/sim_data1/knockoutexp_ill_fastq-reads.fastq" [mgexp]="/home/elowe/sim_data1/knockoutexp_ill_fastq-reads_megan.fastq")
-file=(psunif mgunif psexp mgexp)
-ty=(mass tophit tophit.recall)
+file=(psunif mgunif psexp mgexp) # array of file "names"
+ty=(tophit tophit.recall) # array of file types
 
 if [ -e $out ] ; # does output file exist
 then
