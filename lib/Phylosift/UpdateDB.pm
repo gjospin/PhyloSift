@@ -325,17 +325,15 @@ if [ \$? -gt 0 ]; then
 	mkdir -p \$WORKDIR
 fi
 cd \$WORKDIR
-phylosift search $params --isolate --besthit \$1
-phylosift align $params --isolate --besthit \$1
+phylosift search $params --isolate --besthit --unique \$1
+phylosift align $params --isolate --besthit --unique \$1
 rm -rf PS_temp/*/treeDir
 rm -rf PS_temp/*/blastDir
 rm -rf PS_temp/*/isolates.fasta
-rm -rf PS_temp/*/alignDir/PMP*.stk
-rm -rf PS_temp/*/alignDir/PMP*.hmm
-rm -rf PS_temp/*/alignDir/PMP*hmm.fasta
 rm -rf PS_temp/*/alignDir/PMP*.newCandidate
 
-scp -r PS_temp/* $hostname:$local_directory
+#scp -r PS_temp/* $hostname:$local_directory
+cp -r PS_temp/* $local_directory
 rm -rf \$WORKDIR
 };
 	my $job_count = 0;
