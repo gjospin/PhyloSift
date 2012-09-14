@@ -180,6 +180,8 @@ sub run {
 
 	debug "MODE :: " . $self->{"mode"} . "\n";
 
+	$Phylosift::Settings::keep_search = 1 if $self->{"mode"} eq 'search';
+
 #changed > to >> so that we append to that file every time a run is restarted and we can keep track if there was a change in DB or in command
 #Also it prevents the file from being clobbered every time a run is restarted.
 	if ( $self->{"mode"} eq 'search' || $self->{"mode"} eq 'all' ) {
