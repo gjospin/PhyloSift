@@ -49,6 +49,8 @@ while(<INBC>){
 close(INBC);
 
 #reading barcodes to names mapping
+my %output_filehandles_1 = ();
+my %output_filehandles_2 = ();
 my %mapping = ();
 print STDERR "Reading name mapping\n";
 open(INMAP,$ARGV[2]);
@@ -57,6 +59,8 @@ while(<INMAP>){
     my @line = split(/\t/,$_);
     $line[1] =~ s/\s/_/g;
     $mapping{$line[0]}=$line[1];
+    open($output_filehandles_1{$line[1]},">>$ARGV[3]/$ARGV[4]"."_$line[1]"."_1.fastq");
+    open($output_filehandles_2{$line[1]},">>$ARGV[3]/$ARGV[4]"."_$line[1]"."_2.fastq");
 }
 close(INBC);
 
@@ -96,29 +100,34 @@ foreach my $file(@files){
 	if(exists $barcode{$i2}){
 	    $BC2 = $barcode{$i2};
         }
+	my $code = $BC1.".".$BC2;
 	if($BC1 eq "" || $BC2 eq ""){
 	    $bc_count{mismatch} = 1 if ! exists $bc_count{mismatch};
 	    $bc_count{mismatch} ++ if exists $bc_count{mismatch};
-	    open(OUT1,">>$ARGV[3]/$ARGV[4]"."_mismatched_barcodes"."_1.fastq");
-	    open(OUT2,">>$ARGV[3]/$ARGV[4]"."_mismatched_barcodes"."_2.fastq");
-	    print OUT1 @read1;
-	    print OUT2 @read2;
-	    close(OUT1);
-	    close(OUT2);
+	    $code = "mismatched_barcode";
 	}else{
-	    my $code = $BC1.".".$BC2;
 	    $code = $mapping{"$BC1.$BC2"} if exists ($mapping{"$BC1.$BC2"});
 	    $bc_count{$code}=1 if ! exists $bc_count{$code};
             $bc_count{$code} ++ if exists $bc_count{$code};
-	    open(OUT1,">>$ARGV[3]/$ARGV[4]"."_$code"."_1.fastq");
-	    open(OUT2,">>$ARGV[3]/$ARGV[4]"."_$code"."_2.fastq");
-	    print OUT1 @read1;
-	    print OUT2 @read2;
-	    close(OUT1);
-	    close(OUT2);
 	}
+	if(!exists $output_filehandles_1{$code}){
+	    print "new CODE : $code\n";
+	    open($output_filehandles_1{$code},">>$ARGV[3]/$ARGV[4]"."_$code"."_1.fastq");
+	    open($output_filehandles_2{$code},">>$ARGV[3]/$ARGV[4]"."_$code"."_2.fastq");	    
+	}
+	my $READ_HANDLE_1 = $output_filehandles_1{$code};
+	my $READ_HANDLE_2 = $output_filehandles_2{$code};
+	print $READ_HANDLE_1 @read1 if exists $output_filehandles_1{$code};
+	print $READ_HANDLE_2 @read2 if exists $output_filehandles_2{$code};
     }
 }
+
+#close files and flush IO buffers
+foreach my $handle (keys (%output_filehandles_1)){
+    close($output_filehandles_1{$handle});
+    close($output_filehandles_2{$handle});
+}
+
 
 foreach my $code (sort {$bc_count{$a} cmp $bc_count{$b} } keys %bc_count){
     print STDERR $code."\t".$bc_count{$code}."\n";
