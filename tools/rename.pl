@@ -6,7 +6,7 @@
 
 use strict; use warnings;
 
-open FILE, "< psversion" or die "Couldn't find psversion!";
+open FILE, "< ../psversion" or die "Couldn't find psversion!";
 chomp(my $name = <FILE>);      # Get Phylosift tarball name from psversion
 my $tarname = $name. '.tar.bz2';
 `tar -xjf $tarname`;
