@@ -6,10 +6,11 @@
 
 use strict; use warnings;
 
-open FILE, "<psversion" or die "Couldn't find psversion!";
+open FILE, "< psversion" or die "Couldn't find psversion!";
 chomp(my $name = <FILE>);      # Get Phylosift tarball name from psversion
-$name = $name . '.tar.bz2';    # Append extension
-my $newname = 'phylosift.tar.bz2';   # new name for tarball
-rename ($name, $newname);      # rename files
+my $tarname = $name. '.tar.bz2';
+`tar -xjf $tarname`;
+`mv $name ../phylosift`;
+
 
 exit;
