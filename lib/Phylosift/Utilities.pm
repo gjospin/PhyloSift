@@ -994,7 +994,11 @@ sub get_decorated_marker_name {
 	my $updated    = $args{updated} || 0;
 	my $sub_marker = $args{sub_marker};
 	my $base       = $args{base} || 0;
+	my $long       = $args{long} || 0;
+	my $short      = $args{short} || 0;
 	$name = get_marker_basename( marker => $name ) if $base;
+	$name .= ".long" if $long;
+	$name .= ".short" if $short;
 	$name .= ".codon" if $dna;
 	$name .= ".updated" 
 	  if ( $updated || $Phylosift::Settings::updated ) && !$Phylosift::Settings::extended && $name !~ /^1[68]s/;

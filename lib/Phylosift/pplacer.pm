@@ -56,17 +56,45 @@ sub pplacer {
 		$covref = Phylosift::Summarize::read_coverage( file => $Phylosift::Settings::coverage );
 	}
 	unshift(@{$markRef},'concat'); #adds the concatenation to the list of markers
-	foreach my $marker ( @{$markRef} ) {
+	my $long_rna_switch = -1;
+	my $short_rna_jplace;
+	for(my $mI=0; $mI < @{$markRef}; $mI++){
+		my $marker = @$markRef[$mI];
 		# the PMPROK markers are contained in the concat above
 		next if($marker =~ /PMPROK/ && $Phylosift::Settings::updated);
 		next if($marker =~ /DNGNGWU/ && $Phylosift::Settings::updated);
-		my $read_alignment_file = $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta( marker => Phylosift::Utilities::get_marker_basename(marker=>$marker), chunk => $chunk );
-		next unless -e $read_alignment_file && -s $read_alignment_file > 0;
-		my $options = $marker eq "concat" ? "--groups $Phylosift::Settings::pplacer_groups" : "";
-		$options .= " --mmap-file abracadabra " if ($marker =~ /18s/);  # FIXME: this should be based on the number of seqs in the tree.
-		$options .= " --mmap-file abracadabra " if ($marker =~ /16s/ || $marker eq "concat");
-		my $place_file = place_reads(self=>$self, marker=>$marker, dna=>0, chunk => $chunk, reads=>$read_alignment_file, options=>$options);
-		unlink("$self->{\"treeDir\"}/abracadabra") if $options =~ /abracadabra/;	# remove the mmap file created by pplacer
+		# RNA markers have short and long types
+		my $protein = Phylosift::Utilities::is_protein_marker(marker=>$marker);
+		$long_rna_switch = ($long_rna_switch + 1)%2 unless $protein;
+		my $mbname = Phylosift::Utilities::get_marker_basename(marker=>$marker);
+		my $short_rna = $protein ? 0 : !$long_rna_switch;
+		my $long_rna = $protein ? 0 : $long_rna_switch;
+		$mI-- if($short_rna); # need to hit RNA markers twice: short then long
+		my $read_alignment_file = $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta( marker => $mbname, chunk => $chunk, long => $long_rna, short => $short_rna );
+		my $place_file = "";
+		if(-e $read_alignment_file && -s $read_alignment_file > 0){
+			my $options = $marker eq "concat" ? "--groups $Phylosift::Settings::pplacer_groups" : "";
+			$options .= " --mmap-file abracadabra " if ($marker =~ /18s/ || $marker =~ /16s/ || $marker eq "concat");
+			$place_file = place_reads(self=>$self, marker=>$marker, dna=>0, chunk => $chunk, reads=>$read_alignment_file, options=>$options, short_rna=>$short_rna);
+			unlink("$self->{\"treeDir\"}/abracadabra") if $options =~ /abracadabra/;	# remove the mmap file created by pplacer
+		}
+		$short_rna_jplace = $place_file if ($short_rna);
+		# merge output from short and long RNA
+		if($long_rna==1){
+			my $dest_jplace = Phylosift::Utilities::get_aligner_output_fasta( marker => $mbname, chunk => $chunk );
+			$dest_jplace = $self->{"treeDir"} . "/" . basename( $dest_jplace, ".fasta" );
+			$dest_jplace .= ".jplace";
+			my $mver;
+			$mver = $short_rna_jplace if(-e $short_rna_jplace && !-e $place_file);
+			$mver = $place_file if(!-e $short_rna_jplace && -e $place_file);
+			`mv $mver $dest_jplace` if defined $mver;
+			if(-e $short_rna_jplace && -e $place_file){
+				# both short and long RNA seqs, need to merge.
+				my $merge_cl = "$Phylosift::Settings::guppy merge -o $dest_jplace $place_file $short_rna_jplace";
+				unlink($place_file);
+				unlink($short_rna_jplace);
+			}
+		}
 	}
 	if ( defined($chunk) && $self->{"mode"} eq "all" ) {
 		Phylosift::Utilities::end_timer( name => "runPplacer" );
@@ -99,7 +127,7 @@ sub merge_chunk {
 	$unchunked_place =~ s/\.\d+\.jplace/.jplace/g;
 	if(-e $unchunked_place){
 		# merge
-		my $merge_cl = "$Phylosift::Utilities::guppy merge -o $unchunked_place $place_file $unchunked_place";
+		my $merge_cl = "$Phylosift::Settings::guppy merge -o $unchunked_place $place_file $unchunked_place";
 		debug("Merging jplaces with $merge_cl\n");
 		system($merge_cl);
 	}else{
@@ -296,6 +324,7 @@ sub place_reads{
 	my $submarker = $args{sub_marker};
 	my $chunk = $args{chunk};
 	my $options = $args{options} || "";
+	my $short_rna = $args{short_rna} || 0;
 	my $marker_package = Phylosift::Utilities::get_marker_package( self => $self, marker => $marker, dna => $dna, sub_marker=>$submarker );
 	unless(-d $marker_package ){
 		# try not updated
@@ -308,14 +337,14 @@ sub place_reads{
 			croak("Marker: $marker\nPackage: $marker_package\nPackage does not exist\nPlacement without a marker package is no longer supported");
 		}
 	}
-	my $pp = "cd $self->{\"treeDir\"}; $Phylosift::Settings::pplacer $options --verbosity $Phylosift::Settings::pplacer_verbosity -j ".$Phylosift::Settings::threads." -c $marker_package \"$reads\"";
+	$marker_package .= ".short" if $short_rna;
+	my $jplace = $self->{"treeDir"} . "/" . basename($reads, ".fasta").".jplace";
+	my $pp = "cd $self->{\"treeDir\"}; $Phylosift::Settings::pplacer $options -o $jplace --verbosity $Phylosift::Settings::pplacer_verbosity -j ".$Phylosift::Settings::threads." -c $marker_package \"$reads\"";
 	debug "Running $pp\n";
 	system($pp);
 	
-	my $jplace = basename($reads, ".fasta").".jplace";
 
-	`mv "$jplace" "$self->{"treeDir"}"` if ( -e $jplace );
-	return unless -e $self->{"treeDir"} . "/$jplace";
+	return unless -e $jplace;
 
 	# if we're on the concat marker, create a single jplace with all reads for use with multisample metrics 
 	if($marker eq "concat"){
@@ -324,7 +353,7 @@ sub place_reads{
 		my $markermapfile = Phylosift::Utilities::get_marker_taxon_map(self=>$self, marker=>$marker, dna=>$dna, sub_marker=>$submarker);
 		return unless -e $markermapfile;	# can't summarize if there ain't no mappin'!
 		my $taxonmap = Phylosift::Summarize::read_taxonmap(file=>$markermapfile);
-		name_taxa_in_jplace( self => $self, input => $self->{"treeDir"} . "/$jplace", output => $sample_jplace_naming, taxonmap=>$taxonmap );
+		name_taxa_in_jplace( self => $self, input => $jplace, output => $sample_jplace_naming, taxonmap=>$taxonmap );
 		`$Phylosift::Settings::guppy merge -o $sample_jplace $sample_jplace_naming $sample_jplace` if -f $sample_jplace;
 		`cp $sample_jplace_naming $sample_jplace` unless -f $sample_jplace;
 		`rm $sample_jplace_naming`;
@@ -334,7 +363,7 @@ sub place_reads{
 	    debug "Placing on sub markers $marker\n";
 		load_submarkers();
 		if(keys(%submarker_map)>0){
-			make_submarker_placements(self=>$self, marker=>$marker, chunk=>$chunk, place_file=>$self->{"treeDir"} . "/$jplace") if $self->{"dna"};
+			make_submarker_placements(self=>$self, marker=>$marker, chunk=>$chunk, place_file=>$jplace) if $self->{"dna"};
 		}
 	}
 	
@@ -344,16 +373,16 @@ sub place_reads{
 
 		# read the tree edge to taxon map for this marker
 		my $markermapfile = Phylosift::Utilities::get_marker_taxon_map(self=>$self, marker=>$marker, dna=>$dna, sub_marker=>$submarker);
-		return unless -e $markermapfile;	# can't summarize if there ain't no mappin'!
+		return $jplace unless -e $markermapfile;	# can't summarize if there ain't no mappin'!
 		my $taxonmap = Phylosift::Summarize::read_taxonmap(file=>$markermapfile);
 
 		# rename nodes
-		name_taxa_in_jplace( self => $self, input => $self->{"treeDir"} . "/$jplace", output => $self->{"treeDir"} . "/$jplace", taxonmap=>$taxonmap );
+		name_taxa_in_jplace( self => $self, input => $jplace, output => $jplace, taxonmap=>$taxonmap );
 	}
-	return $self->{"treeDir"} . "/$jplace" unless defined($covref);
+	return $jplace unless defined($covref);
 	debug "Weighting sequences in $marker\n";
-	weight_placements( self => $self, coverage => $covref, place_file => $self->{"treeDir"} . "/$jplace" );
-	return $self->{"treeDir"} . "/$jplace";
+	weight_placements( self => $self, coverage => $covref, place_file => $jplace );
+	return $jplace;
 }
 
 =head2 weight_placements
