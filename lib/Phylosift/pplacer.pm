@@ -91,6 +91,7 @@ sub pplacer {
 			if(-e $short_rna_jplace && -e $place_file){
 				# both short and long RNA seqs, need to merge.
 				my $merge_cl = "$Phylosift::Settings::guppy merge -o $dest_jplace $place_file $short_rna_jplace";
+				`$merge_cl`;
 				unlink($place_file);
 				unlink($short_rna_jplace);
 			}
