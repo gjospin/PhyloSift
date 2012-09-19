@@ -54,6 +54,8 @@ Example 1:  > phylosift.pl build_marker test.aln 0.01
 Example 2:  > phylosift.pl build_marker -f test.aln 0.01
 Example 3:  > phylosift.pl build_marker -f test.aln 0.01 file.map
 
+The PD (phylogenetic diversity) pruning threshold is used to remove very similar sequences from the alignment, so those left are less biased towards heavily studied lineages. The threshold is passed to the pda program, which is described in Minh et. al. 2006 and http://www.cibiv.at/software/pda/pda-manual/.
+
 Simulating Reads
 ===========================================
 > phylosift.pl sim --output=<output_path> <genomes_path> <number_of_genomes_to_choose_from> <reads_to_generate>
@@ -70,7 +72,7 @@ Mode : Only execute a specific step in the pipeline
   placer - run pplacer on the results from the align step
   summary - run the taxonomy assignment steps
   index - indexes the various databases needed for Rapsearch, Bowtie and Blast
-  build_maker - creates a reference package from a multiple alignment file
+  build_marker - creates a reference package from a multiple alignment file
   sim - Picks random genomes from the concatenated reference tree, 
         knocks the selected genomes out of the marker DB, 
         runs PS on the generated reads from the selected genomes (in different formats).

@@ -3,6 +3,7 @@ use Cwd;
 use Carp;
 use Phylosift::Utilities qw(:all);
 use File::Basename;
+use JSON;
 
 =head1 NAME
 
@@ -99,6 +100,7 @@ sub build_marker {
 	) unless -e "$target_dir/$core.tree";
 	my $rep_file;
 	if($seq_count > 10 ){
+		debug "Looking for representatives\n";
 		#need to generate representatives using PDA
 		$rep_file = get_representatives_from_tree(
 			tree             => $fasttree_file,
@@ -119,7 +121,7 @@ sub build_marker {
 	) unless -e "$target_dir/$core.rep" || !-e "$target_dir/$core.pda";
 	if ( defined $mapping ) {
 		my $tmp_jplace     = $target_dir . "/" . $core . ".tmpread.jplace";
-		my $mangled_jplace = $tmp_jplace . ".mangled";
+		my $mangled = $target_dir . "/" . $core . ".tmpread.mangled";
 		my $taxon_map      = $target_dir . "/" . $core . ".taxonmap";
 		my $id_taxon_map   = $target_dir . "/" . $core . ".gene_map";
 		my $ncbi_sub_tree  = $target_dir . "/" . $core . ".subtree";
@@ -136,7 +138,7 @@ sub build_marker {
 		) unless -e "$target_dir/$core.tmpread.fasta";
 		`cd "$target_dir";pplacer -c temp_ref -p "$tmpread_file"`
 		  unless -e $tmp_jplace;
-		jplace_mangler( in => $tmp_jplace, out => $mangled_jplace );
+		tree_mangler( in => $tmp_jplace, out => $mangled );
 
 		#create a file with a list of IDs
 		my %taxon_hash = generate_id_to_taxonid_map(
@@ -153,16 +155,16 @@ sub build_marker {
 			taxon_ids => \@taxon_array
 		);
 		debug "AFTER ncbi_subtree\n";
-		`readconciler $ncbi_sub_tree $mangled_jplace $id_taxon_map $taxon_map`;
+		`readconciler $ncbi_sub_tree $mangled $id_taxon_map $taxon_map`;
 		debug "AFTER readconciler\n";
 
-`rm -rf "$tmpread_file" "$mangled_jplace" "$tmp_jplace" "$id_taxon_map" "$ncbi_sub_tree"  "$target_dir/temp_ref"`;
+#`rm -rf "$tmpread_file" "$mangled" "$tmp_jplace" "$id_taxon_map" "$ncbi_sub_tree"  "$target_dir/temp_ref"`;
 	}
 
 #use taxit to create a new reference package required for running PhyloSift
 #needed are : 1 alignment file, 1 representatives fasta file, 1 hmm profile, 1 tree file, 1 log tree file.
 `cd "$target_dir";taxit create -c -d "Creating a reference package for PhyloSift for the $core marker" -l "$core" -f "$clean_aln" -t "$target_dir/$core.tree" -s "$target_dir/$core.log" -P "$core"`;
-
+	exit;
 	`rm "$target_dir/$core.pda"` if -e "$target_dir/$core.pda";
 	`rm "$target_dir/$core.tree"`;
 	`rm "$target_dir/$core.log"`;
@@ -332,7 +334,9 @@ sub generate_id_to_taxonid_map {
 	my $marker     = $args{marker} || miss("Marker name");
 	my %map_hash   = %{$list_ref};
 	my $FHOUT      = Phylosift::Utilities::ps_open( ">" . $out_file );
+	debug("MAPFILE : $map_file\n");
 	my $FHIN       = Phylosift::Utilities::ps_open($map_file);
+	
 	my @test_array = keys(%map_hash);
 	my %return_hash = ();
 
@@ -370,22 +374,25 @@ sub generate_id_to_taxonid_map {
 	return %return_hash;
 }
 
-=head2 jplace_mangler
+=head2 tree_mangler
 
-mangles a Jplace file according the regex
+mangles a Jplace file according the regex and prints out a tree
 
 =cut
 
-sub jplace_mangler {
+sub tree_mangler {
 	my %args    = @_;
 	my $fileIN  = $args{in} || miss("Input file");
 	my $fileOUT = $args{out} || miss("Output file");
 	my $FH      = Phylosift::Utilities::ps_open($fileIN);
 	my $FHOUT   = Phylosift::Utilities::ps_open( ">" . $fileOUT );
-	while ( my $line = <$FH> ) {
-		$line =~ s/:(.+?)\{(\d+?)\}/\{$2\}:$1/g;
-		print $FHOUT $line;
-	}
+	my @treedata = <$FH>;
+	close($FH);
+	my $json_data = decode_json( join("", @treedata) );
+	# parse the tree
+	my $tree_string = $json_data->{tree};
+	$tree_string =~ s/:([^:\)\(]+?)\{(\d+?)\}/\{$2\}:$1/g;
+	print $FHOUT $tree_string;
 }
 
 =head2 generate_hmm

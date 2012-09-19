@@ -463,61 +463,62 @@ sub alignAndMask {
 	my $markRef = $args{marker_reference} || miss("marker_reference");
 	my $chunk   = $args{chunk};
 	
+	my $long_rna = -1;
 	for ( my $index = 0 ; $index < @{$markRef} ; $index++ ) {
 		my $marker         = ${$markRef}[$index];
 		my $refcount       = 0;
 		my $stockholm_file = Phylosift::Utilities::get_marker_stockholm_file( self => $self, marker => $marker );
-		my $hmmalign       = "";
 		my @lines;
-		if ( Phylosift::Utilities::is_protein_marker( marker => $marker ) ) {
-			my $new_candidate = Phylosift::Utilities::get_candidate_file( self => $self, marker => $marker, type => "", new => 1, chunk => $chunk );
-			next unless -e $new_candidate && -s $new_candidate > 0;
-			my $hmm_file = Phylosift::Utilities::get_marker_hmm_file( self => $self, marker => $marker, loc => 1 );
-			my $HMM = ps_open($hmm_file);
-			while ( my $line = <$HMM> ) {
-				if ( $line =~ /NSEQ\s+(\d+)/ ) {
-					$refcount = $1;
-					last;
-				}
-			}
+		my $protein = Phylosift::Utilities::is_protein_marker( marker => $marker );
+		$long_rna = ($long_rna + 1)%2 unless $protein;
+		my $candidate;
+		if(!$protein && $long_rna == 0){
+			$candidate = Phylosift::Utilities::get_candidate_file( self => $self, marker => $marker, type => ".rna.short", chunk => $chunk );
+			$index--;
+		}elsif( $long_rna == 1){
+			$candidate = Phylosift::Utilities::get_candidate_file( self => $self, marker => $marker, type => ".rna.long",  chunk => $chunk );
+		}else{
+			$candidate = Phylosift::Utilities::get_candidate_file( self => $self, marker => $marker, type => "", new => 1, chunk => $chunk );
+		}
+		next unless -e $candidate && -s $candidate > 0;
 
-			# Align the hits to the reference alignment using Hmmer3
+		my $hmm_file = Phylosift::Utilities::get_marker_hmm_file( self => $self, marker => $marker, loc => 1 );
+		Phylosift::Utilities::build_hmm(marker=>$marker) unless -e $hmm_file;
+		my $HMM = ps_open($hmm_file);
+		while ( my $line = <$HMM> ) {
+			if ( $line =~ /NSEQ\s+(\d+)/ ) {
+				$refcount = $1;
+				last;
+			}
+		}
+		if ( $protein || !$long_rna ) {
+			# Align the hits to the reference alignment using HMMER 3
 			# pipe in the aligned sequences, trim them further, and write them back out
-			$hmmalign = "$Phylosift::Settings::hmmalign --outformat afa --mapali " . $stockholm_file . " $hmm_file \"$new_candidate\" |";
+			my $hmmalign = "$Phylosift::Settings::hmmalign --outformat afa --mapali " . $stockholm_file . " $hmm_file \"$candidate\" |";
 			debug "Running $hmmalign\n";
 			my $HMMALIGN = ps_open($hmmalign);
 			@lines = <$HMMALIGN>;
 		} else {
 			debug "Setting up cmalign for marker $marker\n";
-			my $candidate_long  = Phylosift::Utilities::get_candidate_file( self => $self, marker => $marker, type => ".rna.long",  chunk => $chunk );
-			my $candidate_short = Phylosift::Utilities::get_candidate_file( self => $self, marker => $marker, type => ".rna.short", chunk => $chunk );
-
-			#if the marker is rna, use infernal instead of hmmalign
+			#if the marker is long rna, use infernal instead of hmmalign
 			# use tau=1e-6 instead of default 1e-7 to reduce memory consumption to under 4GB
 			my $fasta = "";
-			if ( -e $candidate_long ) {
-				my $cmalign =
-				    "$Phylosift::Settings::cmalign -q --dna --mxsize $Phylosift::Settings::cm_align_long_mxsize --tau $Phylosift::Settings::cm_align_long_tau "
-				  . Phylosift::Utilities::get_marker_cm_file( self => $self, marker => $marker )
-				  . " $candidate_long | ";
-				debug "Running $cmalign\n";
-				my $CMALIGN = ps_open($cmalign);
-				$fasta .= Phylosift::Utilities::stockholm2fasta( in => $CMALIGN );
-			}
-			if ( -e $candidate_short ) {
-				my $cmalign =
-				    "$Phylosift::Settings::cmalign -q $Phylosift::Settings::cm_align_short_ali --dna --mxsize $Phylosift::Settings::cm_align_short_mxsize --tau $Phylosift::Settings::cm_align_short_tau "
-				  . Phylosift::Utilities::get_marker_cm_file( self => $self, marker => $marker )
-				  . " $candidate_short | ";
-				debug "Running $cmalign\n";
-				my $CMALIGN = ps_open($cmalign);
-				$fasta .= Phylosift::Utilities::stockholm2fasta( in => $CMALIGN );
-			}
+			$refcount = 0;
+			my $cmalign =
+			    "$Phylosift::Settings::cmalign -q --dna --mxsize $Phylosift::Settings::cm_align_long_mxsize --tau $Phylosift::Settings::cm_align_long_tau "
+			  . Phylosift::Utilities::get_marker_cm_file( self => $self, marker => $marker )
+			  . " $candidate | ";
+			debug "Running $cmalign\n";
+			my $CMALIGN = ps_open($cmalign);
+			$fasta .= Phylosift::Utilities::stockholm2fasta( in => $CMALIGN );
 			@lines = split( /\n/, $fasta );
 			next if @lines == 0;
 		}
 		my $mbname = Phylosift::Utilities::get_marker_basename( marker => $marker );
-		my $outputFastaAA = $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta( marker => $mbname, chunk => $chunk );
+		
+		my $short_rna = $protein ? 0 : !$long_rna;
+		my $long = $protein ? 0 : $long_rna;
+		my $outputFastaAA = $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta( marker => $mbname, chunk => $chunk, long => $long, short => $short_rna );
 		my $outputFastaDNA = $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta( marker => $mbname, dna => 1, chunk => $chunk );
 		my $ALIOUT = ps_open( ">" . $outputFastaAA );
 		my $prev_seq;
@@ -538,6 +539,7 @@ sub alignAndMask {
 				  )
 				  if $seqCount <= $refcount
 					  && $seqCount > 0;
+
 				writeAlignedSeq(
 								 self         => $self,
 								 OUTPUT       => $ALIOUT,
@@ -622,7 +624,7 @@ sub alignAndMask {
 
 			#removing the marker from the list if no sequences were added to the alignment file
 			warn "Masking or hmmsearch thresholds failed, removing $marker from the list\n";
-			splice @{$markRef}, $index--, 1;
+			splice @{$markRef}, $index--, 1 if $protein; # index may have been changed if not protein
 		}elsif( $seqCount > 1 && $Phylosift::Settings::unique ) {
 			unlink( $outputFastaAA );
 			unlink( $outputFastaDNA );
@@ -682,13 +684,13 @@ sub merge_alignment {
 	my $seq_IO   = Phylosift::Utilities::open_SeqIO_object( file => $ali_file );
 	while ( my $seq = $seq_IO->next_seq() ) {
 	    my $core = "";
-	    if($seq->id =~ m/^(\S+)_(\d+)$/){
-		$core = $1;
-	    }else{
-		$seq->id =~ m/^(\S+)/;
-		$core = $1;
-	    }
-		$self->{"read_names"}{$core} = () if ( !exists $self->{"read_names"}{$core} );
+            if($seq->id =~ m/^(\S+)_(\d+)$/){
+                $core = $1;
+            }else{
+                $seq->id =~ m/^(\S+)/;
+                $core = $1;
+            }
+	    $self->{"read_names"}{$core} = () if ( !exists $self->{"read_names"}{$core} );
 		push( @{ ${ $self->{"read_names"} }{$core} }, $self->{"read_names"}{ $seq->id }[0] )
 		  unless defined( @{ ${ $self->{"read_names"} }{$core} } ) && scalar( @{ ${ $self->{"read_names"} }{$core} } == 2 ); #both pairs have been added already
 		if ( exists $seqs{$core} ) {
