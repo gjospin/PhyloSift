@@ -12,9 +12,6 @@ use XML::Writer;
 use JSON;
 
 set_default_values();
-if ( $^O =~ /arwin/ ) {
-	use lib "$FindBin::Bin/osx/darwin-thread-multi-2level/";
-}
 
 =head1 NAME
 
