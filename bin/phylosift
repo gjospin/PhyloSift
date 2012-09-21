@@ -168,15 +168,16 @@ debug("@ARGV\n");
 if ( scalar(@ARGV) < 1 ) {
 	croak $usage ;
 }elsif ( scalar(@ARGV) == 1 ) {
-	croak $usage unless ( $ARGV[0] eq 'index' );
-}elsif ( scalar(@ARGV) == 2 ) {
+	croak $usage unless ( $ARGV[0] eq 'index' || $ps->{stdin} );
+}elsif ( scalar(@ARGV) == 2 && !$ps->{stdin}) {
 	croak $usage if ($ARGV[0] eq 'index');
 	croak $usage unless ( $ARGV[0] && $ARGV[1]  );
-}elsif ( scalar(@ARGV) == 3 ) {
+}elsif ( scalar(@ARGV) == 3 && !$ps->{stdin} ) {
 	croak $usage unless ( $ARGV[0] && $ARGV[1] && $ARGV[2] );
 } else {
 	#croak $usage. "\nOR\n" . $usage . "\n";
 }
+
 # make sure we're on a 64-bit OS
 unless ( (POSIX::uname)[4] =~ /64/ || $^O =~ /arwin/ ) {
 	print STDERR (POSIX::uname)[4] . "\n";
@@ -195,4 +196,5 @@ if( $ARGV[0] eq 'sim'){
 }
 debug "FORCE: " . $Phylosift::Settings::force . "\n";
 debug "Continue : " . $Phylosift::Settings::continue . "\n";
+
 $ps->run( force=>$Phylosift::Settings::force, custom=>$Phylosift::Settings::custom, cont=>$Phylosift::Settings::continue );
