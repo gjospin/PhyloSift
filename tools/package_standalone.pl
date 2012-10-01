@@ -83,6 +83,16 @@ add_package(url=>"http://search.cpan.org/CPAN/authors/id/R/RJ/RJBS/Getopt-Long-D
 add_package(url=>"http://search.cpan.org/CPAN/authors/id/R/RJ/RJBS/String-RewritePrefix-0.006.tar.gz");
 add_package(url=>"http://search.cpan.org/CPAN/authors/id/R/RJ/RJBS/App-Cmd-0.318.tar.gz");
 
+add_package(url=>"http://search.cpan.org/CPAN/authors/id/D/DR/DROLSKY/Class-Load-0.20.tar.gz");
+add_package(url=>"http://search.cpan.org/CPAN/authors/id/R/RJ/RJBS/Data-OptList-0.107.tar.gz");
+add_package(url=>"http://search.cpan.org/CPAN/authors/id/A/AD/ADAMK/Params-Util-1.07.tar.gz");
+add_package(url=>"http://search.cpan.org/CPAN/authors/id/R/RJ/RJBS/Sub-Install-0.926.tar.gz");
+
+add_package(url=>"http://search.cpan.org/CPAN/authors/id/D/DR/DROLSKY/Module-Implementation-0.06.tar.gz");
+add_package(url=>"http://search.cpan.org/CPAN/authors/id/Z/ZE/ZEFRAM/Module-Runtime-0.013.tar.gz", mv_cmd=>"mv blib/lib/Module/* $prefix/lib/Module/");
+add_package(url=>"http://search.cpan.org/CPAN/authors/id/D/DO/DOY/Try-Tiny-0.11.tar.gz");
+add_package(url=>"http://search.cpan.org/CPAN/authors/id/D/DR/DROLSKY/Class-Load-XS-0.04.tar.gz", mv_cmd=>"mv lib/Class/Load/* $prefix/lib/Class/Load/");
+
 # package everything up and datestamp it
 my @timerval = localtime();
 my $datestr  = ( 1900 + $timerval[5] );
