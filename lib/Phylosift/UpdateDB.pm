@@ -378,13 +378,13 @@ sub concat_marker_files {
 	$catline .= " ";
 	my $fasta = get_fasta_filename(marker=>$marker, updated=>1);
 	`cat $catline $cat_ch "$local_directory/$fasta"`;
-	$catline =~ s/\.fasta /\.codon\.fasta /g;
+	$catline =~ s/updated\.fasta /codon\.updated\.fasta /g;
 	if ( Phylosift::Utilities::is_protein_marker( marker => $marker ) ) {
 		my $codon_fasta = get_fasta_filename(marker=>$marker, updated=>1, dna=>1);
 		`cat $catline $cat_ch "$local_directory/$codon_fasta"`;
 	}
 	unless($marker eq "concat"){
-		$catline =~ s/\.codon\.fasta/\.unmasked/g;
+		$catline =~ s/\.codon\.updated\.fasta/\.unmasked/g;
 		my $reps = get_reps_filename( marker => $marker, updated => 1 );
 		`cat $catline $cat_ch "$local_directory/$reps"`;
 	}
@@ -427,7 +427,7 @@ sub collate_markers {
 		# find all alignments with this marker
 		my @catfiles = ();
 		foreach my $file (@alldata) {
-			next unless $file =~ /(.+\.fasta)\/alignDir\/$marker.fasta/;
+			next unless $file =~ /(.+\.fasta)\/alignDir\/$marker.updated.fasta/;
 			my $genome = $1;
 			my $taxon = $1 if $genome =~ /\.(\d+)\.fasta/;
 			next if( defined($taxon) && defined($ko_list{$taxon}));
@@ -617,9 +617,11 @@ sub update_ncbi_taxonomy {
 	my $repository = $args{repository} || miss("repository");
 	print "Downloading new NCBI taxonomy...\n";
 	my $url = "ftp://ftp.ncbi.nih.gov/pub/taxonomy/taxdump.tar.gz";
-	my $ff = File::Fetch->new( uri => $url );
+#	print "Include path is @INC\n";
+#	my $ff = File::Fetch->new( uri => $url );
 	`mkdir -p "$repository/ncbi"`;
-	$ff->fetch( to => "$repository/ncbi" );
+#	$ff->fetch( to => "$repository/ncbi" );
+	`cd $repository/ncbi ; curl -LO $url`;
 	system("cd $repository/ncbi/ ; tar xzf taxdump.tar.gz");
 	unlink("$repository/ncbi/taxdump.tar.gz");
 	unlink("$repository/ncbi/citations.dmp");
@@ -1061,6 +1063,53 @@ EOF
 	}
 	wait_for_jobs( job_ids => \@jobids );
 	`rm ps_reconcile.sh.o* ps_reconcile.sh.e* ps_reconcile_codon.sh.o* ps_reconcile_codon.sh.e* *.tmpread.fasta *.tmpread.jplace *.tmpread.jplace.mangled`;
+}
+
+sub launch_marker_builds {
+	my %args = @_;
+	my $self        = $args{self} || miss("self");
+	my $marker_dir  = $args{marker_dir} || miss("marker_dir");
+	
+	my @tmp_ids = ("$marker_dir/tmp_ids.aa.txt","$marker_dir/tmp_ids.dna.txt");
+	
+	my @markerlist = Phylosift::Utilities::gather_markers();
+	unshift( @markerlist, "concat" );
+	my @jobids;
+
+	my $bs = "/tmp/ps_build_marker.sh";
+	my $BUILDSCRIPT = ps_open( ">$bs" );
+	print $BUILDSCRIPT <<EOF;
+#!/bin/sh
+#\$ -cwd
+#\$ -V
+#\$ -S /bin/bash
+
+phylosift build_marker -f \$1 \$2 \$3
+
+EOF
+
+	for(my $dna=0; $dna<2; $dna++){
+		my $ids = $marker_dir."/".get_gene_id_file(dna=>$dna);
+		my $INIDS = ps_open($ids);
+		my $OUTIDS = ps_open(">".$tmp_ids[$dna]);
+		while(my $line = <$INIDS>){
+			$line =~ s/.+\t(\d+)\t(\d+)/$2\t$1/g;
+			print $OUTIDS $line;
+		}
+		close $OUTIDS;
+		foreach my $marker (@markerlist) {
+			my $pruned = !$dna;
+			my $marker_fasta = get_fasta_filename( marker => $marker, updated => 1, pruned=>$pruned, dna=>$dna);
+			print STDERR "Couldnt find $marker_fasta\n" unless -e $marker_fasta;
+			next unless -e $marker_fasta;
+			next if $marker =~ /^PMPROK/ || $marker =~ /^DNGNGWU/;	# skip these since they all go in the concat
+			
+			my $qsub_args = $marker eq "concat" ? "-l mem_free=20G" : "";
+			my @marray = ($marker_fasta,"0.01",$tmp_ids[$dna]);
+			qsub_job(script=>$bs, qsub_args => $qsub_args, job_ids=>\@jobids, script_args=>\@marray );
+		}
+	}
+	wait_for_jobs( job_ids => \@jobids );
 }
 
 =head2 update_rna
