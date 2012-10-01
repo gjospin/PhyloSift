@@ -41,7 +41,7 @@ if (@ARGV>0 && $ARGV[0] eq "buildbot") # if buildbot
 }
 
 # add Rutger Vos' Bio::Phylo
-add_package(url=>"http://search.cpan.org/CPAN/authors/id/R/RV/RVOSA/Bio-Phylo-0.45.tar.gz", mv_cmd=>"mv blib/lib/Bio/Phylo* $prefix/lib/Bio/");
+add_package(url=>"http://search.cpan.org/CPAN/authors/id/R/RV/RVOSA/Bio-Phylo-0.45.tar.gz", mv_cmd=>"mv lib/Bio/* $prefix/lib/Bio/");
 
 # add JSON package
 add_package(url=>"http://search.cpan.org/CPAN/authors/id/M/MA/MAKAMAKA/JSON-2.53.tar.gz");
@@ -79,6 +79,8 @@ add_package(url=>"http://search.cpan.org/CPAN/authors/id/J/JP/JPEACOCK/version-0
 # support for App::Cmd
 add_package(url=>"http://search.cpan.org/CPAN/authors/id/A/AD/ADAMK/List-MoreUtils-0.33.tar.gz");
 add_package(url=>"http://search.cpan.org/CPAN/authors/id/D/DO/DOY/Package-Stash-0.33.tar.gz");
+add_package(url=>"http://search.cpan.org/CPAN/authors/id/R/RJ/RJBS/Getopt-Long-Descriptive-0.092.tar.gz");
+add_package(url=>"http://search.cpan.org/CPAN/authors/id/R/RJ/RJBS/String-RewritePrefix-0.006.tar.gz");
 add_package(url=>"http://search.cpan.org/CPAN/authors/id/R/RJ/RJBS/App-Cmd-0.318.tar.gz");
 
 # package everything up and datestamp it
