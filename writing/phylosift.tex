@@ -339,7 +339,9 @@ To understand how community structure analysis with PhyloSift compares to simila
 In that study, fecal material was collected from infants and adults at diverse geographical locations and subjected to sequencing.
 Over 600 samples were sequenced using the 16S amplicon protocol.
 Of those 110 were also subjected to metagenomic shotgun sequencing using 454 pyrosequencing chemistry.
-Here we apply PhyloSift to the 110 metagenomic samples and conduct a community structure comparison among the samples.
+Here we apply PhyloSift to the 110 metagenomic samples and conduct a community structure comparison among the samples, and additionally replicate the Yatsunenko et al. QIIME analyses on this subset of data.
+
+All QIIME analyses were carried out using release 1.5.0 of the QIIME software toolkit, using the workflow and parameters reported by Yatsunenko et al.. The Greengenes reference database (collapsed at 97\% identity) was used to carry out a closed-reference OTU picking protocol at 97\% sequence identity with uclust. All reads which matched database sequences at this level were retained for downstream processing, while non-matching sequences were excluded from further analyses. Parameters for the pick_otus.py script were executed as follows: --max_accepts 1 --max_rejects 8 --stepwords 8 --word_length 8. OTUs were given a taxonomic assignment according to the corresponding reference sequence in the Greengenes database. Rarefaction and PCoA analyses were carried out using the alpha_diversity.py and beta_diversity_through_plots.py workflows. A full list of these QIIME commands and output files have been publicly deposited in Drayd (Accession number XXXXX).
 
 PhyloSift processed each of the 110 samples, requiring an average of 35 minutes CPU time per sample.
 The majority of CPU time is spent in phylogenetic placement of reads.
