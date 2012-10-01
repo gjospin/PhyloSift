@@ -19,8 +19,8 @@ sub usage_desc { "simulate %o" }
 sub options {
 	return (
 		[ "genome_count=i",  "The number of genomes to include in the simulated community", { default => 10 }],
-		[ "read_count=i",    "Number of reads in the simulated community"], { default => 100000 },
-		[ "genome_dir=s",    "Location to a genome repository created by phylosift updateDB"], 
+		[ "read_count=i",    "Number of reads in the simulated community", { default => 100000 }],
+		[ "genome_dir=s",    "Path to a genome repository created by phylosift updateDB"], 
 	);
 }
 
