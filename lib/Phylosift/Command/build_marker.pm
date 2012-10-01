@@ -51,7 +51,7 @@ sub execute {
 	Phylosift::Command::sanity_check();
 
 	my $ps = new Phylosift::Phylosift();
-	build_marker(self=>$ps, opt=>$opt, alignment=>$opt{alignment}, force=>$opt{force}, cutoff=>$opt{reps_pd}, mapping=>$opt{taxonmap});
+	Phylosift::MarkerBuild::build_marker(self=>$ps, opt=>$opt, alignment=>$opt->{alignment}, force=>$opt->{force}, cutoff=>$opt->{reps_pd}, mapping=>$opt->{taxonmap});
 
 }
 
