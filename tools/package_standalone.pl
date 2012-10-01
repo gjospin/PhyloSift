@@ -69,20 +69,17 @@ add_package(url=>"http://search.cpan.org/CPAN/authors/id/J/JO/JOSEPHW/XML-Writer
 
 # libwww-perl (for LWP::Simple)
 add_package(url=>"http://search.cpan.org/CPAN/authors/id/G/GA/GAAS/libwww-perl-6.04.tar.gz");
-
 add_package(url=>"http://search.cpan.org/CPAN/authors/id/G/GA/GAAS/HTTP-Message-6.03.tar.gz");
-
 add_package(url=>"http://search.cpan.org/CPAN/authors/id/G/GA/GAAS/HTTP-Date-6.02.tar.gz", mv_cmd=>"mv blib/lib/HTTP/* $prefix/lib/HTTP");
 
 # add Version.pm
 `mkdir $prefix/legacy`;
 add_package(url=>"http://search.cpan.org/CPAN/authors/id/J/JP/JPEACOCK/version-0.95.tar.gz", make_opts=>"--perl_only", mv_cmd=>"mv blib/lib/version* $prefix/legacy/");
 
-add_package(url=>"http://search.cpan.org/CPAN/authors/id/D/DO/DOY/Try-Tiny-0.11.tar.gz");
-
-add_package(url=>"http://search.cpan.org/CPAN/authors/id/H/HI/HIO/String-CamelCase-0.02.tar.gz");
-
-add_package(url=>"http://search.cpan.org/CPAN/authors/id/I/IS/ISHIGAKI/CLI-Dispatch-0.15.tar.gz");
+# support for App::Cmd
+add_package(url=>"http://search.cpan.org/CPAN/authors/id/A/AD/ADAMK/List-MoreUtils-0.33.tar.gz");
+add_package(url=>"http://search.cpan.org/CPAN/authors/id/D/DO/DOY/Package-Stash-0.33.tar.gz");
+add_package(url=>"http://search.cpan.org/CPAN/authors/id/R/RJ/RJBS/App-Cmd-0.318.tar.gz");
 
 # package everything up and datestamp it
 my @timerval = localtime();
@@ -114,7 +111,7 @@ sub add_package {
 	if(defined $mv_cmd){
 		`$mv_cmd`;
 	}else{
-		`mv blib/lib/* $prefix/lib/`;
+		`mv -f -u blib/lib/* $prefix/lib/`;
 	}
 	chdir("..");
 }
