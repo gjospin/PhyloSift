@@ -304,7 +304,6 @@ sub run_later_stages {
 
 sub read_phylosift_config {
 	my %args          = @_;
-	my $self          = $args{self} || miss("self");
 	my $custom_config = $Phylosift::Settings::configuration;
 
 	# first get the install prefix of this script
@@ -324,8 +323,6 @@ sub read_phylosift_config {
 	}
 
 	#apply the command line parameters to override the RC files
-
-	return $self;
 }
 
 =head2 fileCheck
