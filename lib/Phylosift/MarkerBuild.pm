@@ -35,6 +35,7 @@ if you don't export anything, such as for a purely object-oriented module.
 
 sub build_marker {
 	my %args     = @_;
+	my $opt      = $args{opt};
 	my $self     = $args{self} || miss("self");
 	my $aln_file = $args{alignment} || miss("alignment");
 	my $cutoff   = $args{cutoff} || miss("cutoff");
@@ -55,44 +56,49 @@ sub build_marker {
 
 	#$target_dir = $Phylosift::Settings::file_dir;
 	if ( -e $target_dir && !$force ) {
-		croak
-"Marker already exists in $marker_dir. Delete Marker and restart the marker build.\nUse -f to force an override of the previous marker.\nUsage:\n>phylosift build_marker -f aln_file cutoff\n";
+		croak("Marker already exists in $marker_dir. Delete Marker and restart the marker build.\nUse -f to force an override of the previous marker.\nUsage:\n>phylosift build_marker -f aln_file cutoff\n");
 	} else {
 		`rm -rf "$target_dir"` if $force;
 		`mkdir "$target_dir"`;
 	}
 	my $fasta_file = "$target_dir/$core.fasta";
 	$aln_file = check_sequence_integrity(input=>$aln_file , output_dir=> $target_dir) ;
-	my $seq_count  = Phylosift::Utilities::unalign_sequences(
-		aln         => $aln_file,
-		output_path => $fasta_file
-	);
-	my $masked_aln = "$target_dir/$core.masked";
-	mask_aln( file => $aln_file, output => $masked_aln ) unless -e $masked_aln;
-	my $hmm_file = "$target_dir/$core.hmm";
-	generate_hmm( file_name => $aln_file, hmm_name => $hmm_file )
-	  unless -e $hmm_file;
-	Phylosift::Utilities::fasta2stockholm(
-		fasta  => $aln_file,
-		output => "$target_dir/$core.stk"
-	) unless -e "$target_dir/$core.stk";
-	my $stk_aln = "$target_dir/$core.stk";
+	
+	unless($opt->{update_only}){
+		# this code path generates new alignments
+		# no need to do this if we're just updating an existing marker with new sequences
+		my $seq_count  = Phylosift::Utilities::unalign_sequences(
+			aln         => $aln_file,
+			output_path => $fasta_file
+		);
+		my $masked_aln = "$target_dir/$core.masked";
+		mask_aln( file => $aln_file, output => $masked_aln ) unless -e $masked_aln;
+		my $hmm_file = "$target_dir/$core.hmm";
+		generate_hmm( file_name => $aln_file, hmm_name => $hmm_file )
+		  unless -e $hmm_file;
+		Phylosift::Utilities::fasta2stockholm(
+			fasta  => $aln_file,
+			output => "$target_dir/$core.stk"
+		) unless -e "$target_dir/$core.stk";
+		my $stk_aln = "$target_dir/$core.stk";
 
-	#may need to create an unaligned file for the sequences before aligning them
-	my $new_alignment_file = hmmalign_to_model(
-		hmm_profile         => $hmm_file,
-		sequence_file       => $fasta_file,
-		target_dir          => $target_dir,
-		reference_alignment => $stk_aln,
-		sequence_count      => $seq_count
-	);
-	my $clean_aln = "$target_dir/$core.clean";
-	my %id_map    = mask_and_clean_alignment(
-		alignment_file => $new_alignment_file,
-		output_file    => $clean_aln
-	);
-	debug( "ID_map is " . scalar( keys(%id_map) ) . " long\n" );
-	my @array = keys(%id_map);
+		#may need to create an unaligned file for the sequences before aligning them
+		my $new_alignment_file = hmmalign_to_model(
+			hmm_profile         => $hmm_file,
+			sequence_file       => $fasta_file,
+			target_dir          => $target_dir,
+			reference_alignment => $stk_aln,
+			sequence_count      => $seq_count
+		);
+		my $clean_aln = "$target_dir/$core.clean";
+		my %id_map    = mask_and_clean_alignment(
+			alignment_file => $new_alignment_file,
+			output_file    => $clean_aln
+		);
+		debug( "ID_map is " . scalar( keys(%id_map) ) . " long\n" );
+		my @array = keys(%id_map);
+	}
+
 
 	my ( $fasttree_file, $tree_log_file ) = generate_fasttree(
 		alignment_file   => $clean_aln,
