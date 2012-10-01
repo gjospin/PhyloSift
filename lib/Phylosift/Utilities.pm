@@ -15,9 +15,9 @@ use POSIX ();
 use Carp;
 use Cwd;
 
-if ( $^O =~ /arwin/ ) {
-	use lib "$FindBin::Bin/../osx/darwin-thread-multi-2level/";
-}
+#if ( $^O =~ /arwin/ ) {
+#	use lib "$FindBin::Bin/../osx/darwin-thread-multi-2level/";
+#}
 use Exporter;
 use vars qw[ @EXPORT @EXPORT_OK %EXPORT_TAGS @ISA ];
 @ISA         = 'Exporter';
@@ -538,6 +538,8 @@ sub data_checks {
 		data_path => $Phylosift::Settings::ncbi_path
 	));
 	debug "DIR : $Phylosift::Settings::ncbi_dir\n";
+	debug "Skipping check for NCBI updates on server\n" if $Phylosift::Settings::disable_update_check;
+	return if $Phylosift::Settings::disable_update_check;
 	my ( $content_type, $document_length, $modified_time, $expires, $server ) =
 	  head("$Phylosift::Settings::ncbi_url");
 	if ( -x $Phylosift::Settings::ncbi_dir ) {
