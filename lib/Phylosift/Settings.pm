@@ -1,7 +1,6 @@
 package Phylosift::Settings;
 use warnings;
 use strict;
-use Phylosift::Utilities qw(:all);
 use Carp;
 
 =head1 Name
@@ -22,7 +21,7 @@ Version 0.01
 
 sub set_default {
 	my %args  = @_;
-	my $param = $args{parameter} || Phylosift::Utilities::miss("parameter");
+	my $param = $args{parameter};
 	my $value = $args{value};
 	my $force = $args{force} || 0;
 	if ( !defined(${$param}) ) {
