@@ -98,7 +98,7 @@ add_package(url=>"http://search.cpan.org/CPAN/authors/id/R/RJ/RJBS/Sub-Exporter-
 
 # requires Build.pl
 # provides a pure perl impl
-add_package(url=>"http://search.cpan.org/CPAN/authors/id/D/DR/DROLSKY/Params-Validate-1.06.tar.gz", mv_cmd=>"mv blib/lib/Params/Validate* $prefix/lib/Params/");
+add_package(url=>"http://search.cpan.org/CPAN/authors/id/D/DR/DROLSKY/Params-Validate-1.06.tar.gz", mv_cmd=>"mv blib/lib/Params/Validate* $prefix/lib/Params/", build_pl=>1);
 
 # package everything up and datestamp it
 my @timerval = localtime();
