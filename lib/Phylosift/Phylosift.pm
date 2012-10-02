@@ -214,7 +214,7 @@ sub run_later_stages {
 	if ( $self->{"mode"} eq 'placer' ) {
 		$self = run_pplacer(@_);
 	}
-	if ( $self->{"mode"} eq 'summary' ) {
+	if ( $self->{"mode"} eq 'summarize' ) {
 		$self = taxonomy_assignments(@_);
 	}
 }
