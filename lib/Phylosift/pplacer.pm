@@ -327,6 +327,7 @@ sub place_reads{
 	my $options = $args{options} || "";
 	my $short_rna = $args{short_rna} || 0;
 	my $marker_package = Phylosift::Utilities::get_marker_package( self => $self, marker => $marker, dna => $dna, sub_marker=>$submarker );
+
 	unless(-d $marker_package ){
 		# try not updated
 		if($Phylosift::Settings::updated){
@@ -344,7 +345,7 @@ sub place_reads{
 	debug "Running $pp\n";
 	system($pp);
 	
-
+	debug "no output in $jplace\n" unless -e $jplace;
 	return unless -e $jplace;
 
 	# if we're on the concat marker, create a single jplace with all reads for use with multisample metrics 
@@ -352,9 +353,12 @@ sub place_reads{
 		my $sample_jplace = $Phylosift::Settings::file_dir."/".$self->{"fileName"}.".jplace";
 		my $sample_jplace_naming = $Phylosift::Settings::file_dir."/".$self->{"fileName"}.".naming.jplace";
 		my $markermapfile = Phylosift::Utilities::get_marker_taxon_map(self=>$self, marker=>$marker, dna=>$dna, sub_marker=>$submarker);
+		debug "Using markermap $markermapfile\n";
 		return unless -e $markermapfile;	# can't summarize if there ain't no mappin'!
+		debug "Reading taxonmap\n";
 		my $taxonmap = Phylosift::Summarize::read_taxonmap(file=>$markermapfile);
 		name_taxa_in_jplace( self => $self, input => $jplace, output => $sample_jplace_naming, taxonmap=>$taxonmap );
+		debug "merging $Phylosift::Settings::guppy merge -o $sample_jplace $sample_jplace_naming $sample_jplace\n";
 		`$Phylosift::Settings::guppy merge -o $sample_jplace $sample_jplace_naming $sample_jplace` if -f $sample_jplace;
 		`cp $sample_jplace_naming $sample_jplace` unless -f $sample_jplace;
 		`rm $sample_jplace_naming`;
