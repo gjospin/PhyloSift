@@ -53,6 +53,11 @@ sub build_marker {
 	if( $taxit eq "" ){
 		croak("Error: you must install pplacer's taxtastic and its dependencies prior to building markers. See https://github.com/fhcrc/taxtastic for more information.\n")
 	}
+	
+	# check for other programs
+	Phylosift::Utilities::program_checks();
+	# load NCBI taxonomy and marker info
+	Phylosift::Utilities::data_checks(self=>$self);
 
 	#$target_dir = $Phylosift::Settings::file_dir;
 	if ( -e $target_dir && !$force ) {
@@ -64,6 +69,7 @@ sub build_marker {
 	my $fasta_file = "$target_dir/$core.fasta";
 	$aln_file = check_sequence_integrity(input=>$aln_file , output_dir=> $target_dir) ;
 	
+	my $clean_aln = $aln_file;
 	unless($opt->{update_only}){
 		# this code path generates new alignments
 		# no need to do this if we're just updating an existing marker with new sequences
@@ -90,14 +96,16 @@ sub build_marker {
 			reference_alignment => $stk_aln,
 			sequence_count      => $seq_count
 		);
-		my $clean_aln = "$target_dir/$core.clean";
-		my %id_map    = mask_and_clean_alignment(
-			alignment_file => $new_alignment_file,
-			output_file    => $clean_aln
-		);
-		debug( "ID_map is " . scalar( keys(%id_map) ) . " long\n" );
-		my @array = keys(%id_map);
+	}else{
+		# copy the unmasked sequences
+		`cp $opt->{unaligned} $fasta_file`;
 	}
+	$clean_aln = "$target_dir/$core.clean";
+	my %id_map    = mask_and_clean_alignment(
+		alignment_file => $aln_file,
+		output_file    => $clean_aln
+	);
+	debug( "ID_map is " . scalar( keys(%id_map) ) . " long\n" );
 
 
 	my ( $fasttree_file, $tree_log_file ) = generate_fasttree(
@@ -142,8 +150,7 @@ sub build_marker {
 			file     => "$target_dir/$core",
 			aln_file => $clean_aln
 		) unless -e "$target_dir/$core.tmpread.fasta";
-		`cd "$target_dir";pplacer -c temp_ref -p "$tmpread_file"`
-		  unless -e $tmp_jplace;
+		`cd "$target_dir";pplacer -c temp_ref -p "$tmpread_file"` unless -e $tmp_jplace;
 		tree_mangler( in => $tmp_jplace, out => $mangled );
 
 		#create a file with a list of IDs
@@ -156,28 +163,27 @@ sub build_marker {
 		);
 		my @taxon_array = keys(%taxon_hash);
 		debug "TAXON_ARRAY " . scalar(@taxon_array) . "\n";
-		make_ncbi_subtree(
-			out_file  => $ncbi_sub_tree,
-			taxon_ids => \@taxon_array
-		);
+		make_ncbi_subtree( out_file  => $ncbi_sub_tree, taxon_ids => \@taxon_array );
 		debug "AFTER ncbi_subtree\n";
-		`readconciler $ncbi_sub_tree $mangled $id_taxon_map $taxon_map`;
+		my $rconc = "$Phylosift::Settings::readconciler $ncbi_sub_tree $mangled $id_taxon_map $taxon_map";
+		debug $rconc."\n";
+		system($rconc);
 		debug "AFTER readconciler\n";
 
-#`rm -rf "$tmpread_file" "$mangled" "$tmp_jplace" "$id_taxon_map" "$ncbi_sub_tree"  "$target_dir/temp_ref"`;
+		`rm -rf "$tmpread_file" "$mangled" "$tmp_jplace" "$id_taxon_map" "$ncbi_sub_tree"  "$target_dir/temp_ref"`;
 	}
 
 #use taxit to create a new reference package required for running PhyloSift
 #needed are : 1 alignment file, 1 representatives fasta file, 1 hmm profile, 1 tree file, 1 log tree file.
 `cd "$target_dir";taxit create -c -d "Creating a reference package for PhyloSift for the $core marker" -l "$core" -f "$clean_aln" -t "$target_dir/$core.tree" -s "$target_dir/$core.log" -P "$core"`;
-	exit;
+
 	`rm "$target_dir/$core.pda"` if -e "$target_dir/$core.pda";
 	`rm "$target_dir/$core.tree"`;
 	`rm "$target_dir/$core.log"`;
 	`rm "$target_dir/$core.aln"`;
 	`rm "$target_dir/$core.fasta"`;
 	`rm "$target_dir/$core.checked"` if -e "$target_dir/$core.checked";
-	`rm "$clean_aln"`;
+	`rm "$clean_aln"` unless $opt->{update_only};
 	`mv "$target_dir/$core"/* "$target_dir"`;
 	`rm -rf "$target_dir/$core"`;
 	`rm -rf "$Phylosift::Settings::file_dir"`;
