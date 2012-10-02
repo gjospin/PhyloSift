@@ -93,8 +93,8 @@ add_package(url=>"http://search.cpan.org/CPAN/authors/id/Z/ZE/ZEFRAM/Module-Runt
 add_package(url=>"http://search.cpan.org/CPAN/authors/id/D/DO/DOY/Try-Tiny-0.11.tar.gz");
 add_package(url=>"http://search.cpan.org/CPAN/authors/id/D/DR/DROLSKY/Class-Load-XS-0.04.tar.gz", mv_cmd=>"mv lib/Class/Load/* $prefix/lib/Class/Load/");
 add_package(url=>"http://search.cpan.org/CPAN/authors/id/S/SI/SIMONW/Module-Pluggable-4.3.tar.gz", mv_cmd=>"mv blib/lib/Module/* $prefix/lib/Module/; mv blib/lib/Devel $prefix/lib/");
-add_package(url=>"http://search.cpan.org/CPAN/authors/id/D/DR/DROLSKY/Package-DeprecationManager-0.13.tar.gz");
-add_package(url=>"http://search.cpan.org/CPAN/authors/id/R/RJ/RJBS/Sub-Exporter-0.984.tar.gz");
+add_package(url=>"http://search.cpan.org/CPAN/authors/id/D/DR/DROLSKY/Package-DeprecationManager-0.13.tar.gz", mv_cmd=>"mv blib/lib/Package/* $prefix/lib/Package/");
+add_package(url=>"http://search.cpan.org/CPAN/authors/id/R/RJ/RJBS/Sub-Exporter-0.984.tar.gz", mv_cmd=>"mv blib/lib/Sub/* $prefix/lib/Sub/");
 
 # requires Build.pl
 # provides a pure perl impl
