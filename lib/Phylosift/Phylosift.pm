@@ -202,22 +202,6 @@ sub run {
 		run_later_stages(self => $self, cont => $continue, marker => \@markers );
 	}
 
-	if ( $self->{"mode"} eq 'benchmark' ) {
-		$self = benchmark( self => $self );
-		exit;
-	}
-	if ( $self->{"mode"} eq 'compare' ) {
-		$self = compare( self => $self );
-	}
-
-	if ( $self->{"mode"} eq 'sim' ) {
-		Phylosift::Simulations::prep_simulation(
-			self        => $self,
-			pick        => $ARGV[2],
-			genomes_dir => $ARGV[1],
-			reads       => $ARGV[3]
-		);
-	}
 	Phylosift::Utilities::end_timer( name => "START" );
 }
 
@@ -417,16 +401,6 @@ sub taxonomy_assignments {
 	return $self;
 }
 
-=head2 benchmark
-
-=cut
-
-sub benchmark {
-	my %args = @_;
-	my $self = $args{self} || miss("self");
-	debug "RUNNING Benchmark\n";
-	Phylosift::Benchmark::run_benchmark( self => $self, output_path => "./" );
-}
 
 =head2 compare
 
