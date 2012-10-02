@@ -92,11 +92,18 @@ add_package(url=>"http://search.cpan.org/CPAN/authors/id/D/DR/DROLSKY/Module-Imp
 add_package(url=>"http://search.cpan.org/CPAN/authors/id/Z/ZE/ZEFRAM/Module-Runtime-0.013.tar.gz", mv_cmd=>"mv blib/lib/Module/* $prefix/lib/Module/");
 add_package(url=>"http://search.cpan.org/CPAN/authors/id/D/DO/DOY/Try-Tiny-0.11.tar.gz");
 add_package(url=>"http://search.cpan.org/CPAN/authors/id/D/DR/DROLSKY/Class-Load-XS-0.04.tar.gz", mv_cmd=>"mv lib/Class/Load/* $prefix/lib/Class/Load/");
+add_package(url=>"http://search.cpan.org/CPAN/authors/id/S/SI/SIMONW/Module-Pluggable-4.3.tar.gz");
+add_package(url=>"http://search.cpan.org/CPAN/authors/id/D/DR/DROLSKY/Package-DeprecationManager-0.13.tar.gz");
+add_package(url=>"http://search.cpan.org/CPAN/authors/id/R/RJ/RJBS/Sub-Exporter-0.984.tar.gz");
+
+# requires Build.pl
+# provides a pure perl impl
+add_package(url=>"http://search.cpan.org/CPAN/authors/id/D/DR/DROLSKY/Params-Validate-1.06.tar.gz", mv_cmd=>"mv blib/lib/Params/Validate* $prefix/lib/Params/");
 
 # package everything up and datestamp it
 my @timerval = localtime();
 my $datestr  = ( 1900 + $timerval[5] );
-$datestr .= 0 if $timerval[4] <= 9;
+$datestr .= 0 if $timerval[4] < 9;
 $datestr .= ( $timerval[4] + 1 );
 $datestr .= 0 if $timerval[3] <= 9;
 $datestr .= $timerval[3];
@@ -111,6 +118,7 @@ sub add_package {
 	my $url = $args{url};
 	my $make_opts = $args{make_opts} || "";
 	my $mv_cmd = $args{mv_cmd};
+	my $build_pl = $args{build_pl} || 0;
 	my $fname = $url;
 	$fname =~ s/http.+\///g;
 	my $bname = basename($fname, ".tar.gz");
@@ -118,12 +126,18 @@ sub add_package {
 	`curl -LO $url`;
 	`tar xzf $fname`;
 	chdir($bname);
-	`perl Makefile.PL $make_opts`;
-	`make`;
-	if(defined $mv_cmd){
+	if($build_pl){
+		`perl Build.PL`;
+		`./Build`;
 		`$mv_cmd`;
 	}else{
-		`mv -f -u blib/lib/* $prefix/lib/`;
+		`perl Makefile.PL $make_opts`;
+		`make`;
+		if(defined $mv_cmd){
+			`$mv_cmd`;
+		}else{
+			`mv -f -u blib/lib/* $prefix/lib/`;
+		}
 	}
 	chdir("..");
 }
