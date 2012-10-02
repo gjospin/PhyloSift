@@ -43,7 +43,7 @@ sub load_opt {
 
 sub execute {
 	my ($self, $opt, $args) = @_;
-	load_opt{opt=>$opt};
+	load_opt(opt=>$opt);
 	Phylosift::Command::sanity_check();
 
 	my $ps = new Phylosift::Phylosift();
