@@ -64,13 +64,6 @@ A list of functions that can be exported.  You can delete this section
 if you don't export anything, such as for a purely object-oriented module.
 
 =head1 SUBROUTINES/METHODS
-
-=head2 programChecks
-
-checks the program requirements for PhyloSift
-writes to STDERR if a program is missing or the wrong version is installed
-returns 1 or 0 depending on success of failure.
-
 =cut
 
 sub miss {
@@ -137,7 +130,15 @@ sub get_program_path {
 
 our %marker_lookup = ();
 
-sub programChecks {
+=head2 program_checks
+
+checks the program requirements for PhyloSift
+writes to STDERR if a program is missing or the wrong version is installed
+returns 1 or 0 depending on success of failure.
+
+=cut
+
+sub program_checks {
 	eval 'require Bio::Seq;';
 	if ($@) {
 		carp "Bioperl was NOT found\n";
@@ -986,7 +987,7 @@ sub get_marker_taxon_map {
 	my $marker_path = get_marker_path( self => $self, marker => $marker );
 	my $bname       = get_marker_basename( marker => $marker );
 	my $decorated   = get_decorated_marker_name(%args);
-	return "$marker_path/$decorated/$bname.taxonmap";
+	return "$marker_path/$decorated/$decorated.taxonmap";
 }
 
 sub get_decorated_marker_name {
@@ -1500,7 +1501,7 @@ sub get_db {
 	my $db_name = $args{db_name};
 	if ( defined($self) && !defined( $args{path} ) ) {
 		return $Phylosift::Settings::markers_extended_dir . "/$db_name"
-		  if defined( $Phylosift::Settings::extended );
+		  if defined( $Phylosift::Settings::extended ) && $Phylosift::Settings::extended;
 		return $Phylosift::Settings::marker_dir . "/$db_name";
 	}
 	return "$path/$db_name";
