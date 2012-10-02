@@ -153,16 +153,10 @@ sub run {
 
 	#read_phylosift_config( self => $self );
 	run_program_check( self => $self );
-	Phylosift::Utilities::data_checks( self => $self )
-	  ;        # unless $self->{"mode"} eq 'sim';
-	file_check( self => $self )
-	  unless $self->{"mode"} eq 'index'
-	  || $self->{"mode"}     eq 'sim'
-	  || $self->{"mode"}     eq 'build_marker';
-	directory_prep( self => $self, force => $force, cont => $continue )
-	  unless $self->{"mode"} eq 'index';
-	$self->{"readsFile"} =
-	  prep_isolate_files( self => $self, file => $self->{"readsFile"} )
+	Phylosift::Utilities::data_checks( self => $self );
+	file_check( self => $self );
+	directory_prep( self => $self, force => $force, cont => $continue );
+	$self->{"readsFile"} = prep_isolate_files( self => $self, file => $self->{"readsFile"} )
 	  if $Phylosift::Settings::isolate == 1;
 
 	# Forcing usage of updated markers
@@ -179,8 +173,6 @@ sub run {
 	}
 
 	debug "MODE :: " . $self->{"mode"} . "\n";
-
-	$Phylosift::Settings::keep_search = 1 if $self->{"mode"} eq 'search';
 
 #changed > to >> so that we append to that file every time a run is restarted and we can keep track if there was a change in DB or in command
 #Also it prevents the file from being clobbered every time a run is restarted.
@@ -200,33 +192,16 @@ sub run {
 	}
 	debug "MODE :: " . $self->{"mode"} . "\n";
 
-	if (   defined($Phylosift::Settings::start_chunk)
-		&& defined($Phylosift::Settings::chunks) )
-	{
-		for (
-			my $c = $Phylosift::Settings::start_chunk ;
-			$c <
-			$Phylosift::Settings::start_chunk + $Phylosift::Settings::chunks ;
-			$c++
-		  )
+	if (   defined($Phylosift::Settings::start_chunk) && defined($Phylosift::Settings::chunks) ) {
+		for ( my $c = $Phylosift::Settings::start_chunk ; $c < $Phylosift::Settings::start_chunk + $Phylosift::Settings::chunks ; $c++ )
 		{
-			run_later_stages(
-				self   => $self,
-				cont   => $continue,
-				marker => \@markers,
-				chunk  => $c
-			);
+			run_later_stages(self => $self, cont => $continue, marker => \@markers, chunk => $c);
 		}
 	}
 	else {
-		run_later_stages(
-			self   => $self,
-			cont   => $continue,
-			marker => \@markers
-		);
+		run_later_stages(self => $self, cont => $continue, marker => \@markers );
 	}
 
-	#	if ( $self->{"mode"} eq 'summary' || $self->{"mode"} eq 'all' ) {
 	if ( $self->{"mode"} eq 'benchmark' ) {
 		$self = benchmark( self => $self );
 		exit;
@@ -234,43 +209,7 @@ sub run {
 	if ( $self->{"mode"} eq 'compare' ) {
 		$self = compare( self => $self );
 	}
-	if ( $self->{"mode"} eq 'index' ) {
-		@markers = Phylosift::Utilities::gather_markers(
-			self              => $self,
-			path              => $Phylosift::Settings::marker_dir,
-			force_gather      => 1,
-			allow_missing_hmm => 1
-		);
-		Phylosift::Utilities::index_marker_db(
-			self    => $self,
-			markers => \@markers,
-			path    => $Phylosift::Settings::marker_dir
-		);
-		my @extended_markers = Phylosift::Utilities::gather_markers(
-			self => $self,
-			path => $Phylosift::Settings::markers_extended_dir,
-			force_gather      => 1,
-			allow_missing_hmm => 1
-		  )
-		  if -d $Phylosift::Settings::markers_extended_dir
-		  && $Phylosift::Settings::extended;
-		Phylosift::Utilities::index_marker_db(
-			self    => $self,
-			markers => \@extended_markers,
-			path    => $Phylosift::Settings::markers_extended_dir
-		  )
-		  if -d $Phylosift::Settings::markers_extended_dir
-		  && $Phylosift::Settings::extended;
-	}
-	if ( $self->{"mode"} eq 'build_marker' ) {
-		Phylosift::MarkerBuild::build_marker(
-			self      => $self,
-			alignment => $ARGV[1],
-			cutoff    => $ARGV[2],
-			force     => $force,
-			mapping   => $ARGV[3]
-		);
-	}
+
 	if ( $self->{"mode"} eq 'sim' ) {
 		Phylosift::Simulations::prep_simulation(
 			self        => $self,
@@ -372,7 +311,7 @@ sub run_program_check {
 	my $self = $args{self} || miss("self");
 
 #check if the various programs used in this pipeline are installed on the machine
-	my $progCheck = Phylosift::Utilities::programChecks($self);
+	my $progCheck = Phylosift::Utilities::program_checks($self);
 	if ( $progCheck != 0 ) {
 		croak "A required program was not found during the checks aborting\n";
 	}
@@ -429,7 +368,7 @@ sub directory_prep {
 	#    print "FORCE DIRPREP   $force\t mode   ".$self->{"mode"}."\n";
 	#    exit;
 	#remove the directory from a previous run
-	if ( $force && $self->{"mode"} eq 'all' || $self->{"mode"} eq 'sim' ) {
+	if ( $force && $self->{"mode"} eq 'all' ) {
 		debug( "deleting an old run\n", 0 );
 		`rm -rf "$Phylosift::Settings::file_dir"`;
 	}
