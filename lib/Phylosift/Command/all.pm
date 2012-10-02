@@ -30,16 +30,14 @@ sub all_opts {
 		chunk =>      [ "chunk=i",      "Only run a set number of chunks"],
 		chunk_size => [ "chunk_size=i", "Run so many sequences per chunk"],
 	);
-#		[ "keep_search",  "Keeps the blastDir files (Default: Delete the blastDir files after every chunk)"],
-
-#		[ "simple",       "Creates a simple taxonomic summary of the output; no Krona output"],
-#		[ "coverage=s",   "Provides a contig/scaffold coverage file to Phylosift"],
 }
 
 sub options {
 	my %opts = all_opts();
 	%opts = (%opts, Phylosift::Command::search::search_opts());
-	return values(%opts);	
+	# all-specific options:
+	$opts{keep_search} => [ "keep_search",  "Keeps the blastDir files (Default: Delete the blastDir files after every chunk)"],
+	return values(%opts);
 }
 
 sub validate {
