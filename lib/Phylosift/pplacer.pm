@@ -11,6 +11,7 @@ use Phylosift::Settings;
 use Bio::Phylo::IO qw(parse unparse);
 use Bio::AlignIO;
 use File::Basename;
+use Phylosift::HTMLReport;
 use JSON;
 use Carp;
 
@@ -361,6 +362,11 @@ sub place_reads{
 		debug "merging $Phylosift::Settings::guppy merge -o $sample_jplace $sample_jplace_naming $sample_jplace\n";
 		`$Phylosift::Settings::guppy merge -o $sample_jplace $sample_jplace_naming $sample_jplace` if -f $sample_jplace;
 		`cp $sample_jplace_naming $sample_jplace` unless -f $sample_jplace;
+		my $sample_fat_xml = $Phylosift::Settings::file_dir."/".$self->{"fileName"}.".xml";
+		`$Phylosift::Settings::guppy fat -o $sample_fat_xml $sample_jplace` if -f $sample_jplace;
+		my $html_report = $Phylosift::Settings::file_dir."/".$self->{"fileName"}.".html";
+		$self->{HTML} = Phylosift::HTMLReport::begin_report(self=>$self, file=>$html_report);
+		Phylosift::HTMLReport::add_jnlp(self=>$self, marker=>"concat", OUTPUT=>$self->{HTML}, xml=>$sample_fat_xml);
 		`rm $sample_jplace_naming`;
 	}
 
