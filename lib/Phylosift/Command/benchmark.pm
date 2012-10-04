@@ -32,7 +32,6 @@ sub load_opt {
 	my %args = @_;
 	my $opt = $args{opt};
 	$Phylosift::Settings::configuration = $opt->{config};
-	$Phylosift::Settings::keep_search = $opt->{keep_search};
 	$Phylosift::Settings::disable_update_check = $opt->{disable_updates};
 	$Phylosift::Settings::my_debug = $opt->{debug};
 
@@ -46,6 +45,7 @@ sub execute {
 	my $ps = new Phylosift::Phylosift();
 	Phylosift::Utilities::program_checks();
 	Phylosift::Utilities::data_checks( self => $ps );
+	$ps->{"readsFile"} = @$args[0];
 
 	Phylosift::Benchmark::run_benchmark( self => $ps, output_path => $opt->{output} );
 }
