@@ -280,24 +280,38 @@ sub summarize {
 	}
 
 	# also write out the taxon assignments for sequences
-	my $SEQUENCETAXA = ps_open( ">$Phylosift::Settings::file_dir/sequence_taxa.$chunk.txt" );
-	my $SEQUENCESUMMARY = ps_open( ">$Phylosift::Settings::file_dir/sequence_taxa_summary.$chunk.txt" );
-	foreach my $qname ( keys(%placements) ) {
+	write_sequence_taxa_summary( self=>$self, placements => \%placements, unclassifiable => \%unclassifiable, sequence_markers => \%sequence_markers, chunk => $chunk );
+	$self->{"read_names"} = ();    #clearing the hash from memory
+	merge_sequence_taxa( self => $self, chunk => $chunk );
+}
+
+sub write_sequence_taxa_summary {
+	my %args  = @_;
+	my $self  = $args{self} || miss("PS Object");
+	my $placements = $args{placements} || miss("placements");
+	my $unclassifiable = $args{unclassifiable} || miss("unclassifiable");
+	my $sequence_markers = $args{sequence_markers} || miss("sequence_markers");
+	my $chunk = $args{chunk};
+	my $chunky = defined($chunk) ? ".$chunk" : "";
+	
+	my $SEQUENCETAXA = ps_open( ">$Phylosift::Settings::file_dir/sequence_taxa$chunky.txt" );
+	my $SEQUENCESUMMARY = ps_open( ">$Phylosift::Settings::file_dir/sequence_taxa_summary$chunky.txt" );
+	foreach my $qname ( keys(%$placements) ) {
 
 		# sum up all placements for this sequence, use to normalize
 		my $placecount = 0;
-		foreach my $taxon_id ( keys( %{ $placements{$qname} } ) ) {
-			$placecount += $placements{$qname}{$taxon_id};
+		foreach my $taxon_id ( keys( %{ $placements->{$qname} } ) ) {
+			$placecount += $placements->{$qname}{$taxon_id};
 		}
-		$placecount += $unclassifiable{$qname} if defined( $unclassifiable{$qname} );
+		$placecount += $unclassifiable->{$qname} if defined( $unclassifiable->{$qname} );
 
 # determine the different unique names used for this molecule (e.g. /1 and /2 for paired reads)
 		my %unique_names;
 
 		# normalize to probability distribution
-		foreach my $taxon_id ( sort { $placements{$qname}{$b} <=> $placements{$qname}{$a} } keys %{ $placements{$qname} } )
+		foreach my $taxon_id ( sort { $placements->{$qname}{$b} <=> $placements->{$qname}{$a} } keys %{ $placements->{$qname} } )
 		{
-			$placements{$qname}{$taxon_id} /= $placecount;
+			$placements->{$qname}{$taxon_id} /= $placecount;
 			my ( $taxon_name, $taxon_level, $tid ) =  get_taxon_info( taxon => $taxon_id );
 			$taxon_level = "Unknown" unless defined($taxon_level);
 			$taxon_name  = "Unknown" unless defined($taxon_name);
@@ -311,18 +325,18 @@ sub summarize {
 				}
 				foreach my $name_ref ( keys(%unique_names) ) {
 					print $SEQUENCETAXA "$name_ref\t$taxon_id\t$taxon_level\t$taxon_name\t"
-					  . $placements{$qname}{$taxon_id} . "\t" . join( "\t", keys( %{ $sequence_markers{$qname} } ) ). "\n";
+					  . $placements->{$qname}{$taxon_id} . "\t" . join( "\t", keys( %{ $sequence_markers->{$qname} } ) ). "\n";
 				}
 			}
 		}
 		foreach my $name_ref ( keys(%unique_names) ) {
-			if ( defined( $unclassifiable{$qname} ) ) {
-				print $SEQUENCETAXA "$name_ref\tUnknown\tUnknown\tUnclassifiable\t" . ( $unclassifiable{$qname} / $placecount ) . "\t"
-				  . $unclassifiable{$qname} . "\t" . join( "\t", keys( %{ $sequence_markers{$qname} } ) ) . "\n";
+			if ( defined( $unclassifiable->{$qname} ) ) {
+				print $SEQUENCETAXA "$name_ref\tUnknown\tUnknown\tUnclassifiable\t" . ( $unclassifiable->{$qname} / $placecount ) . "\t"
+				  . $unclassifiable->{$qname} . "\t" . join( "\t", keys( %{ $sequence_markers->{$qname} } ) ) . "\n";
 			}
 		}
 
-		my $readsummary = sum_taxon_levels( placements => $placements{$qname} );
+		my $readsummary = sum_taxon_levels( placements => $placements->{$qname} );
 		foreach my $taxon_id ( sort { $readsummary->{$b} <=> $readsummary->{$a} } keys %{$readsummary} ) {
 			my ( $taxon_name, $taxon_level, $tid ) = get_taxon_info( taxon => $taxon_id );
 			$taxon_level = "Unknown" unless defined($taxon_level);
@@ -330,7 +344,7 @@ sub summarize {
 			if ( exists $self->{"read_names"}{$qname} ) {
 				foreach my $name_ref ( keys(%unique_names) ) {
 					print $SEQUENCESUMMARY "$name_ref\t$taxon_id\t$taxon_level\t$taxon_name\t" . $readsummary->{$taxon_id} . "\t"
-					  . join( "\t", keys( %{ $sequence_markers{$qname} } ) ) . "\n";
+					  . join( "\t", keys( %{ $sequence_markers->{$qname} } ) ) . "\n";
 				}
 			}
 
@@ -338,15 +352,6 @@ sub summarize {
 	}
 	close($SEQUENCESUMMARY);
 	close($SEQUENCETAXA);
-	$self->{"read_names"} = ();    #clearing the hash from memory
-	merge_sequence_taxa( self => $self );
-}
-
-sub write_sequence_taxa_summary {
-	my %args  = @_;
-	my $self  = $args{self} || miss("PS Object");
-	my $chunk = $args{chunk};
-	
 }
 
 =head2 merge_sequence_taxa
@@ -358,6 +363,7 @@ sub write_sequence_taxa_summary {
 sub merge_sequence_taxa {
 	my %args       = @_;
 	my $self       = $args{self} || miss("PS Object");
+	my $chunk      = $args{chunk} || miss("chunk");
 	my $taxa_seed  = $Phylosift::Settings::file_dir . "/sequence_taxa.*.txt";
 	my @taxa_files = glob("$taxa_seed");
 	my %placements = ();
@@ -399,8 +405,7 @@ sub merge_sequence_taxa {
 		# make a summary of total reads at each taxonomic level
 		# this gets used later in krona output
 		foreach my $qname ( keys(%placements) ) {
-			my $readsummary =
-			  sum_taxon_levels( placements => $placements{$qname} );
+			my $readsummary = sum_taxon_levels( placements => $placements{$qname} );
 			foreach my $taxon_id ( keys(%$readsummary) ) {
 				$all_summary{$taxon_id} = 0 unless defined( $all_summary{$taxon_id} );
 				$all_summary{$taxon_id} += $readsummary->{$taxon_id};
@@ -445,6 +450,11 @@ sub merge_sequence_taxa {
 		%unclassifiable_markers = ();
 	}
 
+	# write a single combined taxa summary
+	`cat $taxa_seed > $Phylosift::Settings::file_dir/sequence_taxa.txt`;
+	my $taxa_summary_seed  = $Phylosift::Settings::file_dir . "/sequence_taxa_summary.*.txt";
+	`cat $taxa_summary_seed > $Phylosift::Settings::file_dir/sequence_taxa_summary.txt`;
+
 
 	my $MARKER_HITS = ps_open( ">" . $Phylosift::Settings::file_dir . "/marker_summary.txt" );
 	print $MARKER_HITS "Marker_name\tNumber of hits\n";
@@ -483,7 +493,6 @@ sub merge_sequence_taxa {
 		last if $taxasum >= $totalreads * 0.9;
 	}
 	close($TAXAHPDOUT);
-	Phylosift::Utilities::end_timer( name => "runSummarize" );
 	Phylosift::Utilities::start_timer( name => "runKrona" );
 
 	#Need to move this to the merge summary function
@@ -491,6 +500,8 @@ sub merge_sequence_taxa {
 
 		# skip this if only a simple summary is desired (it's slow)
 		debug "Generating krona\n";
+		my $html_report = $Phylosift::Settings::file_dir."/".$self->{"fileName"}.".html";
+		$self->{HTML} = ps_open(">$html_report") unless defined $self->{HTML};
 		Phylosift::HTMLReport::add_krona(self=>$self, OUTPUT=>$self->{HTML}, summary => \%concat_summary ) if scalar( keys(%concat_summary) ) > 0;
 #		%ncbi_summary = ();
 #		%ncbi_summary = %all_summary;
