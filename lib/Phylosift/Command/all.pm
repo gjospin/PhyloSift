@@ -72,6 +72,7 @@ sub load_opt {
 	$Phylosift::Settings::stdin = $opt->{stdin};
 	$Phylosift::Settings::chunks = $opt->{chunks};
 	$Phylosift::Settings::my_debug = $opt->{debug};
+	$Phylosift::Settings::CHUNK_MAX_SEQS = $opt->{chunk_size};
 
 	$Phylosift::Utilities::debuglevel = $Phylosift::Settings::my_debug || 0;
 }
