@@ -19,6 +19,7 @@ sub usage_desc { "place %o <sequence file> [pair sequence file]" }
 sub place_opts {
 	my %opts = (
 		coverage => [ "coverage=s",   "Provides a contig/scaffold coverage file for estimating relative abundance"],
+		bayes    => [ "bayes",        "Compute posterior probabilities during phylogenetic placement. Required for Bayesian hypothesis testing"],
 	);
 	return %opts;
 }

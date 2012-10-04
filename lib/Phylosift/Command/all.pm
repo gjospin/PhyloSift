@@ -80,6 +80,7 @@ sub load_opt {
 	set_ifdef(\$Phylosift::Settings::chunks, $opt->{chunks});
 	set_ifdef(\$Phylosift::Settings::my_debug, $opt->{debug});
 	set_ifdef(\$Phylosift::Settings::CHUNK_MAX_SEQS, $opt->{chunk_size});
+	set_ifdef(\$Phylosift::Settings::bayes, $opt->{bayes});
 	
 
 	$Phylosift::Utilities::debuglevel = $Phylosift::Settings::my_debug || 0;
@@ -93,7 +94,7 @@ sub execute {
 	my $ps = new Phylosift::Phylosift();
 	$ps = $ps->initialize( mode => "all", file_1 => @$args[0], file_2 => @$args[1]);
 	$ps->{"ARGV"} = \@ARGV;
-
+	
 	debug("FORCE: " . $Phylosift::Settings::force . "\n");
 	debug("Continue : " . $Phylosift::Settings::continue . "\n");
 	$ps->run( force=>$Phylosift::Settings::force, custom=>$Phylosift::Settings::custom, cont=>$Phylosift::Settings::continue );
