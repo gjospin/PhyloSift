@@ -2,9 +2,9 @@ package Phylosift::Command::test_lineage;
 use Phylosift -command;
 use Phylosift::Settings;
 use Phylosift::Phylosift;
-use Phylosift::Simulations;
+use JSON;
 use Carp;
-use Phylosift::Utilities qw(debug);
+use Phylosift::Utilities qw(debug ps_open);
 
 sub description {
 	return "phylosift test_lineage - conduct a statistical test (a Bayes factor) for the presence of a particular lineage in a sample";
@@ -24,9 +24,7 @@ sub options {
 }
 
 sub validate {
-	my ($self, $opt, $args) = @_;
-	
-	$self->usage_error("benchmark requires a phylosift output directory") unless @$args > 0;
+	my ($self, $opt, $args) = @_;	
 }
 
 sub load_opt {
@@ -49,16 +47,15 @@ sub execute {
 	
 	# convert taxon IDs to a hash
 	my %taxon_ids;
-	foreach my $tid(@$opt->{taxon}){
+	foreach my $tid(@{$opt->{taxon}}){
 		$taxon_ids{$tid}=1;
 	}
 	
 	# get taxon names
-	my $namemap = read_name_map();
 	Phylosift::Summarize::read_ncbi_taxon_name_map();
 
 	# read in the JSON file
-	my $sample_jplace = $opt->{sample}."/treeDir/concat.1.jplace";
+	my $sample_jplace = $opt->{sample}."/treeDir/concat.updated.1.jplace";
 	my $JPLACEFILE = ps_open( $sample_jplace );
 	my @treedata = <$JPLACEFILE>;	
 	close $JPLACEFILE;
@@ -71,13 +68,10 @@ sub execute {
 	my @nodes;
 	foreach my $node ( @{ $tree->get_entities } ) {
 		my $name = $node->get_name;
-		$name =~ s/\{\d+?\}//g;
-
-		if(defined($namemap->{$name})){
-			push (@nodes, $node) if defined( $taxon_ids{ $namemap->{$name} } );
-			next;
-		}
+		my $tid = $1 if $name =~ /\[(\d+?)\]\{/;
+		push (@nodes, $node) if defined( $taxon_ids{ $tid } )
 	}
+	debug "Found ".scalar(@nodes)." nodes\n";
 	
 	# get the mrca of nodes in question
 	my $mrca = $tree->get_mrca(\@nodes);
@@ -91,9 +85,10 @@ sub execute {
 			$subtree_edges{$1} = 1 if $name =~ /\{(\d+?)\}/;			
 		}
 	);
+	debug "After including mrca subtree edges we have ".scalar(keys(%subtree_edges))." targets\n";
 
 	# now walk the list of placements and add up probability mass
-	my $bf_numer = 1;
+	my $bf_numer = 1.0;
 	for ( my $i = 0 ; $i < @{ $json_data->{placements} } ; $i++ ) {
 		my $place = $json_data->{placements}->[$i];
 
@@ -107,6 +102,7 @@ sub execute {
 		$bf_numer *= (1.0-$mass);
 	}
 	print "Hypothesis: taxa in this group have zero abundance\n";
+	print "bf_numer is $bf_numer\n";
 	print "Bayes factor: ". ($bf_numer / (1-$bf_numer)). "\n";
 	print "1-3\tBarely worth mentioning\n";
 	print "3-10\tSubstantial\n";
