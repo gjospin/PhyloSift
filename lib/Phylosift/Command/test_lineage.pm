@@ -86,6 +86,7 @@ sub execute {
 		}
 	);
 	debug "After including mrca subtree edges we have ".scalar(keys(%subtree_edges))." targets\n";
+	debug "Looking on edges ".join("\t", keys(%subtree_edges))."\n";
 
 	# now walk the list of placements and add up probability mass
 	my $bf_numer = 1.0;
@@ -97,13 +98,14 @@ sub execute {
 		for ( my $j = 0 ; $j < @{ $place->{p} } ; $j++ ) {
 			my $edge      = $place->{p}->[$j]->[0];
 			next unless defined($subtree_edges{$edge});
-			my $mass += $place->{p}->[$j]->[2];
+			$mass += $place->{p}->[$j]->[2];
 		}
 		$bf_numer *= (1.0-$mass);
 	}
 	print "Hypothesis: taxa in this group have zero abundance\n";
 	print "bf_numer is $bf_numer\n";
-	print "Bayes factor: ". ($bf_numer / (1-$bf_numer)). "\n";
+	my $bf = $bf_numer == 1 ? "Infinite -- target is beyond limit of detection" : ($bf_numer / (1-$bf_numer));
+	print "Bayes factor: $bf\n";
 	print "1-3\tBarely worth mentioning\n";
 	print "3-10\tSubstantial\n";
 	print "10-30\tStrong\n";
