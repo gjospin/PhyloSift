@@ -70,10 +70,11 @@ sub build_marker {
 	$aln_file = check_sequence_integrity(input=>$aln_file , output_dir=> $target_dir) ;
 	
 	my $clean_aln = $aln_file;
+	my $seq_count = -1;
 	unless($opt->{update_only}){
 		# this code path generates new alignments
 		# no need to do this if we're just updating an existing marker with new sequences
-		my $seq_count  = Phylosift::Utilities::unalign_sequences(
+		$seq_count  = Phylosift::Utilities::unalign_sequences(
 			aln         => $aln_file,
 			output_path => $fasta_file
 		);
@@ -96,8 +97,8 @@ sub build_marker {
 			reference_alignment => $stk_aln,
 			sequence_count      => $seq_count
 		);
-	}else{
-		# copy the unmasked sequences
+	}elsif( -e $opt->{unaligned} ){
+		# copy the unmasked sequences if they exist
 		`cp $opt->{unaligned} $fasta_file`;
 	}
 	$clean_aln = "$target_dir/$core.clean";
@@ -113,7 +114,7 @@ sub build_marker {
 		target_directory => $target_dir
 	) unless -e "$target_dir/$core.tree";
 	my $rep_file;
-	if($seq_count > 10 ){
+	if($seq_count > 10 || $seq_count < 0){
 		debug "Looking for representatives\n";
 		#need to generate representatives using PDA
 		$rep_file = get_representatives_from_tree(
@@ -121,18 +122,18 @@ sub build_marker {
 			target_directory => $target_dir,
 			cutoff           => $cutoff
 		) unless -e "$target_dir/$core.pda";
+	# need to read the representatives picked by PDA and generate a representative fasta file
+		my $rep_fasta = get_fasta_from_pda_representatives(
+			pda_file        => $rep_file,
+			target_dir      => $target_dir,
+			fasta_reference => $fasta_file,
+			id_map          => \%id_map
+		) if -e $fasta_file;
 	}else{
 		#use all the sequences for representatives
-		`cp $fasta_file $target_dir/$core.rep`;
+		`cp $fasta_file $target_dir/$core.rep` if -e $fasta_file;
 	}
 
-#need to read the representatives picked by PDA and generate a representative fasta file
-	my $rep_fasta = get_fasta_from_pda_representatives(
-		pda_file        => $rep_file,
-		target_dir      => $target_dir,
-		fasta_reference => $fasta_file,
-		id_map          => \%id_map
-	) unless -e "$target_dir/$core.rep" || !-e "$target_dir/$core.pda";
 	if ( defined $mapping ) {
 		my $tmp_jplace     = $target_dir . "/" . $core . ".tmpread.jplace";
 		my $mangled = $target_dir . "/" . $core . ".tmpread.mangled";
@@ -177,14 +178,14 @@ sub build_marker {
 #needed are : 1 alignment file, 1 representatives fasta file, 1 hmm profile, 1 tree file, 1 log tree file.
 `cd "$target_dir";taxit create -c -d "Creating a reference package for PhyloSift for the $core marker" -l "$core" -f "$clean_aln" -t "$target_dir/$core.tree" -s "$target_dir/$core.log" -P "$core"`;
 
-	`rm "$target_dir/$core.pda"` if -e "$target_dir/$core.pda";
-	`rm "$target_dir/$core.tree"`;
-	`rm "$target_dir/$core.log"`;
-	`rm "$target_dir/$core.aln"`;
-	`rm "$target_dir/$core.fasta"`;
-	`rm "$target_dir/$core.checked"` if -e "$target_dir/$core.checked";
-	`rm "$clean_aln"` unless $opt->{update_only};
-	`mv "$target_dir/$core"/* "$target_dir"`;
+	`rm -f "$target_dir/$core.pda"` if -e "$target_dir/$core.pda";
+	`rm -f "$target_dir/$core.tree"`;
+	`rm -f "$target_dir/$core.log"`;
+	`rm -f "$target_dir/$core.aln"`;
+	`rm -f "$target_dir/$core.fasta"`;
+	`rm -f "$target_dir/$core.checked"` if -e "$target_dir/$core.checked";
+	`rm -f "$clean_aln"` unless $opt->{update_only};
+	`mv -f "$target_dir/$core"/* "$target_dir"`;
 	`rm -rf "$target_dir/$core"`;
 	`rm -rf "$Phylosift::Settings::file_dir"`;
 }

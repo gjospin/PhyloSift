@@ -31,7 +31,6 @@ sub options {
 sub validate {
 	my ($self, $opt, $args) = @_;
 	$self->usage_error("build_marker requires an alignment") unless defined $opt->{alignment};
-	$self->usage_error("build_marker --update-only requires unaligned sequences given with --unaligned") if defined $opt->{update_only} && !defined $opt->{unaligned};
 }
 
 sub load_opt {
