@@ -987,7 +987,7 @@ sub get_marker_taxon_map {
 	my $marker_path = get_marker_path( self => $self, marker => $marker );
 	my $bname       = get_marker_basename( marker => $marker );
 	my $decorated   = get_decorated_marker_name(%args);
-	return "$marker_path/$decorated/$decorated.taxonmap";
+	return "$marker_path/$decorated/$bname.taxonmap";
 }
 
 sub get_decorated_marker_name {
