@@ -76,6 +76,7 @@ sub pplacer {
 		if(-e $read_alignment_file && -s $read_alignment_file > 0){
 			my $options = $marker eq "concat" ? "--groups $Phylosift::Settings::pplacer_groups" : "";
 			$options .= " --mmap-file abracadabra " if ($marker =~ /18s/ || $marker =~ /16s/ || $marker eq "concat");
+			$options .= " -p " if( $Phylosift::Settings::bayes ); # calc posterior probabilities. this is slow.
 			$place_file = place_reads(self=>$self, marker=>$marker, dna=>0, chunk => $chunk, reads=>$read_alignment_file, options=>$options, short_rna=>$short_rna);
 			unlink("$self->{\"treeDir\"}/abracadabra") if $options =~ /abracadabra/;	# remove the mmap file created by pplacer
 		}
@@ -117,6 +118,7 @@ sub set_default_values{
 	Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::pplacer_verbosity,value=>"0");
 	Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::max_submarker_dist,value=>0.15);
 	Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::min_submarker_prob,value=>0.35);	
+	Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::pendant_branch_limit,value=>0.6);	
 }
 
 sub merge_chunk {
@@ -342,12 +344,15 @@ sub place_reads{
 	}
 	$marker_package .= ".short" if $short_rna;
 	my $jplace = $self->{"treeDir"} . "/" . basename($reads, ".fasta").".jplace";
-	my $pp = "cd $self->{\"treeDir\"}; $Phylosift::Settings::pplacer $options -o $jplace --verbosity $Phylosift::Settings::pplacer_verbosity -j ".$Phylosift::Settings::threads." -c $marker_package \"$reads\"";
+	my $pp = "$Phylosift::Settings::pplacer $options -o $jplace --verbosity $Phylosift::Settings::pplacer_verbosity -j ".$Phylosift::Settings::threads." -c $marker_package \"$reads\"";
 	debug "Running $pp\n";
 	system($pp);
 	
 	debug "no output in $jplace\n" unless -e $jplace;
 	return unless -e $jplace;
+
+	# remove placements on very long branches, they are unreliable due to LBA artifacts.
+	filter_placements(place_file=>$jplace);
 
 	# if we're on the concat marker, create a single jplace with all reads for use with multisample metrics 
 	if($marker eq "concat"){
@@ -394,6 +399,47 @@ sub place_reads{
 	debug "Weighting sequences in $marker\n";
 	weight_placements( self => $self, coverage => $covref, place_file => $jplace );
 	return $jplace;
+}
+
+=head2 filter_placements
+
+placements with very long pendant branches tend to be erroneous due to long branch attraction issues
+eliminate these from the placement set
+
+=cut
+
+sub filter_placements {
+	my %args       = @_;
+	my $place_file = $args{place_file} || miss("place_file");
+	my $JPLACEFILE = ps_open( $place_file );
+	my @treedata = <$JPLACEFILE>;	
+	close $JPLACEFILE;
+
+	my $filtered = 0;
+	my $json_data = decode_json( join("", @treedata) );
+	for ( my $i = 0 ; $i < @{ $json_data->{placements} } ; $i++ ) {
+		my $place = $json_data->{placements}->[$i];
+
+		# for each placement edge in the placement record
+		# calculate the avg pendant branch length
+		my $w_avg = 0;
+		my $lwr = 0;
+		for ( my $j = 0 ; $j < @{ $place->{p} } ; $j++ ) {
+			$w_avg += $place->{p}->[$j]->[2] * $place->{p}->[$j]->[4];
+			$lwr += $place->{p}->[$j]->[2];
+		}
+		$w_avg /= $lwr;
+		if($w_avg >= $Phylosift::Settings::pendant_branch_limit){
+			# branch too long. delete this one from the placement set
+			$filtered++;
+		}
+	}
+	if($filtered > 0){
+		my $OUTPLACE = ps_open( ">".$place_file );
+		print $OUTPLACE encode_json( $json_data );
+		close $OUTPLACE;
+	}
+	debug "Removed $filtered sequences on long pendant edges\n";
 }
 
 =head2 weight_placements
