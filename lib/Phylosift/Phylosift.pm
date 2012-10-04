@@ -157,7 +157,7 @@ sub run {
 	file_check( self => $self );
 	directory_prep( self => $self, force => $force, cont => $continue );
 	$self->{"readsFile"} = prep_isolate_files( self => $self, file => $self->{"readsFile"} )
-	  if $Phylosift::Settings::isolate == 1;
+	  if defined($Phylosift::Settings::isolate) && $Phylosift::Settings::isolate == 1;
 
 	# Forcing usage of updated markers
 	debug "Using updated markers\n" if $Phylosift::Settings::updated;
