@@ -174,7 +174,7 @@ sub vector_screen {
 	# screen each fastq for vector contamination
 	print STDERR "Filtering out vector contamination\n";
 	foreach my $barcode(keys(%r1files)){
-		my $bwt_cmd = "bowtie2-align -p 8 -x $vector_db -1 ".$r1files{$barcode}{name}." -2 ".$r2files{$barcode}{name}." |";
+		my $bwt_cmd = "bowtie2-align --local -p 8 -x $vector_db -1 ".$r1files{$barcode}{name}." -2 ".$r2files{$barcode}{name}." |";
 		print STDERR "Running $bwt_cmd\n";
 		open(my $BWT, $bwt_cmd);
 		my $filt_name = $r1files{$barcode}{name};
