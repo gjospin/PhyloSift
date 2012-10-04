@@ -18,7 +18,7 @@ sub usage_desc { "place %o <sequence file> [pair sequence file]" }
 
 sub place_opts {
 	my %opts = (
-		[ "coverage=s",   "Provides a contig/scaffold coverage file for estimating relative abundance"],
+		coverage => [ "coverage=s",   "Provides a contig/scaffold coverage file for estimating relative abundance"],
 	);
 	return %opts;
 }
@@ -31,8 +31,7 @@ sub options {
 
 sub validate {
 	my ($self, $opt, $args) = @_;
-	
-	$self->usage_error("phylosift align requires exactly one or two file name arguments to run") unless @$args == 1 || @$args == 2;
+	$self->usage_error("phylosift place requires exactly one or two file name arguments to run") unless @$args == 1 || @$args == 2;
 }
 
 sub execute {
