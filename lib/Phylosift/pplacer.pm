@@ -495,11 +495,13 @@ sub name_taxa_in_jplace {
 	foreach my $node ( @{ $tree->get_entities } ) {
 
 		my $name = $node->get_name;
-		$name =~ s/\{\d+?\}//g;
+		$name =~ s/(\{\d+?\})//g;
+		my $branch_id = $1;
 		if(defined($namemap->{$name})){
-			my @data = Phylosift::Summarize::get_taxon_info( taxon => $namemap->{$name} );
+			my $taxon_id = $namemap->{$name};
+			my @data = Phylosift::Summarize::get_taxon_info( taxon => $taxon_id );
 			my $ncbi_name = Phylosift::Summarize::tree_name( name => $data[0] );
-			$node->set_name($ncbi_name);
+			$node->set_name($ncbi_name."[$taxon_id]".$branch_id);
 			next;
 		}
 		# this might be an internal node. try to get a taxon group ID and name from the taxon map
@@ -515,7 +517,7 @@ sub name_taxa_in_jplace {
 			my $ncbi_name = Phylosift::Summarize::tree_name( name => $data[0] ) ;
 			$node_name .= "_$ncbi_name"."_" if defined $ncbi_name;
 		}
-		$node->set_name($node_name);
+		$node->set_name($node_name.$branch_id);
 	}
 	$json_data->{tree} = unparse( '-phylo' => $tree, '-format' => 'newick', '-nodelabels' => 1 );
 	$JPLACEFILE = ps_open( ">$output" );
