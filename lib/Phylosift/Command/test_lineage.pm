@@ -102,15 +102,18 @@ sub execute {
 		my $mass = 0;
 		for ( my $j = 0 ; $j < @{ $place->{p} } ; $j++ ) {
 			my $edge      = $place->{p}->[$j]->[0];
-			die "Error, test_lineage requires posterior probabilities of branch placement, please run pplacer with the -p option.\n\n" if scalar(@{$place->{p}->[$j]}) < 6;
+			die "Error, test_lineage requires posterior probabilities of branch placement, please use phylosift to reanalyze the data with the --bayes option.\n\n" if scalar(@{$place->{p}->[$j]}) < 6;
 			next unless defined($subtree_edges{$edge});
 			$mass += $place->{p}->[$j]->[5];
 		}
 		$bf_numer *= (1.0-$mass);
 	}
-	print "Hypothesis: taxa in this group have zero abundance\n";
+	
+	print "Null hypothesis: taxa in this group have zero abundance in the sample\n";
 	my $bf = $bf_numer == 1 ? "Infinite -- target is beyond limit of detection" : ($bf_numer / (1-$bf_numer));
 	print "Bayes factor: $bf\n";
+	print "Strength of null hypothesis rejection:";
+	print "< 1\t Null hypothesis supported\n";
 	print "1-3\tBarely worth mentioning\n";
 	print "3-10\tSubstantial\n";
 	print "10-30\tStrong\n";
