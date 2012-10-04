@@ -68,10 +68,12 @@ sub execute {
 	# find the nodes in question
 	my $tree = Bio::Phylo::IO->parse( '-string' => $tree_string, '-format' => 'newick')->first;
 	my @nodes;
+	my %subtree_edges;
 	foreach my $node ( @{ $tree->get_entities } ) {
 		my $name = $node->get_name;
 		my $tid = $1 if $name =~ /\[(\d+?)\]\{/;
-		push (@nodes, $node) if defined( $taxon_ids{ $tid } )
+		$subtree_edges{$1} = 1 if defined( $taxon_ids{ $tid } ) && $name =~ /\{(\d+?)\}/;
+		push (@nodes, $node) if defined( $taxon_ids{ $tid } );
 	}
 	debug "Found ".scalar(@nodes)." nodes\n";
 	if(@nodes==0){
@@ -80,16 +82,20 @@ sub execute {
 	
 	# get the mrca of nodes in question
 	my $mrca = $tree->get_mrca(\@nodes);
+	debug "nodes[0] name is ".$nodes[0]->get_name."\n";
+	debug "mrca name is ".$mrca->get_name."\n";
 	
+	# if nontrivial mrca then
 	# accumulate a list of all subtree nodes of interest
-	my %subtree_edges;
-	$mrca->visit_depth_first(
-		-post => sub {
-			my $node = shift;
-			my $name = $node->get_name;
-			$subtree_edges{$1} = 1 if $name =~ /\{(\d+?)\}/;			
-		}
-	);
+	if(@nodes > 1){
+		$mrca->visit_depth_first(
+			-post => sub {
+				my $node = shift;
+				my $name = $node->get_name;
+				$subtree_edges{$1} = 1 if $name =~ /\{(\d+?)\}/;			
+			}
+		);
+	}
 	debug "After including mrca subtree edges we have ".scalar(keys(%subtree_edges))." target(s)\n";
 	debug "Looking on edges ".join("\t", keys(%subtree_edges))."\n";
 
@@ -111,8 +117,8 @@ sub execute {
 	
 	print "Null hypothesis: taxa in this group have zero abundance in the sample\n";
 	my $bf = $bf_numer == 1 ? "Infinite -- target is beyond limit of detection" : ($bf_numer / (1-$bf_numer));
-	print "Bayes factor: $bf\n";
-	print "Strength of null hypothesis rejection:";
+	print "\nBayes factor: $bf\n\n";
+	print "Strength of null hypothesis rejection:\n";
 	print "< 1\t Null hypothesis supported\n";
 	print "1-3\tBarely worth mentioning\n";
 	print "3-10\tSubstantial\n";
