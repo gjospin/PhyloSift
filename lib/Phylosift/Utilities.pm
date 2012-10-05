@@ -1900,7 +1900,7 @@ Gets the current date and formats it by YYYYMMDD
 sub get_date_YYYYMMDD {
 	my @timerval = localtime();
 	my $datestr  = ( 1900 + $timerval[5] );
-	$datestr .= 0 if $timerval[4] <= 9;
+	$datestr .= 0 if $timerval[4] < 9;
 	$datestr .= ( $timerval[4] + 1 );
 	$datestr .= 0 if $timerval[3] <= 9;
 	$datestr .= $timerval[3];
