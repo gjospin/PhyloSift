@@ -482,7 +482,7 @@ sub collate_markers {
 	my @taxonids = keys(%alltaxa);
 	Phylosift::MarkerBuild::make_ncbi_subtree(out_file=>"$marker_dir/ncbi_tree.updated.tre", taxon_ids=>\@taxonids);
 
-	wait_for_jobs( job_ids => \@jobids );
+	wait_for_jobs( job_ids => \@job_ids );
 }
 
 sub clean_representatives {
@@ -1111,7 +1111,7 @@ sub write_marker_build_script {
 #\$ -V
 #\$ -S /bin/bash
 
-export PATH="$PATH:$ps"
+export PATH="\$PATH:$ps"
 $ps/phylosift build_marker -f --alignment=\$1 --update-only --taxonmap=\$2 --reps_pd=\$3 \$4
 
 EOF
