@@ -602,6 +602,8 @@ sub get_taxon_info {
 		#it's an ncbi taxon id.  look up its name and level.
 		my $merged = Phylosift::Summarize::read_merged_nodes();
 		$in = $merged->{$in} if defined( $merged->{$in} );
+		my $deleted = Phylosift::Summarize::read_deleted_nodes();
+		return ($in, "", "") if defined($deleted->{$in});
 		my $name  = $idnamemap{$in};
 		my $level = $parent{$in}->[1];
 		return ( $name, $level, $in );
@@ -694,6 +696,21 @@ sub read_merged_nodes {
 	}
 	debug "Done reading merged\n";
 	return \%merged;
+}
+
+my %deleted;
+
+sub read_deleted_nodes {
+	return \%deleted if %deleted;
+	debug "Reading deleted ncbi nodes\n";
+	my $DELETED = ps_open("$Phylosift::Settings::ncbi_dir/delnodes.dmp");
+	while ( my $line = <$DELETED> ) {
+		chomp $line;
+		my @vals = split( /\s+\|\s*/, $line );
+		$deleted{ $vals[0] } = 1;
+	}
+	debug "Done reading deleted\n";
+	return \%deleted;
 }
 
 =head1 AUTHOR
