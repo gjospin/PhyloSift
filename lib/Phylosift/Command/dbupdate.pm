@@ -91,7 +91,7 @@ sub execute {
 	#Phylosift::UpdateDB::update_rna( self => $newObject, marker_dir => $marker_dir );
 	Phylosift::UpdateDB::update_ncbi_taxonomy( repository => $destination );
 	debug "Updating NCBI tree and taxon map...";
-	Phylosift::UpdateDB::make_ncbi_tree_from_update( self => $newObject, marker_dir => $marker_dir );
+#	Phylosift::UpdateDB::make_ncbi_tree_from_update( self => $newObject, marker_dir => $marker_dir );
 	debug "done\n";
 	Phylosift::UpdateDB::launch_marker_builds(self=>$self, marker_dir => $marker_dir );
 #	Phylosift::UpdateDB::build_marker_trees_fasttree( marker_directory => $marker_dir, pruned => 0 );
