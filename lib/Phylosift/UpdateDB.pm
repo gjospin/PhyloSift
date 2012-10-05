@@ -453,19 +453,21 @@ sub collate_markers {
 		# now rename sequences with their taxon IDs 
 		my $fasta = get_fasta_filename(marker=>$marker, updated=>1);
 		next unless -e "$local_directory/$fasta";
-		fix_names_in_alignment( alignment => "$local_directory/$fasta" );
+		create_taxon_id_table(alignment => "$local_directory/$fasta", output => "$marker_dir/$fasta.taxon_ids");
+#		fix_names_in_alignment( alignment => "$local_directory/$fasta" );
 		`cp "$local_directory/$fasta" "$marker_dir/$fasta"`;
 		my $reps = get_reps_filename( marker => $marker, updated => 1 );
 		my $clean_reps = get_reps_filename( marker => $marker, updated => 1, clean => 1 );
 		if(-e "$local_directory/$reps" ){
 			clean_representatives(infile=>"$local_directory/$reps", outfile=>"$local_directory/$clean_reps" );
-			fix_names_in_alignment( alignment => "$local_directory/$clean_reps" );
+#			fix_names_in_alignment( alignment => "$local_directory/$clean_reps" );
 			`cp "$local_directory/$clean_reps" "$marker_dir/$clean_reps"`;
 		}
 		
 		my $codon_fasta = get_fasta_filename(marker=>$marker, updated=>1,dna=>1);
 		next unless -e "$local_directory/$codon_fasta";
-		fix_names_in_alignment( alignment => "$local_directory/$codon_fasta" );
+		create_taxon_id_table(alignment => "$local_directory/$codon_fasta", output => "$marker_dir/$codon_fasta.taxon_ids");
+##		fix_names_in_alignment( alignment => "$local_directory/$codon_fasta" );
 		`cp "$local_directory/$codon_fasta" "$marker_dir/$codon_fasta"`;
 	}
 }
@@ -811,6 +813,23 @@ export OMP_NUM_THREADS=3
 	`rm ps_tree.sh.* ps_tree_codon.* ps_tree_rna.*`;
 }
 
+sub create_taxon_id_table {
+	my %args = @_;
+	my $alignment = $args{alignment} || miss("alignment");
+	my $output = $args{output} || miss("output");
+	my $OUTPUT = ps_open( ">$output" );
+	my $INALN = ps_open( $alignment );
+	while ( my $line = <$INALN> ) {
+		if ( $line =~ /^>(.+)/ ) {
+			my $header = $1;
+			if ( $header =~ /\.(\d+?)\.fasta/ ) {
+				print $OUTPUT "$header\t$1\n";
+			}
+		}
+	}
+	close $OUTPUT;
+}
+
 sub fix_names_in_alignment {
 	my %args = @_;
 	my $alignment = $args{alignment} || miss("alignment");
@@ -1069,9 +1088,7 @@ sub launch_marker_builds {
 	my %args = @_;
 	my $self        = $args{self} || miss("self");
 	my $marker_dir  = $args{marker_dir} || miss("marker_dir");
-	
-	my @tmp_ids = ("$marker_dir/tmp_ids.aa.txt","$marker_dir/tmp_ids.dna.txt");
-	
+		
 	my @markerlist = Phylosift::Utilities::gather_markers();
 	unshift( @markerlist, "concat" );
 	my @jobids;
@@ -1084,19 +1101,11 @@ sub launch_marker_builds {
 #\$ -V
 #\$ -S /bin/bash
 
-phylosift build_marker -f \$1 \$2 \$3
+phylosift build_marker -f --alignment=\$1 --update-only --taxonmap=\$2 --reps_pd=\$3 \$4
 
 EOF
 
 	for(my $dna=0; $dna<2; $dna++){
-		my $ids = $marker_dir."/".get_gene_id_file(dna=>$dna);
-		my $INIDS = ps_open($ids);
-		my $OUTIDS = ps_open(">".$tmp_ids[$dna]);
-		while(my $line = <$INIDS>){
-			$line =~ s/.+\t(\d+)\t(\d+)/$2\t$1/g;
-			print $OUTIDS $line;
-		}
-		close $OUTIDS;
 		foreach my $marker (@markerlist) {
 			my $pruned = !$dna;
 			my $marker_fasta = get_fasta_filename( marker => $marker, updated => 1, pruned=>$pruned, dna=>$dna);
@@ -1105,7 +1114,9 @@ EOF
 			next if $marker =~ /^PMPROK/ || $marker =~ /^DNGNGWU/;	# skip these since they all go in the concat
 			
 			my $qsub_args = $marker eq "concat" ? "-l mem_free=20G" : "";
-			my @marray = ($marker_fasta,"0.01",$tmp_ids[$dna]);
+			my @marray = ($marker_fasta,$marker_fasta.".taxon_ids","0.01");
+			my $clean_reps = get_reps_filename( marker => $marker, updated => 1, clean => 1 );
+			push(@marray, "--unaligned=$clean_reps") if $dna==0;
 			qsub_job(script=>$bs, qsub_args => $qsub_args, job_ids=>\@jobids, script_args=>\@marray );
 		}
 	}
