@@ -38,7 +38,7 @@ sub build_marker {
 	my $opt      = $args{opt};
 	my $self     = $args{self} || miss("self");
 	my $aln_file = $args{alignment} || miss("alignment");
-	my $cutoff   = $args{cutoff} || miss("cutoff");
+	my $reps_pd   = $args{reps_pd} || miss("reps_pd");
 	my $force   = $args{force};      #force is not a required option
 	my $mapping = $args{mapping};    #not a required argument
 	my ( $core, $path, $ext ) = fileparse( $aln_file, qr/\.[^.]*$/ );
@@ -120,7 +120,7 @@ sub build_marker {
 		$rep_file = get_representatives_from_tree(
 			tree             => $fasttree_file,
 			target_directory => $target_dir,
-			cutoff           => $cutoff
+			reps_pd           => $reps_pd
 		) unless -e "$target_dir/$core.pda";
 	# need to read the representatives picked by PDA and generate a representative fasta file
 		my $rep_fasta = get_fasta_from_pda_representatives(
@@ -173,10 +173,35 @@ sub build_marker {
 
 		`rm -rf "$tmpread_file" "$mangled" "$tmp_jplace" "$id_taxon_map" "$ncbi_sub_tree"  "$target_dir/temp_ref"`;
 	}
+	
+	# create a taxon table for taxit
+	if(0){		
+	my $TAXIN = ps_open($mapping);
+	my $TAXIDTABLE = ps_open(">$target_dir/tax_ids.txt");
+	my $SEQIDS = ps_open(">$target_dir/seq_ids.csv");
+	print $SEQIDS "\"seq_name\",\"tax_id\"\n";
+	while(my $line = <$TAXIN>){
+		chomp $line;
+		my ($seq_name, $tid) = split(/\t/, $line);
+		my @tinfo = Phylosift::Summarize::get_taxon_info(taxon=>$tid); # lookup will check for any merging
+		# not sure what taxit doesn't like about the astrovirus but it won't handle them...
+		if (length($tinfo[2]) > 0 && $tinfo[2] ne "ERROR" && $tinfo[0] !~ /ASTROVIRUS/){			
+			print $TAXIDTABLE "$tinfo[2]\n";
+			my @ancestors = Phylosift::Benchmark::get_ancestor_array(tax_id=>$tinfo[2]);
+			foreach my $a(@ancestors){
+				print $TAXIDTABLE "$a\n";
+			}
+		}
+		print $SEQIDS "$seq_name,$tid\n";
+	}
+	close $TAXIDTABLE;
+	system("taxit taxtable -d /home/koadman/git/PhyloSift/test_build/ncbi_taxonomy.db -t $target_dir/tax_ids.txt -o $target_dir/taxa.csv");
+	}
 
 #use taxit to create a new reference package required for running PhyloSift
 #needed are : 1 alignment file, 1 representatives fasta file, 1 hmm profile, 1 tree file, 1 log tree file.
 `cd "$target_dir";taxit create -c -d "Creating a reference package for PhyloSift for the $core marker" -l "$core" -f "$clean_aln" -t "$target_dir/$core.tree" -s "$target_dir/$core.log" -P "$core"`;
+#`cd "$target_dir";taxit create -c -d "Creating a reference package for PhyloSift for the $core marker" -i $target_dir/seq_ids.csv -T $target_dir/taxa.csv -l "$core" -f "$clean_aln" -t "$target_dir/$core.tree" -s "$target_dir/$core.log" -P "$core"`;
 
 	`rm -f "$target_dir/$core.pda"` if -e "$target_dir/$core.pda";
 	`rm -f "$target_dir/$core.tree"`;
@@ -522,7 +547,7 @@ sub get_representatives_from_tree {
 	my %args       = @_;
 	my $tree_file  = $args{tree} || miss("tree");
 	my $target_dir = $args{target_directory} || miss("target_directory");
-	my $cutoff     = $args{cutoff} || miss("cutoff");
+	my $reps_pd    = $args{reps_pd} || miss("reps_pd");
 	my ( $core, $path, $ext ) = fileparse( $tree_file, qr/\.[^.]*$/ );
 
 	#get the number of taxa in the tree
@@ -540,7 +565,7 @@ sub get_representatives_from_tree {
 #pda doesn't seem to want to run if $taxa_count is the number of leaves. Decrementing to let pda do the search.
 	$taxa_count--;
 	my $pda_cmd =
-"cd \"$target_dir\";$Phylosift::Settings::pda -g -k $taxa_count -minlen $cutoff \"$tree_file\" \"$target_dir/$core.pda\"";
+"cd \"$target_dir\";$Phylosift::Settings::pda -g -k $taxa_count -minlen $reps_pd \"$tree_file\" \"$target_dir/$core.pda\"";
 	`$pda_cmd`;
 	return "$target_dir/$core.pda";
 }
