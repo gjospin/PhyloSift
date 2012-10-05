@@ -85,15 +85,13 @@ sub execute {
 #	Phylosift::UpdateDB::find_new_genomes( genome_directory => $ebi_repository,           results_directory => $local, files => \@new_genomes );
 #	Phylosift::UpdateDB::find_new_genomes( genome_directory => $local_repository,         results_directory => $local, files => \@new_genomes );
 #	Phylosift::UpdateDB::qsub_updates( local_directory => $local, files => \@new_genomes );
+	debug "Updating NCBI tree and taxon map...";
+#	Phylosift::UpdateDB::update_ncbi_taxonomy( repository => $destination );
 	Phylosift::UpdateDB::collate_markers( local_directory => $local, marker_dir => $marker_dir, taxon_knockouts => $taxon_knockouts );
 	
 #	Phylosift::UpdateDB::assign_seqids( marker_directory => $marker_dir );
 	#Phylosift::UpdateDB::update_rna( self => $newObject, marker_dir => $marker_dir );
-	Phylosift::UpdateDB::update_ncbi_taxonomy( repository => $destination );
-	debug "Updating NCBI tree and taxon map...";
 #	Phylosift::UpdateDB::make_ncbi_tree_from_update( self => $newObject, marker_dir => $marker_dir );
-	debug "done\n";
-	Phylosift::UpdateDB::launch_marker_builds(self=>$self, marker_dir => $marker_dir );
 #	Phylosift::UpdateDB::build_marker_trees_fasttree( marker_directory => $marker_dir, pruned => 0 );
 	#Phylosift::UpdateDB::make_codon_submarkers( marker_dir => $marker_dir );
 #	Phylosift::UpdateDB::pd_prune_markers( marker_directory => $marker_dir );
