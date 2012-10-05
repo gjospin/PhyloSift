@@ -15,7 +15,6 @@ Reads the input file looking for taxonomic origins in the read headers and
 Reads Summary files and generates accuracy ratings for every taxonmic level.
 
 =cut
-my %parent               = ();
 my %nameidmap            = ();    # Key is an id - Value is a name (Use if you have an ID and want a name)
 my %idnamemap            = ();    # Key is a name - Value is an id (Use if you have a name and want an ID)
 my %sourceIDs            = ();
@@ -30,9 +29,7 @@ sub run_benchmark {
 	my ($nimref, $inmref) = Phylosift::Summarize::read_ncbi_taxon_name_map();
 	%nameidmap = %$nimref;
 	%idnamemap  = %$inmref;
-	my $rents  = Phylosift::Summarize::read_ncbi_taxonomy_structure();
 	print STDERR "parse_simulated_reads\n";
-	%parent = %$rents;
 	my ($refTaxa_ref, $taxon_read_counts,$taxonomy_counts) = parse_simulated_reads( file_name=>$self->{"readsFile"} );
 	%refTaxa = %$refTaxa_ref;
 	my ($top_place,$all_place) = read_seq_summary( self=>$self, output_path=>$output_path,read_source=> \%readSource );
@@ -351,9 +348,10 @@ sub get_ancestor_array {
     my %args = @_;
 	my $curID    = $args{tax_id} || miss("tax_id");
 	my @ancestor = ();
+	my $parent = Phylosift::Summarize::read_ncbi_taxonomy_structure();
 	while ( defined($curID) && $curID != 1 ) {
 		push( @ancestor, $curID );
-		$curID = ${ $parent{$curID} }[0];
+		$curID = ${ $parent->{$curID} }[0];
 	}
 	return @ancestor;
 }
