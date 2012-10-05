@@ -41,12 +41,15 @@ sub build_marker {
 	my $reps_pd   = $args{reps_pd} || miss("reps_pd");
 	my $force   = $args{force};      #force is not a required option
 	my $mapping = $args{mapping};    #not a required argument
+	my $destination = $args{destination};
 	my ( $core, $path, $ext ) = fileparse( $aln_file, qr/\.[^.]*$/ );
 	my $marker_dir = Phylosift::Utilities::get_data_path(
 		data_name => "markers",
 		data_path => $Phylosift::Settings::marker_path
 	);
-	my $target_dir = $marker_dir . "/$core";
+	
+	$destination = $marker_dir unless defined($destination);
+	$target_dir = $destination . "/$core";
 
 	# check that taxit is available
 	my $taxit = Phylosift::Utilities::get_program_path( prog_name => "taxit" );
@@ -61,7 +64,7 @@ sub build_marker {
 
 	#$target_dir = $Phylosift::Settings::file_dir;
 	if ( -e $target_dir && !$force ) {
-		croak("Marker already exists in $marker_dir. Delete Marker and restart the marker build.\nUse -f to force an override of the previous marker.\nUsage:\n>phylosift build_marker -f aln_file cutoff\n");
+		croak("Marker already exists in $destination. Delete Marker and restart the marker build.\nUse -f to force an override of the previous marker.\nUsage:\n>phylosift build_marker -f aln_file cutoff\n");
 	} else {
 		`rm -rf "$target_dir"` if $force;
 		`mkdir "$target_dir"`;
@@ -180,7 +183,7 @@ sub build_marker {
 #use taxit to create a new reference package required for running PhyloSift
 #needed are : 1 alignment file, 1 representatives fasta file, 1 hmm profile, 1 tree file, 1 log tree file.
 	my $taxdb_opts = ""; # add taxit-friendly taxon labels if available
-	$taxdb_opts = "-i $target_dir/seq_ids.csv -T $target_dir/taxa.csv" if -e "$target_dir/taxa.csv";
+	$taxdb_opts = "-i $target_dir/seq_ids.csv -T $target_dir/taxa.csv" if -e "$target_dir/taxa.csv" && -s "$target_dir/taxa.csv" > 0;
 	my $taxit_cmd = "cd \"$target_dir\";taxit create -c -d \"Creating a reference package for PhyloSift for the $core marker\" -l \"$core\" -f \"$clean_aln\" -t \"$target_dir/$core.tree\" $taxdb_opts -s \"$target_dir/$core.log\" -P \"$core\"";
 	debug "Running $taxit_cmd\n";
 	`$taxit_cmd`;
