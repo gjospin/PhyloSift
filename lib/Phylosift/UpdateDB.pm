@@ -470,13 +470,18 @@ sub collate_markers {
 #			fix_names_in_alignment( alignment => "$local_directory/$clean_reps" );
 			`cp "$local_directory/$clean_reps" "$marker_dir/$clean_reps"`;
 		}
+		debug "Launching marker build for $marker\n";
+		my $job_id = launch_marker_build(marker=>$marker, dna=>0, batch_script=>$bs);
+		push(@job_ids, $job_id);
 		
 		my $codon_fasta = get_fasta_filename(marker=>$marker, updated=>1,dna=>1);
 		next unless -e "$local_directory/$codon_fasta";
 		create_taxon_id_table(alignment => "$local_directory/$codon_fasta", output => "$marker_dir/$codon_fasta.taxon_ids", alltaxa=>\%alltaxa);
 ##		fix_names_in_alignment( alignment => "$local_directory/$codon_fasta" );
 		`cp "$local_directory/$codon_fasta" "$marker_dir/$codon_fasta"`;
-		my $job_id = launch_marker_build(marker=>$marker, dna=>1, batch_script=>$bs);
+
+		debug "Launching marker build for $marker.codon\b";
+		$job_id = launch_marker_build(marker=>$marker, dna=>1, batch_script=>$bs);
 		push(@job_ids, $job_id);
 	}
 	my @taxonids = keys(%alltaxa);
@@ -1120,7 +1125,7 @@ EOF
 
 sub launch_marker_build {
 	my %args = @_;
-	my $dna = $args{dna} || miss("dna");
+	my $dna = $args{dna};
 	my $marker = $args{marker} || miss("marker");
 	my $bs = $args{batch_script} || miss("batch_script");
 		
