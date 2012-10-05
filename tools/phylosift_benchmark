@@ -34,7 +34,7 @@ for(my $bI=0; $bI<@benchmark_data; $bI++){
 	my $url = $benchmark_data[$bI][1];
 	my $seqname = $1 if $url =~ /.+\/(.+?)$/;
 	print STDERR "Downloading $url to $seqname\n";
-	`curl -LO $seqname $url`;
+	`wget $url`;
 
 	# run through the command-line just to test the interface as well
 	my $url_arg = "";
