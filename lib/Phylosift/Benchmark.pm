@@ -15,7 +15,6 @@ Reads the input file looking for taxonomic origins in the read headers and
 Reads Summary files and generates accuracy ratings for every taxonmic level.
 
 =cut
-my %parent               = ();
 my %nameidmap            = ();    # Key is an id - Value is a name (Use if you have an ID and want a name)
 my %idnamemap            = ();    # Key is a name - Value is an id (Use if you have a name and want an ID)
 my %sourceIDs            = ();
@@ -30,9 +29,7 @@ sub run_benchmark {
 	my ($nimref, $inmref) = Phylosift::Summarize::read_ncbi_taxon_name_map();
 	%nameidmap = %$nimref;
 	%idnamemap  = %$inmref;
-	my $rents  = Phylosift::Summarize::read_ncbi_taxonomy_structure();
 	print STDERR "parse_simulated_reads\n";
-	%parent = %$rents;
 	my ($refTaxa_ref, $taxon_read_counts,$taxonomy_counts) = parse_simulated_reads( file_name=>$self->{"readsFile"} );
 	%refTaxa = %$refTaxa_ref;
 	my ($top_place,$all_place) = read_seq_summary( self=>$self, output_path=>$output_path,read_source=> \%readSource );
@@ -250,7 +247,7 @@ sub report_csv {
 
 	unless ( -f $report_file ) {
 		my $TOPHITS = ps_open( ">$report_file" );
-		print $TOPHITS "Date,Superkingdom,Phylum,Subphylum,Class,Order,Family,Genus,Species,Subspecies,No Rank\n";
+		print $TOPHITS "Date,Superkingdom,Phylum,Subphylum,Class,Order,Family,Genus,Species,Subspecies\n";
 		close $TOPHITS;
 	}
 	my $date = Phylosift::Utilities::get_date_YYYYMMDD();
@@ -267,73 +264,9 @@ sub report_csv {
 	print $TOPHITS "," . as_percent( num=>$matchTop{"genus"},        denom=>$readNumber );
 	print $TOPHITS "," . as_percent( num=>$matchTop{"species"},      denom=>$readNumber );
 	print $TOPHITS "," . as_percent( num=>$matchTop{"subspecies"},   denom=>$readNumber );
-	print $TOPHITS "," . as_percent( num=>$matchTop{"no rank"},      denom=>$readNumber );
 	print $TOPHITS "\n";
 }
 
-sub report_text {
-    my %args = @_;
-    my $self = $args{self};
-	my $outputfile    = $args{output_file} || miss("output_file");
-	my $mtref         = $args{mtref} || miss("mtref");
-	my $maref         = $args{maref} || miss("maref");
-	my $readNumber    = $args{read_number} || miss("read_number");
-	my $allReadNumber = $args{all_read_number} || miss("all_read_number");
-	my $totalProb     = $args{total_prob} || miss("total_prob");
-	my $rtpref        = $args{rtpref} || miss("rtpref");
-	my %matchTop      = %$mtref;
-	my %matchAll      = %$maref;
-	my %rankTotalProb = %$rtpref;
-	print "\n";
-	print "Top placed Matches : Superkingdom\t" . 100 * $matchTop{"superkingdom"} / $readNumber . "\n";
-	print "Top placed Matches : Phylum\t" . 100 * $matchTop{"phylum"} / $readNumber . "\n";
-	print "Top placed Matches : Subphylum\t" . 100 * $matchTop{"subphylum"} / $readNumber . "\n";
-	print "Top placed Matches : Class\t" . 100 * $matchTop{"class"} / $readNumber . "\n";
-	print "Top placed Matches : Order\t" . 100 * $matchTop{"order"} / $readNumber . "\n";
-	print "Top placed Matches : Family\t" . 100 * $matchTop{"family"} / $readNumber . "\n";
-	print "Top placed Matches : Genus\t" . 100 * $matchTop{"genus"} / $readNumber . "\n";
-	print "Top placed Matches : Species\t" . 100 * $matchTop{"species"} / $readNumber . "\n";
-	print "Top placed Matches : Subspecies\t" . 100 * $matchTop{"subspecies"} / $readNumber . "\n";
-	print "Top placed Matches : No rank\t" . 100 * $matchTop{"no rank"} / $readNumber . "\n";
-	print "\n";
-	print "Total placed Reads : $readNumber\n";
-	print "\n";
-	print "All placements Matches : Superkingdom\t" . 100 * $matchAll{"superkingdom"} / $allReadNumber . "\n";
-	print "All placements Matches : Phylum\t" . 100 * $matchAll{"phylum"} / $allReadNumber . "\n";
-	print "All placements Matches : Subphylum\t" . 100 * $matchAll{"subphylum"} / $allReadNumber . "\n";
-	print "All placements Matches : Class\t" . 100 * $matchAll{"class"} / $allReadNumber . "\n";
-	print "All placements Matches : Order\t" . 100 * $matchAll{"order"} / $allReadNumber . "\n";
-	print "All placements Matches : Family\t" . 100 * $matchAll{"family"} / $allReadNumber . "\n";
-	print "All placements Matches : Genus\t" . 100 * $matchAll{"genus"} / $allReadNumber . "\n";
-	print "All placements Matches : Species\t" . 100 * $matchAll{"species"} / $allReadNumber . "\n";
-	print "All placements Matches : Subspecies\t" . 100 * $matchAll{"subspecies"} / $allReadNumber . "\n";
-	print "All placements Matches : No rank\t" . 100 * $matchAll{"no rank"} / $allReadNumber . "\n";
-	print "\n";
-	print "All placements Matches : Superkingdom\t" . 100 * $matchAll{"superkingdom"} / $totalProb . "\n";
-	print "All placements Matches : Phylum\t" . 100 * $matchAll{"phylum"} / $totalProb . "\n";
-	print "All placements Matches : Subphylum\t" . 100 * $matchAll{"subphylum"} / $totalProb . "\n";
-	print "All placements Matches : Class\t" . 100 * $matchAll{"class"} / $totalProb . "\n";
-	print "All placements Matches : Order\t" . 100 * $matchAll{"order"} / $totalProb . "\n";
-	print "All placements Matches : Family\t" . 100 * $matchAll{"family"} / $totalProb . "\n";
-	print "All placements Matches : Genus\t" . 100 * $matchAll{"genus"} / $totalProb . "\n";
-	print "All placements Matches : Species\t" . 100 * $matchAll{"species"} / $totalProb . "\n";
-	print "All placements Matches : Subspecies\t" . 100 * $matchAll{"subspecies"} / $totalProb . "\n";
-	print "All placements Matches : No rank\t" . 100 * $matchAll{"no rank"} / $totalProb . "\n";
-	print "\n";
-	print "Rank specific Percentages\n";
-	print "All placements Matches : Superkingdom\t" . 100 * $matchAll{"superkingdom"} / $rankTotalProb{"superkingdom"} . "\n";
-	print "All placements Matches : Phylum\t" . 100 * $matchAll{"phylum"} / $rankTotalProb{"phylum"} . "\n";
-	print "All placements Matches : Subphylum\t" . 100 * $matchAll{"subphylum"} / $rankTotalProb{"subphylum"} . "\n";
-	print "All placements Matches : Class\t" . 100 * $matchAll{"class"} / $rankTotalProb{"class"} . "\n";
-	print "All placements Matches : Order\t" . 100 * $matchAll{"order"} / $rankTotalProb{"order"} . "\n";
-	print "All placements Matches : Family\t" . 100 * $matchAll{"family"} / $rankTotalProb{"family"} . "\n";
-	print "All placements Matches : Genus\t" . 100 * $matchAll{"genus"} / $rankTotalProb{"genus"} . "\n";
-	print "All placements Matches : Species\t" . 100 * $matchAll{"species"} / $rankTotalProb{"species"} . "\n";
-	print "All placements Matches : Subspecies\t" . 100 * $matchAll{"subspecies"} / $rankTotalProb{"subspecies"} . "\n";
-	print "All placements Matches : No rank\t" . 100 * $matchAll{"no rank"} / $rankTotalProb{"no rank"} . "\n";
-	print "\n";
-	print "Total placements : $allReadNumber\n";
-}
 
 =head2 parse_simulated_reads
 Reads a fasta file extracting the source field for each read.
@@ -415,9 +348,10 @@ sub get_ancestor_array {
     my %args = @_;
 	my $curID    = $args{tax_id} || miss("tax_id");
 	my @ancestor = ();
+	my $parent = Phylosift::Summarize::read_ncbi_taxonomy_structure();
 	while ( defined($curID) && $curID != 1 ) {
 		push( @ancestor, $curID );
-		$curID = ${ $parent{$curID} }[0];
+		$curID = ${ $parent->{$curID} }[0];
 	}
 	return @ancestor;
 }

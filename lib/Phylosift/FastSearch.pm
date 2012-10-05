@@ -83,8 +83,7 @@ sub run_search {
 	my $type =
 	  Phylosift::Utilities::get_sequence_input_type( $F1IN );
 	$self->{readtype} = $type;
-	$self->{"dna"} =
-	  $type->{seqtype} eq "protein" ? 0 : 1;   # Is the input protein sequences?
+	$self->{"dna"} = $type->{seqtype} eq "protein" ? 0 : 1;   # Is the input protein sequences?
 	debug "Input type is $type->{seqtype}, $type->{format}\n";
 
 	#making sure $type->{paired} is set so we create the appropriate variables
@@ -187,7 +186,6 @@ sub set_default_values{
 	my $default_chunk_size = 200000;
 	$default_chunk_size = 1000000 if !defined($Phylosift::Settings::extended) || !$Phylosift::Settings::extended;
 	Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::CHUNK_MAX_SEQS,value=>$default_chunk_size);
-	Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::CHUNK_MAX_SIZE,value=>10000000);
 	Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::lastal_evalue,value=>"-e75");
 	Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::lastal_rna_evalue,value=>"-e300");
 	Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::bowtie_quiet,value=>"--quiet --sam-nohead --sam-nosq");

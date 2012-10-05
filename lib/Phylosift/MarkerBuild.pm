@@ -3,6 +3,7 @@ use Cwd;
 use Carp;
 use Phylosift::Utilities qw(:all);
 use File::Basename;
+use JSON;
 
 =head1 NAME
 
@@ -34,92 +35,114 @@ if you don't export anything, such as for a purely object-oriented module.
 
 sub build_marker {
 	my %args     = @_;
+	my $opt      = $args{opt};
 	my $self     = $args{self} || miss("self");
 	my $aln_file = $args{alignment} || miss("alignment");
-	my $cutoff   = $args{cutoff} || miss("cutoff");
+	my $reps_pd   = $args{reps_pd} || miss("reps_pd");
 	my $force   = $args{force};      #force is not a required option
 	my $mapping = $args{mapping};    #not a required argument
+	my $destination = $args{destination};
 	my ( $core, $path, $ext ) = fileparse( $aln_file, qr/\.[^.]*$/ );
 	my $marker_dir = Phylosift::Utilities::get_data_path(
 		data_name => "markers",
 		data_path => $Phylosift::Settings::marker_path
 	);
-	my $target_dir = $marker_dir . "/$core";
+	
+	$destination = $marker_dir unless defined($destination);
+	$target_dir = $destination . "/$core";
 
 	# check that taxit is available
 	my $taxit = Phylosift::Utilities::get_program_path( prog_name => "taxit" );
 	if( $taxit eq "" ){
 		croak("Error: you must install pplacer's taxtastic and its dependencies prior to building markers. See https://github.com/fhcrc/taxtastic for more information.\n")
 	}
+	
+	# check for other programs
+	Phylosift::Utilities::program_checks();
+	# load NCBI taxonomy and marker info
+	Phylosift::Utilities::data_checks(self=>$self);
 
 	#$target_dir = $Phylosift::Settings::file_dir;
 	if ( -e $target_dir && !$force ) {
-		croak
-"Marker already exists in $marker_dir. Delete Marker and restart the marker build.\nUse -f to force an override of the previous marker.\nUsage:\n>phylosift build_marker -f aln_file cutoff\n";
+		croak("Marker already exists in $destination. Delete Marker and restart the marker build.\nUse -f to force an override of the previous marker.\nUsage:\n>phylosift build_marker -f aln_file cutoff\n");
 	} else {
 		`rm -rf "$target_dir"` if $force;
 		`mkdir "$target_dir"`;
 	}
 	my $fasta_file = "$target_dir/$core.fasta";
 	$aln_file = check_sequence_integrity(input=>$aln_file , output_dir=> $target_dir) ;
-	my $seq_count  = Phylosift::Utilities::unalign_sequences(
-		aln         => $aln_file,
-		output_path => $fasta_file
-	);
-	my $masked_aln = "$target_dir/$core.masked";
-	mask_aln( file => $aln_file, output => $masked_aln ) unless -e $masked_aln;
-	my $hmm_file = "$target_dir/$core.hmm";
-	generate_hmm( file_name => $aln_file, hmm_name => $hmm_file )
-	  unless -e $hmm_file;
-	Phylosift::Utilities::fasta2stockholm(
-		fasta  => $aln_file,
-		output => "$target_dir/$core.stk"
-	) unless -e "$target_dir/$core.stk";
-	my $stk_aln = "$target_dir/$core.stk";
 
-	#may need to create an unaligned file for the sequences before aligning them
-	my $new_alignment_file = hmmalign_to_model(
-		hmm_profile         => $hmm_file,
-		sequence_file       => $fasta_file,
-		target_dir          => $target_dir,
-		reference_alignment => $stk_aln,
-		sequence_count      => $seq_count
-	);
-	my $clean_aln = "$target_dir/$core.clean";
+	
+	my $clean_aln = $aln_file;
+	my $seq_count = -1;
+	unless($opt->{update_only}){
+		# this code path generates new alignments
+		# no need to do this if we're just updating an existing marker with new sequences
+		$seq_count  = Phylosift::Utilities::unalign_sequences(
+			aln         => $aln_file,
+			output_path => $fasta_file
+		);
+		my $masked_aln = "$target_dir/$core.masked";
+		mask_aln( file => $aln_file, output => $masked_aln ) unless -e $masked_aln;
+		my $hmm_file = "$target_dir/$core.hmm";
+		generate_hmm( file_name => $aln_file, hmm_name => $hmm_file )
+		  unless -e $hmm_file;
+		Phylosift::Utilities::fasta2stockholm(
+			fasta  => $aln_file,
+			output => "$target_dir/$core.stk"
+		) unless -e "$target_dir/$core.stk";
+		my $stk_aln = "$target_dir/$core.stk";
+
+		#may need to create an unaligned file for the sequences before aligning them
+		my $new_alignment_file = hmmalign_to_model(
+			hmm_profile         => $hmm_file,
+			sequence_file       => $fasta_file,
+			target_dir          => $target_dir,
+			reference_alignment => $stk_aln,
+			sequence_count      => $seq_count
+		);
+	}elsif( -e $opt->{unaligned} ){
+		# copy the unmasked sequences if they exist
+		`cp $opt->{unaligned} $fasta_file`;
+	}
+	$clean_aln = "$target_dir/$core.clean";
 	my %id_map    = mask_and_clean_alignment(
-		alignment_file => $new_alignment_file,
+		alignment_file => $aln_file,
 		output_file    => $clean_aln
 	);
 	debug( "ID_map is " . scalar( keys(%id_map) ) . " long\n" );
-	my @array = keys(%id_map);
+
 
 	my ( $fasttree_file, $tree_log_file ) = generate_fasttree(
 		alignment_file   => $clean_aln,
 		target_directory => $target_dir
 	) unless -e "$target_dir/$core.tree";
 	my $rep_file;
-	if($seq_count > 10 ){
+	if($seq_count > 10 || $seq_count < 0){
+		debug "Looking for representatives\n";
 		#need to generate representatives using PDA
 		$rep_file = get_representatives_from_tree(
 			tree             => $fasttree_file,
 			target_directory => $target_dir,
-			cutoff           => $cutoff
+			reps_pd           => $reps_pd
 		) unless -e "$target_dir/$core.pda";
+	# need to read the representatives picked by PDA and generate a representative fasta file
+		my $rep_fasta = get_fasta_from_pda_representatives(
+			pda_file        => $rep_file,
+			target_dir      => $target_dir,
+			fasta_reference => $fasta_file,
+			id_map          => \%id_map
+		) if -e $fasta_file;
 	}else{
 		#use all the sequences for representatives
-		`cp $fasta_file $target_dir/$core.rep`;
+		`cp $fasta_file $target_dir/$core.rep` if -e $fasta_file;
 	}
+	
+	create_taxon_table(target_dir=>$target_dir, mapping=>$mapping );
 
-#need to read the representatives picked by PDA and generate a representative fasta file
-	my $rep_fasta = get_fasta_from_pda_representatives(
-		pda_file        => $rep_file,
-		target_dir      => $target_dir,
-		fasta_reference => $fasta_file,
-		id_map          => \%id_map
-	) unless -e "$target_dir/$core.rep" || !-e "$target_dir/$core.pda";
 	if ( defined $mapping ) {
 		my $tmp_jplace     = $target_dir . "/" . $core . ".tmpread.jplace";
-		my $mangled_jplace = $tmp_jplace . ".mangled";
+		my $mangled = $target_dir . "/" . $core . ".tmpread.mangled";
 		my $taxon_map      = $target_dir . "/" . $core . ".taxonmap";
 		my $id_taxon_map   = $target_dir . "/" . $core . ".gene_map";
 		my $ncbi_sub_tree  = $target_dir . "/" . $core . ".subtree";
@@ -134,9 +157,8 @@ sub build_marker {
 			file     => "$target_dir/$core",
 			aln_file => $clean_aln
 		) unless -e "$target_dir/$core.tmpread.fasta";
-		`cd "$target_dir";pplacer -c temp_ref -p "$tmpread_file"`
-		  unless -e $tmp_jplace;
-		jplace_mangler( in => $tmp_jplace, out => $mangled_jplace );
+		`cd "$target_dir";pplacer -c temp_ref -p "$tmpread_file"` unless -e $tmp_jplace;
+		tree_mangler( in => $tmp_jplace, out => $mangled );
 
 		#create a file with a list of IDs
 		my %taxon_hash = generate_id_to_taxonid_map(
@@ -148,31 +170,62 @@ sub build_marker {
 		);
 		my @taxon_array = keys(%taxon_hash);
 		debug "TAXON_ARRAY " . scalar(@taxon_array) . "\n";
-		make_ncbi_subtree(
-			out_file  => $ncbi_sub_tree,
-			taxon_ids => \@taxon_array
-		);
+		make_ncbi_subtree( out_file  => $ncbi_sub_tree, taxon_ids => \@taxon_array );
 		debug "AFTER ncbi_subtree\n";
-		`readconciler $ncbi_sub_tree $mangled_jplace $id_taxon_map $taxon_map`;
+		my $rconc = "$Phylosift::Settings::readconciler $ncbi_sub_tree $mangled $id_taxon_map $taxon_map";
+		debug $rconc."\n";
+		system($rconc);
 		debug "AFTER readconciler\n";
 
-`rm -rf "$tmpread_file" "$mangled_jplace" "$tmp_jplace" "$id_taxon_map" "$ncbi_sub_tree"  "$target_dir/temp_ref"`;
+		`rm -rf "$tmpread_file" "$mangled" "$tmp_jplace" "$ncbi_sub_tree"  "$target_dir/temp_ref"`;
 	}
-
+	
 #use taxit to create a new reference package required for running PhyloSift
 #needed are : 1 alignment file, 1 representatives fasta file, 1 hmm profile, 1 tree file, 1 log tree file.
-`cd "$target_dir";taxit create -c -d "Creating a reference package for PhyloSift for the $core marker" -l "$core" -f "$clean_aln" -t "$target_dir/$core.tree" -s "$target_dir/$core.log" -P "$core"`;
+	my $taxdb_opts = ""; # add taxit-friendly taxon labels if available
+	$taxdb_opts = "-i $target_dir/seq_ids.csv -T $target_dir/taxa.csv" if -e "$target_dir/taxa.csv" && -s "$target_dir/taxa.csv" > 0;
+	my $taxit_cmd = "cd \"$target_dir\";taxit create -c -d \"Creating a reference package for PhyloSift for the $core marker\" -l \"$core\" -f \"$clean_aln\" -t \"$target_dir/$core.tree\" $taxdb_opts -s \"$target_dir/$core.log\" -P \"$core\"";
+	debug "Running $taxit_cmd\n";
+	`$taxit_cmd`;
 
-	`rm "$target_dir/$core.pda"` if -e "$target_dir/$core.pda";
-	`rm "$target_dir/$core.tree"`;
-	`rm "$target_dir/$core.log"`;
-	`rm "$target_dir/$core.aln"`;
-	`rm "$target_dir/$core.fasta"`;
-	`rm "$target_dir/$core.checked"` if -e "$target_dir/$core.checked";
-	`rm "$clean_aln"`;
-	`mv "$target_dir/$core"/* "$target_dir"`;
+	`rm -f "$target_dir/$core.pda"` if -e "$target_dir/$core.pda";
+	`rm -f "$target_dir/$core.tree"`;
+	`rm -f "$target_dir/$core.log"`;
+	`rm -f "$target_dir/$core.aln"`;
+	`rm -f "$target_dir/$core.fasta"`;
+	`rm -f "$target_dir/$core.checked"` if -e "$target_dir/$core.checked";
+	`rm -f "$clean_aln"` unless $opt->{update_only};
+	`mv -f "$target_dir/$core"/* "$target_dir"`;
 	`rm -rf "$target_dir/$core"`;
 	`rm -rf "$Phylosift::Settings::file_dir"`;
+}
+
+sub create_taxon_table {
+	my %args = @_;
+	my $mapping = $args{mapping};
+	my $target_dir = $args{target_dir};
+
+	# create a taxon table for taxit
+	my $TAXIN = ps_open($mapping);
+	my $TAXIDTABLE = ps_open(">$target_dir/tax_ids.txt");
+	my $SEQIDS = ps_open(">$target_dir/seq_ids.csv");
+	print $SEQIDS "\"seq_name\",\"tax_id\"\n";
+	my %allanc;
+	while(my $line = <$TAXIN>){
+		chomp $line;
+		my ($seq_name, $tid) = split(/\t/, $line);
+		my @tinfo = Phylosift::Summarize::get_taxon_info(taxon=>$tid); # lookup will check for any merging
+		# not sure what taxit doesn't like about the astrovirus but it won't handle them...
+		if (length($tinfo[2]) > 0 && $tinfo[2] ne "ERROR" && $tinfo[0] !~ /ASTROVIRUS/){	
+			$allanc{$tinfo[2]}=1;
+		}
+		print $SEQIDS "$seq_name,$tid\n";
+	}
+	print $TAXIDTABLE join("\n",keys(%allanc));
+	close $TAXIDTABLE;
+	my $t_cmd = "taxit taxtable -d $target_dir/../ncbi_taxonomy.db -t $target_dir/tax_ids.txt -o $target_dir/taxa.csv";
+	debug "Running $t_cmd\n";
+	system($t_cmd);	
 }
 
 =head2 check_sequence_integrity
@@ -332,7 +385,9 @@ sub generate_id_to_taxonid_map {
 	my $marker     = $args{marker} || miss("Marker name");
 	my %map_hash   = %{$list_ref};
 	my $FHOUT      = Phylosift::Utilities::ps_open( ">" . $out_file );
+	debug("MAPFILE : $map_file\n");
 	my $FHIN       = Phylosift::Utilities::ps_open($map_file);
+	
 	my @test_array = keys(%map_hash);
 	my %return_hash = ();
 
@@ -370,22 +425,25 @@ sub generate_id_to_taxonid_map {
 	return %return_hash;
 }
 
-=head2 jplace_mangler
+=head2 tree_mangler
 
-mangles a Jplace file according the regex
+mangles a Jplace file according the regex and prints out a tree
 
 =cut
 
-sub jplace_mangler {
+sub tree_mangler {
 	my %args    = @_;
 	my $fileIN  = $args{in} || miss("Input file");
 	my $fileOUT = $args{out} || miss("Output file");
 	my $FH      = Phylosift::Utilities::ps_open($fileIN);
 	my $FHOUT   = Phylosift::Utilities::ps_open( ">" . $fileOUT );
-	while ( my $line = <$FH> ) {
-		$line =~ s/:(.+?)\{(\d+?)\}/\{$2\}:$1/g;
-		print $FHOUT $line;
-	}
+	my @treedata = <$FH>;
+	close($FH);
+	my $json_data = decode_json( join("", @treedata) );
+	# parse the tree
+	my $tree_string = $json_data->{tree};
+	$tree_string =~ s/:([^:\)\(]+?)\{(\d+?)\}/\{$2\}:$1/g;
+	print $FHOUT $tree_string;
 }
 
 =head2 generate_hmm
@@ -502,7 +560,7 @@ sub get_representatives_from_tree {
 	my %args       = @_;
 	my $tree_file  = $args{tree} || miss("tree");
 	my $target_dir = $args{target_directory} || miss("target_directory");
-	my $cutoff     = $args{cutoff} || miss("cutoff");
+	my $reps_pd    = $args{reps_pd} || miss("reps_pd");
 	my ( $core, $path, $ext ) = fileparse( $tree_file, qr/\.[^.]*$/ );
 
 	#get the number of taxa in the tree
@@ -520,7 +578,7 @@ sub get_representatives_from_tree {
 #pda doesn't seem to want to run if $taxa_count is the number of leaves. Decrementing to let pda do the search.
 	$taxa_count--;
 	my $pda_cmd =
-"cd \"$target_dir\";$Phylosift::Settings::pda -g -k $taxa_count -minlen $cutoff \"$tree_file\" \"$target_dir/$core.pda\"";
+"cd \"$target_dir\";$Phylosift::Settings::pda -g -k $taxa_count -minlen $reps_pd \"$tree_file\" \"$target_dir/$core.pda\"";
 	`$pda_cmd`;
 	return "$target_dir/$core.pda";
 }

@@ -227,11 +227,7 @@ void reconcile( PhyloTree< TreeNode >& reftree, string treefile, unordered_multi
 //
 	string line;
 	string treestring;
-	getline( treein, line );
 	getline( treein, treestring );
-	size_t qpos = treestring.find("\"");
-	size_t rqpos = treestring.rfind("\"");
-	treestring = treestring.substr( qpos + 1, rqpos - qpos - 1);
 	stringstream treestr(treestring);
 //	cout << "Trying to read " << treestring << endl;
 

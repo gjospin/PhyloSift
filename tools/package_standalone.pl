@@ -4,54 +4,50 @@
 #
 use strict;
 use warnings;
-`rm -rf PhyloSift`;
+use File::Basename;
 
-my $branch = $ARGV[0] || "master";
+my $prefix = "../PhyloSift";
 
-#`rm -rf bioperl-live`;
-`git clone git://github.com/gjospin/PhyloSift.git`;
-`cd PhyloSift ; git checkout $branch`;
-`rm -rf PhyloSift/.git`;
-`rm PhyloSift/Makefile.PL`;
-`rm PhyloSift/ignore.txt`;
-`rm PhyloSift/MANIFEST`;
-`rm PhyloSift/Changes`;
-`rm PhyloSift/.gitignore`;
-`rm PhyloSift/.includepath`;
-`rm PhyloSift/.project`;
-`rm -rf PhyloSift/t`;
-`rm -rf PhyloSift/tools`;
-
-# add bioperl-live
-`git clone git://github.com/bioperl/bioperl-live.git`;
-`mv bioperl-live/Bio* PhyloSift/lib`;
+if (@ARGV>0 && $ARGV[0] eq "buildbot") # if buildbot
+{
+	$prefix = ".."; # set path prefix
+	
+	# add bioperl-live (working in buildbot)
+    `git clone git://github.com/bioperl/bioperl-live.git`;
+    `mv bioperl-live/Bio* lib/`;
+}else{
+	`rm -rf PhyloSift`;
+	
+	my $branch = $ARGV[0] || "master"; # set branch to checkout
+    $prefix = "../PhyloSift"; # set path prefix
+    
+    #`rm -rf bioperl-live`;
+    `git clone git://github.com/gjospin/PhyloSift.git`;
+    `cd PhyloSift ; git checkout $branch`;
+    `rm -rf PhyloSift/.git`;
+    `rm PhyloSift/Makefile.PL`;
+    `rm PhyloSift/ignore.txt`;
+    `rm PhyloSift/MANIFEST`;
+    `rm PhyloSift/Changes`;
+    `rm PhyloSift/.gitignore`;
+    `rm PhyloSift/.includepath`;
+    `rm PhyloSift/.project`;
+    `rm -rf PhyloSift/t`;
+    `rm -rf PhyloSift/tools`;
+    
+    # add bioperl-live (not on buildbot)
+    `git clone git://github.com/bioperl/bioperl-live.git`;
+    `mv bioperl-live/Bio* PhyloSift/lib/`;
+}
 
 # add Rutger Vos' Bio::Phylo
-`curl -LO http://search.cpan.org/CPAN/authors/id/R/RV/RVOSA/Bio-Phylo-0.45.tar.gz`;
-`tar xvzf Bio-Phylo-0.45.tar.gz`;
-chdir("Bio-Phylo-0.45");
-`perl Makefile.PL`;
-`make`;
-`mv blib/lib/Bio/Phylo* ../PhyloSift/lib/Bio/`;
-chdir("..");
+add_package(url=>"http://search.cpan.org/CPAN/authors/id/R/RV/RVOSA/Bio-Phylo-0.45.tar.gz", mv_cmd=>"mv lib/Bio/* $prefix/lib/Bio/");
 
 # add JSON package
-`curl -LO http://search.cpan.org/CPAN/authors/id/M/MA/MAKAMAKA/JSON-2.53.tar.gz`;
-`tar xvzf JSON-2.53.tar.gz`;
-chdir("JSON-2.53");
-`perl Makefile.PL`;
-`make`;
-`mv blib/lib/JSON* ../PhyloSift/lib/`;
-chdir("..");
+add_package(url=>"http://search.cpan.org/CPAN/authors/id/M/MA/MAKAMAKA/JSON-2.53.tar.gz");
 
 # Encode::Locale
-`curl -LO http://search.cpan.org/CPAN/authors/id/G/GA/GAAS/Encode-Locale-0.04.tar.gz`;
-`tar xzf Encode-Locale-0.04.tar.gz`;
-chdir("Encode-Locale-0.04");
-`perl Makefile.PL`;
-`make`;
-`mv blib/lib/Encode ../PhyloSift/lib/`;
-chdir("..");
+add_package(url=>"http://search.cpan.org/CPAN/authors/id/G/GA/GAAS/Encode-Locale-0.04.tar.gz");
 
 # add Locale::Maketext
 `curl -LO http://search.cpan.org/CPAN/authors/id/T/TO/TODDR/Locale-Maketext-1.19.tar.gz`;
@@ -62,69 +58,52 @@ chdir("Locale-Maketext-1.19");
 `rm lib/Locale/Maketext/*.pod`;
 `perl Makefile.PL`;
 `make`;
-`mv blib/lib/Locale/ ../PhyloSift/lib/`;
+`mv blib/lib/Locale/ $prefix/lib/`;
 chdir("..");
 
 # Locale::Maketext::Simple 
-`curl -LO http://search.cpan.org/CPAN/authors/id/J/JE/JESSE/Locale-Maketext-Simple-0.21.tar.gz`;
-`tar xvzf Locale-Maketext-Simple-0.21.tar.gz`;
-chdir("Locale-Maketext-Simple-0.21");
-`perl Makefile.PL`;
-`make`;
-`mv blib/lib/Locale/Maketext/* ../PhyloSift/lib/Locale/Maketext/`;
-chdir("..");
+add_package(url=>"http://search.cpan.org/CPAN/authors/id/J/JE/JESSE/Locale-Maketext-Simple-0.21.tar.gz", mv_cmd=>"mv blib/lib/Locale/Maketext/* $prefix/lib/Locale/Maketext/");
 
 # XML::Writer
-`curl -LO http://search.cpan.org/CPAN/authors/id/J/JO/JOSEPHW/XML-Writer-0.615.tar.gz`;
-`tar xzf XML-Writer-0.615.tar.gz`;
-chdir("XML-Writer-0.615");
-`perl Makefile.PL`;
-`make`;
-`mv blib/lib/XML/ ../PhyloSift/lib/`;
-chdir("..");
+add_package(url=>"http://search.cpan.org/CPAN/authors/id/J/JO/JOSEPHW/XML-Writer-0.615.tar.gz");
 
 # libwww-perl (for LWP::Simple)
-`curl -LO http://search.cpan.org/CPAN/authors/id/G/GA/GAAS/libwww-perl-6.04.tar.gz`;
-`tar xzf libwww-perl-6.04.tar.gz`;
-chdir("libwww-perl-6.04");
-`perl Makefile.PL`;
-`make`;
-`mv blib/lib/LWP/ ../PhyloSift/lib/`;
-chdir("..");
-
-`curl -LO http://search.cpan.org/CPAN/authors/id/G/GA/GAAS/HTTP-Message-6.03.tar.gz`;
-`tar xzf HTTP-Message-6.03.tar.gz`;
-chdir("HTTP-Message-6.03");
-`perl Makefile.PL`;
-`make`;
-`mv blib/lib/HTTP/ ../PhyloSift/lib/`;
-chdir("..");
-
-`curl -LO http://search.cpan.org/CPAN/authors/id/G/GA/GAAS/HTTP-Date-6.02.tar.gz`;
-`tar xzf HTTP-Date-6.02.tar.gz`;
-chdir("HTTP-Date-6.02");
-`perl Makefile.PL`;
-`make`;
-`mv blib/lib/HTTP/ ../PhyloSift/lib/`;
-chdir("..");
-
+add_package(url=>"http://search.cpan.org/CPAN/authors/id/G/GA/GAAS/libwww-perl-6.04.tar.gz");
+add_package(url=>"http://search.cpan.org/CPAN/authors/id/G/GA/GAAS/HTTP-Message-6.03.tar.gz");
+add_package(url=>"http://search.cpan.org/CPAN/authors/id/G/GA/GAAS/HTTP-Date-6.02.tar.gz", mv_cmd=>"mv blib/lib/HTTP/* $prefix/lib/HTTP");
 
 # add Version.pm
-`curl -LO http://search.cpan.org/CPAN/authors/id/J/JP/JPEACOCK/version-0.95.tar.gz`;
-`tar xzf version-0.95.tar.gz`;
-chdir("version-0.95");
-`perl Makefile.PL --perl_only`;
-`make`;
+`mkdir $prefix/legacy`;
+add_package(url=>"http://search.cpan.org/CPAN/authors/id/J/JP/JPEACOCK/version-0.95.tar.gz", make_opts=>"--perl_only", mv_cmd=>"mv blib/lib/version* $prefix/legacy/");
 
-# put these in "legacy" because we only want to use them if the perl version is ancient -- including them breaks newer perls
-`mv blib/lib/version* ../PhyloSift/legacy/`;
+# support for App::Cmd
+add_package(url=>"http://search.cpan.org/CPAN/authors/id/A/AD/ADAMK/List-MoreUtils-0.33.tar.gz");
+add_package(url=>"http://search.cpan.org/CPAN/authors/id/D/DO/DOY/Package-Stash-0.33.tar.gz");
+add_package(url=>"http://search.cpan.org/CPAN/authors/id/R/RJ/RJBS/Getopt-Long-Descriptive-0.092.tar.gz");
+add_package(url=>"http://search.cpan.org/CPAN/authors/id/R/RJ/RJBS/String-RewritePrefix-0.006.tar.gz");
+add_package(url=>"http://search.cpan.org/CPAN/authors/id/R/RJ/RJBS/App-Cmd-0.318.tar.gz");
 
-chdir("..");
+add_package(url=>"http://search.cpan.org/CPAN/authors/id/D/DR/DROLSKY/Class-Load-0.20.tar.gz");
+add_package(url=>"http://search.cpan.org/CPAN/authors/id/R/RJ/RJBS/Data-OptList-0.107.tar.gz");
+add_package(url=>"http://search.cpan.org/CPAN/authors/id/A/AD/ADAMK/Params-Util-1.07.tar.gz");
+add_package(url=>"http://search.cpan.org/CPAN/authors/id/R/RJ/RJBS/Sub-Install-0.926.tar.gz");
+
+add_package(url=>"http://search.cpan.org/CPAN/authors/id/D/DR/DROLSKY/Module-Implementation-0.06.tar.gz");
+add_package(url=>"http://search.cpan.org/CPAN/authors/id/Z/ZE/ZEFRAM/Module-Runtime-0.013.tar.gz", mv_cmd=>"mv blib/lib/Module/* $prefix/lib/Module/");
+add_package(url=>"http://search.cpan.org/CPAN/authors/id/D/DO/DOY/Try-Tiny-0.11.tar.gz");
+add_package(url=>"http://search.cpan.org/CPAN/authors/id/D/DR/DROLSKY/Class-Load-XS-0.04.tar.gz", mv_cmd=>"mv lib/Class/Load/* $prefix/lib/Class/Load/");
+add_package(url=>"http://search.cpan.org/CPAN/authors/id/S/SI/SIMONW/Module-Pluggable-4.3.tar.gz", mv_cmd=>"mv blib/lib/Module/* $prefix/lib/Module/; mv blib/lib/Devel $prefix/lib/");
+add_package(url=>"http://search.cpan.org/CPAN/authors/id/D/DR/DROLSKY/Package-DeprecationManager-0.13.tar.gz", mv_cmd=>"mv blib/lib/Package/* $prefix/lib/Package/");
+add_package(url=>"http://search.cpan.org/CPAN/authors/id/R/RJ/RJBS/Sub-Exporter-0.984.tar.gz", mv_cmd=>"mv blib/lib/Sub/* $prefix/lib/Sub/");
+
+# requires Build.pl
+# provides a pure perl impl
+add_package(url=>"http://search.cpan.org/CPAN/authors/id/D/DR/DROLSKY/Params-Validate-1.06.tar.gz", mv_cmd=>"mv blib/lib/Params/Validate* $prefix/lib/Params/", build_pl=>1);
 
 # package everything up and datestamp it
 my @timerval = localtime();
 my $datestr  = ( 1900 + $timerval[5] );
-$datestr .= 0 if $timerval[4] <= 9;
+$datestr .= 0 if $timerval[4] < 9;
 $datestr .= ( $timerval[4] + 1 );
 $datestr .= 0 if $timerval[3] <= 9;
 $datestr .= $timerval[3];
@@ -133,3 +112,32 @@ $datestr .= $timerval[3];
 `rm -rf phylosift_$datestr`;
 `echo "phylosift_$datestr" > psversion`;
 exit 0;
+
+sub add_package {
+	my %args = @_;
+	my $url = $args{url};
+	my $make_opts = $args{make_opts} || "";
+	my $mv_cmd = $args{mv_cmd};
+	my $build_pl = $args{build_pl} || 0;
+	my $fname = $url;
+	$fname =~ s/http.+\///g;
+	my $bname = basename($fname, ".tar.gz");
+	
+	`curl -LO $url`;
+	`tar xzf $fname`;
+	chdir($bname);
+	if($build_pl){
+		`perl Build.PL`;
+		`./Build`;
+		`$mv_cmd`;
+	}else{
+		`perl Makefile.PL $make_opts`;
+		`make`;
+		if(defined $mv_cmd){
+			`$mv_cmd`;
+		}else{
+			`mv -f -u blib/lib/* $prefix/lib/`;
+		}
+	}
+	chdir("..");
+}

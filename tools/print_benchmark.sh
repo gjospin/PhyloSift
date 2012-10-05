@@ -1,12 +1,16 @@
 #! /bin/bash
 # Author: Eric Lowe
-out="/home/elowe/sim_data1/benchmark_out.txt"
+prefix='/home/elowe/sim_data1' # variable to set path prefix for data files
+kounif='knockoutunif_ill_fastq-reads' # variable to set file name for knockoutunif files
+koexp='knockoutexp_ill_fastq-reads' # variable to set file name for knockoutexp files
+out="$prefix/benchmark_out.txt" # output file
 mg='mg' # string comparison variable, for MEGAN
 mc='mc' # string comparison variable, for MetaCV
+pb='pb' # string comparison variable, for PhymmBL
 # declare associative array path
 declare -A path
-path=([psunif]="/home/elowe/sim_data1/knockoutunif_ill_fastq-reads.fastq" [mgunif]="/home/elowe/sim_data1/knockoutunif_ill_fastq-reads_megan.fastq" [psexp]="/home/elowe/sim_data1/knockoutexp_ill_fastq-reads.fastq" [mgexp]="/home/elowe/sim_data1/knockoutexp_ill_fastq-reads_megan.fastq" [mcunif]="/home/elowe/sim_data1/knockoutunif_ill_fastq-reads_mcv.fastq" [mcexp]="/home/elowe/sim_data1/knockoutexp_ill_fastq-reads_mcv.fastq")
-file=(psunif mgunif mcunif psexp mgexp mcexp) # array of file "names"
+path=([psunif]="$prefix/$kounif.fastq" [mgunif]="$prefix/${kounif}_megan.fastq" [psexp]="$prefix/$koexp.fastq" [mgexp]="$prefix/${koexp}_megan.fastq" [mcunif]="$prefix/${kounif}_mcv.fastq" [mcexp]="$prefix/${koexp}_mcv.fastq" [pbunif]="$prefix/${kounif}_phymmbl.fastq" [pbexp]="$prefix/${koexp}_phymmbl.fastq")
+file=(psunif mgunif mcunif psexp mgexp mcexp pbunif pbexp) # array of file "names"
 ty=(tophit tophit.recall) # array of file types
 
 if [ -e $out ] ; # does output file exist
@@ -18,18 +22,19 @@ fi
 
 for i in ${file[*]} ; # for each element in file array
 do 
-    data=${i##[pm][sgc]} # strips off ps, mc or mg, assigning data as unif or exp
-    prog=${i%%[ue]*} # strips off unif or exp, assigning prog as ps, mc or mg
+    data=${i##[pm][sgcb]} # strips off ps, pb, mc or mg, assigning data as unif or exp
+    prog=${i%%[ue]*} # strips off unif or exp, assigning prog as ps, pb, mc or mg
     
     if [ $prog == $mg ] ; # if $prog is mg
     then
 	prog='megan' # assign megan to $prog
-    fi
-    
-    if [ $prog == $mc ] ; # if $prog is mc
+    elif [ $prog == $mc ] ; # if $prog is mc
     then
 	prog='metacv' # assign metacv to $prog
-    fi	
+    elif [ $prog == $pb ] ; # if $prog is pb
+    then
+	prog='phymmbl' # assign phymmbl to $prog
+    fi
 
     for j in ${ty[*]} ; # for each element in ty array
     do 

@@ -15,9 +15,9 @@ use POSIX ();
 use Carp;
 use Cwd;
 
-if ( $^O =~ /arwin/ ) {
-	use lib "$FindBin::Bin/../osx/darwin-thread-multi-2level/";
-}
+#if ( $^O =~ /arwin/ ) {
+#	use lib "$FindBin::Bin/../osx/darwin-thread-multi-2level/";
+#}
 use Exporter;
 use vars qw[ @EXPORT @EXPORT_OK %EXPORT_TAGS @ISA ];
 @ISA         = 'Exporter';
@@ -64,13 +64,6 @@ A list of functions that can be exported.  You can delete this section
 if you don't export anything, such as for a purely object-oriented module.
 
 =head1 SUBROUTINES/METHODS
-
-=head2 programChecks
-
-checks the program requirements for PhyloSift
-writes to STDERR if a program is missing or the wrong version is installed
-returns 1 or 0 depending on success of failure.
-
 =cut
 
 sub miss {
@@ -137,7 +130,15 @@ sub get_program_path {
 
 our %marker_lookup = ();
 
-sub programChecks {
+=head2 program_checks
+
+checks the program requirements for PhyloSift
+writes to STDERR if a program is missing or the wrong version is installed
+returns 1 or 0 depending on success of failure.
+
+=cut
+
+sub program_checks {
 	eval 'require Bio::Seq;';
 	if ($@) {
 		carp "Bioperl was NOT found\n";
@@ -538,6 +539,8 @@ sub data_checks {
 		data_path => $Phylosift::Settings::ncbi_path
 	));
 	debug "DIR : $Phylosift::Settings::ncbi_dir\n";
+	debug "Skipping check for NCBI updates on server\n" if $Phylosift::Settings::disable_update_check;
+	return if $Phylosift::Settings::disable_update_check;
 	my ( $content_type, $document_length, $modified_time, $expires, $server ) =
 	  head("$Phylosift::Settings::ncbi_url");
 	if ( -x $Phylosift::Settings::ncbi_dir ) {
@@ -994,7 +997,11 @@ sub get_decorated_marker_name {
 	my $updated    = $args{updated} || 0;
 	my $sub_marker = $args{sub_marker};
 	my $base       = $args{base} || 0;
+	my $long       = $args{long} || 0;
+	my $short      = $args{short} || 0;
 	$name = get_marker_basename( marker => $name ) if $base;
+	$name .= ".long" if $long;
+	$name .= ".short" if $short;
 	$name .= ".codon" if $dna;
 	$name .= ".updated" 
 	  if ( $updated || $Phylosift::Settings::updated ) && !$Phylosift::Settings::extended && $name !~ /^1[68]s/;
@@ -1029,9 +1036,9 @@ sub is_protein_marker {
 	my $bname       = get_marker_basename( marker => $marker );
 
 	# only protein markers have HMMs
+	return 0 if ( -e "$marker_path/$marker/$bname.cm" );
 	return 1 if ( -e "$marker_path/$marker/$bname.hmm" );
 	return 1 if ( -e "$marker_path/$bname.hmm" );
-	return 0 if ( -e "$marker_path/$marker/$bname.cm" );
 	return 1;
 }
 
@@ -1494,7 +1501,7 @@ sub get_db {
 	my $db_name = $args{db_name};
 	if ( defined($self) && !defined( $args{path} ) ) {
 		return $Phylosift::Settings::markers_extended_dir . "/$db_name"
-		  if defined( $Phylosift::Settings::extended );
+		  if defined( $Phylosift::Settings::extended ) && $Phylosift::Settings::extended;
 		return $Phylosift::Settings::marker_dir . "/$db_name";
 	}
 	return "$path/$db_name";
@@ -1667,13 +1674,16 @@ sub index_marker_db {
 		my $hmm_file =
 		  get_marker_hmm_file( self => $args{self}, marker => $marker );
 		next if -e $hmm_file;
-		my $cm_file =
-		  get_marker_cm_file( self => $args{self}, marker => $marker );
-		next if -e $cm_file;
-		my $stk_file =
-		  get_marker_stockholm_file( self => $args{self}, marker => $marker );
-		`$Phylosift::Settings::hmmbuild "$hmm_file" "$stk_file"`;
+		build_hmm(marker=>$marker);
 	}
+}
+
+sub build_hmm {
+	my %args        = @_;
+	my $marker = $args{marker} || miss("marker");	
+	my $hmm_file = get_marker_hmm_file( self => $args{self}, marker => $marker );
+	my $stk_file = get_marker_stockholm_file( self => $args{self}, marker => $marker );
+	`$Phylosift::Settings::hmmbuild "$hmm_file" "$stk_file"`;
 }
 
 =head2 gather_markers
@@ -1890,7 +1900,7 @@ Gets the current date and formats it by YYYYMMDD
 sub get_date_YYYYMMDD {
 	my @timerval = localtime();
 	my $datestr  = ( 1900 + $timerval[5] );
-	$datestr .= 0 if $timerval[4] <= 9;
+	$datestr .= 0 if $timerval[4] < 9;
 	$datestr .= ( $timerval[4] + 1 );
 	$datestr .= 0 if $timerval[3] <= 9;
 	$datestr .= $timerval[3];
