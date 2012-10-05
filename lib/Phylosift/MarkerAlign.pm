@@ -375,7 +375,8 @@ sub writeAlignedSeq {
 	return if $aligned_count < $Phylosift::Settings::min_aligned_residues;
 
 	#substitute all the non letter or number characters into _ in the IDs to avoid parsing issues in tree viewing programs or others
-	my $new_name = Phylosift::Summarize::tree_name( name => $prev_name );
+	my $new_name = $prev_name;
+	#my $new_name = Phylosift::Summarize::tree_name( name => $prev_name );
 	#add a paralog ID if there was more than one good hit for this sequence
 	my $randy = int(rand(2000000000));	# paralogs need to be unique so they are not merged later
 	$new_name .= "_p$seq_count.$randy" if exists( $self->{"read_names"}{$new_name} ) && $seq_count > 0;
@@ -412,7 +413,7 @@ sub aa_to_dna_aln {
 	foreach my $seq ( $aln->each_seq ) {
 		my $aa_seqstr    = $seq->seq();
 		my $id           = $seq->display_id;
-		$id =~ s/_p\d+\.\d+$//g; # FIXME!! this needs to use lookup table
+		#$id =~ s/\d+\.\d+$//g; # FIXME!! this needs to use lookup table # No longer needed since we use coordinates
 		my $dnaseq       = $dnaseqs->{$id} || $aln->throw( "cannot find " . $seq->display_id );
 		my $start_offset = ( $seq->start - 1 ) * CODONSIZE;
 		$dnaseq = $dnaseq->seq();
@@ -680,14 +681,25 @@ sub merge_alignment {
 	my $type     = $args{type};
 	my %seqs     = ();
 	my $seq_IO   = Phylosift::Utilities::open_SeqIO_object( file => $ali_file );
+	my %coord = ();
 	while ( my $seq = $seq_IO->next_seq() ) {
-	    my $core = "";
-	    if($seq->id =~ m/^(\S+)_(\d+)$/){
-		$core = $1;
-	    }else{
-		$seq->id =~ m/^(\S+)/;
-		$core = $1;
-	    }
+		my $core = "";
+		if ( $seq->id =~ m/^(\S+)(\.\d+\.\d+)_(\d+)$/ ) {
+			$core = $1;
+			if(exists $coord{$core}){
+				$coord{$core} .= $2 if exists $coord{$core};
+			}else{
+				$coord{$core} = $2;
+			}
+		} else {
+			$seq->id =~ m/^(\S+)(\.\d+\.\d+)/;
+			$core = $1;
+			if(exists $coord{$core}){
+				$coord{$core} .= $2 if exists $coord{$core};
+			}else{
+				$coord{$core} = $2;
+			}
+		}
 		$self->{"read_names"}{$core} = () if ( !exists $self->{"read_names"}{$core} );
 		push( @{ ${ $self->{"read_names"} }{$core} }, $self->{"read_names"}{ $seq->id }[0] )
 		  unless defined( @{ ${ $self->{"read_names"} }{$core} } ) && scalar( @{ ${ $self->{"read_names"} }{$core} } == 2 ); #both pairs have been added already
@@ -719,7 +731,9 @@ sub merge_alignment {
 	#print to the alignment file
 	my $FH = ps_open( ">" . $ali_file );
 	foreach my $core ( keys %seqs ) {
-		print $FH ">" . $core . "\n" . $seqs{$core} . "\n";
+		print $FH ">" . $core;
+		print $FH $coord{$core} if exists $coord{$core};
+		print $FH "\n" . $seqs{$core} . "\n";
 	}
 	close($FH);
 }

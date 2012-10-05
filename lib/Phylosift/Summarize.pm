@@ -60,15 +60,13 @@ sub read_ncbi_taxon_name_map {
 	my $TAXIDS  = ps_open("$ncbidir/names.dmp");
 	while ( my $line = <$TAXIDS> ) {
 		chomp $line;
-		if (   ( $line =~ /scientific name/ )
-			|| ( $line =~ /synonym/ )
-			|| ( $line =~ /misspelling/ ) )
+		if (    ( $line =~ /scientific name/ )
+			 || ( $line =~ /synonym/ )
+			 || ( $line =~ /misspelling/ ) )
 		{
 			my @vals = split( /\s+\|\s+/, $line );
-			$nameidmap{ homogenize_name_ala_dongying( name => $vals[1] ) } =
-			  $vals[0];
-			$idnamemap{ $vals[0] } =
-			  homogenize_name_ala_dongying( name => $vals[1] )
+			$nameidmap{ homogenize_name_ala_dongying( name => $vals[1] ) } = $vals[0];
+			$idnamemap{ $vals[0] } = homogenize_name_ala_dongying( name => $vals[1] )
 			  if ( $line =~ /scientific name/ );
 		}
 	}
@@ -136,10 +134,8 @@ set_default_values for all the parameters in this module
 sub set_default_values {
 	my %args = @_;
 	my $self = $args{self};
-	Phylosift::Settings::set_default(
-		parameter => \$Phylosift::Settings::krona_threshold,
-		value     => 0.01
-	);
+	Phylosift::Settings::set_default(    parameter => \$Phylosift::Settings::krona_threshold,
+									  value     => 0.01 );
 }
 
 =head2 summarize
@@ -186,10 +182,10 @@ sub summarize {
 			$sub_mark = "*" if $dna;
 			my $place_base = $self->{"treeDir"} . "/"
 			  . Phylosift::Utilities::get_read_placement_file(
-				marker     => $marker,
-				dna        => $dna,
-				sub_marker => $sub_mark,
-				chunk      => $chunk
+															   marker     => $marker,
+															   dna        => $dna,
+															   sub_marker => $sub_mark,
+															   chunk      => $chunk
 			  );
 			my @place_files;
 			@place_files = glob($place_base)
@@ -197,12 +193,12 @@ sub summarize {
 			push( @place_files, $place_base ) if $dna == 0 && -e $place_base;
 			foreach my $placeFile (@place_files) {
 				my $PP_COVFILE = ps_open(
-					">"
-					  . Phylosift::Utilities::get_read_placement_file(
-						marker => $marker,
-						chunk  => $chunk
-					  )
-					  . ".cov"
+										  ">"
+											. Phylosift::Utilities::get_read_placement_file(
+																							 marker => $marker,
+																							 chunk  => $chunk
+											)
+											. ".cov"
 				  )
 				  if ( defined $Phylosift::Settings::coverage );
 				my $sub;
@@ -210,15 +206,14 @@ sub summarize {
 
 				# first read the taxonomy mapping
 				my $markermapfile = Phylosift::Utilities::get_marker_taxon_map(
-					self       => $self,
-					marker     => $marker,
-					dna        => $dna,
-					sub_marker => $sub
+																				self       => $self,
+																				marker     => $marker,
+																				dna        => $dna,
+																				sub_marker => $sub
 				);
 				debug "MARKERFILE : $markermapfile\n";
 				next
-				  unless -e $markermapfile
-				  ;    # can't summarize if there ain't no mappin'!
+				  unless -e $markermapfile;    # can't summarize if there ain't no mappin'!
 				my $markerncbimap = read_taxonmap( file => $markermapfile );
 
 				# then read & map the placement
@@ -243,17 +238,15 @@ sub summarize {
 								my $qweight = $place->{nm}->[$k]->[1];
 								$unclassifiable{$qname} = 0
 								  unless defined( $unclassifiable{$qname} );
-								$unclassifiable{$qname} +=
-								  $edge_mass * $qweight;
+								$unclassifiable{$qname} += $edge_mass * $qweight;
 							}
 							next;
 						}
 						my $mapcount = scalar( @{ $markerncbimap->{$edge} } );
 
-				  # for each taxon to which the current phylogeny edge could map
+						# for each taxon to which the current phylogeny edge could map
 						foreach my $taxon ( @{ $markerncbimap->{$edge} } ) {
-							my ( $taxon_name, $taxon_level, $taxon_id ) =
-							  get_taxon_info( taxon => $taxon );
+							my ( $taxon_name, $taxon_level, $taxon_id ) = get_taxon_info( taxon => $taxon );
 
 							# for each query seq in the current placement record
 							for ( my $k = 0 ; $k < @{ $place->{nm} } ; $k++ ) {
@@ -263,16 +256,13 @@ sub summarize {
 								$placements{$qname} = ()
 								  unless defined( $placements{$qname} );
 								$placements{$qname}{$taxon_id} = 0
-								  unless
-								  defined( $placements{$qname}{$taxon_id} );
-								$placements{$qname}{$taxon_id} +=
-								  $edge_mass * $qweight / $mapcount;
+								  unless defined( $placements{$qname}{$taxon_id} );
+								$placements{$qname}{$taxon_id} += $edge_mass * $qweight / $mapcount;
 								$ncbireads{$taxon} = 0
 								  unless defined $ncbireads{$taxon};
 
-							  # split the p.p. across the possible edge mappings
-								$ncbireads{$taxon} +=
-								  $edge_mass * $qweight / $mapcount;
+								# split the p.p. across the possible edge mappings
+								$ncbireads{$taxon} += $edge_mass * $qweight / $mapcount;
 							}
 						}
 					}
@@ -284,13 +274,8 @@ sub summarize {
 	}
 
 	# also write out the taxon assignments for sequences
-	my $SEQUENCETAXA =
-	  ps_open(
-		">" . $Phylosift::Settings::file_dir . "/sequence_taxa.$chunk.txt" );
-	my $SEQUENCESUMMARY =
-	  ps_open( ">"
-		  . $Phylosift::Settings::file_dir
-		  . "/sequence_taxa_summary.$chunk.txt" );
+	my $SEQUENCETAXA    = ps_open( ">" . $Phylosift::Settings::file_dir . "/sequence_taxa.$chunk.txt" );
+	my $SEQUENCESUMMARY = ps_open( ">" . $Phylosift::Settings::file_dir . "/sequence_taxa_summary.$chunk.txt" );
 	foreach my $qname ( keys(%placements) ) {
 
 		# sum up all placements for this sequence, use to normalize
@@ -301,18 +286,17 @@ sub summarize {
 		$placecount += $unclassifiable{$qname}
 		  if defined( $unclassifiable{$qname} );
 
-# determine the different unique names used for this molecule (e.g. /1 and /2 for paired reads)
+		# determine the different unique names used for this molecule (e.g. /1 and /2 for paired reads)
 		my %unique_names;
 
 		# normalize to probability distribution
 		foreach my $taxon_id (
-			sort { $placements{$qname}{$b} <=> $placements{$qname}{$a} }
-			keys %{ $placements{$qname} }
+							   sort { $placements{$qname}{$b} <=> $placements{$qname}{$a} }
+							   keys %{ $placements{$qname} }
 		  )
 		{
 			$placements{$qname}{$taxon_id} /= $placecount;
-			my ( $taxon_name, $taxon_level, $tid ) =
-			  get_taxon_info( taxon => $taxon_id );
+			my ( $taxon_name, $taxon_level, $tid ) = get_taxon_info( taxon => $taxon_id );
 			$taxon_level = "Unknown" unless defined($taxon_level);
 			$taxon_name  = "Unknown" unless defined($taxon_name);
 			$self->{"read_names"}{$qname} = [$qname]
@@ -325,18 +309,15 @@ sub summarize {
 					$unique_names{$name_ref} = 1;
 				}
 				foreach my $name_ref ( keys(%unique_names) ) {
-					print $SEQUENCETAXA
-					  "$name_ref\t$taxon_id\t$taxon_level\t$taxon_name\t"
+					print $SEQUENCETAXA "$name_ref\t$taxon_id\t$taxon_level\t$taxon_name\t"
 					  . $placements{$qname}{$taxon_id} . "\t"
-					  . join( "\t", keys( %{ $sequence_markers{$qname} } ) )
-					  . "\n";
+					  . join( "\t", keys( %{ $sequence_markers{$qname} } ) ) . "\n";
 				}
 			}
 		}
 		foreach my $name_ref ( keys(%unique_names) ) {
 			if ( defined( $unclassifiable{$qname} ) ) {
-				print $SEQUENCETAXA
-				  "$name_ref\tUnknown\tUnknown\tUnclassifiable\t"
+				print $SEQUENCETAXA "$name_ref\tUnknown\tUnknown\tUnclassifiable\t"
 				  . ( $unclassifiable{$qname} / $placecount ) . "\t"
 				  . $unclassifiable{$qname} . "\t"
 				  . join( "\t", keys( %{ $sequence_markers{$qname} } ) ) . "\n";
@@ -345,21 +326,18 @@ sub summarize {
 
 		my $readsummary = sum_taxon_levels( placements => $placements{$qname} );
 		foreach my $taxon_id (
-			sort { $readsummary->{$b} <=> $readsummary->{$a} }
-			keys %{$readsummary}
+							   sort { $readsummary->{$b} <=> $readsummary->{$a} }
+							   keys %{$readsummary}
 		  )
 		{
-			my ( $taxon_name, $taxon_level, $tid ) =
-			  get_taxon_info( taxon => $taxon_id );
+			my ( $taxon_name, $taxon_level, $tid ) = get_taxon_info( taxon => $taxon_id );
 			$taxon_level = "Unknown" unless defined($taxon_level);
 			$taxon_name  = "Unknown" unless defined($taxon_name);
 			if ( exists $self->{"read_names"}{$qname} ) {
 				foreach my $name_ref ( keys(%unique_names) ) {
-					print $SEQUENCESUMMARY
-					  "$name_ref\t$taxon_id\t$taxon_level\t$taxon_name\t"
+					print $SEQUENCESUMMARY "$name_ref\t$taxon_id\t$taxon_level\t$taxon_name\t"
 					  . $readsummary->{$taxon_id} . "\t"
-					  . join( "\t", keys( %{ $sequence_markers{$qname} } ) )
-					  . "\n";
+					  . join( "\t", keys( %{ $sequence_markers{$qname} } ) ) . "\n";
 				}
 			}
 
@@ -368,6 +346,7 @@ sub summarize {
 	close($SEQUENCESUMMARY);
 	close($SEQUENCETAXA);
 	$self->{"read_names"} = ();    #clearing the hash from memory
+	Phylosift::Summarize::rename_sequences( self => $self, chunk => $chunk );
 	merge_sequence_taxa( self => $self );
 }
 
@@ -378,11 +357,11 @@ sub summarize {
 =cut
 
 sub merge_sequence_taxa {
-	my %args       = @_;
-	my $self       = $args{self} || miss("PS Object");
-	my $taxa_seed  = $Phylosift::Settings::file_dir . "/sequence_taxa.*.txt";
-	my @taxa_files = glob("$taxa_seed");
-	my %placements = ();
+	my %args              = @_;
+	my $self              = $args{self} || miss("PS Object");
+	my $taxa_seed         = $Phylosift::Settings::file_dir . "/sequence_taxa.*.txt";
+	my @taxa_files        = glob("$taxa_seed");
+	my %placements        = ();
 	my %placement_markers = ();
 	my %all_summary;
 	my %concat_summary;
@@ -409,8 +388,7 @@ sub merge_sequence_taxa {
 				for ( my $i = 5 ; $i < @line ; $i++ ) {
 					$unclassifiable_markers{$read_id}{ $line[$i] } = 1;
 				}
-			}
-			else {
+			} else {
 				$placements{$read_id}{$taxon_id} = $prob;
 				for ( my $i = 5 ; $i < @line ; $i++ ) {
 					$placement_markers{$read_id}{ $line[$i] } = 1;
@@ -421,8 +399,7 @@ sub merge_sequence_taxa {
 		# make a summary of total reads at each taxonomic level
 		# this gets used later in krona output
 		foreach my $qname ( keys(%placements) ) {
-			my $readsummary =
-			  sum_taxon_levels( placements => $placements{$qname} );
+			my $readsummary = sum_taxon_levels( placements => $placements{$qname} );
 			foreach my $taxon_id ( keys(%$readsummary) ) {
 				$all_summary{$taxon_id} = 0
 				  unless defined( $all_summary{$taxon_id} );
@@ -439,8 +416,7 @@ sub merge_sequence_taxa {
 			foreach my $mname ( keys %{ $unclassifiable_markers{$rid} } ) {
 				if ( exists $marker_number_hits{$mname} ) {
 					$marker_number_hits{$mname}++;
-				}
-				else {
+				} else {
 					$marker_number_hits{$mname} = 1;
 				}
 			}
@@ -449,8 +425,7 @@ sub merge_sequence_taxa {
 			foreach my $mname ( keys %{ $placement_markers{$rid} } ) {
 				if ( exists $marker_number_hits{$mname} ) {
 					$marker_number_hits{$mname}++;
-				}
-				else {
+				} else {
 					$marker_number_hits{$mname} = 1;
 				}
 			}
@@ -469,33 +444,25 @@ sub merge_sequence_taxa {
 		%unclassifiable_markers = ();
 	}
 
-
-	my $MARKER_HITS =
-	  ps_open( ">" . $Phylosift::Settings::file_dir . "/marker_summary.txt" );
+	my $MARKER_HITS = ps_open( ">" . $Phylosift::Settings::file_dir . "/marker_summary.txt" );
 	print $MARKER_HITS "Marker_name\tNumber of hits\n";
 	foreach my $mname (
-		sort { $marker_number_hits{$b} <=> $marker_number_hits{a} }
-		keys %marker_number_hits
+						sort { $marker_number_hits{$b} <=> $marker_number_hits{a} }
+						keys %marker_number_hits
 	  )
 	{
 		print $MARKER_HITS "$mname\t$marker_number_hits{$mname}\n";
 	}
 	close($MARKER_HITS);
-	my $TAXAOUT =
-	  ps_open( ">" . $Phylosift::Settings::file_dir . "/taxasummary.txt" );
+	my $TAXAOUT = ps_open( ">" . $Phylosift::Settings::file_dir . "/taxasummary.txt" );
 
 	# sort rest of taxa by descending abundance order
 	print $TAXAOUT "Unclassifiable\tUnknown\tUnknown\t$unclass_total\n";
-	foreach
-	  my $taxon ( sort { $ncbireads{$b} <=> $ncbireads{$a} } keys %ncbireads )
-	{
-		my ( $taxon_name, $taxon_level, $taxon_id ) =
-		  get_taxon_info( taxon => $taxon );
+	foreach my $taxon ( sort { $ncbireads{$b} <=> $ncbireads{$a} } keys %ncbireads ) {
+		my ( $taxon_name, $taxon_level, $taxon_id ) = get_taxon_info( taxon => $taxon );
 		$taxon_level = "Unknown" unless defined($taxon_level);
 		$taxon_name  = "Unknown" unless defined($taxon_name);
-		print $TAXAOUT
-		  join( "\t", $taxon_id, $taxon_level, $taxon_name,
-			$ncbireads{$taxon} ), "\n";
+		print $TAXAOUT join( "\t", $taxon_id, $taxon_level, $taxon_name, $ncbireads{$taxon} ), "\n";
 	}
 	close($TAXAOUT);
 
@@ -508,19 +475,13 @@ sub merge_sequence_taxa {
 	debug "Total reads placed is " . scalar( keys(%placements) ) . "\n";
 	debug "Total classifiable probability mass is $totalreads\n";
 
-# write the taxa with 90% highest posterior density, assuming each read is an independent observation
+	# write the taxa with 90% highest posterior density, assuming each read is an independent observation
 	my $taxasum    = 0;
-	my $TAXAHPDOUT =
-	  ps_open( ">" . $Phylosift::Settings::file_dir . "/taxa_90pct_HPD.txt" );
-	foreach
-	  my $taxon ( sort { $ncbireads{$b} <=> $ncbireads{$a} } keys %ncbireads )
-	{
+	my $TAXAHPDOUT = ps_open( ">" . $Phylosift::Settings::file_dir . "/taxa_90pct_HPD.txt" );
+	foreach my $taxon ( sort { $ncbireads{$b} <=> $ncbireads{$a} } keys %ncbireads ) {
 		$taxasum += $ncbireads{$taxon};
-		my ( $taxon_name, $taxon_level, $taxon_id ) =
-		  get_taxon_info( taxon => $taxon );
-		print $TAXAHPDOUT
-		  join( "\t", $taxon_id, $taxon_level, $taxon_name,
-			$ncbireads{$taxon} ), "\n";
+		my ( $taxon_name, $taxon_level, $taxon_id ) = get_taxon_info( taxon => $taxon );
+		print $TAXAHPDOUT join( "\t", $taxon_id, $taxon_level, $taxon_name, $ncbireads{$taxon} ), "\n";
 		last if $taxasum >= $totalreads * 0.9;
 	}
 	close($TAXAHPDOUT);
@@ -537,13 +498,12 @@ sub merge_sequence_taxa {
 		  if scalar( keys(%ncbi_summary) ) > 0;
 		%ncbi_summary = ();
 		%ncbi_summary = %all_summary;
-		krona_report(
-			self => $self,
-			file => $self->{"fileName"} . ".allmarkers.html"
-		  )
+		krona_report(       self => $self,
+					  file => $self->{"fileName"} . ".allmarkers.html" )
 		  if scalar( keys(%all_summary) ) > 0;
 	}
 	Phylosift::Utilities::end_timer( name => "runKrona" );
+
 }
 
 my $xml;
@@ -553,8 +513,7 @@ sub krona_report {
 	my $self            = $args{self} || miss("self");
 	my $file            = $args{file} || "krona.html";
 	my $KRONA_THRESHOLD = $Phylosift::Settings::krona_threshold;
-	my $OUTPUT          =
-	  IO::File->new( ">" . $Phylosift::Settings::file_dir . "/$file" );
+	my $OUTPUT          = IO::File->new( ">" . $Phylosift::Settings::file_dir . "/$file" );
 	print $OUTPUT <<EOF
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
@@ -590,8 +549,8 @@ EOF
 
 	# FIXME: work with other taxonomy trees
 	my $taxonomy = Bio::Phylo::IO->parse(
-		'-file'   => "$Phylosift::Settings::marker_dir/ncbi_tree.updated.tre",
-		'-format' => 'newick',
+										  '-file'   => "$Phylosift::Settings::marker_dir/ncbi_tree.updated.tre",
+										  '-format' => 'newick',
 	)->first;
 
 	debug "visitor\n";
@@ -599,21 +558,19 @@ EOF
 	debug "Root node id " . $root->get_name . "\n";
 	debug "Root node read count " . $ncbi_summary{ $root->get_name } . "\n";
 
-   # write out abundance for nodes that have > $KRONA_THRESHOLD probability mass
+	# write out abundance for nodes that have > $KRONA_THRESHOLD probability mass
 	$root->visit_depth_first(
 		-pre => sub {
 			my $node = shift;
 			my $name = $node->get_name;
 			return
 			  unless ( defined( $ncbi_summary{$name} )
-				&& $ncbi_summary{$name} / $ncbi_summary{1} > $KRONA_THRESHOLD );
-			my ( $taxon_name, $taxon_level, $taxon_id ) =
-			  get_taxon_info( taxon => $name );
+					   && $ncbi_summary{$name} / $ncbi_summary{1} > $KRONA_THRESHOLD );
+			my ( $taxon_name, $taxon_level, $taxon_id ) = get_taxon_info( taxon => $name );
 			$xml->startTag(
-				"node",
-				"name" => $taxon_name,
-				"href" =>
-"http://www.ncbi.nlm.nih.gov/Taxonomy/Browser/wwwtax.cgi?id=$name"
+							"node",
+							"name" => $taxon_name,
+							"href" => "http://www.ncbi.nlm.nih.gov/Taxonomy/Browser/wwwtax.cgi?id=$name"
 			);
 			$xml->startTag("abundance");
 			$xml->startTag("val");
@@ -626,7 +583,7 @@ EOF
 			my $name = $node->get_name;
 			return
 			  unless ( defined( $ncbi_summary{$name} )
-				&& $ncbi_summary{$name} / $ncbi_summary{1} > $KRONA_THRESHOLD );
+					   && $ncbi_summary{$name} / $ncbi_summary{1} > $KRONA_THRESHOLD );
 			$xml->endTag("node");
 		},
 		-no_sister => sub {
@@ -634,7 +591,7 @@ EOF
 			my $name = $node->get_name;
 			return
 			  unless ( defined( $ncbi_summary{$name} )
-				&& $ncbi_summary{$name} / $ncbi_summary{1} > $KRONA_THRESHOLD );
+					   && $ncbi_summary{$name} / $ncbi_summary{1} > $KRONA_THRESHOLD );
 			$xml->endTag("node");
 		}
 	);
@@ -653,16 +610,9 @@ sub print_run_info {
 	my $self    = $args{self} || miss("self");
 	my $OUTPUT  = $args{OUTPUT} || miss("OUTPUT");
 	my $newline = $args{newline} || "\n";
-	print $OUTPUT "Program run as:$newline"
-	  . join( " ", "phylosift", @{ $self->{"ARGV"} } )
-	  . "$newline";
+	print $OUTPUT "Program run as:$newline" . join( " ", "phylosift", @{ $self->{"ARGV"} } ) . "$newline";
 	print $OUTPUT "Marker database version:\n"
-	  . join(
-		"$newline",
-		Phylosift::Utilities::get_marker_version(
-			path => $Phylosift::Settings::marker_dir
-		)
-	  )
+	  . join( "$newline", Phylosift::Utilities::get_marker_version( path => $Phylosift::Settings::marker_dir ) )
 	  . "$newline";
 }
 
@@ -690,30 +640,29 @@ sub write_confidence_intervals {
 	my %samples;
 	for ( my $sI = 0 ; $sI < $sample_count ; $sI++ ) {
 
-#        my @sample = Math::Random::random_multinomial( $totalreads, @valarray );
+		#        my @sample = Math::Random::random_multinomial( $totalreads, @valarray );
 		my @sample;
 		my $kI = 0;
 		foreach my $key ( keys(%ncbireads) ) {
 			push( @{ $samples{$key} }, $sample[ $kI++ ] );
 		}
 	}
-	my $TAXA_CONF =
-	  ps_open( ">" . $Phylosift::Settings::file_dir . "/taxaconfidence.txt" );
+	my $TAXA_CONF = ps_open( ">" . $Phylosift::Settings::file_dir . "/taxaconfidence.txt" );
 	foreach my $key ( keys(%samples) ) {
 		my @svals = @{ $samples{$key} };
 		my @sorted = sort { $a <=> $b } @svals;
 		my ( $taxon_name, $taxon_level, $taxon_id ) = getTaxonInfo($key);
 		print $TAXA_CONF join( "\t",
-			$taxon_id,
-			$taxon_level,
-			$taxon_name,
-			$sorted[0],
-			$sorted[ int( $sample_count * 0.1 ) ],
-			$sorted[ int( $sample_count * 0.25 ) ],
-			$sorted[ int( $sample_count * 0.5 ) ],
-			$sorted[ int( $sample_count * 0.75 ) ],
-			$sorted[ int( $sample_count * 0.9 ) ],
-			$sorted[ $sample_count - 1 ] ),
+							   $taxon_id,
+							   $taxon_level,
+							   $taxon_name,
+							   $sorted[0],
+							   $sorted[ int( $sample_count * 0.1 ) ],
+							   $sorted[ int( $sample_count * 0.25 ) ],
+							   $sorted[ int( $sample_count * 0.5 ) ],
+							   $sorted[ int( $sample_count * 0.75 ) ],
+							   $sorted[ int( $sample_count * 0.9 ) ],
+							   $sorted[ $sample_count - 1 ] ),
 		  "\n";
 	}
 }
@@ -749,8 +698,7 @@ sub get_taxon_info {
 		my $name  = $idnamemap{$in};
 		my $level = $parent{$in}->[1];
 		return ( $name, $level, $in );
-	}
-	elsif ( $in =~ /\w+/ ) {
+	} elsif ( $in =~ /\w+/ ) {
 
 		# old style map, need to go from NCBI name back to ID
 		my $name = $in;
@@ -758,8 +706,7 @@ sub get_taxon_info {
 		my ( $id, $qname ) = donying_find_name_in_taxa_db( name => $name );
 		my $level = $parent{$id}->[1];
 		return ( $in, $level, $id );
-	}
-	else {
+	} else {
 	}
 	return ( $in, "", "" );
 }
@@ -840,6 +787,72 @@ sub read_merged_nodes {
 	}
 	debug "Done reading merged\n";
 	return \%merged;
+}
+
+=head2 rename_sequences
+
+Looks through all the output files in the directories to change the unique numbers back to the original sequence IDs
+Only need a PS object as input.
+=cut
+
+sub rename_sequences {
+	my %args  = @_;
+	my $self  = $args{self} || miss("PS object");
+	my $chunk = $args{chunk} || miss("Chunk number");
+	if(!-e $self->{"blastDir"} . "/lookup_ID.$chunk.tbl"){
+		warn "Lookup_ID.$chunk.tbl was not found\n";
+		return;
+	}
+	#read the read mapping file
+	my %name_mapping = ();
+	my $FH_MAP       = ps_open( $self->{"blastDir"} . "/lookup_ID.$chunk.tbl" );
+	while (<$FH_MAP>) {
+		chomp($_);
+		my @line = split( / /, $_ );
+		$name_mapping{ $line[1] } = $line[0];
+	}
+	close($FH_MAP);
+
+	#open all the
+	my @array_to_rename = ();
+	push( @array_to_rename, glob( $self->{"blastDir"} . "/*.ffn.$chunk*" ) );
+	push( @array_to_rename, glob( $self->{"blastDir"} . "/*.aa.$chunk*" ) );
+	push( @array_to_rename, glob( $self->{"alignDir"} . "/*.updated.$chunk.fasta" ) );
+	push( @array_to_rename, glob( $self->{"alignDir"} . "/*.newCandidate.aa.$chunk" ) );
+	push( @array_to_rename, glob( $self->{"alignDir"} . "/*.$chunk.unmasked" ) );
+	push( @array_to_rename, glob( $self->{"alignDir"} . "/*.codon.updated.$chunk.fasta" ) );
+	push( @array_to_rename, glob( $self->{"treeDir"} . "/*.updated.$chunk.jplace" ) );
+	push( @array_to_rename, glob( $Phylosift::Settings::file_dir . "/*.jplace" ) );
+	push( @array_to_rename, glob( $Phylosift::Settings::file_dir . "/sequence_taxa*.$chunk.txt" ) );
+	debug "FILE DIR : ".$Phylosift::Settings::file_dir ."\n";
+	foreach my $file (@array_to_rename) {
+		my $FH  = ps_open($file);
+		my $TMP = ps_open(">$file.tmp");
+		if ( $file =~ m/\.jplace/ ) {
+			my @treedata = <$FH>;	
+			my $json_data = decode_json( join( "", @treedata ) );
+			debug "Replacing names in a jplace file\n";
+			# parse the tree
+			for ( my $i = 0 ; $i < @{ $json_data->{placements} } ; $i++ ) {
+				my $placement = $json_data->{placements}->[$i];
+				for ( my $j = 0 ; $j < @{ $placement->{nm} } ; $j++ ) {
+					$placement->{nm}->[$j]->[0] =~ s/^(\d+)\./$name_mapping{$1}\./;
+				}
+			}
+
+			# write the renamed jplace
+			print $TMP encode_json($json_data);	
+		}else{
+			while (<$FH>) {
+				$_ =~ s/^>(\d+)\./>$name_mapping{$1}\./g; #fasta files
+				$_ =~ s/^(\d+)\./$name_mapping{$1}\./g; #summary files
+				print $TMP $_;
+			}
+		}
+		close($FH);
+		close($TMP);
+		`mv "$file.tmp" "$file"`;
+	}
 }
 
 =head1 AUTHOR

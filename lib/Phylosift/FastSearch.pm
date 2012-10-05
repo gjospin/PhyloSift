@@ -58,6 +58,7 @@ my $align_fraction = $Phylosift::Settings::align_fraction;
 my $align_fraction_isolate = $Phylosift::Settings::align_fraction_isolate;
   # use this align_fraction when in isolate mode on long sequences
 my $quality_threshold = $Phylosift::Settings::quality_threshold;
+my @lookup_array = ();
 my %markers;
 my %markerNuc = ();
 my %markerLength;
@@ -418,7 +419,7 @@ sub launch_searches {
 	`rm -f "$reads_file"`;
 	`rm -f "$bowtie2_r1_pipe" "$last_rna_pipe"`
 	  if ( $bowtie2_r1_pipe ne "/dev/null" );
-	`rm -f "$bowtie2_r2_pipe"` if defined($bowtie2_r2_pipe);
+	`rm -f "$bowtie2_r2_pipe"` if defined($bowtie2_r2_pipe) && $bowtie2_r2_pipe ne "/dev/null";
 	foreach my $last_pipe (@last_pipe_array) {
 		`rm -f "$last_pipe"`;
 	}
@@ -468,7 +469,8 @@ sub demux_sequences {
 	my $readtype             = $args{readtype};
 	my @lines1;
 	my @lines2;
-
+	my $lookup_id_filename = $self->{"blastDir"}."/lookup_ID.$chunk.tbl";
+	my $IDFILE = ps_open(">$lookup_id_filename");
 	my $lastal_index   = 0;
 	my $lastal_threads = scalar(@LAST_PIPE_ARRAY);
 	my $completed_chunk = has_chunk_completed(self=> $self , chunk=> $chunk);
@@ -531,6 +533,7 @@ sub demux_sequences {
 			qtrim_read(read=>\@lines1, quality=>$quality_threshold, readtype=>$readtype);
 			qtrim_read(read=>\@lines2, quality=>$quality_threshold, readtype=>$readtype) if defined($lines2[0]);
 
+			
 			# send the reads to bowtie
 			print $BOWTIE2_PIPE1 @lines1 unless $completed_chunk;
 			print $BOWTIE2_PIPE1 @lines2 if @lines2 && !$completed_chunk;
@@ -541,6 +544,23 @@ sub demux_sequences {
 			$lines1[0] =~ s/^@/>/g;
 			$lines2[0] =~ s/^@/>/g if @lines2;
 
+			#add the reads to file lookup
+			if($lines1[0] =~ m/^>(\S+)\/1/){
+				print $IDFILE "$1 $seq_count\n";
+			}elsif($lines1[0] =~ m/^>(\S+)/){
+				print $IDFILE "$1 $seq_count\n";
+			}
+
+			$lines1[0] = ">$seq_count";
+			$lines1[0] .= "/1" if $paired;
+			$lines1[0] .= "\n";
+			if($paired){
+				$lines2[0] = ">$seq_count";
+				$lines2[0] .= "/2" if $paired;
+				$lines2[0] .= "\n";
+			}
+
+			
 			# some FastQ use . instead of N (wtf?)
 			$lines1[1] =~ s/\./N/g;
 			$lines2[1] =~ s/\./N/g if @lines2;
@@ -591,6 +611,22 @@ sub demux_sequences {
 					$lines2[0] =~ s/^(\S+)/$1\/2/g;
 				}
 			}
+			
+			#add the reads to file lookup
+			if($lines1[0] =~ m/^>(\S+)\/1/){
+				print $IDFILE "$1 $seq_count\n";
+			}elsif($lines1[0] =~ m/^>(\S+)/){
+				print $IDFILE "$1 $seq_count\n";
+			}
+			
+			$lines1[0] = ">$seq_count";
+			$lines1[0] .= "/1" if $paired;
+			$lines1[0] .= "\n";
+			if($paired){
+				$lines2[0] = ">$seq_count";
+				$lines2[0] .= "/2" if $paired;
+				$lines2[0] .= "\n";
+			}
 			if ( length( $lines1[1] ) > 1000
 				|| ( defined($F2IN) && length( $lines2[1] ) > 1000 ) )
 			{
@@ -608,6 +644,7 @@ sub demux_sequences {
 				#				print $BOWTIE2_PIPE2 @lines2 if defined($F2IN);
 			}
 
+			
 			# send the reads to last
 			print $last_pipe $lines1[0] . $lines1[1] unless $completed_chunk;
 			print $last_pipe $lines2[0] . $lines2[1] if defined($F2IN) && !$completed_chunk;
@@ -627,7 +664,7 @@ sub demux_sequences {
 		close($LAST_PIPE);
 	}
 	close($BOWTIE2_PIPE1);
-
+	close($IDFILE);
 	#	close($BOWTIE2_PIPE2) if defined($F2IN);
 	close($LAST_RNA_PIPE);
 	close($READS_PIPE);
@@ -794,7 +831,7 @@ sub translate_frame {
 	$new_seq = $new_seq->revcom() if ( $frame < 0 );
 
 	if ($reverse_translate) {
-		$id = Phylosift::Summarize::tree_name( name => $id );
+		#$id = Phylosift::Summarize::tree_name( name => $id );
 		if ( exists $markerNuc{$marker} ) {
 			$markerNuc{$marker} .= ">" . $id . "\n" . $new_seq->seq . "\n";
 		}
@@ -874,6 +911,7 @@ sub get_hits_contigs {
 		# running on long reads or an assembly
 		# allow each region of a sequence to have a top hit
 		# do not allow overlap
+		
 		if ( defined( $contig_top_bitscore{$query} ) ) {
 			my $i = 0;
 			for ( ; $i < @{ $contig_hits{$query} } ; $i++ ) {
@@ -889,10 +927,9 @@ sub get_hits_contigs {
 				{
 
 	  # debug "Found overlap $query and $markerName, $query_start:$query_end\n";
-					$suff++;
 					$contig_hits{$query}->[$i] = [
 						$markerName, $bitScore,   $query_start,
-						$query_end,  $frameshift, $pid . "_" . $suff
+						$query_end,  $frameshift, $pid 
 					  ]
 					  if ( $bitScore > $prevhit[1] );
 					last;
@@ -904,12 +941,11 @@ sub get_hits_contigs {
 					&& $prevhit[3] < $query_start - $max_hit_overlap
 					&& $query_end + $max_hit_overlap < $prevhit[2] )
 				{
-					$suff++;
 
 	  # debug "Found overlap $query and $markerName, $query_start:$query_end\n";
 					$contig_hits{$query}->[$i] = [
 						$markerName, $bitScore,   $query_start,
-						$query_end,  $frameshift, $pid . "_" . $suff
+						$query_end,  $frameshift, $pid 
 					  ]
 					  if ( $bitScore > $prevhit[1] );
 					last;
@@ -930,11 +966,9 @@ sub get_hits_contigs {
 		}
 		elsif ( !defined( $contig_top_bitscore{$query} ) ) {
 
-			#increment the suffix
-			$suff++;
 			my @hitdata = [
 				$markerName, $bitScore,   $query_start,
-				$query_end,  $frameshift, $pid . "_" . $suff
+				$query_end,  $frameshift, $pid 
 			];
 			push( @{ $contig_hits{$query} }, @hitdata );
 			$contig_top_bitscore{$query}{$markerName} = $bitScore;
@@ -1169,7 +1203,9 @@ sub write_candidates {
 			my $new_seq;
 			$new_seq = substr( $seq->seq, $start, $end - $start );
 			my $new_id = $seq->id;
-			$new_id .= "_p$suff" if ( $Phylosift::Settings::isolate );
+			my $coord = ".$start.$end";
+			$new_id =~ s/(\S+)(\/\d)/$1$coord$2/;
+			#$new_id .= "_p$suff" if ( $Phylosift::Settings::isolate );
 
 			#if we're working from DNA then need to translate to protein
 			if ( $self->{"dna"} && $type !~ /\.rna/ ) {
