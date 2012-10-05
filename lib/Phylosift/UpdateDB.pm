@@ -416,7 +416,7 @@ sub collate_markers {
 	}
 	
 	my $bs = "/tmp/ps_build_marker.sh";
-	write_marker_build_script(batch_script=>$bs);
+	write_marker_build_script(batch_script=>$bs, destination=>$marker_dir);
 
 	# get a list of genomes available in the results directory
 	# this hopefully means we touch each inode over NFS only once
@@ -472,7 +472,7 @@ sub collate_markers {
 		}
 		debug "Launching marker build for $marker\n";
 		my $job_id = launch_marker_build(marker=>$marker, dna=>0, batch_script=>$bs);
-		push(@job_ids, $job_id);
+		push(@job_ids, $job_id) if defined $job_id;
 		
 		my $codon_fasta = get_fasta_filename(marker=>$marker, updated=>1,dna=>1);
 		next unless -e "$local_directory/$codon_fasta";
@@ -482,7 +482,7 @@ sub collate_markers {
 
 		debug "Launching marker build for $marker.codon\b";
 		$job_id = launch_marker_build(marker=>$marker, dna=>1, batch_script=>$bs);
-		push(@job_ids, $job_id);
+		push(@job_ids, $job_id) if defined $job_id;
 	}
 	my @taxonids = keys(%alltaxa);
 	Phylosift::MarkerBuild::make_ncbi_subtree(out_file=>"$marker_dir/ncbi_tree.updated.tre", taxon_ids=>\@taxonids);
@@ -1107,6 +1107,7 @@ EOF
 
 sub write_marker_build_script {
 	my %args = @_;
+	my $destination = $args{destination} || miss("destination");
 	my $bs = $args{batch_script};
 	my $BUILDSCRIPT = ps_open( ">$bs" );
 	my $ps = $FindBin::Bin;
@@ -1117,7 +1118,7 @@ sub write_marker_build_script {
 #\$ -S /bin/bash
 
 export PATH="\$PATH:$ps"
-$ps/phylosift build_marker -f --alignment=\$1 --update-only --taxonmap=\$2 --reps_pd=\$3 \$4
+$ps/phylosift build_marker -f --debug --alignment=\$1 --update-only --taxonmap=\$2 --reps_pd=\$3 \$4 --destination=$destination
 
 EOF
 
@@ -1133,7 +1134,7 @@ sub launch_marker_build {
 
 	my $marker_fasta = get_fasta_filename( marker => $marker, updated => 1, dna=>$dna);
 	print STDERR "Couldnt find $marker_fasta\n" unless -e $marker_fasta;
-	next unless -e $marker_fasta;
+	return unless -e $marker_fasta;
 	next if $marker =~ /^PMPROK/ || $marker =~ /^DNGNGWU/;	# skip these since they all go in the concat
 	
 	my $qsub_args = $marker eq "concat" ? "-l mem_free=20G" : "";

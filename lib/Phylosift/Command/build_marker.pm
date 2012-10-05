@@ -25,6 +25,7 @@ sub options {
 		[ "reps_pd=f",      "Specify the minimum divergence between representative sequences", { default => 0.1 }], 
 		[ "tree_pd=f",      "Specify the minimum phylogenetic diversity in the reference tree", { default => 0.1 }],
 		[ "taxonmap=s",     "A file containing a mapping of sequence names to taxon IDs"],
+		[ "destination",    "Store the new marker package at the given location instead of the default marker repository"],
 	);
 }
 
@@ -50,7 +51,7 @@ sub execute {
 	Phylosift::Command::sanity_check();
 
 	my $ps = new Phylosift::Phylosift();
-	Phylosift::MarkerBuild::build_marker(self=>$ps, opt=>$opt, alignment=>$opt->{alignment}, force=>$opt->{force}, reps_pd=>$opt->{reps_pd}, tree_pd=>$opt->{tree_pd}, mapping=>$opt->{taxonmap});
+	Phylosift::MarkerBuild::build_marker(self=>$ps, opt=>$opt, alignment=>$opt->{alignment}, force=>$opt->{force}, reps_pd=>$opt->{reps_pd}, tree_pd=>$opt->{tree_pd}, mapping=>$opt->{taxonmap}, destination=>$opt->{destination});
 }
 
 1;
