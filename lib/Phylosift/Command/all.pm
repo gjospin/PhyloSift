@@ -37,6 +37,9 @@ sub all_opts {
 sub options {
 	my %opts = all_opts();
 	%opts = (%opts, Phylosift::Command::search::search_opts());
+	%opts = (%opts, Phylosift::Command::align::align_opts());
+	%opts = (%opts, Phylosift::Command::place::place_opts());
+	%opts = (%opts, Phylosift::Command::summarize::summarize_opts());
 	# all-specific options:
 	$opts{keep_search} => [ "keep_search",  "Keeps the blastDir files (Default: Delete the blastDir files after every chunk)"],
 	return values(%opts);
