@@ -68,6 +68,7 @@ sub build_marker {
 	}
 	my $fasta_file = "$target_dir/$core.fasta";
 	$aln_file = check_sequence_integrity(input=>$aln_file , output_dir=> $target_dir) ;
+
 	
 	my $clean_aln = $aln_file;
 	my $seq_count = -1;
@@ -133,6 +134,8 @@ sub build_marker {
 		#use all the sequences for representatives
 		`cp $fasta_file $target_dir/$core.rep` if -e $fasta_file;
 	}
+	
+	create_taxon_table(target_dir=>$target_dir, mapping=>$mapping );
 
 	if ( defined $mapping ) {
 		my $tmp_jplace     = $target_dir . "/" . $core . ".tmpread.jplace";
@@ -171,37 +174,16 @@ sub build_marker {
 		system($rconc);
 		debug "AFTER readconciler\n";
 
-		`rm -rf "$tmpread_file" "$mangled" "$tmp_jplace" "$id_taxon_map" "$ncbi_sub_tree"  "$target_dir/temp_ref"`;
+		`rm -rf "$tmpread_file" "$mangled" "$tmp_jplace" "$ncbi_sub_tree"  "$target_dir/temp_ref"`;
 	}
 	
-	# create a taxon table for taxit
-	if(0){		
-	my $TAXIN = ps_open($mapping);
-	my $TAXIDTABLE = ps_open(">$target_dir/tax_ids.txt");
-	my $SEQIDS = ps_open(">$target_dir/seq_ids.csv");
-	print $SEQIDS "\"seq_name\",\"tax_id\"\n";
-	while(my $line = <$TAXIN>){
-		chomp $line;
-		my ($seq_name, $tid) = split(/\t/, $line);
-		my @tinfo = Phylosift::Summarize::get_taxon_info(taxon=>$tid); # lookup will check for any merging
-		# not sure what taxit doesn't like about the astrovirus but it won't handle them...
-		if (length($tinfo[2]) > 0 && $tinfo[2] ne "ERROR" && $tinfo[0] !~ /ASTROVIRUS/){			
-			print $TAXIDTABLE "$tinfo[2]\n";
-			my @ancestors = Phylosift::Benchmark::get_ancestor_array(tax_id=>$tinfo[2]);
-			foreach my $a(@ancestors){
-				print $TAXIDTABLE "$a\n";
-			}
-		}
-		print $SEQIDS "$seq_name,$tid\n";
-	}
-	close $TAXIDTABLE;
-	system("taxit taxtable -d /home/koadman/git/PhyloSift/test_build/ncbi_taxonomy.db -t $target_dir/tax_ids.txt -o $target_dir/taxa.csv");
-	}
-
 #use taxit to create a new reference package required for running PhyloSift
 #needed are : 1 alignment file, 1 representatives fasta file, 1 hmm profile, 1 tree file, 1 log tree file.
-`cd "$target_dir";taxit create -c -d "Creating a reference package for PhyloSift for the $core marker" -l "$core" -f "$clean_aln" -t "$target_dir/$core.tree" -s "$target_dir/$core.log" -P "$core"`;
-#`cd "$target_dir";taxit create -c -d "Creating a reference package for PhyloSift for the $core marker" -i $target_dir/seq_ids.csv -T $target_dir/taxa.csv -l "$core" -f "$clean_aln" -t "$target_dir/$core.tree" -s "$target_dir/$core.log" -P "$core"`;
+	my $taxdb_opts = ""; # add taxit-friendly taxon labels if available
+	$taxdb_opts = "-i $target_dir/seq_ids.csv -T $target_dir/taxa.csv" if -e "$target_dir/taxa.csv";
+	my $taxit_cmd = "cd \"$target_dir\";taxit create -c -d \"Creating a reference package for PhyloSift for the $core marker\" -l \"$core\" -f \"$clean_aln\" -t \"$target_dir/$core.tree\" $taxdb_opts -s \"$target_dir/$core.log\" -P \"$core\"";
+	debug "Running $taxit_cmd\n";
+	`$taxit_cmd`;
 
 	`rm -f "$target_dir/$core.pda"` if -e "$target_dir/$core.pda";
 	`rm -f "$target_dir/$core.tree"`;
@@ -213,6 +195,34 @@ sub build_marker {
 	`mv -f "$target_dir/$core"/* "$target_dir"`;
 	`rm -rf "$target_dir/$core"`;
 	`rm -rf "$Phylosift::Settings::file_dir"`;
+}
+
+sub create_taxon_table {
+	my %args = @_;
+	my $mapping = $args{mapping};
+	my $target_dir = $args{target_dir};
+
+	# create a taxon table for taxit
+	my $TAXIN = ps_open($mapping);
+	my $TAXIDTABLE = ps_open(">$target_dir/tax_ids.txt");
+	my $SEQIDS = ps_open(">$target_dir/seq_ids.csv");
+	print $SEQIDS "\"seq_name\",\"tax_id\"\n";
+	my %allanc;
+	while(my $line = <$TAXIN>){
+		chomp $line;
+		my ($seq_name, $tid) = split(/\t/, $line);
+		my @tinfo = Phylosift::Summarize::get_taxon_info(taxon=>$tid); # lookup will check for any merging
+		# not sure what taxit doesn't like about the astrovirus but it won't handle them...
+		if (length($tinfo[2]) > 0 && $tinfo[2] ne "ERROR" && $tinfo[0] !~ /ASTROVIRUS/){	
+			$allanc{$tinfo[2]}=1;
+		}
+		print $SEQIDS "$seq_name,$tid\n";
+	}
+	print $TAXIDTABLE join("\n",keys(%allanc));
+	close $TAXIDTABLE;
+	my $t_cmd = "taxit taxtable -d $target_dir/../ncbi_taxonomy.db -t $target_dir/tax_ids.txt -o $target_dir/taxa.csv";
+	debug "Running $t_cmd\n";
+	system($t_cmd);	
 }
 
 =head2 check_sequence_integrity
