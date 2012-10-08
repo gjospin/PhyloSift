@@ -243,7 +243,7 @@ sub summarize {
 						# for each taxon to which the current phylogeny edge could map
 						foreach my $taxon ( @{ $markerncbimap->{$edge} } ) {
 							my ( $taxon_name, $taxon_level, $taxon_id ) = get_taxon_info( taxon => $taxon );
-
+							
 							# for each query seq in the current placement record
 							for ( my $k = 0 ; $k < @{ $place->{nm} } ; $k++ ) {
 								my $qname   = $place->{nm}->[$k]->[0];
@@ -302,6 +302,9 @@ sub write_sequence_taxa_summary {
 		# normalize to probability distribution
 		foreach my $taxon_id ( sort { $placements->{$qname}{$b} <=> $placements->{$qname}{$a} } keys %{ $placements->{$qname} } )
 		{
+			#skip if taxon_id is empty/undefined
+			next unless defined($taxon_id) || $taxon_id eq "";
+			my $blah = $taxon_id || next;
 			$placements->{$qname}{$taxon_id} /= $placecount;
 			my ( $taxon_name, $taxon_level, $tid ) =  get_taxon_info( taxon => $taxon_id );
 			$taxon_level = "Unknown" unless defined($taxon_level);
@@ -329,6 +332,7 @@ sub write_sequence_taxa_summary {
 
 		my $readsummary = sum_taxon_levels( placements => $placements->{$qname} );
 		foreach my $taxon_id ( sort { $readsummary->{$b} <=> $readsummary->{$a} } keys %{$readsummary} ) {
+			my $blah = $taxon_id || next;
 			my ( $taxon_name, $taxon_level, $tid ) = get_taxon_info( taxon => $taxon_id );
 			$taxon_level = "Unknown" unless defined($taxon_level);
 			$taxon_name  = "Unknown" unless defined($taxon_name);

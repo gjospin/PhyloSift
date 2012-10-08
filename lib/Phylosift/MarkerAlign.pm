@@ -68,8 +68,8 @@ sub MarkerAlign {
 	}
 	directoryPrepAndClean( self => $self, marker_reference => $markersRef, chunk => $chunk );
 	my $index = -1;
-	markerPrepAndRun( self => $self, marker_reference => $markersRef, chunk => $chunk );
-	debug "after HMMSEARCH PARSE\n";
+	markerPrep( self => $self, marker_reference => $markersRef, chunk => $chunk );
+	debug "after marker prep\n";
 	alignAndMask( self => $self, marker_reference => $markersRef, chunk => $chunk );
 	debug "AFTER ALIGN and MASK\n";
 
@@ -242,11 +242,11 @@ sub split_rna_on_size {
 
 =cut
 
-=head2 markerPrepAndRun
+=head2 markerPrep
 
 =cut
 
-sub markerPrepAndRun {
+sub markerPrep {
 	my %args    = @_;
 	my $self    = $args{self} || miss("self");
 	my $markRef = $args{marker_reference} || miss("marker_reference");
@@ -273,19 +273,6 @@ sub markerPrepAndRun {
 			}
 			next;
 		}
-		my $hmm_file = Phylosift::Utilities::get_marker_hmm_file( self => $self, marker => $marker, loc => 1 );
-		my $stockholm_file = Phylosift::Utilities::get_marker_stockholm_file( self => $self, marker => $marker );
-		unless ( -e $hmm_file && -e $stockholm_file ) {
-			my $trimfinalFile = Phylosift::Utilities::get_trimfinal_marker_file( self => $self, marker => $marker );
-
-			#converting the marker's reference alignments from Fasta to Stockholm (required by Hmmer3)
-			Phylosift::Utilities::fasta2stockholm( fasta => "$trimfinalFile", output => $stockholm_file );
-
-			#build the Hmm for the marker using Hmmer3
-			if ( !-e $hmm_file ) {
-				`$Phylosift::Utilities::hmmbuild $hmm_file $stockholm_file`;
-			}
-		}
 		my $new_candidate = Phylosift::Utilities::get_candidate_file( self => $self, marker => $marker, type => "", new => 1, chunk => $chunk );
 		unlink($new_candidate);
 		foreach my $type (@search_types) {
@@ -294,63 +281,11 @@ sub markerPrepAndRun {
 			my @candidate_files = glob("$candidate.*");
 			foreach my $cand_file (@candidate_files) {
 				next unless -e $cand_file;
-				my $fifo_out = $self->{"alignDir"} . "/" . Phylosift::Utilities::get_marker_basename( marker => $marker ) . ".tmpout.fifo";
-				`mkfifo "$fifo_out"`;
-				my $hmmsearch_cmd =
-				    "$Phylosift::Settings::hmmsearch -E $Phylosift::Settings::hmmsearch_evalue --cpu "
-				  . $Phylosift::Settings::threads
-				  . " $Phylosift::Settings::hmmsearch_options --tblout \"$fifo_out\" \"$hmm_file\" \"$cand_file\" > /dev/null &";
-				debug("$hmmsearch_cmd\n");
-				system($hmmsearch_cmd );
-				my $HMMSEARCH = ps_open($fifo_out);
-				hmmsearch_parse( self => $self, marker => $marker, type => $type, HMMSEARCH => $HMMSEARCH, fasta_file => $cand_file, chunk => $chunk );
-				unlink($fifo_out);
+				`cat $cand_file >> $new_candidate`;
 			}
 		}
 	}
 	return $self;
-}
-
-=head2 hmmsearchParse
-
-=cut
-
-sub hmmsearch_parse {
-	my %args       = @_;
-	my $self       = $args{self} || miss("self");
-	my $marker     = $args{marker} || miss("marker");
-	my $type       = $args{type} || miss("type");
-	my $HMMSEARCH  = $args{HMMSEARCH} || miss("HMMSEARCH");
-	my $fasta_file = $args{fasta_file} || miss("fasta file");
-	my $chunk      = $args{chunk};
-	my %hmmHits    = ();
-	my %hmmScores  = ();
-	my $countHits  = 0;
-	while (<$HMMSEARCH>) {
-		chomp($_);
-		if ( $_ =~ m/^(\S+)\s+-\s+(\S+)\s+-\s+(\S+)\s+(\S+)/ ) {
-			$countHits++;
-			my $hitname     = $1;
-			my $basehitname = $1;
-			my $hitscore    = $4;
-			if ( !defined( $hmmScores{$basehitname} ) || $hmmScores{$basehitname} < $hitscore ) {
-				$hmmScores{$basehitname} = $hitscore;
-				$hmmHits{$basehitname}   = $hitname;
-			}
-		}
-	}
-	my $new_candidate = Phylosift::Utilities::get_candidate_file( self => $self, marker => $marker, type => "", new => 1, chunk => $chunk );
-	$new_candidate = ">" . $new_candidate if -f $new_candidate;    # append if the file already exists
-	$new_candidate = ">" . $new_candidate;                         # otherwise make a new one
-	my $NEWCANDIDATE = ps_open($new_candidate);
-	my $seqin = Phylosift::Utilities::open_SeqIO_object( file => $fasta_file );
-	while ( my $sequence = $seqin->next_seq ) {
-		my $baseid = $sequence->id;
-		if ( exists $hmmHits{$baseid} && $hmmHits{$baseid} eq $sequence->id ) {
-			print $NEWCANDIDATE ">" . $sequence->id . "\n" . $sequence->seq . "\n";
-		}
-	}
-	close($NEWCANDIDATE);
 }
 
 =head2 writeAlignedSeq
@@ -471,16 +406,19 @@ sub alignAndMask {
 		my $stockholm_file = Phylosift::Utilities::get_marker_stockholm_file( self => $self, marker => $marker );
 		my @lines;
 		my $protein = Phylosift::Utilities::is_protein_marker( marker => $marker );
+		debug "$marker : $protein\n";
 		$long_rna = ($long_rna + 1)%2 unless $protein;
+		debug "LONG RNA : $long_rna\n";
 		my $candidate;
 		if(!$protein && $long_rna == 0){
 			$candidate = Phylosift::Utilities::get_candidate_file( self => $self, marker => $marker, type => ".rna.short", chunk => $chunk );
 			$index--;
-		}elsif( $long_rna == 1){
+		}elsif( !$protein && $long_rna == 1){
 			$candidate = Phylosift::Utilities::get_candidate_file( self => $self, marker => $marker, type => ".rna.long",  chunk => $chunk );
 		}else{
 			$candidate = Phylosift::Utilities::get_candidate_file( self => $self, marker => $marker, type => "", new => 1, chunk => $chunk );
 		}
+		debug "$candidate\n";
 		next unless -e $candidate && -s $candidate > 0;
 
 		my $hmm_file = Phylosift::Utilities::get_marker_hmm_file( self => $self, marker => $marker, loc => 1 );
