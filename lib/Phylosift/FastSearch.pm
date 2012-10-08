@@ -1203,6 +1203,7 @@ sub write_candidates {
 			my $new_id = $seq->id;
 			my $coord = ".$start.$end";
 			if($Phylosift::Settings::paired){
+				#when working with paired data, move the mateID to the end of the string
 				$new_id =~ s/(\d+)(\/\d)/$1$coord$2/;
 			}else{
 				$new_id =~ s/(\d+)/$1$coord/;
