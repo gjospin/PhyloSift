@@ -1135,9 +1135,9 @@ sub launch_marker_build {
 	my $marker_fasta = get_fasta_filename( marker => $marker, updated => 1, dna=>$dna);
 	print STDERR "Couldnt find $marker_fasta\n" unless -e $marker_fasta;
 	return unless -e $marker_fasta;
-	next if $marker =~ /^PMPROK/ || $marker =~ /^DNGNGWU/;	# skip these since they all go in the concat
+	return if $marker =~ /^PMPROK/ || $marker =~ /^DNGNGWU/;	# skip these since they all go in the concat
 	
-	my $qsub_args = $marker eq "concat" ? "-l mem_free=20G" : "";
+	my $qsub_args = $marker eq "concat" ? " -l mem_free=20G -v OMP_NUM_THREADS=3 " : "";
 	my @marray = ($marker_fasta,$marker_fasta.".taxon_ids","0.01");
 	my $clean_reps = get_reps_filename( marker => $marker, updated => 1, clean => 1 );
 	push(@marray, "--unaligned=$clean_reps") if $dna==0;
