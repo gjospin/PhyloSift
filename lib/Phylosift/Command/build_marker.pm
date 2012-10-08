@@ -23,7 +23,7 @@ sub options {
 		[ "update-only",    "Generate an updated marker only, no new HMM"],
 		[ "unaligned=s",    "Unaligned and unmasked sequences corresponding from the gene family"],
 		[ "reps_pd=f",      "Specify the minimum divergence between representative sequences", { default => 0.1 }], 
-		[ "tree_pd=f",      "Specify the minimum phylogenetic diversity in the reference tree", { default => 0.1 }],
+		[ "tree_pd=f",      "Specify the minimum phylogenetic diversity in the reference tree", { default => 0.01 }],
 		[ "taxonmap=s",     "A file containing a mapping of sequence names to taxon IDs"],
 		[ "destination",    "Store the new marker package at the given location instead of the default marker repository"],
 	);
