@@ -39,6 +39,7 @@ sub build_marker {
 	my $self     = $args{self} || miss("self");
 	my $aln_file = $args{alignment} || miss("alignment");
 	my $reps_pd   = $args{reps_pd} || miss("reps_pd");
+	my $tree_pd   = $args{tree_pd} || miss("tree_pd");
 	my $force   = $args{force};      #force is not a required option
 	my $mapping = $args{mapping};    #not a required argument
 	my $destination = $args{destination};
@@ -113,10 +114,13 @@ sub build_marker {
 	debug( "ID_map is " . scalar( keys(%id_map) ) . " long\n" );
 
 
-	my ( $fasttree_file, $tree_log_file ) = generate_fasttree(
-		alignment_file   => $clean_aln,
-		target_directory => $target_dir
-	) unless -e "$target_dir/$core.tree";
+	my ( $fasttree_file, $tree_log_file ) = generate_fasttree( alignment_file => $clean_aln, target_directory => $target_dir ) unless -e "$target_dir/$core.tree";
+
+	pd_prune_fasta( tre => $fasttree_file, distance => $tree_pd, fasta => $clean_aln, pruned_fasta => "$target_dir/$core.pruned.fasta" );
+
+	( $fasttree_file, $tree_log_file ) = generate_fasttree( alignment_file => "$target_dir/$core.pruned.fasta", target_directory => $target_dir );
+	`mv $target_dir/$core.pruned.fasta $clean_aln`;
+
 	my $rep_file;
 	if($seq_count > 10 || $seq_count < 0){
 		debug "Looking for representatives\n";
@@ -184,7 +188,7 @@ sub build_marker {
 #needed are : 1 alignment file, 1 representatives fasta file, 1 hmm profile, 1 tree file, 1 log tree file.
 	my $taxdb_opts = ""; # add taxit-friendly taxon labels if available
 	$taxdb_opts = "-i $target_dir/seq_ids.csv -T $target_dir/taxa.csv" if -e "$target_dir/taxa.csv" && -s "$target_dir/taxa.csv" > 0;
-	my $taxit_cmd = "cd \"$target_dir\";taxit create -c -d \"Creating a reference package for PhyloSift for the $core marker\" -l \"$core\" -f \"$clean_aln\" -t \"$target_dir/$core.tree\" $taxdb_opts -s \"$target_dir/$core.log\" -P \"$core\"";
+	my $taxit_cmd = "cd \"$target_dir\";taxit create -c -d \"Creating a reference package for PhyloSift for the $core marker\" -l \"$core\" -f \"$clean_aln\" -t \"$fasttree_file\" $taxdb_opts -s \"$tree_log_file\" -P \"$core\"";
 	debug "Running $taxit_cmd\n";
 	`$taxit_cmd`;
 
@@ -277,9 +281,21 @@ sub create_temp_read_fasta {
 	print $TMPREAD ">blahblahblah\n";
 	my $ALNIN = ps_open( "$aln_file" );
 	my $line = <$ALNIN>;
+	my $total_chars = 0;
+	my $max_chars = 80;
 	while ( $line = <$ALNIN> ) {
 		last if $line =~ /^>/;
-		print $TMPREAD $line;
+		chomp $line;
+		if($max_chars > length($line)){
+			$line =~ s/-/A/g;
+			print $TMPREAD "$line\n";
+		}else{
+			my $begin = substr($line, 0, $max_chars - $total_chars);
+			$begin =~ s/-/A/g;
+			my $end = "-" x (length($line)-length($begin)); 
+			print $TMPREAD "$begin$end\n";
+		}
+		$total_chars += $line;
 	}
 	return $file.".tmpread.fasta";
 }
@@ -637,6 +653,42 @@ sub get_fasta_from_pda_representatives {
 	}
 	return "$target_dir/$core.rep";
 }
+
+sub pd_prune_fasta {
+	my %args         = @_;
+	my $tre          = $args{tre} || miss("tre");
+	my $distance     = $args{distance} || miss("distance");
+	my $fasta        = $args{fasta} || miss("fasta");
+	my $pruned_fasta = $args{pruned_fasta} || miss("pruned_fasta");
+
+	# no point in pruning something with fewer than three taxa
+	my $seq_count = `grep -c ">" "$fasta"`;
+	chomp $seq_count;
+	if($seq_count < 3){
+		`cp "$fasta" "$pruned_fasta"`;
+		return;
+	}
+
+	my $prune_cmd = "$Phylosift::Settings::pda -k 20000 -g -minlen $distance $tre $tre.pruning.log";
+	system("$prune_cmd");
+
+	# read the list of taxa to keep
+	my $PRUNE = ps_open( "$tre.pruning.log" );
+	my $intaxa = 0;
+	my %keep_taxa;
+	while ( my $line = <$PRUNE> ) {
+		$intaxa = 1 if ( $line =~ /optimal PD set has/ );
+		next unless $intaxa;
+		chomp $line;
+		$keep_taxa{$line} = 1;
+		last if ( length($line) < 2 );    # taxa set ends with empty line
+	}
+
+	# create a pruned alignment fasta
+	Phylosift::UpdateDB::filter_fasta( input_fasta => $fasta, output_fasta => $pruned_fasta, keep_taxa => \%keep_taxa );
+	`rm "$tre.pruning.log"`;
+}
+
 
 =head2 mask_aln
 
