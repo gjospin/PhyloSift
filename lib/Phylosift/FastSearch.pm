@@ -982,7 +982,7 @@ sub get_hits_contigs {
 	foreach my $marker (keys %hit_counts){
 		if($hit_counts_total > $Phylosift::Settings::CHUNK_MAX_SEQS/10 && $hit_counts{$marker}/$hit_counts_total > 0.5 ){
 			if($self->{"custom_chunk_size"} ==0){
-				my $warning = "\n\n\nDetected large number of hits to a single marker with Default chunk size used.\n";
+				my $warning = "\n\n\nDetected large number of hits to the marker $marker with Default chunk size used.\n";
 				$warning .=  "This will require a large amount of memory. \n";
 				$warning .= "Manually tune the number of sequences to be processed per chunks in phylosiftrc\n\n\n";
 				Phylosift::Utilities::print_bat_signal();
