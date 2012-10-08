@@ -20,12 +20,12 @@ use Cwd;
 #}
 use Exporter;
 use vars qw[ @EXPORT @EXPORT_OK %EXPORT_TAGS @ISA ];
-@ISA         = 'Exporter';
-@EXPORT      = qw[start_timer end_timer debug miss ps_open];
-@EXPORT_OK   = qw[];
+@ISA       = 'Exporter';
+@EXPORT    = qw[start_timer end_timer debug miss ps_open];
+@EXPORT_OK = qw[];
 %EXPORT_TAGS = (
-	STD => \@EXPORT,
-	all => [ @EXPORT, @EXPORT_OK ],
+				 STD => \@EXPORT,
+				 all => [ @EXPORT, @EXPORT_OK ],
 );
 our $debuglevel = 0;
 
@@ -94,9 +94,9 @@ sub get_program_path {
 	my $progcheck = "";
 
 	# if a path was already given try that first
-	if (   defined($progpath)
-		&& $progpath ne ""
-		&& -x $progpath . "/" . $progname )
+	if (    defined($progpath)
+		 && $progpath ne ""
+		 && -x $progpath . "/" . $progname )
 	{
 		$progcheck = $progpath . "/" . $progname;
 	}
@@ -106,13 +106,13 @@ sub get_program_path {
 	  unless ( $progcheck =~ /$progname/ || !( -x $Bin . "/" . $progname ) );
 	$progcheck = $Bin . "/bin/" . $progname
 	  unless ( $progcheck =~ /$progname/
-		|| !( -x $Bin . "/bin/" . $progname ) );
+			   || !( -x $Bin . "/bin/" . $progname ) );
 
 	# then check the OS and use Mac binaries if needed
 	if ( $^O =~ /arwin/ ) {
 		$progcheck = $Bin . "/../osx/" . $progname
 		  unless ( $progcheck =~ /$progname/
-			&& !( -x $Bin . "/" . $progname ) );
+				   && !( -x $Bin . "/" . $progname ) );
 		$progcheck = $Bin . "/../osx/" . $progname
 		  if ( $progcheck =~ /$Bin\/bin/ );    # don't use the linux binary!
 	}
@@ -145,100 +145,137 @@ sub program_checks {
 		return 1;
 	}
 	Phylosift::Settings::set_default(
-		parameter => \$Phylosift::Settings::pplacer,
-		value     => get_program_path(
-			prog_name => "pplacer",
-			prog_path => $Phylosift::Settings::pplacer_path
-		)
+									  parameter => \$Phylosift::Settings::pplacer,
+									  value     => get_program_path(
+																 prog_name => "pplacer",
+																 prog_path => $Phylosift::Settings::pplacer_path
+									  )
 	);
 	if ( $Phylosift::Settings::pplacer eq "" ) {
 
 		#program not found return;
 		carp("pplacer not found");
 		return 1;
-	}
-	else {
+	} else {
 		`$Phylosift::Settings::pplacer --version` =~ m/v1.1.alpha(\d+)/;
 		if ( $1 < 10 ) {
 
- # pplacer was found but the version doesn't match the one tested with Phylosift
-			carp(
-"Warning : a different version of pplacer was found. PhyloSift was tested with pplacer v1.1.alpha10\n"
-			);
+			# pplacer was found but the version doesn't match the one tested with Phylosift
+			carp( "Warning : a different version of pplacer was found. PhyloSift was tested with pplacer v1.1.alpha10\n" );
 		}
 	}
-	Phylosift::Settings::set_default(parameter => \$Phylosift::Settings::guppy, value=> get_program_path(
-		prog_name => "guppy",
-		prog_path => $Phylosift::Settings::ps_path
-	));
-	Phylosift::Settings::set_default(parameter => \$Phylosift::Settings::taxit, value=>get_program_path(
-		prog_name => "taxit",
-		prog_path => $Phylosift::Settings::ps_path
-	));
-	Phylosift::Settings::set_default(parameter => \$Phylosift::Settings::rppr, value=>get_program_path(
-		prog_name => "rppr",
-		prog_path => $Phylosift::Settings::ps_path
-	));
-	Phylosift::Settings::set_default(parameter => \$Phylosift::Settings::cmalign, value=>get_program_path(
-		prog_name => "cmalign",
-		prog_path => $Phylosift::Settings::ps_path
-	));
-	Phylosift::Settings::set_default(parameter => \$Phylosift::Settings::hmmalign, value=>get_program_path(
-		prog_name => "hmmalign",
-		prog_path => $Phylosift::Settings::hmmer3_path
-	));
+	Phylosift::Settings::set_default(
+									  parameter => \$Phylosift::Settings::guppy,
+									  value     => get_program_path(
+																 prog_name => "guppy",
+																 prog_path => $Phylosift::Settings::ps_path
+									  )
+	);
+	Phylosift::Settings::set_default(
+									  parameter => \$Phylosift::Settings::taxit,
+									  value     => get_program_path(
+																 prog_name => "taxit",
+																 prog_path => $Phylosift::Settings::ps_path
+									  )
+	);
+	Phylosift::Settings::set_default(
+									  parameter => \$Phylosift::Settings::rppr,
+									  value     => get_program_path(
+																 prog_name => "rppr",
+																 prog_path => $Phylosift::Settings::ps_path
+									  )
+	);
+	Phylosift::Settings::set_default(
+									  parameter => \$Phylosift::Settings::cmalign,
+									  value     => get_program_path(
+																 prog_name => "cmalign",
+																 prog_path => $Phylosift::Settings::ps_path
+									  )
+	);
+	Phylosift::Settings::set_default(
+									  parameter => \$Phylosift::Settings::hmmalign,
+									  value     => get_program_path(
+																 prog_name => "hmmalign",
+																 prog_path => $Phylosift::Settings::hmmer3_path
+									  )
+	);
 	if ( $Phylosift::Settings::hmmalign eq "" ) {
 
 		#program not found return;
 		carp("HMMER3 not found");
 		return 1;
-	}
-	elsif ( `$Phylosift::Settings::hmmalign -h` !~ m/HMMER 3.0/ ) {
+	} elsif ( `$Phylosift::Settings::hmmalign -h` !~ m/HMMER 3.0/ ) {
 
- # pplacer was found but the version doens't match the one tested with Phylosift
-		carp
-"Warning : a different version of HMMER was found. PhyloSift was tested with HMMER 3.0rc1\n";
+		# pplacer was found but the version doens't match the one tested with Phylosift
+		carp "Warning : a different version of HMMER was found. PhyloSift was tested with HMMER 3.0rc1\n";
 	}
-	Phylosift::Settings::set_default(parameter => \$Phylosift::Settings::hmmbuild,value=> get_program_path(
-		prog_name => "hmmbuild",
-		prog_path => $Phylosift::Settings::hmmer3_path
-	));
-	Phylosift::Settings::set_default(parameter => \$Phylosift::Settings::raxml,value=> get_program_path(
-		prog_name => "raxmlHPC",
-		prog_path => $Phylosift::Settings::ps_path
-	));
+	Phylosift::Settings::set_default(
+									  parameter => \$Phylosift::Settings::hmmbuild,
+									  value     => get_program_path(
+																 prog_name => "hmmbuild",
+																 prog_path => $Phylosift::Settings::hmmer3_path
+									  )
+	);
+	Phylosift::Settings::set_default(
+									  parameter => \$Phylosift::Settings::raxml,
+									  value     => get_program_path(
+																 prog_name => "raxmlHPC",
+																 prog_path => $Phylosift::Settings::ps_path
+									  )
+	);
 	if ( $Phylosift::Settings::raxml eq "" ) {
 		carp("raxmlHPC was not found\n");
 		return 1;
 	}
-	Phylosift::Settings::set_default(parameter => \$Phylosift::Settings::readconciler,value=> get_program_path(
-		prog_name => "readconciler",
-		prog_path => $Phylosift::Settings::ps_path
-	));
-	Phylosift::Settings::set_default(parameter => \$Phylosift::Settings::segment_tree,value=> get_program_path(
-		prog_name => "segment_tree",
-		prog_path => $Phylosift::Settings::ps_path
-	));
-	Phylosift::Settings::set_default(parameter => \$Phylosift::Settings::pda,value=> get_program_path(
-		prog_name => "pda",
-		prog_path => $Phylosift::Settings::ps_path
-	));
-	Phylosift::Settings::set_default(parameter => \$Phylosift::Settings::fasttree,value=> get_program_path(
-		prog_name => "FastTree",
-		prog_path => $Phylosift::Settings::ps_path
-	));
-	Phylosift::Settings::set_default(parameter => \$Phylosift::Settings::lastdb,value=> get_program_path(
-		prog_name => "lastdb",
-		prog_path => $Phylosift::Settings::ps_path
-	));
-	Phylosift::Settings::set_default(parameter => \$Phylosift::Settings::lastal,value=> get_program_path(
-		prog_name => "lastal",
-		prog_path => $Phylosift::Settings::ps_path
-	));
-	Phylosift::Settings::set_default(parameter => \$Phylosift::Settings::bowtie2align,value=> get_program_path(
-		prog_name => "bowtie2-align",
-		prog_path => $Phylosift::Settings::bowtie2_path
-	));
+	Phylosift::Settings::set_default(
+									  parameter => \$Phylosift::Settings::readconciler,
+									  value     => get_program_path(
+																 prog_name => "readconciler",
+																 prog_path => $Phylosift::Settings::ps_path
+									  )
+	);
+	Phylosift::Settings::set_default(
+									  parameter => \$Phylosift::Settings::segment_tree,
+									  value     => get_program_path(
+																 prog_name => "segment_tree",
+																 prog_path => $Phylosift::Settings::ps_path
+									  )
+	);
+	Phylosift::Settings::set_default(
+									  parameter => \$Phylosift::Settings::pda,
+									  value     => get_program_path(
+																 prog_name => "pda",
+																 prog_path => $Phylosift::Settings::ps_path
+									  )
+	);
+	Phylosift::Settings::set_default(
+									  parameter => \$Phylosift::Settings::fasttree,
+									  value     => get_program_path(
+																 prog_name => "FastTree",
+																 prog_path => $Phylosift::Settings::ps_path
+									  )
+	);
+	Phylosift::Settings::set_default(
+									  parameter => \$Phylosift::Settings::lastdb,
+									  value     => get_program_path(
+																 prog_name => "lastdb",
+																 prog_path => $Phylosift::Settings::ps_path
+									  )
+	);
+	Phylosift::Settings::set_default(
+									  parameter => \$Phylosift::Settings::lastal,
+									  value     => get_program_path(
+																 prog_name => "lastal",
+																 prog_path => $Phylosift::Settings::ps_path
+									  )
+	);
+	Phylosift::Settings::set_default(
+									  parameter => \$Phylosift::Settings::bowtie2align,
+									  value     => get_program_path(
+																 prog_name => "bowtie2-align",
+																 prog_path => $Phylosift::Settings::bowtie2_path
+									  )
+	);
 
 	if ( $Phylosift::Settings::bowtie2align eq "" ) {
 
@@ -246,10 +283,13 @@ sub program_checks {
 		carp("bowtie2 not found");
 		return 1;
 	}
-	Phylosift::Settings::set_default(parameter => \$Phylosift::Settings::bowtie2build,value=> get_program_path(
-		prog_name => "bowtie2-build",
-		prog_path => $Phylosift::Settings::bowtie2_path
-	));
+	Phylosift::Settings::set_default(
+									  parameter => \$Phylosift::Settings::bowtie2build,
+									  value     => get_program_path(
+																 prog_name => "bowtie2-build",
+																 prog_path => $Phylosift::Settings::bowtie2_path
+									  )
+	);
 	return 0;
 }
 
@@ -259,21 +299,43 @@ reads the marker_summary file from a specific directory
 
 =cut
 
-sub read_marker_summary{
-	my %args = @_;
-	my $self = $args{self} || miss("PS object");
-	my $directory = $args{path} || miss("marker_summary Path");
+sub read_marker_summary {
+	my %args        = @_;
+	my $self        = $args{self} || miss("PS object");
+	my $directory   = $args{path} || miss("marker_summary Path");
 	my %return_hash = ();
 	return \%return_hash unless -e "$directory/marker_summary.txt";
-	my $IN = ps_open($directory."/marker_summary.txt");
-	my $header = <$IN>; #read header line
-	while(<$IN>){
+	my $IN     = ps_open( $directory . "/marker_summary.txt" );
+	my $header = <$IN>;                                           #read header line
+	while (<$IN>) {
 		chomp($_);
-		my @line = split(/\t/,$_);
+		my @line = split( /\t/, $_ );
 		next if $line[0] eq 'total';
-		$return_hash{$line[0]} = $line[1];
+		$return_hash{ $line[0] } = $line[1];
 	}
 	return \%return_hash;
+}
+
+=head2 print_bat_signal
+
+Prints the batsignal. Should only be used in case of emergency
+
+=cut
+
+sub print_bat_signal {
+	my $signal = "       _==/          i     i          \\==_\n";
+	$signal .= "     /XX/            |\\___/|            \\XX\n";
+	$signal .= "   /XXXX\\            |XXXXX|            /XXXX\\\n";
+	$signal .= "  |XXXXXX\\_         _XXXXXXX_         _/XXXXXX|\n";
+	$signal .= " XXXXXXXXXXXxxxxxxxXXXXXXXXXXXxxxxxxxXXXXXXXXXXX\n";
+	$signal .= "|XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX|\n";
+	$signal .= "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\n";
+	$signal .= "|XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX|\n";
+	$signal .= " XXXXXX/^^^^^\\XXXXXXXXXXXXXXXXXXXXX/^^^^^\\XXXXXX\n";
+	$signal .= "  |XXX|       \\XXX/^^\\XXXXX/^^\\XXX/       |XXX|\n";
+	$signal .= "    \\XX\       \\X/    \\XXX/    \\X/       /XX/\n";
+	$signal .= "       \"\       \"      \\X/      \"      /\"\n";
+	print STDERR $signal;
 }
 
 =head2 print_marker_summary
@@ -282,16 +344,16 @@ reads the marker_summary file from a specific directory
 
 =cut
 
-sub print_marker_summary{
-	my %args = @_;
-	my $self = $args{self}|| miss("PS object");
-	my $dir = $args{path} || miss("marker_summary path");
+sub print_marker_summary {
+	my %args        = @_;
+	my $self        = $args{self} || miss("PS object");
+	my $dir         = $args{path} || miss("marker_summary path");
 	my $summary_ref = $args{summary} || miss("Summary hash");
-	my $OUT = ps_open(">".$dir."/marker_summary.txt");
-	my %summary = %{$summary_ref};
-	my $total = 0;
-	foreach my $marker (sort keys %summary){
-		print $OUT $marker."\t".$summary{$marker}."\n" if $summary{$marker} > 0;
+	my $OUT         = ps_open( ">" . $dir . "/marker_summary.txt" );
+	my %summary     = %{$summary_ref};
+	my $total       = 0;
+	foreach my $marker ( sort keys %summary ) {
+		print $OUT $marker . "\t" . $summary{$marker} . "\n" if $summary{$marker} > 0;
 		$total += $summary{$marker} unless $marker eq 'concat';
 	}
 	print $OUT "total\t$total\n";
@@ -311,8 +373,7 @@ sub get_data_path {
 	my $datacheck = "";
 	if ( defined($datapath) && $datapath ne "" ) {
 		$datacheck = $datapath . "/" . $dataname;
-	}
-	else {
+	} else {
 		my $scriptpath = dirname($0);
 		$scriptpath =~ s/bin\/?$//g;
 		$datacheck = $scriptpath . "/share/phylosift/" . $dataname;
@@ -348,16 +409,17 @@ sub download_data {
 	my $destination = $args{destination};
 	`mkdir -p "$destination"`;
 
-	eval{
+	eval {
 		require File::Fetch;
 		File::Fetch->import();
 	};
-	if($@){
-		croak("Unable to load perl module File::Fetch. Can not download marker database.\nPlease use cpan to install File::Fetch or download and install the markers manually.\n");
-	}else{
-		
-	  # FIXME this is insecure!
-	  # but then again, so is just about every other line of code in this program...
+	if ($@) {
+		croak(    "Unable to load perl module File::Fetch. Can not download marker database.\nPlease use cpan to install File::Fetch or download and install the markers manually.\n"
+		);
+	} else {
+
+		# FIXME this is insecure!
+		# but then again, so is just about every other line of code in this program...
 		my $ff = File::Fetch->new( uri => $url );
 		$ff->fetch( to => "$destination/.." );
 		debug "URL : $url\n";
@@ -372,14 +434,10 @@ sub download_data {
 	}
 }
 
-Phylosift::Settings::set_default(
-	parameter => \$Phylosift::Settings::marker_base_url,
-	value => "http://edhar.genomecenter.ucdavis.edu/~koadman/phylosift_markers"
-);
-Phylosift::Settings::set_default(
-	parameter => \$Phylosift::Settings::ncbi_url,
-	value     => "http://edhar.genomecenter.ucdavis.edu/~koadman/ncbi.tgz"
-);
+Phylosift::Settings::set_default( parameter => \$Phylosift::Settings::marker_base_url,
+								  value     => "http://edhar.genomecenter.ucdavis.edu/~koadman/phylosift_markers" );
+Phylosift::Settings::set_default( parameter => \$Phylosift::Settings::ncbi_url,
+								  value     => "http://edhar.genomecenter.ucdavis.edu/~koadman/ncbi.tgz" );
 
 =head2 marker_update_check
 
@@ -392,7 +450,7 @@ sub marker_update_check {
 	my $self        = $args{self};
 	my $url         = $args{url};
 	my $marker_path = $args{dir};
-	
+
 	debug "Skipping check for marker updates on server\n"
 	  if $Phylosift::Settings::disable_update_check;
 	return
@@ -401,65 +459,57 @@ sub marker_update_check {
 	  if defined($Phylosift::Settings::marker_update_check)
 	  && $Phylosift::Settings::marker_update_check == 0;
 
-	eval{
+	eval {
 		require LWP::Simple;
 		LWP::Simple->import();
 	};
-	my $result = $@;
+	my $result          = $@;
 	my $get_new_markers = 0;
-	my $modified_time = 0;
+	my $modified_time   = 0;
 	$url =~ s/\/\//\//g;
 	$url =~ s/http:/http:\//g;
 
-	unless($result){
+	unless ($result) {
 
-		my ( $content_type, $document_length, $modified, $expires, $server ) =
-		  head($url);
+		my ( $content_type, $document_length, $modified, $expires, $server ) = head($url);
 		$modified_time = $modified;
 		debug "MARKER_PATH : " . $marker_path . "\nURL : $url\n";
-	
+
 		if ( -x $marker_path ) {
-			my ( $m_url, $m_timestamp ) =
-			  get_marker_version( path => $marker_path );
+			my ( $m_url, $m_timestamp ) = get_marker_version( path => $marker_path );
 			if ( defined($m_url) ) {
 				$m_url =~ s/\/\//\//g;
 				$m_url =~ s/http:/http:\//g;
 				debug "TEST LOCAL :" . localtime($m_timestamp) . "\n";
 				if ( !defined($modified_time) ) {
-					warn
-	"Warning: unable to connect to marker update server, please check your internet connection\n";
-				}
-				elsif ( $modified_time > $m_timestamp ) {
+					warn "Warning: unable to connect to marker update server, please check your internet connection\n";
+				} elsif ( $modified_time > $m_timestamp ) {
 					debug "TEST REMOTE:" . localtime($modified_time) . "\n";
 					warn "Found newer version of the marker data\n";
 					$get_new_markers = 1;
-				}
-				elsif ( $url ne $m_url ) {
-					warn
-	"The marker update URL differs from the local marker DB copy, updating";
+				} elsif ( $url ne $m_url ) {
+					warn "The marker update URL differs from the local marker DB copy, updating";
 					warn "local url $m_url\n";
 					warn "update url $url\n";
 					$get_new_markers = 1;
 				}
-			}
-			else {
+			} else {
 				warn "Marker version unknown, downloading markers\n";
 				$get_new_markers = 1;
 			}
-		}
-		else {
+		} else {
 			if ( !defined($modified_time) ) {
 				croak
-	"Marker data not found and unable to connect to marker update server, please check your phylosift configuration and internet connection!\n";
+				  "Marker data not found and unable to connect to marker update server, please check your phylosift configuration and internet connection!\n";
 			}
 			warn "Unable to find marker data!\n";
 			$get_new_markers = 1;
 		}
-	}else{
+	} else {
 		warn "Unable to check for updates because perl module LWP::Simple is not available. Please use cpan to install it.\n";
 		$get_new_markers = 1 unless -x $marker_path;
 	}
-	
+
 	if ($get_new_markers) {
 		warn "Downloading from $url\n";
 		download_data( url => $url, destination => $marker_path );
@@ -467,14 +517,14 @@ sub marker_update_check {
 		print $VOUT "$url\n";
 		print $VOUT "$modified_time\n";
 		my @markers = gather_markers(
-			self         => $self,
-			path         => $marker_path,
-			force_gather => 1
+									  self         => $self,
+									  path         => $marker_path,
+									  force_gather => 1
 		);
 		index_marker_db(
-			self    => $self,
-			markers => \@markers,
-			path    => $marker_path
+						 self    => $self,
+						 markers => \@markers,
+						 path    => $marker_path
 		);
 	}
 }
@@ -496,7 +546,7 @@ sub data_checks {
 	if ( defined($Phylosift::Settings::marker_base_url) ) {
 		$mbase = $Phylosift::Settings::marker_base_url;
 	}
-	if ( defined( $Phylosift::Settings::marker_url ) ) {
+	if ( defined($Phylosift::Settings::marker_url) ) {
 		$mbase = $Phylosift::Settings::marker_url;
 	}
 	my $marker_update_url           = "$mbase/markers.tgz";
@@ -504,67 +554,67 @@ sub data_checks {
 
 	#
 	# first check for the standard marker directory
-	Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::marker_dir,value => get_data_path(
-		data_name => "markers",
-		data_path => $Phylosift::Settings::marker_path
-	));
+	Phylosift::Settings::set_default(
+									  parameter => \$Phylosift::Settings::marker_dir,
+									  value     => get_data_path(
+															  data_name => "markers",
+															  data_path => $Phylosift::Settings::marker_path
+									  )
+	);
 	marker_update_check(
-		self => $self,
-		dir  => $Phylosift::Settings::marker_dir,
-		url  => $marker_update_url
+						 self => $self,
+						 dir  => $Phylosift::Settings::marker_dir,
+						 url  => $marker_update_url
 	);
 
 	#
 	# now look for the extended marker directory
-	Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::markers_extended_dir,value=>get_data_path(
-		data_name => "markers_extended",
-		data_path => $Phylosift::Settings::extended_marker_path
-	));
-	if ( $Phylosift::Settings::extended ) {
+	Phylosift::Settings::set_default(
+									  parameter => \$Phylosift::Settings::markers_extended_dir,
+									  value     => get_data_path(
+															  data_name => "markers_extended",
+															  data_path => $Phylosift::Settings::extended_marker_path
+									  )
+	);
+	if ($Phylosift::Settings::extended) {
 		marker_update_check(
-			self => $self,
-			dir  => $Phylosift::Settings::markers_extended_dir,
-			url  => $markers_extended_update_url
+							 self => $self,
+							 dir  => $Phylosift::Settings::markers_extended_dir,
+							 url  => $markers_extended_update_url
 		);
 	}
 
 	#
 	# now check for the NCBI taxonomy data
-	Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::ncbi_dir,value=> get_data_path(
-		data_name => "ncbi",
-		data_path => $Phylosift::Settings::ncbi_path
-	));
+	Phylosift::Settings::set_default(
+									  parameter => \$Phylosift::Settings::ncbi_dir,
+									  value     => get_data_path(
+															  data_name => "ncbi",
+															  data_path => $Phylosift::Settings::ncbi_path
+									  )
+	);
 	debug "DIR : $Phylosift::Settings::ncbi_dir\n";
 	debug "Skipping check for NCBI updates on server\n" if $Phylosift::Settings::disable_update_check;
-	return if $Phylosift::Settings::disable_update_check;
-	my ( $content_type, $document_length, $modified_time, $expires, $server ) =
-	  head("$Phylosift::Settings::ncbi_url");
+	return                                              if $Phylosift::Settings::disable_update_check;
+	my ( $content_type, $document_length, $modified_time, $expires, $server ) = head("$Phylosift::Settings::ncbi_url");
 	if ( -x $Phylosift::Settings::ncbi_dir ) {
 		my $ncbi_time = ( stat($Phylosift::Settings::ncbi_dir) )[9];
 		if ( !defined($modified_time) ) {
-			warn
-"Warning: unable to connect to NCBI taxonomy update server, please check your internet connection\n";
-		}
-		elsif ( $modified_time > $ncbi_time ) {
+			warn "Warning: unable to connect to NCBI taxonomy update server, please check your internet connection\n";
+		} elsif ( $modified_time > $ncbi_time ) {
 			warn "Found newer version of NCBI taxonomy data!\n";
 			warn "Downloading from $Phylosift::Settings::ncbi_url\n";
-			download_data(
-				url         => $Phylosift::Settings::ncbi_url,
-				destination => $Phylosift::Settings::ncbi_dir
-			);
+			download_data(          url         => $Phylosift::Settings::ncbi_url,
+						   destination => $Phylosift::Settings::ncbi_dir );
 		}
-	}
-	else {
+	} else {
 		if ( !defined($modified_time) ) {
-			croak
-"NCBI taxonomy data not found and unable to connect to update server, please check your phylosift configuration and internet connection!\n";
+			croak "NCBI taxonomy data not found and unable to connect to update server, please check your phylosift configuration and internet connection!\n";
 		}
 		warn "Unable to find NCBI taxonomy data!\n";
 		warn "Downloading from $Phylosift::Settings::ncbi_url\n";
-		download_data(
-			url         => $Phylosift::Settings::ncbi_url,
-			destination => $Phylosift::Settings::ncbi_dir
-		);
+		download_data(       url         => $Phylosift::Settings::ncbi_url,
+					   destination => $Phylosift::Settings::ncbi_dir );
 	}
 }
 
@@ -596,12 +646,10 @@ sub fasta2stockholm {
 				$curseq = "";
 			}
 			$name = $1;
-		}
-		else {
+		} else {
 			if ( /\S/ && !defined $name ) {
 				warn "Ignoring: $_";
-			}
-			else {
+			} else {
 				s/\s//g;
 				$curseq .= $_;
 			}
@@ -622,11 +670,9 @@ sub fasta2stockholm {
 		my $sseq  = $seq[$sI];
 		my $l     = length $sseq;
 		if ( defined $length ) {
-			croak
-			  "Sequences not all same length ($lname is $length, $nname is $l)"
+			croak "Sequences not all same length ($lname is $length, $nname is $l)"
 			  unless $length == $l;
-		}
-		else {
+		} else {
 			$length = length $sseq;
 			$lname  = $nname;
 		}
@@ -649,15 +695,15 @@ See https://github.com/ihh/dart/ for the original source code
 =cut
 
 sub stockholm2fasta {
-	my %args = @_;
-	my $columns = $args{columns} || 80;    # number of columns in fasta
-	my $gapped = $args{gapped} || 1; # should gapped fasta (aligned) be written?
-	my $sorted = $args{sorted} || 1; # should sequences be sorted?
+	my %args     = @_;
+	my $columns  = $args{columns} || 80;    # number of columns in fasta
+	my $gapped   = $args{gapped} || 1;      # should gapped fasta (aligned) be written?
+	my $sorted   = $args{sorted} || 1;      # should sequences be sorted?
 	my $STREAMIN = $args{in};
 	my @seq;
 	my @names;
 	my $outbuffer = "";
-	my $seq_line  = 0;    # counter for which line we're on in each block.
+	my $seq_line  = 0;                      # counter for which line we're on in each block.
 
 	while ( my $line = <$STREAMIN> ) {
 		if ( $line !~ /\S/ || $line =~ /^\s*#/ || length($line) < 2 ) {
@@ -666,14 +712,13 @@ sub stockholm2fasta {
 		}
 		if ( $line =~ /^\s*\/\// ) {
 			$outbuffer .= printseq(
-				columns => $columns,
-				sorted  => $sorted,
-				seq     => \@seq,
-				names   => \@names,
-				out     => $args{out}
+									columns => $columns,
+									sorted  => $sorted,
+									seq     => \@seq,
+									names   => \@names,
+									out     => $args{out}
 			);
-		}
-		else {
+		} else {
 			chomp $line;
 			my ( $name, $seq ) = split /\s+/, $line;
 			$seq =~ s/[\.\-]//g unless $gapped;
@@ -683,11 +728,11 @@ sub stockholm2fasta {
 		}
 	}
 	$outbuffer .= printseq(
-		columns => $columns,
-		sorted  => $sorted,
-		seq     => \@seq,
-		names   => \@names,
-		out     => $args{out}
+							columns => $columns,
+							sorted  => $sorted,
+							seq     => \@seq,
+							names   => \@names,
+							out     => $args{out}
 	);
 	return $outbuffer;
 }
@@ -723,8 +768,7 @@ sub read_name_table {
 		my $commonName;
 		if ( $line =~ /\{(.+)\}.+\[.+\]/ ) {
 			$commonName = $1;
-		}
-		elsif ( $line =~ /\[(.+)\]$/ ) {
+		} elsif ( $line =~ /\[(.+)\]$/ ) {
 			$commonName = $1;
 		}
 		my @fields = split( /\s+/, $line );
@@ -754,8 +798,7 @@ sub get_marker_length {
 				last;
 			}
 		}
-	}
-	else {
+	} else {
 		my $cm_file = get_marker_cm_file( self => $self, marker => $marker );
 		my $CM = ps_open($cm_file);
 		while ( my $line = <$CM> ) {
@@ -784,11 +827,11 @@ sub make_dummy_file {
 	$glen = "P" x $len x $gapmultiplier if $gapmultiplier == 1;
 	$glen = "A" x $len x $gapmultiplier if $gapmultiplier == 3;
 	my $newseq = Bio::LocatableSeq->new(
-		-seq      => $glen,
-		-alphabet => 'dna',
-		-id       => "dummydummydummy",
-		start     => 1,
-		end       => ( $len * $gapmultiplier )
+										 -seq      => $glen,
+										 -alphabet => 'dna',
+										 -id       => "dummydummydummy",
+										 start     => 1,
+										 end       => ( $len * $gapmultiplier )
 	);
 	my $aln = Bio::SimpleAlign->new();
 	$aln->add_seq($newseq);
@@ -861,8 +904,7 @@ sub get_alignment_marker_file {
 	my $bname       = get_marker_basename( marker => $marker );
 	if ( $Phylosift::Settings::updated == 0 ) {
 		return "$marker_path/$bname.ali";
-	}
-	else {
+	} else {
 		return "$marker_path/$bname.updated.fasta";
 	}
 }
@@ -886,8 +928,7 @@ sub get_marker_aln_file {
 		return "$marker_path/$marker/$bname.aln"
 		  if ( -e "$marker_path/$marker/$bname.aln" );
 		return "$marker_path/$marker/$bname.masked";
-	}
-	else {
+	} else {
 		return "$marker_path/$marker.updated/$bname.aln"
 		  if ( -e "$marker_path/$marker.updated/$bname.aln" );
 		return "$marker_path/$marker.updated/$bname.masked";
@@ -912,8 +953,7 @@ sub get_marker_rep_file {
 
 		# using new-style marker directories
 		return "$marker_path/$marker/$bname.rep";
-	}
-	else {
+	} else {
 		return "$marker_path/$marker.updated/$bname.reps";
 	}
 }
@@ -925,12 +965,12 @@ Returns the HMM file for the marker
 =cut
 
 sub get_marker_hmm_file {
-	my %args   = @_;
-	my $self   = $args{self};
-	my $marker = $args{marker};
-	my $local  = $args{loc} || 0;    #using loc instead of local (reserved word)
+	my %args        = @_;
+	my $self        = $args{self};
+	my $marker      = $args{marker};
+	my $local       = $args{loc} || 0;                                       #using loc instead of local (reserved word)
 	my $marker_path = get_marker_path( self => $self, marker => $marker );
-	my $bname = get_marker_basename( marker => $marker );
+	my $bname       = get_marker_basename( marker => $marker );
 	return "$marker_path/$bname.hmm" if ( -e "$marker_path/$bname.hmm" );
 
 	# using new-style marker directories
@@ -996,11 +1036,12 @@ sub get_decorated_marker_name {
 	my $long       = $args{long} || 0;
 	my $short      = $args{short} || 0;
 	$name = get_marker_basename( marker => $name ) if $base;
-	$name .= ".long" if $long;
+	$name .= ".long"  if $long;
 	$name .= ".short" if $short;
 	$name .= ".codon" if $dna;
-	$name .= ".updated" 
+	$name .= ".updated"
 	  if ( $updated || $Phylosift::Settings::updated ) && !$Phylosift::Settings::extended && $name !~ /^1[68]s/;
+
 	# rna markers don't get pruned
 	$name .= ".sub" . $sub_marker if defined($sub_marker);
 	return $name;
@@ -1053,8 +1094,7 @@ sub get_fasta_marker_file {
 	my $bname       = get_marker_basename( marker => $marker );
 	if ( $Phylosift::Settings::updated == 0 ) {
 		return "$marker_path/$bname.faa";
-	}
-	else {
+	} else {
 		return "$marker_path/$bname.faa";
 	}
 }
@@ -1122,8 +1162,7 @@ sub get_trimfinal_marker_file {
 		return "$marker_path/$marker/$bname.clean"
 		  if -e "$marker_path/$marker/$bname.clean";
 		return "$marker_path/$marker/$bname.aln";
-	}
-	else {
+	} else {
 		return "$marker_path/$bname.trimfinal"
 		  if -e "$marker_path/$bname.trimfinal";
 		return "$marker_path/$marker/$bname.masked"
@@ -1151,8 +1190,7 @@ sub get_trimfinal_fasta_marker_file {
 		return "$marker_path/$bname.trimfinal.fasta"
 		  if -e "$marker_path/$bname.trimfinal.fasta";
 		return "$marker_path/$marker/$bname.aln";
-	}
-	else {
+	} else {
 		return "$marker_path/$bname.trimfinal.fasta"
 		  if -e "$marker_path/$bname.trimfinal.fasta";
 		return "$marker_path/$marker/$bname.aln";
@@ -1176,8 +1214,7 @@ sub get_tree_marker_file {
 		return "$marker_path/$bname.final.tre"
 		  if -e "$marker_path/$bname.final.tre";
 		return "$marker_path/$marker/$bname.tre";
-	}
-	else {
+	} else {
 		return "$marker_path/$bname.updated.tre";
 	}
 }
@@ -1196,8 +1233,7 @@ sub get_tree_stats_marker_file {
 	my $bname       = get_marker_basename( marker => $marker );
 	if ( $Phylosift::Settings::updated == 0 ) {
 		return "$marker_path/$bname.in_phyml_stats.txt";
-	}
-	else {
+	} else {
 		return "$marker_path/$bname.updated.RAxML_info";
 	}
 }
@@ -1216,8 +1252,7 @@ sub get_ncbi_map_file {
 	my $bname       = get_marker_basename( marker => $marker );
 	if ( $Phylosift::Settings::updated == 0 ) {
 		return "$marker_path/$bname.ncbimap";
-	}
-	else {
+	} else {
 		return "$marker_path/$bname.updated.ncbimap";
 	}
 }
@@ -1250,38 +1285,35 @@ sub concatenate_alignments {
 	my $self          = $args{self};
 	my $outputFasta   = $args{output_fasta};
 	my $outputMrBayes = $args{output_bayes};
-	my $gapmultiplier =
-	  $args{gap_multiplier};    # 1 for protein, 3 for reverse-translated DNA
-	my $aln_ref    = $args{alignments};
-	my @alignments = @$aln_ref;
-	my $catobj     = 0;
-	my $MRBAYES    = ps_open(">$outputMrBayes");
-	my $partlist   = "partition genes = " . scalar(@alignments) . ": ";
-	my $prevlen    = 0;
+	my $gapmultiplier = $args{gap_multiplier};                               # 1 for protein, 3 for reverse-translated DNA
+	my $aln_ref       = $args{alignments};
+	my @alignments    = @$aln_ref;
+	my $catobj        = 0;
+	my $MRBAYES       = ps_open(">$outputMrBayes");
+	my $partlist      = "partition genes = " . scalar(@alignments) . ": ";
+	my $prevlen       = 0;
 	foreach my $file (@alignments) {
 		my $aln;
 		my $marker = basename($file);
 		$gapmultiplier = 1 if ( $marker =~ /16s/ || $marker =~ /18s/ );
-		$marker =~
-		  s/\..+//g;    # FIXME: this should really come from a list of markers
+		$marker =~ s/\..+//g;                                                # FIXME: this should really come from a list of markers
 		unless ( -e $file ) {
 
-# this marker doesn't exist, need to create a dummy with the right number of gap columns
+			# this marker doesn't exist, need to create a dummy with the right number of gap columns
 			$aln = make_dummy_file(
-				self           => $self,
-				marker         => $marker,
-				gap_multiplier => $gapmultiplier
+									self           => $self,
+									marker         => $marker,
+									gap_multiplier => $gapmultiplier
 			);
-		}
-		else {
+		} else {
 			my $in = Bio::AlignIO->new( -file => $file, '-format' => 'fasta' );
 			unless ( $aln = $in->next_aln() ) {
 
-# empty marker alignment file, need to create a dummy with the right number of gap columns
+				# empty marker alignment file, need to create a dummy with the right number of gap columns
 				$aln = make_dummy_file(
-					self           => $self,
-					marker         => $marker,
-					gap_multiplier => $gapmultiplier
+										self           => $self,
+										marker         => $marker,
+										gap_multiplier => $gapmultiplier
 				);
 			}
 		}
@@ -1289,9 +1321,7 @@ sub concatenate_alignments {
 		$csname =~ s/\..+//g;
 		$partlist .= "," if $catobj != 0;
 		$partlist .= $csname;
-		print $MRBAYES "charset $csname = "
-		  . ( $prevlen + 1 ) . "-"
-		  . ( $prevlen + $aln->length() ) . "\n";
+		print $MRBAYES "charset $csname = " . ( $prevlen + 1 ) . "-" . ( $prevlen + $aln->length() ) . "\n";
 		$prevlen += $aln->length();
 		my $prevseq = 0;
 		my $newaln = $aln->select( 1, 1 );
@@ -1321,11 +1351,11 @@ sub concatenate_alignments {
 				# add this sequence as all gaps
 				my $tmpseq = "-" x $aln->length();
 				my $newseq = Bio::LocatableSeq->new(
-					-seq      => $tmpseq,
-					-alphabet => "protein",
-					-id       => $catseq->id,
-					start     => 0,
-					end       => 0
+													 -seq      => $tmpseq,
+													 -alphabet => "protein",
+													 -id       => $catseq->id,
+													 start     => 0,
+													 end       => 0
 				);
 				$newseq->verbose(-1);
 				$aln->add_seq($newseq);
@@ -1339,11 +1369,11 @@ sub concatenate_alignments {
 				# add this sequence as all gaps
 				my $tmpseq = "-" x $catobj->length();
 				my $newseq = Bio::LocatableSeq->new(
-					-seq      => $tmpseq,
-					-alphabet => "protein",
-					-id       => $alnseq->id,
-					start     => 0,
-					end       => 0
+													 -seq      => $tmpseq,
+													 -alphabet => "protein",
+													 -id       => $alnseq->id,
+													 start     => 0,
+													 end       => 0
 				);
 				$newseq->verbose(-1);
 				$catobj->add_seq($newseq);
@@ -1354,15 +1384,14 @@ sub concatenate_alignments {
 	}
 	return unless $catobj;    # exit if there's nothing to write about
 	print $MRBAYES "$partlist;\n";
-	my $out =
-	  Bio::AlignIO->new( -file => ">$outputFasta", '-format' => 'fasta' );
+	my $out = Bio::AlignIO->new( -file => ">$outputFasta", '-format' => 'fasta' );
 	foreach my $dummyseq ( $catobj->each_seq_with_id("dummydummydummy") ) {
 		$catobj->remove_seq($dummyseq);
 	}
 	$out->write_aln($catobj);
 
-# get rid of the trailing /1-blahblah that BioPerl insists on adding to sequence names
-# (naughty BioPerl! time out for you!!)
+	# get rid of the trailing /1-blahblah that BioPerl insists on adding to sequence names
+	# (naughty BioPerl! time out for you!!)
 	my $FA       = ps_open($outputFasta);
 	my @fa_lines = <$FA>;
 	my $FA_REOUT = ps_open( ">" . $outputFasta );
@@ -1380,12 +1409,10 @@ sub start_timer {
 	my $t         = time;
 	my @timerval  = localtime($t);
 	$timers{$timername} = $t;
-	debug sprintf(
-		"Before $timername %4d-%02d-%02d %02d:%02d:%02d\n",
-		$timerval[5] + 1900,
-		$timerval[4] + 1,
-		$timerval[3], $timerval[2], $timerval[1], $timerval[0]
-	);
+	debug sprintf( "Before $timername %4d-%02d-%02d %02d:%02d:%02d\n",
+				   $timerval[5] + 1900,
+				   $timerval[4] + 1,
+				   $timerval[3], $timerval[2], $timerval[1], $timerval[0] );
 }
 
 sub end_timer {
@@ -1393,12 +1420,10 @@ sub end_timer {
 	my $timername = $args{name};
 	my $t         = time;
 	my @timerval  = localtime($t);
-	debug sprintf(
-		"After $timername %4d-%02d-%02d %02d:%02d:%02d\n",
-		$timerval[5] + 1900,
-		$timerval[4] + 1,
-		$timerval[3], $timerval[2], $timerval[1], $timerval[0]
-	);
+	debug sprintf( "After $timername %4d-%02d-%02d %02d:%02d:%02d\n",
+				   $timerval[5] + 1900,
+				   $timerval[4] + 1,
+				   $timerval[3], $timerval[2], $timerval[1], $timerval[0] );
 	return $t - $timers{$timername};
 }
 
@@ -1446,20 +1471,13 @@ sub open_SeqIO_object {
 		$format = $args{format};
 	}
 	if ( $args{file} =~ /\.gz$/ ) {
-		$io_object = Bio::SeqIO->new(
-			-file   => "zcat \"$args{file}\" |",
-			-format => $format
-		);
-	}
-	elsif ( $args{file} =~ /\.bz2$/ ) {
-		$io_object = Bio::SeqIO->new(
-			-file   => "bzcat \"$args{file}\" |",
-			-format => $format
-		);
-	}
-	else {
-		$io_object =
-		  Bio::SeqIO->new( -file => $args{file}, -format => $format );
+		$io_object = Bio::SeqIO->new(       -file   => "zcat \"$args{file}\" |",
+									  -format => $format );
+	} elsif ( $args{file} =~ /\.bz2$/ ) {
+		$io_object = Bio::SeqIO->new(       -file   => "bzcat \"$args{file}\" |",
+									  -format => $format );
+	} else {
+		$io_object = Bio::SeqIO->new( -file => $args{file}, -format => $format );
 	}
 	return $io_object;
 }
@@ -1477,14 +1495,11 @@ sub open_sequence_file {
 	my $F1IN;
 	if ( $file =~ /\.gz$/ ) {
 		$F1IN = ps_open("zcat \"$file\" |");
-	}
-	elsif ( $file =~ /\.bz2$/ ) {
+	} elsif ( $file =~ /\.bz2$/ ) {
 		$F1IN = ps_open("bzcat \"$file\" |");
-	}
-	elsif ( $file eq "STDIN" ) {
+	} elsif ( $file eq "STDIN" ) {
 		$F1IN = *STDIN;
-	}
-	else {
+	} else {
 		$F1IN = ps_open($file);
 	}
 	return $F1IN;
@@ -1493,11 +1508,11 @@ sub open_sequence_file {
 sub get_db {
 	my %args    = @_;
 	my $path    = $args{path} || $Phylosift::Settings::marker_dir;
-	my $self    = $args{self};                  # optional argument;
+	my $self    = $args{self};                                       # optional argument;
 	my $db_name = $args{db_name};
 	if ( defined($self) && !defined( $args{path} ) ) {
 		return $Phylosift::Settings::markers_extended_dir . "/$db_name"
-		  if defined( $Phylosift::Settings::extended ) && $Phylosift::Settings::extended;
+		  if defined($Phylosift::Settings::extended) && $Phylosift::Settings::extended;
 		return $Phylosift::Settings::marker_dir . "/$db_name";
 	}
 	return "$path/$db_name";
@@ -1614,14 +1629,14 @@ sub index_marker_db {
 	my $MARKERLISTOUT    = ps_open(">$path/marker_list.txt");
 	foreach my $marker (@markers) {
 		my $marker_rep = get_marker_rep_file(
-			self    => $args{self},
-			marker  => $marker,
-			updated => 1
+											  self    => $args{self},
+											  marker  => $marker,
+											  updated => 1
 		);
 		$marker_rep = get_marker_rep_file(
-			self    => $args{self},
-			marker  => $marker,
-			updated => 0
+										   self    => $args{self},
+										   marker  => $marker,
+										   updated => 0
 		  )
 		  unless -e $marker_rep;
 		debug "marker $marker is protein\n"
@@ -1638,8 +1653,7 @@ sub index_marker_db {
 		while ( my $line = <$INALN> ) {
 			if ( $line =~ /^>(.+)/ ) {
 				print $DBOUT "\n>$marker" . "__$1\n";
-			}
-			else {
+			} else {
 				$line =~ s/[-\.\n\r]//g;
 				$line =~ tr/a-z/A-Z/;
 				print $DBOUT $line;
@@ -1660,23 +1674,22 @@ sub index_marker_db {
 
 	# make a bowtie2 database
 	if ( -e $bowtie2_db_fasta && -s $bowtie2_db_fasta > 100 ) {
-`cd "$path" ; $Phylosift::Settings::lastdb "$bowtie2_db" "$bowtie2_db_fasta"`;
-`cd "$path" ; $Phylosift::Settings::bowtie2build "$bowtie2_db_fasta" "$bowtie2_db"`;
+		`cd "$path" ; $Phylosift::Settings::lastdb "$bowtie2_db" "$bowtie2_db_fasta"`;
+		`cd "$path" ; $Phylosift::Settings::bowtie2build "$bowtie2_db_fasta" "$bowtie2_db"`;
 	}
 
-# now create the .hmm files if they aren't already present
-# this is the case in the extended marker set, since the hmms are too big for transit
+	# now create the .hmm files if they aren't already present
+	# this is the case in the extended marker set, since the hmms are too big for transit
 	foreach my $marker (@markers) {
-		my $hmm_file =
-		  get_marker_hmm_file( self => $args{self}, marker => $marker );
+		my $hmm_file = get_marker_hmm_file( self => $args{self}, marker => $marker );
 		next if -e $hmm_file;
-		build_hmm(marker=>$marker);
+		build_hmm( marker => $marker );
 	}
 }
 
 sub build_hmm {
-	my %args        = @_;
-	my $marker = $args{marker} || miss("marker");	
+	my %args     = @_;
+	my $marker   = $args{marker} || miss("marker");
 	my $hmm_file = get_marker_hmm_file( self => $args{self}, marker => $marker );
 	my $stk_file = get_marker_stockholm_file( self => $args{self}, marker => $marker );
 	`$Phylosift::Settings::hmmbuild "$hmm_file" "$stk_file"`;
@@ -1703,6 +1716,7 @@ sub gather_markers {
 	my $force_gather = $args{force_gather} || 0;
 	my $path         = $args{path} || $Phylosift::Settings::marker_dir;
 	my @marks        = ();
+
 	# try to use a marker list file if it exists
 	if ( !defined($marker_file) && !$force_gather ) {
 		$marker_file = "$path/marker_list.txt" if -e "$path/marker_list.txt";
@@ -1720,8 +1734,7 @@ sub gather_markers {
 			$marker_lookup{ get_marker_basename( marker => $_ ) } = $_;
 		}
 		close($MARKERS_IN);
-	}
-	else {
+	} else {
 
 		# gather all markers
 		# this is for the original marker set
@@ -1732,18 +1745,17 @@ sub gather_markers {
 			push( @marks, $1 );
 		}
 
-	 # now gather directory packaged markers (new style)
-	 # use maxdepth 2 for two-directory-level markers in the extended marker set
+		# now gather directory packaged markers (new style)
+		# use maxdepth 2 for two-directory-level markers in the extended marker set
 		my $MLIST = ps_open("find $path -maxdepth 2 -mindepth 1 -type d |");
 		while ( my $line = <$MLIST> ) {
 			chomp $line;
 			next if $line =~ /PMPROK/;
 			next if $line =~ /concat/;
 			next if $line =~ /representatives/;
-			next if $line =~ /.updated$/;   # just include the base version name
+			next if $line =~ /.updated$/;         # just include the base version name
 			next
-			  if $line =~
-			  /codon.updated.sub\d+$/;      # just include the base version name
+			  if $line =~ /codon.updated.sub\d+$/;    # just include the base version name
 			$line = substr( $line, length($path) + 1 );
 
 			# all markers need to have an hmm or a cm else they are not usable
@@ -1751,8 +1763,8 @@ sub gather_markers {
 			$baseline =~ s/.+\///g;
 			if ( !$missing_hmm ) {
 				next
-				  unless ( -e "$path/$line/$line.cm"
-					|| -e "$path/$line/$baseline.hmm" );
+				  unless (    -e "$path/$line/$line.cm"
+						   || -e "$path/$line/$baseline.hmm" );
 			}
 			$marker_lookup{$baseline} = $line;
 			push( @marks, $line );
@@ -1760,7 +1772,6 @@ sub gather_markers {
 	}
 	return @marks;
 }
-
 
 =head2 get_sequence_input_type
 
@@ -1781,34 +1792,30 @@ sub get_sequence_input_type {
 	$type{qtype}   = "none";
 	my $allcount = 0;
 	my $sequence = 1;
-	my $minq     =
-	  255;    # minimum fastq quality score (for detecting phred33/phred64)
+	my $minq     = 255;    # minimum fastq quality score (for detecting phred33/phred64)
 	my @lines;
 
 	while ( my $line = <$FILE> ) {
-		push(@lines, $line);
+		push( @lines, $line );
 		if ( $line =~ /^>/ ) {
 			$maxfound = $counter > $maxfound ? $counter : $maxfound;
 			$counter = 0;
 			$type{format} = "fasta" if $type{format} eq "unknown";
-		}
-		elsif ( $line =~ /^@/ || $line =~ /^\+/ ) {
+		} elsif ( $line =~ /^@/ || $line =~ /^\+/ ) {
 			$counter  = 0;
 			$sequence = 1;
 			$type{format} = "fastq" if $type{format} eq "unknown";
-		}
-		elsif ( $line =~ /^\+/ ) {
+		} elsif ( $line =~ /^\+/ ) {
 			$sequence = 0;
 			$type{format} = "fastq" if $type{format} eq "unknown";
-		}
-		elsif ( $type{format} eq "fastq" && !$sequence ) {
+		} elsif ( $type{format} eq "fastq" && !$sequence ) {
 
 			# check whether qualities are phred33 or phred64
 			for my $q ( split( //, $line ) ) {
 				$minq = ord($q) if ord($q) < $minq;
 			}
-		}
-		elsif ($sequence) {
+		} elsif ($sequence) {
+
 			#$sequence =~ s/[-\.]//g;    #removing gaps from the sequences
 			$line =~ s/[-\.]//g;
 			$counter  += length($line) - 1;
@@ -1827,8 +1834,8 @@ sub get_sequence_input_type {
 	debug "TYPE : " . $type{seqtype} . "\n";
 	$type{qtype} = "phred64" if $minq < 255;
 	$type{qtype} = "phred33" if $minq < 64;
-	$type{paired} = 0;    # TODO: detect interleaved read pairing
-	$type{buffer} = \@lines;	# a copy of all lines read in case we're streaming
+	$type{paired} = 0;                    # TODO: detect interleaved read pairing
+	$type{buffer} = \@lines;              # a copy of all lines read in case we're streaming
 	return \%type;
 }
 
@@ -1854,8 +1861,7 @@ sub get_sequence_input_type_quickndirty {
 	for ( my $i = 0 ; $i < 200 ; $i++ ) {
 		my $seekpos = int( rand( $filesize - 100 ) );
 		$seekpos = 0
-		  if ( $i == 0 )
-		  ; # always start with the first line in case the sequence is on a single line!
+		  if ( $i == 0 );    # always start with the first line in case the sequence is on a single line!
 		seek( $FILE, $seekpos, 0 );
 		$counter = 0;
 		my $line = <$FILE>;    # burn a line to be sure we get to sequence
@@ -1864,13 +1870,11 @@ sub get_sequence_input_type_quickndirty {
 				$format = "fasta";
 				last if $i > 0;
 				$i++;
-			}
-			elsif ( $line =~ /^@/ || $line =~ /^\+/ ) {
+			} elsif ( $line =~ /^@/ || $line =~ /^\+/ ) {
 				$format = "fastq";
 				last if $i > 0;
 				$i++;
-			}
-			else {
+			} else {
 				$counter += length($line);
 				$dnacount += $line =~ tr/[ACGTNacgtn]//;
 			}
@@ -1913,10 +1917,8 @@ sub print_citations {
 	print "PhyloSift -- Phylogenetic analysis of genomes and metagenomes\n";
 	print "(c) 2011, 2012 Aaron Darling and Guillaume Jospin\n";
 	print "\nCITATION:\n";
-	print
-"		PhyloSift. A. Darling, H. Bik, G. Jospin, J. A. Eisen. Manuscript in preparation\n";
-	print
-"\n\nPhyloSift incorporates several other software packages, please consider also citing the following papers:\n";
+	print "		PhyloSift. A. Darling, H. Bik, G. Jospin, J. A. Eisen. Manuscript in preparation\n";
+	print "\n\nPhyloSift incorporates several other software packages, please consider also citing the following papers:\n";
 	print qq{
 
 		pplacer: linear time maximum-likelihood and Bayesian phylogenetic placement of sequences onto a fixed reference tree.
@@ -2001,9 +2003,9 @@ sub hmmalign_to_model {
 	my $ref_ali       = $args{reference_aln};
 	my ( $core_name, $path, $ext ) = fileparse( $sequence_file, qr/\.[^.]*$/ );
 	if ( !-e "$target_dir/$core_name.aln" ) {
-`hmmalign --mapali "$ref_ali" --trim --outformat afa -o "$target_dir/$core_name.aln" "$hmm_profile" "$sequence_file"`;
+		`hmmalign --mapali "$ref_ali" --trim --outformat afa -o "$target_dir/$core_name.aln" "$hmm_profile" "$sequence_file"`;
 
-#	    `hmmalign --outformat afa -o $target_dir/$core_name.aln $hmm_profile $sequence_file`;
+		#	    `hmmalign --outformat afa -o $target_dir/$core_name.aln $hmm_profile $sequence_file`;
 	}
 	return "$target_dir/$core_name.aln";
 }

@@ -162,8 +162,6 @@ sub set_default_values{
 	Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::min_aligned_residues,value=>$minres);
 	Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::rna_split_size,value=>500);
 	Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::gap_character,value=>"-");
-	Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::hmmsearch_evalue,value=>10);
-	Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::hmmsearch_options,value=>"--max");
 	Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::cm_align_long_tau,value=>"1e-6");
 	Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::cm_align_long_mxsize,value=>"2500");
 	#Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::cm_align_long_ali,value=>"");
@@ -562,7 +560,7 @@ sub alignAndMask {
 		if ( $seqCount == 0 ) {
 
 			#removing the marker from the list if no sequences were added to the alignment file
-			warn "Masking or hmmsearch thresholds failed, removing $marker from the list\n";
+			warn "Masking thresholds failed, removing $marker from the list\n";
 			splice @{$markRef}, $index--, 1 if $protein; # index may have been changed if not protein
 		}elsif( $seqCount > 1 && $Phylosift::Settings::unique ) {
 			unlink( $outputFastaAA );
@@ -701,6 +699,7 @@ sub concatenate_alignments {
 	my $aln_ref       = $args{alignments};
 	my %concat_aln;
 	my $cur_len = 0;
+	my $seq_count = 0;
 	foreach my $alnfile (@$aln_ref) {
 		my $marker = basename($alnfile);
 		$marker =~ s/\..+//g;                     # FIXME: this should really come from a list of markers
@@ -712,6 +711,7 @@ sub concatenate_alignments {
 			while ( my $line = <$ALN> ) {
 				chomp $line;
 				if ( $line =~ />(.+)/ ) {
+					$seq_count++;
 					$id = $1;
 				} elsif ( defined($id) ) {
 					$concat_aln{$id} = "" unless defined( $concat_aln{$id} );
@@ -724,7 +724,7 @@ sub concatenate_alignments {
 		}
 		$cur_len += $len * $gapmultiplier;
 	}
-
+	return if $seq_count <= 0; #don't print an empty file if we don't need to
 	# write out the alignment
 	my $ALNOUT = ps_open( ">" . $output_fasta );
 	foreach my $id ( keys(%concat_aln) ) {
