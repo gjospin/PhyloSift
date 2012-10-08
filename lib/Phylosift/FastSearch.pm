@@ -856,7 +856,8 @@ sub get_hits_contigs {
 	my $pid      = $args{pid} || miss("pid");
 	my $prev_hit = "";
 	my $suff     = 0;
-
+	my %hit_counts = ();
+	my $hit_counts_total = 0;
 # key is a contig name
 # value is an array of arrays, each one has [marker,bit_score,left-end,right-end,suffix]
 	my %contig_hits;
@@ -959,11 +960,16 @@ sub get_hits_contigs {
 					$markerName, $bitScore,   $query_start,
 					$query_end,  $frameshift, $pid . "_" . $suff
 				];
+				$hit_counts{$markerName}=0 unless exists $hit_counts{$markerName};
+				$hit_counts{$markerName}++;
+				$hit_counts_total++;
 				push( @{ $contig_hits{$query} }, @hitdata );
 			}
 		}
 		elsif ( !defined( $contig_top_bitscore{$query} ) ) {
-
+			$hit_counts{$markerName}=0 unless exists $hit_counts{$markerName};
+			$hit_counts{$markerName}++;
+			$hit_counts_total++;
 			my @hitdata = [
 				$markerName, $bitScore,   $query_start,
 				$query_end,  $frameshift, $pid 
@@ -972,6 +978,17 @@ sub get_hits_contigs {
 			$contig_top_bitscore{$query}{$markerName} = $bitScore;
 		}
 		$prev_hit = $query;
+	}
+	foreach my $marker (keys %hit_counts){
+		if($hit_counts_total > $Phylosift::Settings::CHUNK_MAX_SEQS/10 && $hit_counts{$marker}/$hit_counts_total > 0.5 ){
+			if($self->{"custom_chunk_size"} ==0){
+				my $warning = "\n\n\nDetected large number of hits to a single marker with Default chunk size used.\n";
+				$warning .=  "This will require a large amount of memory. \n";
+				$warning .= "Manually tune the number of sequences to be processed per chunks in phylosiftrc\n\n\n";
+				Phylosift::Utilities::print_bat_signal();
+				croak $warning;
+			}
+		}
 	}
 	return \%contig_hits;
 }
@@ -1052,7 +1069,8 @@ sub get_hits_sam {
 	my %markerTopScores;
 	my %topScore = ();
 	my %contig_hits;
-
+	my %hit_counts = ();
+	my $hit_counts_total=0;
 	# return empty if there is no data
 	return unless defined($HITSTREAM);
 	return \%contig_hits unless defined( fileno $HITSTREAM );
@@ -1102,6 +1120,9 @@ sub get_hits_sam {
 
 		#only keep the top hit
 		if ( $topScore{$query} <= $score ) {
+			$hit_counts{$marker_name}=0 unless exists $hit_counts{$marker_name};
+			$hit_counts{$marker_name}++;
+			$hit_counts_total++;
 			$contig_hits{$query} = [
 				[
 					$marker_name, $score,
@@ -1113,6 +1134,17 @@ sub get_hits_sam {
 		}
 	}
 	close($HITSTREAM);
+	foreach my $marker (keys %hit_counts){
+		if($hit_counts_total > $Phylosift::Settings::CHUNK_MAX_SEQS/10 && $hit_counts{$marker}/$hit_counts_total > 0.5 ){
+			if($self->{"custom_chunk_size"} ==0){
+				my $warning = "\n\n\nDetected large number of hits to a single marker with Default chunk size used.\n";
+				$warning .=  "This will require a large amount of memory. \n";
+				$warning .= "Manually tune the number of sequences to be processed per chunks in phylosiftrc\n\n\n";
+				Phylosift::Utilities::print_bat_signal();
+				croak $warning;
+			}
+		}
+	}
 	return \%contig_hits;
 }
 
@@ -1286,7 +1318,9 @@ sub write_candidates {
 		}
 	}
 	debug "$type Got " . scalar( keys %markerHits ) . " markers with hits\n";
-
+	
+	
+	
 	#write the read+ref_seqs for each markers in the list
 	foreach my $marker ( keys %markerHits ) {
 

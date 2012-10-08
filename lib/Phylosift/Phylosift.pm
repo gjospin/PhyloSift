@@ -41,6 +41,7 @@ sub new {
 	$self->{"dna"}         = undef;
 	my %temp_hash = ();
 	$self->{"read_names"} = \%temp_hash;
+	$self->{"custom_chunk_size"} = 0;
 	read_phylosift_config( self => $self );
 	bless($self);
 	return $self;
@@ -236,7 +237,6 @@ sub read_phylosift_config {
 	# a dev directory.  then config in system dir, then user's home.
 	# let each one override its predecessor.
 	{
-
 		package Phylosift::Settings;
 		do "$scriptpath/phylosiftrc";
 		do "$scriptpath/../phylosiftrc";
@@ -244,7 +244,9 @@ sub read_phylosift_config {
 		do "$ENV{HOME}/.phylosiftrc";
 		do $custom_config if defined $custom_config;
 	}
-
+	if(defined $Phylosift::Settings::chunk_size){
+		$args{self}->{"custom_chunk_size"} = 1;
+	}
 	#apply the command line parameters to override the RC files
 }
 
