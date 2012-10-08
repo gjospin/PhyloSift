@@ -199,10 +199,6 @@ sub program_checks {
 		carp
 "Warning : a different version of HMMER was found. PhyloSift was tested with HMMER 3.0rc1\n";
 	}
-	Phylosift::Settings::set_default(parameter => \$Phylosift::Settings::hmmsearch,value=> get_program_path(
-		prog_name => "hmmsearch",
-		prog_path => $Phylosift::Settings::hmmer3_path
-	));
 	Phylosift::Settings::set_default(parameter => \$Phylosift::Settings::hmmbuild,value=> get_program_path(
 		prog_name => "hmmbuild",
 		prog_path => $Phylosift::Settings::hmmer3_path

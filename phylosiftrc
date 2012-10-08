@@ -26,7 +26,6 @@
 # $rppr          = "";
 # $taxit         = "";
 # $hmmalign      = "";
-# $hmmsearch     = "";
 # $hmmbuild      = "";
 # $raxml         = "";
 # $readconciler  = "";
@@ -106,10 +105,6 @@ $align_fraction_isolate = 0.8; # use this align_fraction when in isolate mode on
 #$min_aligned_residues=50;
 #$rna_split_size = 500; #sequences longer than this value will undergo the long sequence pipeline
 #$gap_character = "-";
-
-#hmmsearch
-#$hmmsearch_evalue = 10;
-#$hmmsearch_options = "--max";
 
 #hmmalign
 
