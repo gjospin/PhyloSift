@@ -379,16 +379,16 @@ sub concat_marker_files {
 	my $catline = join( " ", @$cfref );
 	$catline .= " ";
 	my $fasta = get_fasta_filename(marker=>$marker, updated=>1);
-	`cat $catline $cat_ch "$local_directory/$fasta"`;
+	`cat $catline $cat_ch "$local_directory/$fasta" 2> /dev/null`;
 	$catline =~ s/updated\.fasta /codon\.updated\.fasta /g;
 	if ( Phylosift::Utilities::is_protein_marker( marker => $marker ) ) {
 		my $codon_fasta = get_fasta_filename(marker=>$marker, updated=>1, dna=>1);
-		`cat $catline $cat_ch "$local_directory/$codon_fasta"`;
+		`cat $catline $cat_ch "$local_directory/$codon_fasta" 2> /dev/null`;
 	}
 	unless($marker eq "concat"){
 		$catline =~ s/\.codon\.updated\.fasta/\.unmasked/g;
 		my $reps = get_reps_filename( marker => $marker, updated => 1 );
-		`cat $catline $cat_ch "$local_directory/$reps"`;
+		`cat $catline $cat_ch "$local_directory/$reps" 2> /dev/null`;
 	}
 }
 
@@ -423,8 +423,8 @@ sub collate_markers {
 	# NFS is slooooow...
 	print STDERR "Working with " . scalar(@markerlist) . " markers\n";
 	print STDERR "Listing all files in results dir\n";
-	my @alldata = `find "$local_directory" -name "*.fasta"`;
-	print STDERR "Found " . scalar(@alldata) . " files\n";
+	my @alldata = `find "$local_directory" -maxdepth 1 -type d -name "*.fasta"`;
+	print STDERR "Found " . scalar(@alldata) . " genomes\n";
 	unshift( @markerlist, "concat" );
 	my %alltaxa;
 	my @job_ids;
@@ -433,12 +433,14 @@ sub collate_markers {
 
 		# find all alignments with this marker
 		my @catfiles = ();
-		foreach my $file (@alldata) {
-			next unless $file =~ /(.+\.fasta)\/alignDir\/$marker.updated.fasta/;
+		foreach my $fff (@alldata) {
+			my $file = $fff;
+			next unless $file =~ /(.+\.fasta)/;
+			chomp $file;
+			$file .= "/alignDir/$marker.updated.fasta";
 			my $genome = $1;
 			my $taxon = $1 if $genome =~ /\.(\d+)\.fasta/;
 			next if( defined($taxon) && defined($ko_list{$taxon}));
-			chomp($file);
 			push( @catfiles, $file );
 
 			# cat the files into the alignment in batches
@@ -461,13 +463,11 @@ sub collate_markers {
 		my $fasta = get_fasta_filename(marker=>$marker, updated=>1);
 		next unless -e "$local_directory/$fasta";
 		create_taxon_id_table(alignment => "$local_directory/$fasta", output => "$marker_dir/$fasta.taxon_ids", alltaxa=>\%alltaxa);
-#		fix_names_in_alignment( alignment => "$local_directory/$fasta" );
 		`cp "$local_directory/$fasta" "$marker_dir/$fasta"`;
 		my $reps = get_reps_filename( marker => $marker, updated => 1 );
 		my $clean_reps = get_reps_filename( marker => $marker, updated => 1, clean => 1 );
 		if(-e "$local_directory/$reps" ){
 			clean_representatives(infile=>"$local_directory/$reps", outfile=>"$local_directory/$clean_reps" );
-#			fix_names_in_alignment( alignment => "$local_directory/$clean_reps" );
 			`cp "$local_directory/$clean_reps" "$marker_dir/$clean_reps"`;
 		}
 		debug "Launching marker build for $marker\n";
@@ -477,7 +477,6 @@ sub collate_markers {
 		my $codon_fasta = get_fasta_filename(marker=>$marker, updated=>1,dna=>1);
 		next unless -e "$local_directory/$codon_fasta";
 		create_taxon_id_table(alignment => "$local_directory/$codon_fasta", output => "$marker_dir/$codon_fasta.taxon_ids", alltaxa=>\%alltaxa);
-##		fix_names_in_alignment( alignment => "$local_directory/$codon_fasta" );
 		`cp "$local_directory/$codon_fasta" "$marker_dir/$codon_fasta"`;
 
 		debug "Launching marker build for $marker.codon\b";
@@ -673,12 +672,13 @@ sub create_taxon_id_table {
 			my $header = $1;
 			if ( $header =~ /\.(\d+?)\.fasta/ ) {
 				my $taxon_id=$1;
+				next unless defined $taxon_id;
 				my $t=$taxon_id;
 				# need to remove anything that NCBI considers "unclassified", currently taxon node ID 12908.
-				for(; $t != 1; $t = $parent->{$t}){
+				for(; defined($t) && $t != 1; $t = $parent->{$t}->[0]){
 					last if $t == 12908;
 				}
-				next if $t == 12908;
+				next if defined($t) && $t == 12908;
 				print $OUTPUT "$header\t$taxon_id\n";
 				$alltaxa->{$1}=1;
 			}
