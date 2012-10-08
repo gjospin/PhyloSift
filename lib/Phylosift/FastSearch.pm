@@ -1202,7 +1202,11 @@ sub write_candidates {
 			$new_seq = substr( $seq->seq, $start, $end - $start );
 			my $new_id = $seq->id;
 			my $coord = ".$start.$end";
-			$new_id =~ s/(\S+)(\/\d)/$1$coord$2/;
+			if($Phylosift::Settings::paired){
+				$new_id =~ s/(\d+)(\/\d)/$1$coord$2/;
+			}else{
+				$new_id =~ s/(\d+)/$1$coord/;
+			}
 			#$new_id .= "_p$suff" if ( $Phylosift::Settings::isolate );
 
 			#if we're working from DNA then need to translate to protein
