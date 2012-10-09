@@ -450,7 +450,7 @@ sub merge_sequence_taxa {
 
 	my $MARKER_HITS = ps_open( ">" . $Phylosift::Settings::file_dir . "/marker_summary.txt" );
 	print $MARKER_HITS "Marker_name\tNumber of hits\n";
-	foreach my $mname ( sort { $marker_number_hits{$b} <=> $marker_number_hits{a} } keys %marker_number_hits ) {
+	foreach my $mname ( sort { $marker_number_hits{$b} <=> $marker_number_hits{$a} } keys %marker_number_hits ) {
 		print $MARKER_HITS "$mname\t$marker_number_hits{$mname}\n";
 	}
 	close($MARKER_HITS);
