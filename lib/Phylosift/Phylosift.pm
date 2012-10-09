@@ -162,15 +162,9 @@ sub run {
 
 	# Forcing usage of updated markers
 	debug "Using updated markers\n" if $Phylosift::Settings::updated;
-	my @markers = Phylosift::Utilities::gather_markers(
-		self        => $self,
-		marker_file => $custom
-	);
+	my @markers = Phylosift::Utilities::gather_markers( self => $self, marker_file => $custom );
 	if ($Phylosift::Settings::extended) {
-		@markers = Phylosift::Utilities::gather_markers(
-			self => $self,
-			path => $Phylosift::Utilities::markers_extended_dir
-		);
+		@markers = Phylosift::Utilities::gather_markers( self => $self, path => $Phylosift::Utilities::markers_extended_dir );
 	}
 
 	debug "MODE :: " . $self->{"mode"} . "\n";
@@ -178,17 +172,10 @@ sub run {
 #changed > to >> so that we append to that file every time a run is restarted and we can keep track if there was a change in DB or in command
 #Also it prevents the file from being clobbered every time a run is restarted.
 	if ( $self->{"mode"} eq 'search' || $self->{"mode"} eq 'all' ) {
-		my $RUNINFO =
-		  ps_open(
-			">>" . Phylosift::Utilities::get_run_info_file( self => $self ) );
-		Phylosift::Summarize::print_run_info(
-			self   => $self,
-			OUTPUT => $RUNINFO
-		);
-		$self =
-		  run_search( self => $self, cont => $continue, marker => \@markers );
+		my $RUNINFO = ps_open( ">>" . Phylosift::Utilities::get_run_info_file( self => $self ) );
+		Phylosift::Summarize::print_run_info( self => $self, OUTPUT => $RUNINFO );
+		$self = run_search( self => $self, cont => $continue, marker => \@markers );
 
-		#		Phylosift::Summarize::merge_sequence_taxa(self=>$self);
 		debug "MODE :: " . $self->{"mode"} . "\n";
 	}
 	debug "MODE :: " . $self->{"mode"} . "\n";
