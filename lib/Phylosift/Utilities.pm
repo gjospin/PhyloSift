@@ -1761,7 +1761,6 @@ sub gather_markers {
 		while ( my $line = <$MLIST> ) {
 			chomp $line;
 			next if $line =~ /PMPROK/;
-			next if $line =~ /DNGNGWU/;
 			next if $line =~ /concat/;
 			next if $line =~ /representatives/;
 			next if $line =~ /.updated$/;         # just include the base version name
