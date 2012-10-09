@@ -1023,6 +1023,8 @@ sub get_marker_taxon_map {
 	my $marker_path = get_marker_path( self => $self, marker => $marker );
 	my $bname       = get_marker_basename( marker => $marker );
 	my $decorated   = get_decorated_marker_name(%args);
+	my $deco = "$marker_path/$decorated/$decorated.taxonmap";
+	return $deco if -e $deco;
 	return "$marker_path/$decorated/$bname.taxonmap";
 }
 
@@ -1055,7 +1057,14 @@ Returns the gene id file name
 
 sub get_gene_id_file {
 	my %args = @_;
+	my $marker = $args{marker} || miss("marker");	
 	my $dna = $args{dna} || 0;
+	my $marker_path = get_marker_path( marker => $marker );
+	my $bname       = get_marker_basename( marker => $marker );
+	my $decorated   = get_decorated_marker_name(%args);
+	my $deco = "$marker_path/$decorated/$decorated.gene_map";
+	return $deco;
+	return $deco if -e $deco;
 	return "$Phylosift::Settings::marker_dir/gene_ids.codon.txt" if $dna;
 	return "$Phylosift::Settings::marker_dir/gene_ids.aa.txt";
 }
@@ -1734,6 +1743,7 @@ sub gather_markers {
 			$marker_lookup{ get_marker_basename( marker => $_ ) } = $_;
 		}
 		close($MARKERS_IN);
+		return @marks;
 	} else {
 
 		# gather all markers
@@ -1751,26 +1761,25 @@ sub gather_markers {
 		while ( my $line = <$MLIST> ) {
 			chomp $line;
 			next if $line =~ /PMPROK/;
+			next if $line =~ /DNGNGWU/;
 			next if $line =~ /concat/;
 			next if $line =~ /representatives/;
 			next if $line =~ /.updated$/;         # just include the base version name
-			next
-			  if $line =~ /codon.updated.sub\d+$/;    # just include the base version name
+			next if $line =~ /codon.updated.sub\d+$/;    # just include the base version name
 			$line = substr( $line, length($path) + 1 );
 
 			# all markers need to have an hmm or a cm else they are not usable
 			my $baseline = $line;
 			$baseline =~ s/.+\///g;
 			if ( !$missing_hmm ) {
-				next
-				  unless (    -e "$path/$line/$line.cm"
-						   || -e "$path/$line/$baseline.hmm" );
+				next unless ( -e "$path/$line/$line.cm" || -e "$path/$line/$baseline.hmm" );
 			}
 			$marker_lookup{$baseline} = $line;
 			push( @marks, $line );
 		}
 	}
-	return @marks;
+	# always sort these, since the concats need to be used in the same order every time
+	return sort @marks;
 }
 
 =head2 get_sequence_input_type
