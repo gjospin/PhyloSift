@@ -423,8 +423,8 @@ sub collate_markers {
 	# NFS is slooooow...
 	print STDERR "Working with " . scalar(@markerlist) . " markers\n";
 	print STDERR "Listing all files in results dir\n";
-	my @alldata = `find "$local_directory" -maxdepth 1 -type d -name "*.fasta"`;
-	print STDERR "Found " . scalar(@alldata) . " genomes\n";
+	my @alldata = `find "$local_directory" -name "*.fasta"`;
+	print STDERR "Found " . scalar(@alldata) . " sequence files\n";
 	unshift( @markerlist, "concat" );
 	my %alltaxa;
 	my @job_ids;
@@ -433,14 +433,12 @@ sub collate_markers {
 
 		# find all alignments with this marker
 		my @catfiles = ();
-		foreach my $fff (@alldata) {
-			my $file = $fff;
-			next unless $file =~ /(.+\.fasta)/;
-			chomp $file;
-			$file .= "/alignDir/$marker.updated.fasta";
+		foreach my $file (@alldata) {
+			next unless $file =~ /(.+\.fasta)\/alignDir\/$marker.updated.fasta/;
 			my $genome = $1;
 			my $taxon = $1 if $genome =~ /\.(\d+)\.fasta/;
 			next if( defined($taxon) && defined($ko_list{$taxon}));
+			chomp($file);
 			push( @catfiles, $file );
 
 			# cat the files into the alignment in batches
@@ -462,8 +460,9 @@ sub collate_markers {
 		# now rename sequences with their taxon IDs 
 		my $fasta = get_fasta_filename(marker=>$marker, updated=>1);
 		next unless -e "$local_directory/$fasta";
-		create_taxon_id_table(alignment => "$local_directory/$fasta", output => "$marker_dir/$fasta.taxon_ids", alltaxa=>\%alltaxa);
-		`cp "$local_directory/$fasta" "$marker_dir/$fasta"`;
+		filter_short_seqs_from_fasta(input_fasta => "$local_directory/$fasta", output_fasta => "$marker_dir/$fasta", min_pct => 50);
+		create_taxon_id_table(alignment => "$marker_dir/$fasta", output => "$marker_dir/$fasta.taxon_ids", alltaxa=>\%alltaxa);
+#		`cp "$local_directory/$fasta" "$marker_dir/$fasta"`;
 		my $reps = get_reps_filename( marker => $marker, updated => 1 );
 		my $clean_reps = get_reps_filename( marker => $marker, updated => 1, clean => 1 );
 		if(-e "$local_directory/$reps" ){
@@ -476,8 +475,9 @@ sub collate_markers {
 		
 		my $codon_fasta = get_fasta_filename(marker=>$marker, updated=>1,dna=>1);
 		next unless -e "$local_directory/$codon_fasta";
-		create_taxon_id_table(alignment => "$local_directory/$codon_fasta", output => "$marker_dir/$codon_fasta.taxon_ids", alltaxa=>\%alltaxa);
-		`cp "$local_directory/$codon_fasta" "$marker_dir/$codon_fasta"`;
+		filter_short_seqs_from_fasta(input_fasta => "$local_directory/$codon_fasta", output_fasta => "$marker_dir/$codon_fasta", min_pct => 50);
+		create_taxon_id_table(alignment => "$marker_dir/$codon_fasta", output => "$marker_dir/$codon_fasta.taxon_ids", alltaxa=>\%alltaxa);
+#		`cp "$local_directory/$codon_fasta" "$marker_dir/$codon_fasta"`;
 
 		debug "Launching marker build for $marker.codon\b";
 		$job_id = launch_marker_build(marker=>$marker, dna=>1, batch_script=>$bs);
@@ -710,6 +710,39 @@ sub fix_names_in_alignment {
 	close $INALN;
 	close $OUTALN;
 	`mv "$alignment.fixed" "$alignment"`;
+}
+
+
+sub filter_short_seqs_from_fasta {
+	my %args         = @_;
+	my $input_fasta  = $args{input_fasta} || miss("input_fasta");
+	my $output_fasta = $args{output_fasta} || miss("output_fasta");
+	my $min_pct      = $args{min_pct} || miss("min_pct");
+
+	# create a pruned fasta
+	my $FASTA = ps_open( $input_fasta );
+	my $PRUNEDFASTA = ps_open( ">" . $output_fasta );
+	my $curhdr = "";
+	my $curseq = "";
+	while ( my $line = <$FASTA> ) {
+		chomp $line;
+		if ( $line =~ /^>(.+)/ ) {
+			if(length($curseq) > 0){
+				my $glen = $curseq =~ tr/-/-/;
+				my $known_pct = 100*(length($curseq)-$glen) / length($curseq);
+				print $PRUNEDFASTA "$curhdr\n$curseq\n" if $known_pct > $min_pct;
+				$curseq = "";
+			}
+			$curhdr = $line;
+		}else{
+			$curseq .= $line;
+		}
+	}
+	if(length($curseq) > 0){
+		my $glen = $curseq =~ tr/-/-/;
+		my $known_pct = 100*(length($curseq)-$glen) / length($curseq);
+		print $PRUNEDFASTA "$curhdr\n$curseq\n" if $known_pct > $min_pct;
+	}
 }
 
 sub filter_fasta {
