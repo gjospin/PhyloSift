@@ -1063,7 +1063,6 @@ sub get_gene_id_file {
 	my $bname       = get_marker_basename( marker => $marker );
 	my $decorated   = get_decorated_marker_name(%args);
 	my $deco = "$marker_path/$decorated/$decorated.gene_map";
-	return $deco;
 	return $deco if -e $deco;
 	return "$Phylosift::Settings::marker_dir/gene_ids.codon.txt" if $dna;
 	return "$Phylosift::Settings::marker_dir/gene_ids.aa.txt";

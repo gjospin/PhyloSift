@@ -207,7 +207,6 @@ sub summarize {
 																				dna        => $dna,
 																				sub_marker => $sub
 				);
-				debug "MARKERFILE : $markermapfile\n";
 				next
 				  unless -e $markermapfile;    # can't summarize if there ain't no mappin'!
 				my $markerncbimap = read_taxonmap( file => $markermapfile );
@@ -493,15 +492,30 @@ sub merge_sequence_taxa {
 		# skip this if only a simple summary is desired (it's slow)
 		debug "Generating krona\n";
 		my $html_report = $Phylosift::Settings::file_dir."/".$self->{"fileName"}.".html";
-		$self->{HTML} = ps_open(">$html_report") unless defined $self->{HTML};
-		Phylosift::HTMLReport::add_krona(self=>$self, OUTPUT=>$self->{HTML}, summary => \%concat_summary ) if scalar( keys(%concat_summary) ) > 0;
-#		%ncbi_summary = ();
-#		%ncbi_summary = %all_summary;
-#		krona_report(
-#			self => $self,
-#			file => $self->{"fileName"} . ".allmarkers.html"
-#		  )
-#		  if scalar( keys(%all_summary) ) > 0;
+		#$self->{HTML} = ps_open(">$html_report") unless defined $self->{HTML};
+		if(scalar( keys(%concat_summary) ) > 0){
+			if(!defined $self->{HTML} ){
+				$self->{HTML} = Phylosift::HTMLReport::begin_report( self=>$self, file => $html_report );
+			}
+			Phylosift::HTMLReport::add_krona(self=>$self, OUTPUT=>$self->{HTML}, summary => \%concat_summary );
+		}else{
+			my $FH = ps_open(">$html_report");
+			print $FH "No results Found\n";
+			close($FH);
+		}
+		%ncbi_summary = ();
+		%ncbi_summary = %all_summary;
+		my $html_all_report = $Phylosift::Settings::file_dir."/".$self->{"fileName"}."_allmarkers.html";
+		if(scalar( keys(%ncbi_summary) ) > 0){
+			if(!defined $self->{HTMLall} ){
+				$self->{HTMLall} = Phylosift::HTMLReport::begin_report( self=>$self, file => $html_all_report );
+			}
+			Phylosift::HTMLReport::add_krona(self=>$self, OUTPUT=>$self->{HTMLall}, summary => \%ncbi_summary );
+		}else{
+			my $FH = ps_open(">$html_all_report");
+			print $FH "No results Found\n";
+			close($FH);
+		}
 	}
 	Phylosift::Utilities::end_timer( name => "runKrona" );
 
@@ -731,7 +745,6 @@ sub rename_sequences {
 		if ( $file =~ m/\.jplace/ ) {
 			my @treedata = <$FH>;	
 			my $json_data = decode_json( join( "", @treedata ) );
-			debug "Replacing names in a jplace file\n";
 			# parse the tree
 			for ( my $i = 0 ; $i < @{ $json_data->{placements} } ; $i++ ) {
 				my $placement = $json_data->{placements}->[$i];
