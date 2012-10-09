@@ -363,7 +363,7 @@ sub place_reads{
 		return unless -e $markermapfile;	# can't summarize if there ain't no mappin'!
 		debug "Reading taxonmap\n";
 		my $taxonmap = Phylosift::Summarize::read_taxonmap(file=>$markermapfile);
-		name_taxa_in_jplace( self => $self, input => $jplace, output => $sample_jplace_naming, taxonmap=>$taxonmap );
+		name_taxa_in_jplace( self => $self, input => $jplace, output => $sample_jplace_naming, taxonmap=>$taxonmap, marker => $marker );
 		debug "merging $Phylosift::Settings::guppy merge -o $sample_jplace $sample_jplace_naming $sample_jplace\n";
 		`$Phylosift::Settings::guppy merge -o $sample_jplace $sample_jplace_naming $sample_jplace` if -f $sample_jplace;
 		`cp $sample_jplace_naming $sample_jplace` unless -f $sample_jplace;
@@ -393,7 +393,7 @@ sub place_reads{
 		my $taxonmap = Phylosift::Summarize::read_taxonmap(file=>$markermapfile);
 
 		# rename nodes
-		name_taxa_in_jplace( self => $self, input => $jplace, output => $jplace, taxonmap=>$taxonmap );
+		name_taxa_in_jplace( self => $self, input => $jplace, output => $jplace, taxonmap=>$taxonmap, marker => $marker );
 	}
 	return $jplace unless defined($covref);
 	debug "Weighting sequences in $marker\n";
@@ -498,8 +498,9 @@ sub directoryPrepAndClean {
 my %namemap;
 sub read_name_map {
 	my %args   = @_;
+	my $marker = $args{marker} || miss("marker");
 	return \%namemap if %namemap;
-	my $id_file = Phylosift::Utilities::get_gene_id_file();
+	my $id_file = Phylosift::Utilities::get_gene_id_file(marker=>$marker);
 	my $NAMETABLE = ps_open( $id_file );
 	while ( my $line = <$NAMETABLE> ) {
 		chomp $line;
@@ -514,10 +515,11 @@ sub name_taxa_in_jplace {
 	my $self   = $args{self} || miss("self");
 	my $input  = $args{input} || miss("input");
 	my $output = $args{output} || miss("output");
+	my $marker = $args{marker} || miss("marker");
 	my $taxonmap = $args{taxonmap} || miss("taxonmap");
 
 	# read in the taxon name map
-	my $namemap = read_name_map();
+	my $namemap = read_name_map(marker=>$marker);
 	Phylosift::Summarize::read_ncbi_taxon_name_map();
 
 	# parse the tree file to get leaf node names
