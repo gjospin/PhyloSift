@@ -404,9 +404,7 @@ sub alignAndMask {
 		my $stockholm_file = Phylosift::Utilities::get_marker_stockholm_file( self => $self, marker => $marker );
 		my @lines;
 		my $protein = Phylosift::Utilities::is_protein_marker( marker => $marker );
-		debug "$marker : $protein\n";
 		$long_rna = ($long_rna + 1)%2 unless $protein;
-		debug "LONG RNA : $long_rna\n";
 		my $candidate;
 		if(!$protein && $long_rna == 0){
 			$candidate = Phylosift::Utilities::get_candidate_file( self => $self, marker => $marker, type => ".rna.short", chunk => $chunk );
@@ -724,7 +722,7 @@ sub concatenate_alignments {
 		}
 		$cur_len += $len * $gapmultiplier;
 	}
-	return if $seq_count <= 0; #don't print an empty file if we don't need to
+	#return if $seq_count <= 0; #don't print an empty file if we don't need to
 	# write out the alignment
 	my $ALNOUT = ps_open( ">" . $output_fasta );
 	foreach my $id ( keys(%concat_aln) ) {
