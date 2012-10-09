@@ -73,7 +73,6 @@ sub build_marker {
 	my $fasta_file = "$target_dir/$core.fasta";
 	$aln_file = check_sequence_integrity(input=>$aln_file , output_dir=> $target_dir) ;
 
-	
 	my $clean_aln = $aln_file;
 	my $seq_count = -1;
 	unless($opt->{update_only}){
@@ -102,8 +101,10 @@ sub build_marker {
 			reference_alignment => $stk_aln,
 			sequence_count      => $seq_count
 		);
+		$aln_file = $new_alignment_file;
 	}elsif( -e $opt->{unaligned} ){
 		# copy the unmasked sequences if they exist
+		debug "Copying the unaligned fasta sequences\n";
 		`cp $opt->{unaligned} $fasta_file`;
 	}
 	$clean_aln = "$target_dir/$core.clean";
@@ -115,9 +116,8 @@ sub build_marker {
 
 
 	my ( $fasttree_file, $tree_log_file ) = generate_fasttree( alignment_file => $clean_aln, target_directory => $target_dir ) unless -e "$target_dir/$core.tree";
-
 	pd_prune_fasta( tre => $fasttree_file, distance => $tree_pd, fasta => $clean_aln, pruned_fasta => "$target_dir/$core.pruned.fasta" );
-
+	
 	( $fasttree_file, $tree_log_file ) = generate_fasttree( alignment_file => "$target_dir/$core.pruned.fasta", target_directory => $target_dir );
 	`mv $target_dir/$core.pruned.fasta $clean_aln`;
 
@@ -183,7 +183,7 @@ sub build_marker {
 
 		`rm -rf "$tmpread_file" "$mangled" "$tmp_jplace" "$ncbi_sub_tree"  "$target_dir/temp_ref"`;
 	}
-	
+
 #use taxit to create a new reference package required for running PhyloSift
 #needed are : 1 alignment file, 1 representatives fasta file, 1 hmm profile, 1 tree file, 1 log tree file.
 	my $taxdb_opts = ""; # add taxit-friendly taxon labels if available
@@ -217,7 +217,8 @@ sub create_taxon_table {
 	my %allanc;
 	while(my $line = <$TAXIN>){
 		chomp $line;
-		my ($seq_name, $tid) = split(/\t/, $line);
+		my ($seq_name, $tid) = split(/\s+/, $line);
+		next unless $tid;
 		my @tinfo = Phylosift::Summarize::get_taxon_info(taxon=>$tid); # lookup will check for any merging
 		# not sure what taxit doesn't like about the astrovirus but it won't handle them...
 		if (length($tinfo[2]) > 0 && $tinfo[2] ne "ERROR" && $tinfo[0] !~ /ASTROVIRUS/){	
@@ -560,6 +561,8 @@ sub generate_fasttree {
 	}
 	else {
 		debug "NOT DNA detected\n";
+		debug "ALN : $aln_file\n";
+		debug "tree : $target_dir/$core.tree\n";
 `$Phylosift::Settings::fasttree -log "$target_dir/$core.log" "$aln_file" > "$target_dir/$core.tree" 2> /dev/null`;
 	}
 	return ( "$target_dir/$core.tree", "$target_dir/$core.log" );
