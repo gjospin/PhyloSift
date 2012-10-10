@@ -147,8 +147,7 @@ sub summarize {
 	my %args    = @_;
 	my $self    = $args{self} || miss("self");
 	my $chunk   = $args{chunk} || miss("chunk");
-	my $markRef = $args{marker_reference}
-	  || miss("marker_reference");    # list of the markers we're using
+	my $markRef = $args{marker_reference} || miss("marker_reference");    # list of the markers we're using
 	                                  #set_default_values(self=>$self);
 	read_ncbi_taxon_name_map();
 	read_ncbi_taxonomy_structure();
@@ -177,38 +176,18 @@ sub summarize {
 			my $sub_mark;
 			$sub_mark = "*" if $dna;
 			my $place_base = $self->{"treeDir"} . "/"
-			  . Phylosift::Utilities::get_read_placement_file(
-															   marker     => $marker,
-															   dna        => $dna,
-															   sub_marker => $sub_mark,
-															   chunk      => $chunk
-			  );
+			  . Phylosift::Utilities::get_read_placement_file( marker => $marker, dna => $dna, sub_marker => $sub_mark, chunk => $chunk );
 			my @place_files;
-			@place_files = glob($place_base)
-			  if $dna;    # need to glob on all submarkers if in DNA
-			push( @place_files, $place_base ) if $dna == 0 && -e $place_base;
+			@place_files = glob($place_base) if $dna;    # need to glob on all submarkers if in DNA
+			push( @place_files, $place_base ) if !$dna && -e $place_base;
 			foreach my $placeFile (@place_files) {
-				my $PP_COVFILE = ps_open(
-										  ">"
-											. Phylosift::Utilities::get_read_placement_file(
-																							 marker => $marker,
-																							 chunk  => $chunk
-											)
-											. ".cov"
-				  )
-				  if ( defined $Phylosift::Settings::coverage );
+				my $PP_COVFILE = ps_open(">".Phylosift::Utilities::get_read_placement_file(marker => $marker, chunk  => $chunk). ".cov") if ( defined $Phylosift::Settings::coverage );
 				my $sub;
 				$sub = $1 if $placeFile =~ /\.sub(\d+)\./;
 
 				# first read the taxonomy mapping
-				my $markermapfile = Phylosift::Utilities::get_marker_taxon_map(
-																				self       => $self,
-																				marker     => $marker,
-																				dna        => $dna,
-																				sub_marker => $sub
-				);
-				next
-				  unless -e $markermapfile;    # can't summarize if there ain't no mappin'!
+				my $markermapfile = Phylosift::Utilities::get_marker_taxon_map(self => $self, marker => $marker, dna => $dna, sub_marker => $sub);
+				next unless -e $markermapfile;    # can't summarize if there ain't no mappin'!
 				my $markerncbimap = read_taxonmap( file => $markermapfile );
 
 				# then read & map the placement
@@ -231,8 +210,7 @@ sub summarize {
 							for ( my $k = 0 ; $k < @{ $place->{nm} } ; $k++ ) {
 								my $qname   = $place->{nm}->[$k]->[0];
 								my $qweight = $place->{nm}->[$k]->[1];
-								$unclassifiable{$qname} = 0
-								  unless defined( $unclassifiable{$qname} );
+								$unclassifiable{$qname} = 0 unless defined( $unclassifiable{$qname} );
 								$unclassifiable{$qname} += $edge_mass * $qweight;
 							}
 							next;
@@ -248,13 +226,10 @@ sub summarize {
 								my $qname   = $place->{nm}->[$k]->[0];
 								my $qweight = $place->{nm}->[$k]->[1];
 								$sequence_markers{$qname}{$marker} = 1;
-								$placements{$qname} = ()
-								  unless defined( $placements{$qname} );
-								$placements{$qname}{$taxon_id} = 0
-								  unless defined( $placements{$qname}{$taxon_id} );
+								$placements{$qname} = () unless defined( $placements{$qname} );
+								$placements{$qname}{$taxon_id} = 0 unless defined( $placements{$qname}{$taxon_id} );
 								$placements{$qname}{$taxon_id} += $edge_mass * $qweight / $mapcount;
-								$ncbireads{$taxon} = 0
-								  unless defined $ncbireads{$taxon};
+								$ncbireads{$taxon} = 0 unless defined $ncbireads{$taxon};
 
 								# split the p.p. across the possible edge mappings
 								$ncbireads{$taxon} += $edge_mass * $qweight / $mapcount;
