@@ -78,19 +78,12 @@ sub build_marker {
 	unless($opt->{update_only}){
 		# this code path generates new alignments
 		# no need to do this if we're just updating an existing marker with new sequences
-		$seq_count  = Phylosift::Utilities::unalign_sequences(
-			aln         => $aln_file,
-			output_path => $fasta_file
-		);
+		$seq_count  = Phylosift::Utilities::unalign_sequences( aln => $aln_file, output_path => $fasta_file );
 		my $masked_aln = "$target_dir/$core.masked";
 		mask_aln( file => $aln_file, output => $masked_aln ) unless -e $masked_aln;
 		my $hmm_file = "$target_dir/$core.hmm";
-		generate_hmm( file_name => $aln_file, hmm_name => $hmm_file )
-		  unless -e $hmm_file;
-		Phylosift::Utilities::fasta2stockholm(
-			fasta  => $aln_file,
-			output => "$target_dir/$core.stk"
-		) unless -e "$target_dir/$core.stk";
+		generate_hmm( file_name => $aln_file, hmm_name => $hmm_file ) unless -e $hmm_file;
+		Phylosift::Utilities::fasta2stockholm( fasta  => $aln_file, output => "$target_dir/$core.stk" ) unless -e "$target_dir/$core.stk";
 		my $stk_aln = "$target_dir/$core.stk";
 
 		#may need to create an unaligned file for the sequences before aligning them
@@ -108,10 +101,7 @@ sub build_marker {
 		`cp $opt->{unaligned} $fasta_file`;
 	}
 	$clean_aln = "$target_dir/$core.clean";
-	my %id_map    = mask_and_clean_alignment(
-		alignment_file => $aln_file,
-		output_file    => $clean_aln
-	);
+	my %id_map = mask_and_clean_alignment( alignment_file => $aln_file, output_file => $clean_aln );
 	debug( "ID_map is " . scalar( keys(%id_map) ) . " long\n" );
 
 
@@ -142,7 +132,7 @@ sub build_marker {
 		`cp $fasta_file $target_dir/$core.rep` if -e $fasta_file;
 	}
 	
-	create_taxon_table(target_dir=>$target_dir, mapping=>$mapping );
+	create_taxon_table(target_dir=>$target_dir, mapping=>$mapping, id_map => \%id_map );
 
 	if ( defined $mapping ) {
 		my $tmp_jplace     = $target_dir . "/" . $core . ".tmpread.jplace";
@@ -157,10 +147,7 @@ sub build_marker {
 		  unless -e "target_dir/temp_ref";
 
 		#make a dummy jplace file
-		my $tmpread_file = create_temp_read_fasta(
-			file     => "$target_dir/$core",
-			aln_file => $clean_aln
-		) unless -e "$target_dir/$core.tmpread.fasta";
+		my $tmpread_file = create_temp_read_fasta( file => "$target_dir/$core", aln_file => $clean_aln ) unless -e "$target_dir/$core.tmpread.fasta";
 		`cd "$target_dir";pplacer -c temp_ref -p "$tmpread_file"` unless -e $tmp_jplace;
 		tree_mangler( in => $tmp_jplace, out => $mangled );
 
@@ -207,24 +194,26 @@ sub build_marker {
 sub create_taxon_table {
 	my %args = @_;
 	my $mapping = $args{mapping};
+	my $id_map = $args{id_map};
 	my $target_dir = $args{target_dir};
 
 	# create a taxon table for taxit
 	my $TAXIN = ps_open($mapping);
 	my $TAXIDTABLE = ps_open(">$target_dir/tax_ids.txt");
 	my $SEQIDS = ps_open(">$target_dir/seq_ids.csv");
-	print $SEQIDS "\"seq_name\",\"tax_id\"\n";
+	print $SEQIDS "\"seqname\",\"tax_id\"\n";
 	my %allanc;
 	while(my $line = <$TAXIN>){
 		chomp $line;
 		my ($seq_name, $tid) = split(/\s+/, $line);
+		my $seq_id = $id_map->{$seq_name};
 		next unless $tid;
 		my @tinfo = Phylosift::Summarize::get_taxon_info(taxon=>$tid); # lookup will check for any merging
 		# not sure what taxit doesn't like about the astrovirus but it won't handle them...
 		if (length($tinfo[2]) > 0 && $tinfo[2] ne "ERROR" && $tinfo[0] !~ /ASTROVIRUS/){	
 			$allanc{$tinfo[2]}=1;
 		}
-		print $SEQIDS "$seq_name,$tid\n";
+		print $SEQIDS "$seq_id,$tid\n";
 	}
 	print $TAXIDTABLE join("\n",keys(%allanc));
 	close $TAXIDTABLE;
