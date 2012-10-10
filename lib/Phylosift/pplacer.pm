@@ -74,11 +74,7 @@ sub pplacer {
 		my $read_alignment_file = $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta( marker => $mbname, chunk => $chunk, long => $long_rna, short => $short_rna );
 		my $place_file = "";
 		if(-e $read_alignment_file && -s $read_alignment_file > 0){
-			my $options = $marker eq "concat" ? "--groups $Phylosift::Settings::pplacer_groups" : "";
-			$options .= " --mmap-file abracadabra " if ($marker =~ /18s/ || $marker =~ /16s/ || $marker eq "concat");
-			$options .= " -p " if( $Phylosift::Settings::bayes ); # calc posterior probabilities. this is slow.
-			$place_file = place_reads(self=>$self, marker=>$marker, dna=>0, chunk => $chunk, reads=>$read_alignment_file, options=>$options, short_rna=>$short_rna);
-			unlink("$self->{\"treeDir\"}/abracadabra") if $options =~ /abracadabra/;	# remove the mmap file created by pplacer
+			$place_file = place_reads(self=>$self, marker=>$marker, dna=>0, chunk => $chunk, reads=>$read_alignment_file, short_rna=>$short_rna);
 		}
 		$short_rna_jplace = $place_file if ($short_rna);
 		# merge output from short and long RNA
@@ -116,8 +112,7 @@ sub set_default_values{
 	my $self = $args{self};
 	Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::pplacer_groups,value=>15);
 	Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::pplacer_verbosity,value=>"0");
-	Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::max_submarker_dist,value=>0.15);
-	Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::min_submarker_prob,value=>0.35);	
+	Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::max_submarker_dist,value=>0.25);
 	Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::pendant_branch_limit,value=>0.6);	
 }
 
@@ -140,51 +135,31 @@ sub merge_chunk {
 	}
 }
 
-my %subgroup_dist;
-sub get_submarker_distance {
+my %tip_dist;
+sub get_tip_distance {
 	my %args = @_;
 	my $name = $args{name};
 	my $edge = $args{edge};
-	return $subgroup_dist{$edge} if defined($edge);
+	return $tip_dist{$edge} if defined($edge);
 	$edge = $1 if $name=~ /\{(\d+)\}/g;
-	return $subgroup_dist{$edge};
+	return $tip_dist{$edge};
 }
 
-sub set_submarker_distance {
+sub set_tip_distance {
 	my %args  = @_;
 	my $name  = $args{name} || miss("name");
 	my $dist  = $args{dist};
-	my $group = $args{group};
 	my $edge  = $name;
 	$edge = $1 if $name=~ /\{(\d+)\}/g;
-	$subgroup_dist{$edge} = [$dist, $group];
+	$tip_dist{$edge} = $dist;
 }
 
-my %submarker_map;
-sub load_submarkers {
-	my %args  = @_;
-	return if %submarker_map;
-	return unless -e "$Phylosift::Settings::marker_dir/submarkers.txt";
-	my $SUBS = ps_open("$Phylosift::Settings::marker_dir/submarkers.txt");
-	while(my $line = <$SUBS>){
-		chomp $line;
-		my @data = split(/\t/,$line);
-		$submarker_map{$data[0]}=$data[3];
-	}
-}
 
-sub get_submarker {
-	my %args  = @_;
-	my $name  = $args{name} || miss("name");
-	$name =~ s/\{\d+\}//g;
-	return $submarker_map{$name};
-}
-
-sub find_submarker_reads {
+sub find_codon_reads {
 	my %args       = @_;
 	my $place_file = $args{place_file} || miss("place_file");
 
-	debug "submarker read jplace\n";
+	debug "codon read jplace\n";
 	# read the jplace
 	my $JPLACEFILE = ps_open( $place_file );
 	my @treedata = <$JPLACEFILE>;	
@@ -201,92 +176,78 @@ sub find_submarker_reads {
 									  '-string' => $tree_string,
 									  '-format' => 'newick',
 	)->first;
-	
-	# load the submarkers for this marker
-	load_submarkers();
-	
-	# identify the nearest submarker for each node
+		
+	# identify the distance to the tip for each node
 	# this is done by depth first search. 
-	# at each post-order step the shortest distance to a subgroup member is updated
 	my $name_dist_map;
 	$tree->visit_depth_first(
 		-post => sub {
 			my $node = shift;
 			my $name = $node->get_name;
-			# is this one in a subgroup? 
-			# if so set our subgroup distance to 0
-			my $subgroup = get_submarker(name=>$name);
-			if(defined($subgroup)){
-				set_submarker_distance(name=>$name, dist=>0, group=>$subgroup);
+			if( @{ $node->get_children } == 0 ){
+				set_tip_distance(name=>$name, dist=>0);
 			}else{
 				my $min_dist = 999999;
 				foreach my $child( @{ $node->get_children } ){
-					my $subinfo = get_submarker_distance(name=>$child->get_name);
-					$subinfo->[0] += $child->get_branch_length;
-					if( $subinfo->[0] < $min_dist ){
-						$min_dist = $subinfo->[0];
-						$subgroup = $subinfo->[1];
-					}
+					my $subinfo = get_tip_distance(name=>$child->get_name);
+					$subinfo += $child->get_branch_length;
+					$min_dist = $subinfo if( $subinfo < $min_dist );
 				}
-				set_submarker_distance(name=>$name, dist=>$min_dist, group=>$subgroup);
+				set_tip_distance(name=>$name, dist=>$min_dist);
 			}
 		}
 	);
 	
-	# submarker criteria:
-	# send a read to a submarker if at least X % of its placement probability mass is within distance Y of submarker members
-	# 
-	my $max_submarker_dist = $Phylosift::Settings::max_submarker_dist;	# rough guesstimate -- could use tuning
-	my $min_submarker_prob = $Phylosift::Settings::min_submarker_prob;	# rough guesstimate
-	
-	# for each placed read, find its probability mass near submarkers and assign to a submarker
-	# if appropriate
-	my %submarker_reads;
+	# for each placed read, find out whether it's close enough to tree tips to do a codon placement
+	my %codon_reads;
 	for(my $i=0; $i< @{$json_data->{placements}}; $i++){
 		my $read = $json_data->{placements}->[$i];
 		my %sub_prob;
+		my $avg_dist = 0;
 		for( my $j=0; $j < @{$read->{p}}; $j++){
 			my $edge = $read->{p}->[$j]->[0];
 			my $distal = $read->{p}->[$j]->[3];
 			my $pendant = $read->{p}->[$j]->[4];
-			my $sd = get_submarker_distance( edge=>$edge );
-			if($sd->[0] + $pendant < $max_submarker_dist){
-				$sub_prob{$sd->[1]} = 0 unless defined($sub_prob{$sd->[1]});
-				$sub_prob{$sd->[1]} += $sd->[0] + $pendant;
-			}
+			my $lwr = $read->{p}->[$j]->[1];
+			
+			my $td = get_tip_distance( edge=>$edge );
+			$avg_dist += ($td + $pendant + $distal) * $lwr;
 		}
-		my $submarker;
-		foreach my $g(keys(%sub_prob)){
-			$submarker = $g if ($sub_prob{$g} > $min_submarker_prob);
-		}
-		next unless defined($submarker);
-		# remove this one from the .jplace
-		splice @{$json_data->{placements}}, $i--, 1;
 
-		# add it to the list of reads belonging to submarkers
+		# codon criteria:
+		# send a read to a codon alignment if it is within distance Y of the tips of the tree
+		# 
+		next unless $avg_dist < $Phylosift::Settings::max_submarker_dist;
+		# remove this one from the .jplace
+#		splice @{$json_data->{placements}}, $i--, 1;
+
+		# add it to the list of reads belonging to codon alignments
 		for(my $k=0; $k < @{$read->{nm}}; $k++){
 			my $qname = $read->{nm}->[$k]->[0];
-			$submarker_reads{$qname} = $submarker;
+			$codon_reads{$qname} = 1;
 		}
 	}	
 
-	# write a new jplace without the submarker reads	
-	$JPLACEFILE = ps_open( ">".$place_file );
-	print $JPLACEFILE encode_json( $json_data );
-	close $JPLACEFILE;
+	# write a new jplace without the codon reads	
+#	$JPLACEFILE = ps_open( ">".$place_file );
+#	print $JPLACEFILE encode_json( $json_data );
+#	close $JPLACEFILE;
 	
-	return \%submarker_reads;
+	return \%codon_reads;
 }
 
-sub make_submarker_placements{
+sub make_codon_placements{
 	my %args       = @_;
 	my $self = $args{self} || miss("self");
 	my $marker = $args{marker} || miss("marker");
 	my $place_file = $args{place_file} || miss("place_file");
 	my $chunk = $args{chunk};
 
-	# determine which reads go to which submarker
-	my $subreads = find_submarker_reads(place_file=>$place_file);
+	debug "Looking for codon placeable reads\n";
+
+	# determine which reads go to codon alignment
+	my $subreads = find_codon_reads(place_file=>$place_file);
+	debug "Found ".scalar(keys(%{$subreads}))." codon placeable reads\n";
 	
 	# convert to groups
 	my %groups;
@@ -299,10 +260,9 @@ sub make_submarker_placements{
 	my $alnio = Bio::AlignIO->new(-file => $codon_file );
 	my $codon_aln = $alnio->next_aln;
 	foreach my $group( keys(%groups)){
-		my $sub_file = $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta( marker => $marker, sub_marker=>$group, dna=>1, chunk => $chunk );
+		my $sub_file = $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta( marker => $marker, dna=>1, chunk => $chunk, sub_marker => 1 );
 		my $ALNOUT = ps_open(">$sub_file");
-		debug scalar(@{$groups{$group}})." reads in group $group\n";
-		debug "reads are ".join(" ",@{$groups{$group}})."\n";
+		debug scalar(@{$groups{$group}})." reads in group $group added to $sub_file\n";
 		foreach my $id( @{$groups{$group}}){
 			foreach my $seq ( $codon_aln->each_seq_with_id($id) ) {
 				print $ALNOUT ">$id\n".$seq->seq."\n";
@@ -311,11 +271,9 @@ sub make_submarker_placements{
 		close $ALNOUT;
 	}
 	
-	# now place reads on each of these subalignments
-	foreach my $group( keys(%groups)){
-		my $group_aln = $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta( marker => $marker, sub_marker=>$group, dna=>1, chunk => $chunk );
-		place_reads(self=>$self, reads=>$group_aln, marker=>$marker, dna=>1, sub_marker=>$group, chunk => $chunk);
-	}
+	# now place reads on each of the subalignments
+	my $group_aln = $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta( marker => $marker, dna=>1, chunk => $chunk, sub_marker => 1 );
+	place_reads(self=>$self, reads=>$group_aln, marker=>$marker, dna=>1, chunk => $chunk);
 }
 
 sub place_reads{
@@ -325,28 +283,32 @@ sub place_reads{
 	my $marker = $args{marker} || miss("marker");
 	my $reads = $args{reads} || miss("reads");
 	my $covref = $args{coverage};
-	my $submarker = $args{sub_marker};
 	my $chunk = $args{chunk};
-	my $options = $args{options} || "";
 	my $short_rna = $args{short_rna} || 0;
-	my $marker_package = Phylosift::Utilities::get_marker_package( self => $self, marker => $marker, dna => $dna, sub_marker=>$submarker );
+	my $marker_package = Phylosift::Utilities::get_marker_package( self => $self, marker => $marker, dna => $dna );
 
 	unless(-d $marker_package ){
 		# try not updated
 		if($Phylosift::Settings::updated){
 			$Phylosift::Settings::updated=0;
-			$marker_package = Phylosift::Utilities::get_marker_package( self => $self, marker => $marker, dna => $dna, sub_marker=>$submarker );
+			$marker_package = Phylosift::Utilities::get_marker_package( self => $self, marker => $marker, dna => $dna );
 			$Phylosift::Settings::updated=1;
 		}
 		unless(-d $marker_package ){
 			croak("Marker: $marker\nPackage: $marker_package\nPackage does not exist\nPlacement without a marker package is no longer supported");
 		}
 	}
+
+	my $options = $marker eq "concat" ? "--groups $Phylosift::Settings::pplacer_groups" : "";
+	$options .= " --mmap-file abracadabra " if ($marker =~ /18s/ || $marker =~ /16s/ || $marker eq "concat");
+	$options .= " -p " if( $Phylosift::Settings::bayes ); # calc posterior probabilities. this is slow.
+
 	$marker_package .= ".short" if $short_rna;
 	my $jplace = $self->{"treeDir"} . "/" . basename($reads, ".fasta").".jplace";
 	my $pp = "$Phylosift::Settings::pplacer $options -o $jplace --verbosity $Phylosift::Settings::pplacer_verbosity -j ".$Phylosift::Settings::threads." -c $marker_package \"$reads\"";
 	debug "Running $pp\n";
 	system($pp);
+	unlink("$self->{\"treeDir\"}/abracadabra") if $options =~ /abracadabra/;	# remove the mmap file created by pplacer
 	
 	debug "no output in $jplace\n" unless -e $jplace;
 	return unless -e $jplace;
@@ -355,10 +317,10 @@ sub place_reads{
 	filter_placements(place_file=>$jplace);
 
 	# if we're on the concat marker, create a single jplace with all reads for use with multisample metrics 
-	if($marker eq "concat"){
+	if($marker eq "concat" && !$dna){
 		my $sample_jplace = $Phylosift::Settings::file_dir."/".$self->{"fileName"}.".jplace";
 		my $sample_jplace_naming = $Phylosift::Settings::file_dir."/".$self->{"fileName"}.".naming.jplace";
-		my $markermapfile = Phylosift::Utilities::get_marker_taxon_map(self=>$self, marker=>$marker, dna=>$dna, sub_marker=>$submarker);
+		my $markermapfile = Phylosift::Utilities::get_marker_taxon_map(self=>$self, marker=>$marker, dna=>$dna );
 		debug "Using markermap $markermapfile\n";
 		return unless -e $markermapfile;	# can't summarize if there ain't no mappin'!
 		debug "Reading taxonmap\n";
@@ -376,11 +338,9 @@ sub place_reads{
 	}
 
 	if(!$dna && $Phylosift::Settings::updated && Phylosift::Utilities::is_protein_marker(marker=>$marker)){
-	    debug "Placing on sub markers $marker\n";
-		load_submarkers();
-		if(keys(%submarker_map)>0){
-			make_submarker_placements(self=>$self, marker=>$marker, chunk=>$chunk, place_file=>$jplace) if $self->{"dna"};
-		}
+	    debug "Placing on codon markers: $marker\n";
+#		make_codon_placements(self=>$self, marker=>$marker, chunk=>$chunk, place_file=>$jplace) if $self->{"dna"};
+		make_codon_placements(self=>$self, marker=>$marker, chunk=>$chunk, place_file=>$jplace);
 	}
 	
 	unless($Phylosift::Settings::simple){
@@ -388,7 +348,7 @@ sub place_reads{
 		debug "Naming taxa in marker $marker\n";
 
 		# read the tree edge to taxon map for this marker
-		my $markermapfile = Phylosift::Utilities::get_marker_taxon_map(self=>$self, marker=>$marker, dna=>$dna, sub_marker=>$submarker);
+		my $markermapfile = Phylosift::Utilities::get_marker_taxon_map(self=>$self, marker=>$marker, dna=>$dna );
 		return $jplace unless -e $markermapfile;	# can't summarize if there ain't no mappin'!
 		my $taxonmap = Phylosift::Summarize::read_taxonmap(file=>$markermapfile);
 

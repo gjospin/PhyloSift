@@ -168,79 +168,70 @@ sub summarize {
 	my %sequence_markers;    # {sequenceID}=[markers hit]
 	my %weights;             #{sequenceID}{taxonID} = weight
 	unshift( @{$markRef}, "concat" ) if $Phylosift::Settings::updated;
-	for ( my $dna = 0 ; $dna < 2 ; $dna++ ) {
+	foreach my $marker ( @{$markRef} ) {
+		my %seen_queries; # tracks whether a query has been seen already
+		for ( my $dna = 1 ; $dna >= 0 ; $dna-- ) {
 
-		foreach my $marker ( @{$markRef} ) {
+			my $sub = $dna ? 1 : undef;
+			my $place_file = $self->{"treeDir"} . "/"
+			  . Phylosift::Utilities::get_read_placement_file( marker => $marker, dna => $dna, sub_marker => $sub, chunk => $chunk );
+			next unless -e $place_file; # don't bother with this one if there's no read placements
+			my $PP_COVFILE = ps_open(">".Phylosift::Utilities::get_read_placement_file(marker => $marker, chunk  => $chunk). ".cov") if ( defined $Phylosift::Settings::coverage );
 
-			# don't bother with this one if there's no read placements
-			my $sub_mark;
-			$sub_mark = "*" if $dna;
-			my $place_base = $self->{"treeDir"} . "/"
-			  . Phylosift::Utilities::get_read_placement_file( marker => $marker, dna => $dna, sub_marker => $sub_mark, chunk => $chunk );
-			my @place_files;
-			@place_files = glob($place_base) if $dna;    # need to glob on all submarkers if in DNA
-			push( @place_files, $place_base ) if !$dna && -e $place_base;
-			foreach my $placeFile (@place_files) {
-				my $PP_COVFILE = ps_open(">".Phylosift::Utilities::get_read_placement_file(marker => $marker, chunk  => $chunk). ".cov") if ( defined $Phylosift::Settings::coverage );
-				my $sub;
-				$sub = $1 if $placeFile =~ /\.sub(\d+)\./;
+			# first read the taxonomy mapping
+			my $markermapfile = Phylosift::Utilities::get_marker_taxon_map(self => $self, marker => $marker, dna => $dna);
+			debug "Marker $marker missing taxon map $markermapfile\n" unless -e $markermapfile;
+			next unless -e $markermapfile;    # can't summarize if there ain't no mappin'!
+			my $markerncbimap = read_taxonmap( file => $markermapfile );
 
-				# first read the taxonomy mapping
-				my $markermapfile = Phylosift::Utilities::get_marker_taxon_map(self => $self, marker => $marker, dna => $dna, sub_marker => $sub);
-				next unless -e $markermapfile;    # can't summarize if there ain't no mappin'!
-				my $markerncbimap = read_taxonmap( file => $markermapfile );
+			# then read & map the placement
+			my $JPLACEFILE = ps_open($place_file);
+			my @treedata   = <$JPLACEFILE>;
+			close $JPLACEFILE;
+			my $json_data = decode_json( join( "", @treedata ) );
 
-				# then read & map the placement
-				my $JPLACEFILE = ps_open($placeFile);
-				my @treedata   = <$JPLACEFILE>;
-				close $JPLACEFILE;
-				my $json_data = decode_json( join( "", @treedata ) );
+			# for each placement record
+			for ( my $i = 0 ; $i < @{ $json_data->{placements} } ; $i++ ) {
+				my $place = $json_data->{placements}->[$i];
 
-				# for each placement record
-				for ( my $i = 0 ; $i < @{ $json_data->{placements} } ; $i++ ) {
-					my $place = $json_data->{placements}->[$i];
+				# for each query in the placement record
+				for ( my $k = 0 ; $k < @{ $place->{nm} } ; $k++ ) {
+					my $qname   = $place->{nm}->[$k]->[0];
+					my $qweight = $place->{nm}->[$k]->[1];
+					# skip this query if it was already processed (e.g. in codons)
+					next if defined($seen_queries{$qname});
+					$seen_queries{$qname}=1;
 
 					# for each placement edge in the placement record
 					for ( my $j = 0 ; $j < @{ $place->{p} } ; $j++ ) {
 						my $edge      = $place->{p}->[$j]->[0];
 						my $edge_mass = $place->{p}->[$j]->[2];
 						if ( !defined( $markerncbimap->{$edge} ) ) {
-
 							# mark these reads as unclassifiable
-							for ( my $k = 0 ; $k < @{ $place->{nm} } ; $k++ ) {
-								my $qname   = $place->{nm}->[$k]->[0];
-								my $qweight = $place->{nm}->[$k]->[1];
-								$unclassifiable{$qname} = 0 unless defined( $unclassifiable{$qname} );
-								$unclassifiable{$qname} += $edge_mass * $qweight;
-							}
+							$unclassifiable{$qname} = 0 unless defined( $unclassifiable{$qname} );
+							$unclassifiable{$qname} += $edge_mass * $qweight;
 							next;
 						}
-						my $mapcount = scalar( @{ $markerncbimap->{$edge} } );
 
 						# for each taxon to which the current phylogeny edge could map
+						# add the placement probability mass for the sequence to that taxonomic group
+						my $mapcount = scalar( @{ $markerncbimap->{$edge} } );
 						foreach my $taxon ( @{ $markerncbimap->{$edge} } ) {
 							my ( $taxon_name, $taxon_level, $taxon_id ) = get_taxon_info( taxon => $taxon );
 							
-							# for each query seq in the current placement record
-							for ( my $k = 0 ; $k < @{ $place->{nm} } ; $k++ ) {
-								my $qname   = $place->{nm}->[$k]->[0];
-								my $qweight = $place->{nm}->[$k]->[1];
-								$sequence_markers{$qname}{$marker} = 1;
-								$placements{$qname} = () unless defined( $placements{$qname} );
-								$placements{$qname}{$taxon_id} = 0 unless defined( $placements{$qname}{$taxon_id} );
-								$placements{$qname}{$taxon_id} += $edge_mass * $qweight / $mapcount;
-								$ncbireads{$taxon} = 0 unless defined $ncbireads{$taxon};
-
-								# split the p.p. across the possible edge mappings
-								$ncbireads{$taxon} += $edge_mass * $qweight / $mapcount;
-							}
+							$sequence_markers{$qname}{$marker} = 1;
+							$placements{$qname} = () unless defined( $placements{$qname} );
+							$placements{$qname}{$taxon_id} = 0 unless defined( $placements{$qname}{$taxon_id} );
+							$placements{$qname}{$taxon_id} += $edge_mass * $qweight / $mapcount;
+							$ncbireads{$taxon} = 0 unless defined $ncbireads{$taxon};
+	
+							# split the p.p. across the possible edge mappings
+							$ncbireads{$taxon} += $edge_mass * $qweight / $mapcount;
 						}
 					}
-
 				}
 			}
 		}
-
 	}
 
 	# also write out the taxon assignments for sequences
@@ -709,8 +700,9 @@ sub rename_sequences {
 	push( @array_to_rename, glob( $self->{"alignDir"} . "/*.updated.$chunk.fasta" ) );
 	push( @array_to_rename, glob( $self->{"alignDir"} . "/*.newCandidate.aa.$chunk" ) );
 	push( @array_to_rename, glob( $self->{"alignDir"} . "/*.$chunk.unmasked" ) );
-	push( @array_to_rename, glob( $self->{"alignDir"} . "/*.codon.updated.$chunk.fasta" ) );
+	push( @array_to_rename, glob( $self->{"alignDir"} . "/*.codon.updated*.$chunk.fasta" ) );
 	push( @array_to_rename, glob( $self->{"treeDir"} . "/*.updated.$chunk.jplace" ) );
+	push( @array_to_rename, glob( $self->{"treeDir"} . "/*.codon.updated.sub1.$chunk.jplace" ) );
 	push( @array_to_rename, glob( $Phylosift::Settings::file_dir . "/*.jplace" ) );
 	push( @array_to_rename, glob( $Phylosift::Settings::file_dir . "/sequence_taxa*.$chunk.txt" ) );
 	debug "FILE DIR : ".$Phylosift::Settings::file_dir ."\n";
