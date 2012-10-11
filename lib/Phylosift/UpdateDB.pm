@@ -305,8 +305,11 @@ sub qsub_updates {
 	my %args        = @_;
 	my $local_directory = $args{local_directory} || miss ("local_directory");
 	my $files       = $args{files} || miss("files");
+	my $extended    = $args{extended} || 0;
 	my $params;
-#	$params      = "--updated_markers=0 --extended";
+	$params = " --updated_markers=0 --extended " if $extended;
+	$params = " --isolate --besthit " if !$extended;
+
 	# qsub a slew of phylosift jobs and have them report results to a local directory on this host for concatenation
 	my $hostname = `hostname`;
 	chomp $hostname;
@@ -326,15 +329,15 @@ if [ \$? -gt 0 ]; then
 	mkdir -p \$WORKDIR
 fi
 cd \$WORKDIR
-phylosift search $params --isolate --besthit --unique \$1
-phylosift align $params --isolate --besthit --unique \$1
+phylosift search $params \$1
+phylosift align $params \$1
 rm -rf PS_temp/*/treeDir
 rm -rf PS_temp/*/blastDir
 rm -rf PS_temp/*/isolates.fasta
 rm -rf PS_temp/*/alignDir/PMP*.newCandidate
 
-#scp -r PS_temp/* $hostname:$local_directory
-cp -r PS_temp/* $local_directory
+scp -r PS_temp/* $hostname:$local_directory
+#cp -r PS_temp/* $local_directory
 rm -rf \$WORKDIR
 };
 	my $job_count = 0;
@@ -460,8 +463,13 @@ sub collate_markers {
 		# now rename sequences with their taxon IDs 
 		my $fasta = get_fasta_filename(marker=>$marker, updated=>1);
 		next unless -e "$local_directory/$fasta";
-		filter_short_seqs_from_fasta(input_fasta => "$local_directory/$fasta", output_fasta => "$marker_dir/$fasta", min_pct => 50);
+		filter_short_and_unclassified_seqs_from_fasta(input_fasta => "$local_directory/$fasta", output_fasta => "$marker_dir/$fasta", min_pct => 50);
 		create_taxon_id_table(alignment => "$marker_dir/$fasta", output => "$marker_dir/$fasta.taxon_ids", alltaxa=>\%alltaxa);
+		
+		if(!Phylosift::Utilities::is_protein_marker(marker=>$marker)){
+			update_rna(marker=>$marker, marker_dir=>$marker);
+		}
+		
 #		`cp "$local_directory/$fasta" "$marker_dir/$fasta"`;
 		my $reps = get_reps_filename( marker => $marker, updated => 1 );
 		my $clean_reps = get_reps_filename( marker => $marker, updated => 1, clean => 1 );
@@ -475,9 +483,8 @@ sub collate_markers {
 		
 		my $codon_fasta = get_fasta_filename(marker=>$marker, updated=>1,dna=>1);
 		next unless -e "$local_directory/$codon_fasta";
-		filter_short_seqs_from_fasta(input_fasta => "$local_directory/$codon_fasta", output_fasta => "$marker_dir/$codon_fasta", min_pct => 50);
+		filter_short_and_unclassified_seqs_from_fasta(input_fasta => "$local_directory/$codon_fasta", output_fasta => "$marker_dir/$codon_fasta", min_pct => 50);
 		create_taxon_id_table(alignment => "$marker_dir/$codon_fasta", output => "$marker_dir/$codon_fasta.taxon_ids", alltaxa=>\%alltaxa);
-#		`cp "$local_directory/$codon_fasta" "$marker_dir/$codon_fasta"`;
 
 		debug "Launching marker build for $marker.codon\b";
 		$job_id = launch_marker_build(marker=>$marker, dna=>1, batch_script=>$bs);
@@ -535,7 +542,6 @@ sub read_gene_ids {
 sub update_ncbi_taxonomy {
 	my %args = @_;
 	my $repository = $args{repository} || miss("repository");
-	my $base_marker_dir = $args{base_marker_dir} || miss("base_marker_dir");
 	print "Downloading new NCBI taxonomy...\n";
 	my $url = "ftp://ftp.ncbi.nih.gov/pub/taxonomy/taxdump.tar.gz";
 #	print "Include path is @INC\n";
@@ -551,7 +557,7 @@ sub update_ncbi_taxonomy {
 	unlink("$repository/ncbi/gencode.dmp");
 	unlink("$repository/ncbi/readme.txt");
 	system("cd $repository/; tar czf ncbi.tar.gz ncbi");
-	`cd $base_marker_dir ; rm taxdmp.zip ; taxit new_database`;
+	`cd $repository/markers ; rm taxdmp.zip ; taxit new_database`;
 }
 
 sub make_marker_taxon_map {
@@ -666,25 +672,31 @@ sub create_taxon_id_table {
 	my $alltaxa = $args{alltaxa} || miss("alltaxa");
 	my $OUTPUT = ps_open( ">$output" );
 	my $INALN = ps_open( $alignment );
-	my $parent = Phylosift::Summarize::read_ncbi_taxonomy_structure();
 	while ( my $line = <$INALN> ) {
 		if ( $line =~ /^>(.+)/ ) {
 			my $header = $1;
 			if ( $header =~ /\.(\d+?)\.fasta/ ) {
 				my $taxon_id=$1;
 				next unless defined $taxon_id;
-				my $t=$taxon_id;
-				# need to remove anything that NCBI considers "unclassified", currently taxon node ID 12908.
-				for(; defined($t) && $t != 1; $t = $parent->{$t}->[0]){
-					last if $t == 12908;
-				}
-				next if defined($t) && $t == 12908;
+				next if is_unclassified(taxon_id=>$taxon_id);
 				print $OUTPUT "$header\t$taxon_id\n";
 				$alltaxa->{$1}=1;
 			}
 		}
 	}
 	close $OUTPUT;
+}
+
+sub is_unclassified {
+	my %args = @_;
+	my $taxon_id = $args{taxon_id} || miss("taxon_id");
+	my $parent = Phylosift::Summarize::read_ncbi_taxonomy_structure();
+	my $t=$taxon_id;
+	# need to remove anything that NCBI considers "unclassified", currently taxon node ID 12908.
+	for(; defined($t) && $t != 1; $t = $parent->{$t}->[0]){
+		last if $t == 12908;
+	}
+	return defined($t) && $t == 12908;
 }
 
 sub fix_names_in_alignment {
@@ -713,7 +725,7 @@ sub fix_names_in_alignment {
 }
 
 
-sub filter_short_seqs_from_fasta {
+sub filter_short_and_unclassified_seqs_from_fasta {
 	my %args         = @_;
 	my $input_fasta  = $args{input_fasta} || miss("input_fasta");
 	my $output_fasta = $args{output_fasta} || miss("output_fasta");
@@ -730,7 +742,8 @@ sub filter_short_seqs_from_fasta {
 			if(length($curseq) > 0){
 				my $glen = $curseq =~ tr/-/-/;
 				my $known_pct = 100*(length($curseq)-$glen) / length($curseq);
-				print $PRUNEDFASTA "$curhdr\n$curseq\n" if $known_pct > $min_pct;
+				my $taxon_id = $1 if $curhdr =~ /\.(\d+?)\.fasta/;
+				print $PRUNEDFASTA "$curhdr\n$curseq\n" if $known_pct > $min_pct && !is_unclassified(taxon_id=>$taxon_id);
 				$curseq = "";
 			}
 			$curhdr = $line;
@@ -741,7 +754,8 @@ sub filter_short_seqs_from_fasta {
 	if(length($curseq) > 0){
 		my $glen = $curseq =~ tr/-/-/;
 		my $known_pct = 100*(length($curseq)-$glen) / length($curseq);
-		print $PRUNEDFASTA "$curhdr\n$curseq\n" if $known_pct > $min_pct;
+		my $taxon_id = $1 if $curhdr =~ /\.(\d+?)\.fasta/;
+		print $PRUNEDFASTA "$curhdr\n$curseq\n" if $known_pct > $min_pct && !is_unclassified(taxon_id=>$taxon_id);
 	}
 }
 
@@ -902,51 +916,32 @@ We want the updated markers to retain these original sequences.
 sub update_rna {
 	my %args        = @_;
 	my $self        = $args{self} || miss("self");
+	my $marker      = $args{marker} || miss("marker");
+#	my $id_file     = $args{id_file} || miss("id_file");
 	my $marker_dir  = $args{marker_dir} || miss("marker_dir");
-	my @marker_list = Phylosift::Utilities::gather_markers();
-	foreach my $marker (@marker_list) {
-		next if Phylosift::Utilities::is_protein_marker( marker => $marker );
-		my $base_alignment = Phylosift::Utilities::get_marker_aln_file( self=> $self, marker=>$marker );
 
-		#		my $base_alignment = Phylosift::Utilities::get_marker_aln_file(self=>$self, marker=>$marker);
-		my $updated_alignment = get_fasta_filename( marker=>$marker, updated=>1 );
-
-		# need to add to gene_ids.aa.txt
-		# use greengenes id for taxon ID
-		my $aaid_file = "$marker_dir/".get_gene_id_file(dna=>0);
-		my $max_id    = -1;
-
-		#
-		# get the largest gene ID
-		my $AAID = ps_open( $aaid_file );
-		while ( my $line = <$AAID> ) {
-			chomp $line;
-			my ( $marker, $tid, $gid ) = split( /\t/, $line );
-			$max_id = $gid if $gid > $max_id;
+	my $base_alignment = Phylosift::Utilities::get_marker_aln_file( self=> $self, marker=>$marker );
+	my $updated_alignment = get_fasta_filename( marker=>$marker, updated=>1 );
+#	$AAID = ps_open( ">>" . $id_file );
+	my $INALN = ps_open( $base_alignment );
+	my $OUTALN = ps_open( ">>$marker_dir/" . $updated_alignment );
+	my $max_id = 0;
+	while ( my $line = <$INALN> ) {
+		chomp $line;
+		if ( $line =~ /^>(.+)/ ) {
+			my $countstring = sprintf( "%010u", $max_id );
+			my $ggid = $1;
+			$ggid =~ s/\/\d+-\d+//g;    # remove trailing bioperl rubbish
+#			print $AAID "gg_$ggid\t$countstring\n";
+			$line = ">gg_$ggid";
+			$max_id++;
 		}
-		close $AAID;
-
-		#
-		# now start assigning IDs to base marker sequences and adding them to the update
-		$max_id++;
-		$AAID = ps_open( ">>" . $aaid_file );
-		my $INALN = ps_open( $base_alignment );
-		my $OUTALN = ps_open( ">>" . $updated_alignment );
-		while ( my $line = <$INALN> ) {
-			chomp $line;
-			if ( $line =~ /^>(.+)/ ) {
-				my $countstring = sprintf( "%010u", $max_id );
-				my $ggid = $1;
-				$ggid =~ s/\/\d+-\d+//g;    # remove trailing bioperl rubbish
-				print $AAID "$marker\tgg_$ggid\t$countstring\n";
-				$line = ">$countstring";
-				$max_id++;
-			}
-			print $OUTALN "$line\n";
-		}
-		close $AAID;
+		print $OUTALN "$line\n";
 	}
+#	close $AAID;
+
 }
+	
 
 =head2 make_codon_submarkers
 
@@ -1194,46 +1189,8 @@ sub package_markers {
 	foreach my $marker (@markerlist) {
 		# copy the base marker into our directory 
 		`cp -r $base_marker_dir/$marker/ $marker_dir`;
-#		if($marker =~ /PMPROK/){
-#			`cp $base_marker_dir/$marker.faa $marker_dir`;
-#			`cp $base_marker_dir/$marker.ali $marker_dir`;
-#			`cp $base_marker_dir/$marker.final.tre $marker_dir`;
-#			`cp $base_marker_dir/$marker.ncbimap $marker_dir`;
-#			`cp $base_marker_dir/$marker.stk $marker_dir`;
-#			`cp $base_marker_dir/$marker.hmm $marker_dir`;
-#			`cp $base_marker_dir/$marker.trimfinal $marker_dir`;
-#			`cp $base_marker_dir/$marker.trimfinal.fasta $marker_dir`;
-#			`cp $base_marker_dir/$marker.stock.hmm $marker_dir`;
-#			`cp $base_marker_dir/$marker.seed.stock $marker_dir`;
-#		}
 	}
 
-	# then move various files into place
-	foreach my $marker (@markerlist) {
-		for ( my $dna = 0 ; $dna < 2 ; $dna++ ) {    # zero for aa, one for dna
-			my $pack = get_marker_package( marker => $marker, dna => $dna, updated => 1 );
-			# move in reps
-			my $pruned_reps = get_reps_filename( marker => $marker, updated => 1, clean => 1, pruned => 1 );
-			`mv "$pruned_reps" "$pack/$marker.reps"` if $dna==0 && -e $pruned_reps;
-			# move in taxonmap
-			my $taxonmap = get_taxonmap_filename( marker => $marker, dna => $dna, updated => 1, pruned => 0 );
-			`mv "$taxonmap" "$pack/$marker.taxonmap"` if -e $taxonmap;
-		}
-		# now do codon submarkers
-		for(my $group_id=1; ; $group_id++){
-			my $subalignment = get_fasta_filename( marker => $marker, dna => 1, updated => 1, pruned => 0, sub_marker => $group_id );
-			my $pack = get_marker_package( marker => $marker, dna => 1, updated => 1, sub_marker => $group_id );
-			if(-d $pack && !-f "$pack/$subalignment"){
-				print STDERR "Removing package $pack";
-				`rm -rf "$pack"*`;
-			}
-			last unless -e $subalignment;
-			# move in taxonmap
-			my $taxonmap = get_taxonmap_filename( marker => $marker, dna => 1, updated => 1, pruned => 0, sub_marker => $group_id );
-			`mv "$taxonmap" "$pack/$marker.taxonmap"` if -e $taxonmap;
-		}
-
-	}
 	
 	# clean up some stuff that really shouldn't be packaged
 	system("rm -f *.fasttree.log");
