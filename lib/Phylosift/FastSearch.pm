@@ -187,8 +187,7 @@ sub set_default_values{
 	$default_chunk_size = 1000000 if !defined($Phylosift::Settings::extended) || !$Phylosift::Settings::extended;
 	Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::CHUNK_MAX_SEQS,value=>$default_chunk_size);
 	Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::lastal_evalue,value=>"-e75");
-	Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::lastal_rna_evalue,value=>"-e300");
-	Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::bowtie_quiet,value=>"--quiet --sam-nohead --sam-nosq");
+	Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::lastal_rna_evalue,value=>"-e75");
 	Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::bowtie_maxins,value=>"1000");
 	Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::bowtie_aln,value=>"--local");
 	Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::max_hit_overlap,value=>10);
@@ -253,9 +252,6 @@ sub launch_searches {
 	my $chunky          = defined($chunk) ? ".$chunk" : "";
 	my $reads_file      = $dir . "/reads.fasta$chunky";
 	my $last_rna_pipe   = $dir . "/last_rna.pipe";
-	my $bowtie2_r1_pipe = $dir . "/bowtie2_r1.pipe";
-	my $bowtie2_r2_pipe;
-	$bowtie2_r2_pipe = $dir . "/bowtie2_r2.pipe" if $readtype->{paired};
 	debug "Making fifos\n";
 	my @last_pipe_array = ();
 	for ( my $i = 0 ; $i <= $Phylosift::Settings::threads - 1 ; $i++ ) {
@@ -266,16 +262,12 @@ sub launch_searches {
 	if ( $readtype->{seqtype} eq "dna"
 		&& -e Phylosift::Utilities::get_bowtie2_db( self => $self ) . ".prj" )
 	{
-		`mkfifo "$bowtie2_r1_pipe"`;
-		`mkfifo "$bowtie2_r2_pipe"` if $readtype->{paired};
 		`mkfifo "$last_rna_pipe"`;
-		$rna_procs = 2;
+		$rna_procs = 1;
 	}
 	else {
 
 		# if we're searching protein, send these to the bitbucket
-		$bowtie2_r1_pipe = "/dev/null";
-		$bowtie2_r2_pipe = "/dev/null" if $readtype->{paired};
 		$last_rna_pipe   = "/dev/null";
 	}
 	my @children;
@@ -319,49 +311,13 @@ sub launch_searches {
 				}
 				$candidate_type = ".lastal.rna";
 			}
-			elsif ( $count == $Phylosift::Settings::threads + 2 ) {
-
-				#exit the thread if the bowtie DB does not exit
-				if ( !-e Phylosift::Utilities::get_bowtie2_db( self => $self )
-					. ".prj" )
-				{
-					debug
-"Exiting process $count because the bowtie2 rna db does not exist\n";
-
-					# still need to open/close pipes for parent process
-					my $btp1 = ps_open($bowtie2_r1_pipe);
-					my $btp2 = ps_open($bowtie2_r2_pipe)
-					  if defined($bowtie2_r2_pipe);
-					`rm -f "$bowtie2_r1_pipe"`;
-					`rm -f "$bowtie2_r2_pipe"` if defined($bowtie2_r2_pipe);
-					exit 0;
-				}
-				else {
-					$hitstream = bowtie2(
-						self     => $self,
-						readtype => $args{readtype},
-						reads1   => $bowtie2_r1_pipe,
-						reads2   => $bowtie2_r2_pipe
-					);
-				}
-				$candidate_type = ".rna";
-			}
-			my $hitsref;
-			if ( $count == $Phylosift::Settings::threads + 2 ) {
-				$hitsref =
-				  get_hits_sam( self => $self, HITSTREAM => $hitstream );
-
-#$hitsref = get_hits_contigs( self => $self, HITSTREAM => $hitstream, searchtype => "lastal" );
-			}
-			else {
-				$hitsref = get_hits_contigs(
+			my $hitsref = get_hits_contigs(
 					self       => $self,
 					HITSTREAM  => $hitstream,
 					searchtype => "lastal",
 					pid        => $count
 				);
-			}
-
+			
 			# write out sequence regions hitting marker genes to candidate files
 			debug "Writing candidates from process $count\n";
 			write_candidates(
@@ -382,12 +338,11 @@ sub launch_searches {
 	foreach my $last_pipe (@last_pipe_array) {
 		push( @LAST_PIPE_ARRAY, ps_open(">$last_pipe") );
 	}
-	my $BOWTIE2_R1_PIPE = ps_open(">$bowtie2_r1_pipe");
-	my $BOWTIE2_R2_PIPE;
 
  #	debug "TESTING" . $args{readtype}->{paired};
  #	$BOWTIE2_R2_PIPE = ps_open(">$bowtie2_r2_pipe") if $args{readtype}->{paired};
  	debug "Opening $reads_file\n";
+ 	debug "\n\n\nREAD PIPE : $reads_file\n";
 	my $READS_PIPE    = ps_open("+>$reads_file");
 	my $LAST_RNA_PIPE = ps_open(">$last_rna_pipe");
 
@@ -395,8 +350,6 @@ sub launch_searches {
 	# child processes run the search on incoming sequences
 	debug "Octopus is handing out sequences\n";
 	my $finished = demux_sequences(
-		bowtie2_pipe1 => $BOWTIE2_R1_PIPE,
-		bowtie2_pipe2 => $BOWTIE2_R2_PIPE,
 		lastal_pipes  => \@LAST_PIPE_ARRAY,
 		LAST_RNA_PIPE => $LAST_RNA_PIPE,
 		dna           => $self->{"dna"},
@@ -415,9 +368,7 @@ sub launch_searches {
 
 	# clean up
 	`rm -f "$reads_file"`;
-	`rm -f "$bowtie2_r1_pipe" "$last_rna_pipe"`
-	  if ( $bowtie2_r1_pipe ne "/dev/null" );
-	`rm -f "$bowtie2_r2_pipe"` if defined($bowtie2_r2_pipe) && $bowtie2_r2_pipe ne "/dev/null";
+	`rm -f "$last_rna_pipe"`;
 	foreach my $last_pipe (@last_pipe_array) {
 		`rm -f "$last_pipe"`;
 	}
@@ -453,8 +404,6 @@ reads a sequence file and streams it out to named pipes
 =cut
 sub demux_sequences {
 	my %args                 = @_;
-	my $BOWTIE2_PIPE1        = $args{bowtie2_pipe1} || miss("bowtie2_pipe1");
-	my $BOWTIE2_PIPE2        = $args{bowtie2_pipe2};
 	my $READS_PIPE           = $args{reads_pipe} || miss("reads_pipe");
 	my $last_array_reference = $args{lastal_pipes} || miss("lastal_pipes");
 	my $self = $args{self} || miss("PS object");
@@ -476,7 +425,6 @@ sub demux_sequences {
 	my $seq_count = 0;
 	my $seq_size  = 0;
 	my $buffer_index = 0;
-	
 	if(defined($self->{"stashed_lines"})){
 		$lines1[0] = $self->{"stashed_lines"}[0];
 		$lines2[0] = $self->{"stashed_lines"}[1] if defined($self->{"stashed_lines"}[1]);
@@ -531,19 +479,8 @@ sub demux_sequences {
 			qtrim_read(read=>\@lines1, quality=>$quality_threshold, readtype=>$readtype);
 			qtrim_read(read=>\@lines2, quality=>$quality_threshold, readtype=>$readtype) if defined($lines2[0]);
 
-			
-			# send the reads to bowtie
-			print $BOWTIE2_PIPE1 @lines1 unless $completed_chunk;
-			print $BOWTIE2_PIPE1 @lines2 if @lines2 && !$completed_chunk;
-			#			print $BOWTIE2_PIPE2 @lines2 if defined($F2IN);
-
-			#
-			# send the reads to lastal (convert to fasta)
-			$lines1[0] =~ s/^@/>/g;
-			$lines2[0] =~ s/^@/>/g if @lines2;
-
 			#add the reads to file lookup
-			if($lines1[0] =~ m/^>(\S+)\/1/){
+			if($lines1[0] =~ m/^@(\S+)(\/\d)/ && $paired){
 				print $IDFILE "$1 $seq_count\n";
 			}elsif($lines1[0] =~ m/^>(\S+)/){
 				print $IDFILE "$1 $seq_count\n";
@@ -562,11 +499,28 @@ sub demux_sequences {
 			# some FastQ use . instead of N (wtf?)
 			$lines1[1] =~ s/\./N/g;
 			$lines2[1] =~ s/\./N/g if @lines2;
+			
 			print $last_pipe $lines1[0] . $lines1[1] unless $completed_chunk;
 			print $last_pipe $lines2[0] . $lines2[1] if @lines2 && !$completed_chunk;
+			
+			print $LAST_RNA_PIPE $lines1[0] . $lines1[1] unless $completed_chunk;
+			print $LAST_RNA_PIPE $lines2[0] . $lines2[1] if @lines2 && !$completed_chunk;
+			
+			# send the reads to bowtie
+			#print $LAST_RNA_PIPE @lines1 unless $completed_chunk;
+			#print $LAST_RNA_PIPE @lines2 if @lines2 && !$completed_chunk;
+			#			print $BOWTIE2_PIPE2 @lines2 if defined($F2IN);
 
-	#
-	# send the reads to the reads file in fasta format to write candidates later
+			#
+			# send the reads to lastal (convert to fasta)
+			$lines1[0] =~ s/^@/>/g;
+			$lines2[0] =~ s/^@/>/g if @lines2;
+
+			
+			
+
+			#
+			# send the reads to the reads file in fasta format to write candidates later
 			print $READS_PIPE $lines1[0] . $lines1[1] unless $completed_chunk;
 			print $READS_PIPE $lines2[0] . $lines2[1] if @lines2 && !$completed_chunk;
 
@@ -611,7 +565,7 @@ sub demux_sequences {
 			}
 			
 			#add the reads to file lookup
-			if($lines1[0] =~ m/^>(\S+)\/1/){
+			if($lines1[0] =~ m/^>(\S+)(\/\d)/ && $paired){
 				print $IDFILE "$1 $seq_count\n";
 			}elsif($lines1[0] =~ m/^>(\S+)/){
 				print $IDFILE "$1 $seq_count\n";
@@ -625,23 +579,10 @@ sub demux_sequences {
 				$lines2[0] .= "/2" if $paired;
 				$lines2[0] .= "\n";
 			}
-			if ( length( $lines1[1] ) > 1000
-				|| ( defined($F2IN) && length( $lines2[1] ) > 1000 ) )
-			{
 
-				# if reads are long, do RNA search with lastal
-				print $LAST_RNA_PIPE $lines1[0] . $lines1[1] unless $completed_chunk;
-				print $LAST_RNA_PIPE $lines2[0] . $lines2[1] if defined($F2IN) && !$completed_chunk;
-			}
-			else {
-
-				# if they are short, send the reads to bowtie
-				print $BOWTIE2_PIPE1 @lines1 unless $completed_chunk;
-				print $BOWTIE2_PIPE1 @lines2 if defined($F2IN) && !$completed_chunk;
-
-				#				print $BOWTIE2_PIPE2 @lines2 if defined($F2IN);
-			}
-
+			# if reads are long, do RNA search with lastal
+			print $LAST_RNA_PIPE $lines1[0] . $lines1[1] unless $completed_chunk;
+			print $LAST_RNA_PIPE $lines2[0] . $lines2[1] if defined($F2IN) && !$completed_chunk;
 			
 			# send the reads to last
 			print $last_pipe $lines1[0] . $lines1[1] unless $completed_chunk;
@@ -661,7 +602,6 @@ sub demux_sequences {
 	foreach my $LAST_PIPE (@LAST_PIPE_ARRAY) {
 		close($LAST_PIPE);
 	}
-	close($BOWTIE2_PIPE1);
 	close($IDFILE);
 	#	close($BOWTIE2_PIPE2) if defined($F2IN);
 	close($LAST_RNA_PIPE);
@@ -755,9 +695,14 @@ sub lastal_table {
 	my $last_opts  = "";
 	$last_opts = "-F15" if $readtype->{seqtype} eq "dna";
 	my $db = Phylosift::Utilities::get_lastal_db( self => $self );
+	#my $lastal_cmd =
+	#  "$Phylosift::Settings::lastal $last_opts $Phylosift::Settings::lastal_evalue -f0 $db \"$query_file\" |";
+	
 	my $lastal_cmd =
-	  "$Phylosift::Settings::lastal $last_opts $Phylosift::Settings::lastal_evalue -f0 $db \"$query_file\" |";
-	debug "Running $lastal_cmd";
+	  "$Phylosift::Settings::lastal $last_opts $Phylosift::Settings::lastal_evalue ";
+	  #$lastal_cmd .= "-Q2 " if $self->{readtype}{format} eq "fastq";
+	  $lastal_cmd .= "-f0 $db \"$query_file\" |";
+	  debug "Running $lastal_cmd";	
 	my $HISTREAM = ps_open($lastal_cmd);
 	return $HISTREAM;
 }
@@ -774,8 +719,12 @@ sub lastal_table_rna {
 	my $self       = $args{self} || miss("self");
 	my $query_file = $args{query_file} || miss("query_file");
 	my $db         = Phylosift::Utilities::get_bowtie2_db( self => $self );
-	my $lastal_cmd =
-	  "$Phylosift::Settings::lastal $Phylosift::Settings::lastal_rna_evalue -f0 $db \"$query_file\" |";
+	#my $lastal_cmd =
+	  #"$Phylosift::Settings::lastal $Phylosift::Settings::lastal_rna_evalue -f0 $db \"$query_file\" |";
+	  my $lastal_cmd =
+	  "$Phylosift::Settings::lastal $Phylosift::Settings::lastal_rna_evalue ";
+	  #$lastal_cmd .= "-Q2 " if $self->{readtype}{format} eq "fastq";
+	  $lastal_cmd .= "-f0 $db \"$query_file\" |";
 	debug "Running $lastal_cmd";
 	my $HISTREAM = ps_open($lastal_cmd);
 	return $HISTREAM;
@@ -1059,92 +1008,6 @@ sub get_hits {
 		}
 	}
 	close($HITSTREAM);
-	return \%contig_hits;
-}
-
-sub get_hits_sam {
-	my %args      = @_;
-	my $self      = $args{self} || miss("self");
-	my $HITSTREAM = $args{HITSTREAM} || miss("HISTREAM");
-	my %markerTopScores;
-	my %topScore = ();
-	my %contig_hits;
-	my %hit_counts = ();
-	my $hit_counts_total=0;
-	# return empty if there is no data
-	return unless defined($HITSTREAM);
-	return \%contig_hits unless defined( fileno $HITSTREAM );
-	debug "GETHITSAM\n";
-	while (<$HITSTREAM>) {
-
-		#		debug "$_";
-		next if ( $_ =~ /^\@/ );
-		my @fields = split( /\t/, $_ );
-		next if $fields[2] eq "*";    # no hit
-		my $marker_name =
-		  get_marker_name( subject => $fields[2], search_type => "sam" );
-		next unless (exists $markers{$marker_name});
-		my $query = $fields[0];
-		my $score = $fields[4];
-		my $cigar = $fields[5];
-		my $qlen  = length( $fields[9] );
-
-		# subtract off soft masking from query length (unaligned portion)
-		my $query_lend = 0;
-		$query_lend += $1 if $cigar =~ /^(\d+)S/;
-		$qlen -= $1 if $cigar =~ /^(\d+)S/;
-		$qlen -= $1 if $cigar =~ /(\d+)S$/;
-		my $hit_seq = substr( $fields[9], $query_lend, $qlen );
-
-		#add the suffixes back onto the query names if reads are paired
-		if ( $fields[1] > 128 ) {
-
-			#greater than 128 the read is the second mate
-			$query .= "/2";
-		}
-		elsif ( $fields[1] < 128 && $fields[1] > 68 ) {
-
-			#greater than 64 the read is the first mate
-			$query .= "/1";
-		}
-
-		# flip our coordinates if we're in reverse complement
-		# and go back to the start
-		$query_lend = length( $fields[9] ) - $query_lend
-		  if ( $fields[1] & 0x10 );
-		$query_lend = $query_lend - $qlen if ( $fields[1] & 0x10 );
-		next if $qlen < $Phylosift::Settings::discard_length;    
-
-		# running on short reads, just do one marker per read
-		$topScore{$query} = 0 unless exists $topScore{$query};
-
-		#only keep the top hit
-		if ( $topScore{$query} <= $score ) {
-			$hit_counts{$marker_name}=0 unless exists $hit_counts{$marker_name};
-			$hit_counts{$marker_name}++;
-			$hit_counts_total++;
-			$contig_hits{$query} = [
-				[
-					$marker_name, $score,
-					$query_lend,  $query_lend + $qlen - 1,
-					$hit_seq
-				]
-			];
-			$topScore{$query} = $score;
-		}
-	}
-	close($HITSTREAM);
-	foreach my $marker (keys %hit_counts){
-		if($hit_counts_total > $Phylosift::Settings::CHUNK_MAX_SEQS/10 && $hit_counts{$marker}/$hit_counts_total > 0.5 ){
-			if($self->{"custom_chunk_size"} ==0){
-				my $warning = "\n\n\nDetected large number of hits to a single marker with Default chunk size used.\n";
-				$warning .=  "This will require a large amount of memory. \n";
-				$warning .= "Manually tune the number of sequences to be processed per chunks in phylosiftrc\n\n\n";
-				Phylosift::Utilities::print_bat_signal();
-				croak $warning;
-			}
-		}
-	}
 	return \%contig_hits;
 }
 

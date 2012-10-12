@@ -312,7 +312,7 @@ sub writeAlignedSeq {
 	#my $new_name = Phylosift::Summarize::tree_name( name => $prev_name );
 	#add a paralog ID if there was more than one good hit for this sequence
 	my $randy = int(rand(2000000000));	# paralogs need to be unique so they are not merged later
-	$new_name .= "_p$seq_count.$randy" if exists( $self->{"read_names"}{$new_name} ) && $seq_count > 0;
+	#$new_name .= "_p$seq_count.$randy" if exists( $self->{"read_names"}{$new_name} ) && $seq_count > 0;
 	$self->{"read_names"}{$new_name} = () if ( !exists $self->{"read_names"}{$new_name} );
 	push( @{ $self->{"read_names"}{$new_name} }, $prev_name );
 

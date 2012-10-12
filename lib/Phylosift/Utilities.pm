@@ -1674,6 +1674,7 @@ sub index_marker_db {
 	`cd "$path" ; $Phylosift::Settings::lastdb -s 900M -p replast rep.dbfasta`;
 	unlink("$path/rep.dbfasta");    # don't need this anymore!
 
+
 	# make a bowtie2 database
 	if ( -e $bowtie2_db_fasta && -s $bowtie2_db_fasta > 100 ) {
 		`cd "$path" ; $Phylosift::Settings::lastdb "$bowtie2_db" "$bowtie2_db_fasta"`;
