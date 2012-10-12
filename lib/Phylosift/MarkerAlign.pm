@@ -414,7 +414,6 @@ sub alignAndMask {
 		}else{
 			$candidate = Phylosift::Utilities::get_candidate_file( self => $self, marker => $marker, type => "", new => 1, chunk => $chunk );
 		}
-		debug "$candidate\n";
 		next unless -e $candidate && -s $candidate > 0;
 
 		my $hmm_file = Phylosift::Utilities::get_marker_hmm_file( self => $self, marker => $marker, loc => 1 );
@@ -698,6 +697,7 @@ sub concatenate_alignments {
 	my %concat_aln;
 	my $cur_len = 0;
 	my $seq_count = 0;
+	my %id_coords;
 	foreach my $alnfile (@$aln_ref) {
 		my $marker = basename($alnfile);
 		$marker =~ s/\..+//g;                     # FIXME: this should really come from a list of markers
@@ -708,9 +708,12 @@ sub concatenate_alignments {
 			my $id;
 			while ( my $line = <$ALN> ) {
 				chomp $line;
-				if ( $line =~ />(.+)/ ) {
+				if ( $line =~ />(\d+)\.(.+)/ ) {
 					$seq_count++;
 					$id = $1;
+					my $coords = $2;
+					$id_coords{$id} = [] unless defined( $id_coords{$id} );
+					push( @{$id_coords{$id}}, $coords );
 				} elsif ( defined($id) ) {
 					$concat_aln{$id} = "" unless defined( $concat_aln{$id} );
 					my $gapfill = $cur_len - length( $concat_aln{$id} );
@@ -734,7 +737,7 @@ sub concatenate_alignments {
 		my $gcount = ( $concat_aln{$id} =~ tr/-// );
 		next if ( $gcount == length( $concat_aln{$id} ) );    # don't write an all-gap seq. these can slip through sometimes.
 		                                                      # write
-		print $ALNOUT ">$id\n$concat_aln{$id}\n";
+		print $ALNOUT ">$id.".join(",",@{$id_coords{$id}})."\n$concat_aln{$id}\n";
 	}
 }
 
