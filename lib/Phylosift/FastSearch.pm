@@ -342,7 +342,6 @@ sub launch_searches {
  #	debug "TESTING" . $args{readtype}->{paired};
  #	$BOWTIE2_R2_PIPE = ps_open(">$bowtie2_r2_pipe") if $args{readtype}->{paired};
  	debug "Opening $reads_file\n";
- 	debug "\n\n\nREAD PIPE : $reads_file\n";
 	my $READS_PIPE    = ps_open("+>$reads_file");
 	my $LAST_RNA_PIPE = ps_open(">$last_rna_pipe");
 
