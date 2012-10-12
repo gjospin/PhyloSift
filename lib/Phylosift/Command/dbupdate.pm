@@ -23,6 +23,7 @@ sub options {
 		[ "knockouts=s",   "File containing a list of taxon IDs to exclude from the database"],
 		[ "local-storage=s",  "Path to local storage for results of scanning genomes for markers", {required => 1}],
 		[ "base-markers=s",  "Path to base markers to add to updated set", {required => 1}],
+		[ "skip-download",  "Skip downloading new data from external repositories"],
 	);
 }
 
@@ -75,29 +76,22 @@ sub execute {
 	# force use of the new NCBI data
 	$Phylosift::Utilities::ncbi_dir = "$repository/ncbi/";
 	
-#	Phylosift::UpdateDB::get_ebi_genomes( directory => $ebi_repository );
-#	Phylosift::UpdateDB::get_ncbi_draft_genomes( directory => $ncbi_draft_repository );
-#	Phylosift::UpdateDB::get_ncbi_finished_genomes( directory => $ncbi_finished_repository );
-#	Phylosift::UpdateDB::get_ncbi_wgs_genomes( directory => $ncbi_wgs_repository );
-#	Phylosift::UpdateDB::find_new_genomes( genome_directory => $ncbi_finished_repository, results_directory => $local, files => \@new_genomes );
-#	Phylosift::UpdateDB::find_new_genomes( genome_directory => $ncbi_draft_repository,    results_directory => $local, files => \@new_genomes );
-#	Phylosift::UpdateDB::find_new_genomes( genome_directory => $ncbi_wgs_repository,      results_directory => $local, files => \@new_genomes );
-#	Phylosift::UpdateDB::find_new_genomes( genome_directory => $ebi_repository,           results_directory => $local, files => \@new_genomes );
-#	Phylosift::UpdateDB::find_new_genomes( genome_directory => $local_repository,         results_directory => $local, files => \@new_genomes );
-#	Phylosift::UpdateDB::qsub_updates( local_directory => $local, files => \@new_genomes );
+	if (!defined( $opt->{skip_download} )){
+		Phylosift::UpdateDB::get_ebi_genomes( directory => $ebi_repository );
+		Phylosift::UpdateDB::get_ncbi_draft_genomes( directory => $ncbi_draft_repository );
+		Phylosift::UpdateDB::get_ncbi_finished_genomes( directory => $ncbi_finished_repository );
+		Phylosift::UpdateDB::get_ncbi_wgs_genomes( directory => $ncbi_wgs_repository );
+	}
+	Phylosift::UpdateDB::find_new_genomes( genome_directory => $ncbi_finished_repository, results_directory => $local, files => \@new_genomes );
+	Phylosift::UpdateDB::find_new_genomes( genome_directory => $ncbi_draft_repository,    results_directory => $local, files => \@new_genomes );
+	Phylosift::UpdateDB::find_new_genomes( genome_directory => $ncbi_wgs_repository,      results_directory => $local, files => \@new_genomes );
+	Phylosift::UpdateDB::find_new_genomes( genome_directory => $ebi_repository,           results_directory => $local, files => \@new_genomes );
+	Phylosift::UpdateDB::find_new_genomes( genome_directory => $local_repository,         results_directory => $local, files => \@new_genomes );
+	Phylosift::UpdateDB::qsub_updates( local_directory => $local, files => \@new_genomes );
 	debug "Updating NCBI tree and taxon map...";
-#	Phylosift::UpdateDB::update_ncbi_taxonomy( repository => $destination );
+	Phylosift::UpdateDB::update_ncbi_taxonomy( repository => $destination );
 	Phylosift::UpdateDB::collate_markers( local_directory => $local, marker_dir => $marker_dir, taxon_knockouts => $taxon_knockouts );
 	
-#	Phylosift::UpdateDB::assign_seqids( marker_directory => $marker_dir );
-	#Phylosift::UpdateDB::update_rna( self => $newObject, marker_dir => $marker_dir );
-#	Phylosift::UpdateDB::make_ncbi_tree_from_update( self => $newObject, marker_dir => $marker_dir );
-#	Phylosift::UpdateDB::build_marker_trees_fasttree( marker_directory => $marker_dir, pruned => 0 );
-	#Phylosift::UpdateDB::make_codon_submarkers( marker_dir => $marker_dir );
-#	Phylosift::UpdateDB::pd_prune_markers( marker_directory => $marker_dir );
-#	Phylosift::UpdateDB::build_marker_trees_fasttree( marker_directory => $marker_dir, pruned => 1 );
-	#Phylosift::UpdateDB::make_pplacer_packages_with_taxonomy(marker_dir => $marker_dir);
-#	Phylosift::UpdateDB::reconcile_with_ncbi( self => $newObject, marker_directory => $marker_dir, pruned => 1 );
 	#Phylosift::UpdateDB::join_trees( marker_dir => $marker_dir );
 #	Phylosift::UpdateDB::package_markers( marker_directory => $marker_dir, base_marker_directory => $base_markers);
 
