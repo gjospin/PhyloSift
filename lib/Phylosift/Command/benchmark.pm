@@ -46,6 +46,7 @@ sub execute {
 	Phylosift::Utilities::program_checks();
 	Phylosift::Utilities::data_checks( self => $ps );
 	$ps->{"readsFile"} = @$args[0];
+	$ps->{"fileDir"} = "PS_temp/".@$args[0]; # oh gawd so UGLY.
 
 	Phylosift::Benchmark::run_benchmark( self => $ps, output_path => $opt->{output} );
 }

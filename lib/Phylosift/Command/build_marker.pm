@@ -7,7 +7,14 @@ use Carp;
 use Phylosift::Utilities qw(debug);
 
 sub description {
-	return "phylosift build_marker - add a new marker the reference database based on a sequence alignment";
+	return qq{phylosift build_marker - add a new marker the reference database based on a sequence alignment
+===========================================
+
+Example 1:  > phylosift build_marker --alignment test.aln --reps_pd=0.05
+Example 2:  > phylosift build_marker -f --alignment=test.aln --tree_pd=0.01
+Example 3:  > phylosift build_marker -f --alignment=test.aln --taxonmap=file.map
+
+};
 }
 
 sub abstract {
@@ -25,7 +32,7 @@ sub options {
 		[ "reps_pd=f",      "Specify the minimum divergence between representative sequences", { default => 0.1 }], 
 		[ "tree_pd=f",      "Specify the minimum phylogenetic diversity in the reference tree", { default => 0.0025 }],
 		[ "taxonmap=s",     "A file containing a mapping of sequence names to taxon IDs"],
-		[ "destination",    "Store the new marker package at the given location instead of the default marker repository"],
+		[ "destination=s",    "Store the new marker package at the given location instead of the default marker repository"],
 	);
 }
 
