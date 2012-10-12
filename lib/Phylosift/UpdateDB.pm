@@ -315,13 +315,15 @@ sub qsub_updates {
 	chomp $hostname;
 	`mkdir -p "$local_directory"`;
 	
-	my @jobids;
+	my %jobids;
 	my $PHYLOSIFTSCRIPT = ps_open( ">/tmp/pssge.sh" );
-	print $PHYLOSIFTSCRIPT qq{#!/bin/sh
+	my $ps = $FindBin::Bin;
+	print $PHYLOSIFTSCRIPT <<EOF;
+#!/bin/sh
+#\$ -cwd
 #\$ -V
 #\$ -S /bin/bash
-export PATH=\$PATH:/home/koadman/development/PhyloSift/bin/
-export PERL5LIB=\$HOME/lib/perl5:/home/koadman/development/PhyloSift/lib
+
 WORKDIR=/state/partition1/koadman/phylosift/\$JOB_ID
 mkdir -p \$WORKDIR
 if [ \$? -gt 0 ]; then
@@ -329,46 +331,51 @@ if [ \$? -gt 0 ]; then
 	mkdir -p \$WORKDIR
 fi
 cd \$WORKDIR
-phylosift search $params \$1
-phylosift align $params \$1
+
+export PATH="\$PATH:$ps"
+$ps/phylosift search $params \$1
+$ps/phylosift align $params \$1
 rm -rf PS_temp/*/treeDir
 rm -rf PS_temp/*/blastDir
 rm -rf PS_temp/*/isolates.fasta
-rm -rf PS_temp/*/alignDir/PMP*.newCandidate
+rm -rf PS_temp/*/alignDir/DNGNG*.newCandidate
 
 scp -r PS_temp/* $hostname:$local_directory
 #cp -r PS_temp/* $local_directory
 rm -rf \$WORKDIR
-};
+
+EOF
+
 	my $job_count = 0;
 
 	foreach my $file ( @{$files} ) {
 		$job_count++;
-		qsub_job(script=>"/tmp/pssge.sh", job_ids=>\@jobids, script_args=>[$file] );
+		qsub_job(script=>"/tmp/pssge.sh", job_ids=>\%jobids, script_args=>[$file] );
 
 		# check whether we've hit the limit for queued jobs, and rest if needed
 		if ( $job_count == MAX_SGE_JOBS ) {
-			wait_for_jobs(job_ids=>\@jobids);
-			@jobids    = ();
+			wait_for_jobs(job_ids=>\%jobids, min_remaining => 20);
+			%jobids    = ();
 			$job_count = 0;
 		}
 	}
-	wait_for_jobs( job_ids => \@jobids );
+	wait_for_jobs( job_ids => \%jobids );
 }
 
 sub wait_for_jobs {
 	my %args = @_;
-	my $jobref = $args{job_ids} || miss("job_ids");
-	my @job_ids = @$jobref;
+	my $job_ids = $args{job_ids} || miss("job_ids");
+	my $min_remaining = $args{min_remaining} || 0;
 
-	# wait for all jobs to complete
-	foreach my $jobid ( @job_ids ) {
-		while (1) {
+	# wait for all (or most) jobs to complete
+	while (scalar( keys(%{$job_ids}) ) > $min_remaining) {
+		foreach my $jobid ( keys(%{$job_ids}) ) {
 			my $output = `qstat -j $jobid 2>&1`;
-			last unless defined($output);
-			last if $output =~ /Following jobs do not exist/;
-			sleep(20);
+			if(!defined($output) || $output =~ /Following jobs do not exist/){
+				delete $job_ids->{$jobid};
+			}
 		}
+		sleep(60);
 	}
 }
 
@@ -430,7 +437,7 @@ sub collate_markers {
 	print STDERR "Found " . scalar(@alldata) . " sequence files\n";
 	unshift( @markerlist, "concat" );
 	my %alltaxa;
-	my @job_ids;
+	my %job_ids;
 	foreach my $marker (@markerlist) {
 		my $cat_ch = ">";    # first time through ensures that existing files get clobbered
 
@@ -463,7 +470,11 @@ sub collate_markers {
 		# now rename sequences with their taxon IDs 
 		my $fasta = get_fasta_filename(marker=>$marker, updated=>1);
 		next unless -e "$local_directory/$fasta";
-		filter_short_and_unclassified_seqs_from_fasta(input_fasta => "$local_directory/$fasta", output_fasta => "$marker_dir/$fasta", min_pct => 50);
+		if(Phylosift::Utilities::is_protein_marker(marker=>$marker)){
+			filter_short_and_unclassified_seqs_from_fasta(input_fasta => "$local_directory/$fasta", output_fasta => "$marker_dir/$fasta", min_pct => 50);
+		}else{
+			`cp $local_directory/$fasta $marker_dir/$fasta`;
+		}
 		create_taxon_id_table(alignment => "$marker_dir/$fasta", output => "$marker_dir/$fasta.taxon_ids", alltaxa=>\%alltaxa);
 		
 		if(!Phylosift::Utilities::is_protein_marker(marker=>$marker)){
@@ -479,7 +490,7 @@ sub collate_markers {
 		}
 		debug "Launching marker build for $marker\n";
 		my $job_id = launch_marker_build(marker=>$marker, dna=>0, batch_script=>$bs);
-		push(@job_ids, $job_id) if defined $job_id;
+		$job_ids{$job_id} = 1 if defined $job_id;
 		
 		my $codon_fasta = get_fasta_filename(marker=>$marker, updated=>1,dna=>1);
 		next unless -e "$local_directory/$codon_fasta";
@@ -488,12 +499,12 @@ sub collate_markers {
 
 		debug "Launching marker build for $marker.codon\b";
 		$job_id = launch_marker_build(marker=>$marker, dna=>1, batch_script=>$bs);
-		push(@job_ids, $job_id) if defined $job_id;
+		$job_ids{$job_id} = 1 if defined $job_id;
 	}
 	my @taxonids = keys(%alltaxa);
 	Phylosift::MarkerBuild::make_ncbi_subtree(out_file=>"$marker_dir/ncbi_tree.updated.tre", taxon_ids=>\@taxonids);
 
-	wait_for_jobs( job_ids => \@job_ids );
+	wait_for_jobs( job_ids => \%job_ids );
 }
 
 sub clean_representatives {
@@ -862,7 +873,7 @@ sub qsub_job {
 	$qsub_cmd .= join(" ", @$saref ) if defined($saref);
 	my $job      = `$qsub_cmd`;
 	$job =~ /Your job (\d+) /;
-	push( @$jobsref, $1 );
+	$jobsref->{$1} = 1;
 }
 
 
@@ -891,7 +902,7 @@ sub launch_marker_build {
 	my $marker = $args{marker} || miss("marker");
 	my $bs = $args{batch_script} || miss("batch_script");
 		
-	my @jobids;
+	my %jobids;
 
 	my $marker_fasta = get_fasta_filename( marker => $marker, updated => 1, dna=>$dna);
 	print STDERR "Couldnt find $marker_fasta\n" unless -e $marker_fasta;
@@ -902,8 +913,8 @@ sub launch_marker_build {
 	my @marray = ($marker_fasta,$marker_fasta.".taxon_ids","0.01");
 	my $clean_reps = get_reps_filename( marker => $marker, updated => 1, clean => 1 );
 	push(@marray, "--unaligned=$clean_reps") if $dna==0;
-	qsub_job(script=>$bs, qsub_args => $qsub_args, job_ids=>\@jobids, script_args=>\@marray );
-	return $jobids[0];
+	qsub_job(script=>$bs, qsub_args => $qsub_args, job_ids=>\%jobids, script_args=>\@marray );
+	return @{keys(%jobids)}[0];
 }
 
 =head2 update_rna
@@ -1131,9 +1142,9 @@ export OMP_NUM_THREADS=3
 FastTree-nonuni $data_type_args -constraints $constraint_splits -constraintWeight 100 -log $target_constrained_log  $target_alignment_amended > $target_constrained_tree
 	
 EOF
-		my @job_ids = ();
-		qsub_job(script=>"/tmp/constrained_tre.sh", job_ids=>\@job_ids, qsub_args=>"-l mem_free=12G");
-		wait_for_jobs(job_ids=>\@job_ids);
+		my %job_ids = ();
+		qsub_job(script=>"/tmp/constrained_tre.sh", job_ids=>\%job_ids, qsub_args=>"-l mem_free=12G");
+		wait_for_jobs(job_ids=>\%job_ids);
 
 		# finally, make a pplacer package with the constrained tree
 		my $taxit_cl =
