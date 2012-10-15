@@ -334,7 +334,7 @@ sub print_bat_signal {
 	$signal .= " XXXXXX/^^^^^\\XXXXXXXXXXXXXXXXXXXXX/^^^^^\\XXXXXX\n";
 	$signal .= "  |XXX|       \\XXX/^^\\XXXXX/^^\\XXX/       |XXX|\n";
 	$signal .= "    \\XX\       \\X/    \\XXX/    \\X/       /XX/\n";
-	$signal .= "       \"\       \"      \\X/      \"      /\"\n";
+	$signal .= "       \"\\       \"      \\X/      \"      /\"\n";
 	print STDERR $signal;
 }
 
@@ -451,13 +451,15 @@ sub marker_update_check {
 	my $url         = $args{url};
 	my $marker_path = $args{dir};
 
+	
+
 	debug "Skipping check for marker updates on server\n"
-	  if $Phylosift::Settings::disable_update_check;
+	  if $Phylosift::Settings::disable_update_check && ! $self->{"removed_markers"};
 	return
-	  if $Phylosift::Settings::disable_update_check;    # bail out if we're not supposed to be here
-	return
-	  if defined($Phylosift::Settings::marker_update_check)
-	  && $Phylosift::Settings::marker_update_check == 0;
+	  if $Phylosift::Settings::disable_update_check && ! $self->{"removed_markers"};    # bail out if we're not supposed to be here
+	#return
+	#  if defined($Phylosift::Settings::marker_update_check)
+	#  && $Phylosift::Settings::marker_update_check == 0;
 
 	eval {
 		require LWP::Simple;
@@ -518,6 +520,8 @@ sub marker_update_check {
 		print $VOUT "$modified_time\n";
 		# temporarily disabling the forced gather until the concat ordering bug can be resolved
 #		my @markers = gather_markers( self => $self, path => $marker_path, force_gather => 1 );
+	}
+	if($get_new_markers || $self->{"removed_markers"}){
 		my @markers = gather_markers( self => $self, path => $marker_path );
 		index_marker_db( self => $self, markers => \@markers, path => $marker_path );
 	}
@@ -555,6 +559,15 @@ sub data_checks {
 															  data_path => $Phylosift::Settings::marker_path
 									  )
 	);
+	#checking if the PMMPROK markers are present at the same time as DNGNGWU markers
+	my @pmprok = glob("$Phylosift::Settings::marker_dir/PMPROK*");
+	my @dngngwu = glob("$Phylosift::Settings::marker_dir/DNGNGWU*");
+	if(scalar(@pmprok) > 0 && scalar(@dngngwu) > 0 ){
+		warn ("Old AND new core markers detected. Removing the old version\nForcing a re-index of the reference database...\n");
+		my $cmd = "rm -rf $Phylosift::Settings::marker_dir/PMPROK*";
+		`$cmd`;
+		$self->{"removed_markers"}=1;
+	}
 	marker_update_check(
 						 self => $self,
 						 dir  => $Phylosift::Settings::marker_dir,
@@ -1620,8 +1633,8 @@ sub index_marker_db {
 	my $self    = $args{self};
 	my $path    = $args{path};
 	my @markers = @{ $args{markers} };
-	debug "Indexing " . scalar(@markers) . " in $path";
-
+	debug "Indexing " . scalar(@markers) . " in $path\n";
+	
 	# use alignments to make an unaligned fasta database containing everything
 	# strip gaps from the alignments
 	my $bowtie2_db       = get_bowtie2_db( path => $path );
@@ -1641,9 +1654,9 @@ sub index_marker_db {
 										   updated => 0
 		  )
 		  unless -e $marker_rep;
-		debug "marker $marker is protein\n"
-		  if is_protein_marker( marker => $marker );
-		debug "marker rep file $marker_rep\n";
+		#debug "marker $marker is protein\n"
+		  #if is_protein_marker( marker => $marker );
+		#debug "marker rep file $marker_rep\n";
 		my $DBOUT = $RNADBOUT;
 		$DBOUT = $PDBOUT if is_protein_marker( marker => $marker );
 		unless ( -f $marker_rep ) {
@@ -1755,6 +1768,7 @@ sub gather_markers {
 		while ( my $line = <$MLIST> ) {
 			chomp $line;
 			next if $line =~ /PMPROK/;
+			next if $line =~ /DNGNGWU/;
 			next if $line =~ /concat/;
 			next if $line =~ /representatives/;
 			next if $line =~ /.updated$/;         # just include the base version name

@@ -231,7 +231,7 @@ sub read_phylosift_config {
 		do "$ENV{HOME}/.phylosiftrc";
 		do $custom_config if defined $custom_config;
 	}
-	if(defined $Phylosift::Settings::chunk_size){
+	if(defined $Phylosift::Settings::CHUNK_MAX_SEQS){
 		$args{self}->{"custom_chunk_size"} = 1;
 	}
 	#apply the command line parameters to override the RC files

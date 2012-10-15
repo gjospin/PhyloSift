@@ -71,11 +71,10 @@ sub read_seq_summary {
 	#reading and storing information from the sequence_taxa.txt file
 	while (<$FILE_IN>) {
 		next if $_ =~ /^#/;
-		my ($read, $tid, $rank, $taxPlacement, $probability) = split(/\t/,$_);
+		my ($read, $coord, $tid, $rank, $taxPlacement, $probability) = split(/\t/,$_);
 		my @taxPlacementID = Phylosift::Summarize::get_taxon_info(taxon=>$tid);
 					
 		$read =~ s/\\.+//g;	# get rid of bioperl garbage
-
 		#	    print "TaxPlacement : $2\t $taxPlacementID[0]\t\n";
 		my @readAncestor = get_ancestor_array(tax_id=> $taxPlacementID[2] );
 

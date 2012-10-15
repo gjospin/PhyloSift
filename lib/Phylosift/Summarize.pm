@@ -283,14 +283,20 @@ sub write_sequence_taxa_summary {
 					$unique_names{$name_ref} = 1;
 				}
 				foreach my $name_ref ( keys(%unique_names) ) {
-					print $SEQUENCETAXA "$name_ref\t$taxon_id\t$taxon_level\t$taxon_name\t"
+					$name_ref =~ m/(\S+)\.(\d+\.\d+)/;
+					$name_ref = $1;
+					my $coord = $2;
+					print $SEQUENCETAXA "$name_ref\t$coord\t$taxon_id\t$taxon_level\t$taxon_name\t"
 					  . $placements->{$qname}{$taxon_id} . "\t" . join( "\t", keys( %{ $sequence_markers->{$qname} } ) ). "\n";
 				}
 			}
 		}
 		foreach my $name_ref ( keys(%unique_names) ) {
 			if ( defined( $unclassifiable->{$qname} ) ) {
-				print $SEQUENCETAXA "$name_ref\tUnknown\tUnknown\tUnclassifiable\t" . ( $unclassifiable->{$qname} / $placecount ) . "\t"
+				$name_ref =~ m/(\S+)\.(\d+\.\d+)/;
+				$name_ref = $1;
+				my $coord = $2;
+				print $SEQUENCETAXA "$name_ref\t$coord\tUnknown\tUnknown\tUnclassifiable\t" . ( $unclassifiable->{$qname} / $placecount ) . "\t"
 				  . $unclassifiable->{$qname} . "\t" . join( "\t", keys( %{ $sequence_markers->{$qname} } ) ) . "\n";
 			}
 		}
@@ -343,11 +349,12 @@ sub merge_sequence_taxa {
 			chomp($_);
 			my @line         = split( /\t/, $_ );
 			my $read_id      = $line[0];
-			my $taxon_id     = $line[1];
-			my $rank         = $line[2];
-			my $species_name = $line[3];
-			my $prob         = $line[4];
-			my $marker_name  = $line[5];
+			my $coord = $line[1];
+			my $taxon_id     = $line[2];
+			my $rank         = $line[3];
+			my $species_name = $line[4];
+			my $prob         = $line[5];
+			my $marker_name  = $line[6];
 			if ( $taxon_id eq "Unknown" ) {
 				$unclassifiable{$read_id} = $prob;
 				for ( my $i = 5 ; $i < @line ; $i++ ) {
