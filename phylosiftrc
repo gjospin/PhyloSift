@@ -16,7 +16,6 @@
 # $blast_path="";
 # $pplacer_path="";
 # $ps_path="";
-# $bowtie2_path="";
 
 
 # Direct paths to executables
@@ -29,8 +28,6 @@
 # $hmmbuild      = "";
 # $raxml         = "";
 # $readconciler  = "";
-# $bowtie2align  = "";
-# $bowtie2build  = "";
 # $cmalign       = "";
 # $pda           = "";
 # $fasttree      = "";
@@ -71,7 +68,6 @@ $threads = 1;    #allows PS to use the number of threads specified
 #$keep_search   = 0; #prevents the files from the bastDir from being deleted after each chunk has completed
 #$start_chunk          = 1;       #sets the chunk to start with
 #$chunks               = undef;   #sets the number of chunks to be run
-#$chunk_size = 1000000;    #sets the number of sequences to run per chunk
 #$my_debug   = 0;          #print debugging messages?
 #$disable_update_check=1; # can be used to disable the marker update check and download at startup
 
@@ -87,14 +83,8 @@ $threads = 1;    #allows PS to use the number of threads specified
 #lastal rna parameters
 #$lastal_rna_evalue = "-e300";
 
-#bowtie2 parameters
-#$bowtie_quiet = "--quiet --sam-nohead --sam-nosq";
-#$bowtie_maxins = "1000";
-#$bowtie_aln = "--local";
-
 #hit parsing parameters
 #$max_hit_overlap = 10;
-#$discard_length = 30; # don't trust anything shorter than 30nt
 #$best_hits_bit_score_range = 30; # all hits with a bit score within this amount of the best will be used
 $align_fraction = 0.5; # at least this amount of min[length(query),length(marker)] must align to be considered a hit
 $align_fraction_isolate = 0.8; # use this align_fraction when in isolate mode on long sequences
