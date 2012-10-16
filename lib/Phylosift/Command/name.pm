@@ -14,7 +14,7 @@ sub abstract {
 	return "Renames the sequence IDs for all the available directories to the original IDs";
 }
 
-sub usage_desc { "name" }
+sub usage_desc { "name <sequence file> [pair sequence file]" }
 
 
 sub options {
@@ -25,7 +25,7 @@ sub options {
 sub validate {
 	my ($self, $opt, $args) = @_;
 	$self->usage_error("phylosift name requires at least the filename as an argument") if @$args ==0 ;
-	$self->usage_error("phylosift name can only have the filename as an argument") if @$args > 1;
+	$self->usage_error("phylosift name can only have the filename(s) as an argument") if @$args > 2;
 }
 
 sub execute {
