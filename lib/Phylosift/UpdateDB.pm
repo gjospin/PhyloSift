@@ -471,7 +471,7 @@ sub collate_markers {
 		my $fasta = get_fasta_filename(marker=>$marker, updated=>1);
 		next unless -e "$local_directory/$fasta";
 		if(Phylosift::Utilities::is_protein_marker(marker=>$marker)){
-			filter_short_and_unclassified_seqs_from_fasta(input_fasta => "$local_directory/$fasta", output_fasta => "$marker_dir/$fasta", min_pct => 50);
+			filter_short_and_unclassified_seqs_from_fasta(input_fasta => "$local_directory/$fasta", output_fasta => "$marker_dir/$fasta", min_pct => 25);
 		}else{
 			`cp $local_directory/$fasta $marker_dir/$fasta`;
 		}
@@ -494,7 +494,7 @@ sub collate_markers {
 		
 		my $codon_fasta = get_fasta_filename(marker=>$marker, updated=>1,dna=>1);
 		next unless -e "$local_directory/$codon_fasta";
-		filter_short_and_unclassified_seqs_from_fasta(input_fasta => "$local_directory/$codon_fasta", output_fasta => "$marker_dir/$codon_fasta", min_pct => 50);
+		filter_short_and_unclassified_seqs_from_fasta(input_fasta => "$local_directory/$codon_fasta", output_fasta => "$marker_dir/$codon_fasta", min_pct => 25);
 		create_taxon_id_table(alignment => "$marker_dir/$codon_fasta", output => "$marker_dir/$codon_fasta.taxon_ids", alltaxa=>\%alltaxa);
 
 		debug "Launching marker build for $marker.codon\b";
@@ -686,9 +686,11 @@ sub create_taxon_id_table {
 	while ( my $line = <$INALN> ) {
 		if ( $line =~ /^>(.+)/ ) {
 			my $header = $1;
-			if ( $header =~ /\.(\d+?)\.fasta/ ) {
+#			if ( $header =~ /\.(\d+?)\.fasta/ ) {
+			if ( $header =~ /^(\d+?)\./ ) {
 				my $taxon_id=$1;
 				next unless defined $taxon_id;
+				next if $taxon_id < 100;
 				next if is_unclassified(taxon_id=>$taxon_id);
 				print $OUTPUT "$header\t$taxon_id\n";
 				$alltaxa->{$1}=1;
@@ -710,32 +712,6 @@ sub is_unclassified {
 	return defined($t) && $t == 12908;
 }
 
-sub fix_names_in_alignment {
-	my %args = @_;
-	my $alignment = $args{alignment} || miss("alignment");
-	my %markertaxa;
-
-	# naive means to remove most trivial duplicates. TODO: allow divergent paralogs to remain.
-	my $printing = 1;
-	my $INALN = ps_open( $alignment );
-	my $OUTALN = ps_open( ">$alignment.fixed" );
-	while ( my $line = <$INALN> ) {
-		if ( $line =~ /^>(.+)/ ) {
-			my $header = $1;
-			if ( $header =~ /\.(\d+?)\.fasta/ ) {
-				$line           = ">$1\n";
-				$printing       = defined( $markertaxa{$1} ) ? 0 : 1;
-				$markertaxa{$1} = 1;
-			}
-		}
-		print $OUTALN $line if $printing;
-	}
-	close $INALN;
-	close $OUTALN;
-	`mv "$alignment.fixed" "$alignment"`;
-}
-
-
 sub filter_short_and_unclassified_seqs_from_fasta {
 	my %args         = @_;
 	my $input_fasta  = $args{input_fasta} || miss("input_fasta");
@@ -753,7 +729,8 @@ sub filter_short_and_unclassified_seqs_from_fasta {
 			if(length($curseq) > 0){
 				my $glen = $curseq =~ tr/-/-/;
 				my $known_pct = 100*(length($curseq)-$glen) / length($curseq);
-				my $taxon_id = $1 if $curhdr =~ /\.(\d+?)\.fasta/;
+#				my $taxon_id = $1 if $curhdr =~ /\.(\d+?)\.fasta/;
+				my $taxon_id = $1 if $curhdr =~ />(\d+?)\./;
 				print $PRUNEDFASTA "$curhdr\n$curseq\n" if $known_pct > $min_pct && !is_unclassified(taxon_id=>$taxon_id);
 				$curseq = "";
 			}
@@ -765,7 +742,8 @@ sub filter_short_and_unclassified_seqs_from_fasta {
 	if(length($curseq) > 0){
 		my $glen = $curseq =~ tr/-/-/;
 		my $known_pct = 100*(length($curseq)-$glen) / length($curseq);
-		my $taxon_id = $1 if $curhdr =~ /\.(\d+?)\.fasta/;
+#		my $taxon_id = $1 if $curhdr =~ /\.(\d+?)\.fasta/;
+		my $taxon_id = $1 if $curhdr =~ />(\d+?)\./;
 		print $PRUNEDFASTA "$curhdr\n$curseq\n" if $known_pct > $min_pct && !is_unclassified(taxon_id=>$taxon_id);
 	}
 }
@@ -787,78 +765,6 @@ sub filter_fasta {
 		}
 		print $PRUNEDFASTA "$line\n" if $printing;
 	}
-}
-
-sub prune_marker {
-	my %args         = @_;
-	my $tre          = $args{tre} || miss("tre");
-	my $distance     = $args{distance} || miss("distance");
-	my $fasta        = $args{fasta} || miss("fasta");
-	my $pruned_fasta = $args{pruned_fasta} || miss("pruned_fasta");
-
-	# no point in pruning something with fewer than three taxa
-	my $seq_count = `grep -c ">" "$fasta"`;
-	chomp $seq_count;
-	if($seq_count < 3){
-		`cp "$fasta" "$pruned_fasta"`;
-		return;
-	}
-
-	#	my $prune_cmd = "$Phylosift::Settings::pda -k 20000 -g -minlen $args{distance} $args{tre} $args{tre}.pruning.log";
-	my $prune_cmd = "pda -k 20000 -g -minlen $distance $tre $tre.pruning.log";
-	system("$prune_cmd");
-
-	# read the list of taxa to keep
-	my $PRUNE = ps_open( "$tre.pruning.log" );
-	my $intaxa = 0;
-	my %keep_taxa;
-	while ( my $line = <$PRUNE> ) {
-		$intaxa = 1 if ( $line =~ /optimal PD set has/ );
-		next unless $intaxa;
-		chomp $line;
-		$keep_taxa{$line} = 1;
-		last if ( length($line) < 2 );    # taxa set ends with empty line
-	}
-
-	# create a pruned alignment fasta
-	filter_fasta( input_fasta => $fasta, output_fasta => $pruned_fasta, keep_taxa => \%keep_taxa );
-	`rm "$tre.pruning.log"`;
-}
-
-sub pd_prune_markers {
-	my %args = @_;
-	my $marker_dir = $args{marker_directory} || miss("marker_directory");
-	chdir($marker_dir);
-
-	# prune distance is different for AA and DNA
-	# these distances are in substitutions per site
-#	my %PRUNE_DISTANCE = ( 0 => 0.01, 1 => 0.003 );
-	my %PRUNE_DISTANCE = ( 0 => 0.001, 1 => 0.003 );	# try leaving all but the totally identical taxa in to make jplace comparison possible
-	my $REPS_DISTANCE  = 0.05;                                  # reps can be further diverged since we care only about similarity search and not read placement
-	my @markerlist     = Phylosift::Utilities::gather_markers();
-	unshift( @markerlist, "concat" );
-	my $dna = 0;
-#	for ( my $dna = 0 ; $dna < 2 ; $dna++ ) {                   # zero for aa, one for dna
-		foreach my $marker (@markerlist) {
-			next unless Phylosift::Utilities::is_protein_marker( marker => $marker );
-			my $tre = get_fasttree_tre_filename( marker => $marker, dna => $dna, updated => 1, pruned => 0 );
-			my $fasta  = get_fasta_filename( marker => $marker, dna => $dna, updated => 1, pruned => 0 );			
-			my $pruned = get_fasta_filename( marker => $marker, dna => $dna, updated => 1, pruned => 1 );
-			next unless -e $fasta && -e $tre;	# perhaps not all markers have made it this far...
-			
-			my $reps_fasta = "";
-			my $clean_reps;
-			my $pruned_reps;
-			prune_marker( distance => $PRUNE_DISTANCE{$dna}, tre => $tre, fasta => $fasta, pruned_fasta => $pruned );
-
-			# if on protein, also create a pruned reps file. Prune more aggressively for this.
-			if ( $dna == 0 ) {
-				$clean_reps = get_reps_filename( marker => $marker, updated => 1, clean => 1 );
-				$pruned_reps = get_reps_filename( marker => $marker, updated => 1, clean => 1, pruned => 1 );
-				prune_marker( distance => $REPS_DISTANCE, tre => $tre, fasta => $clean_reps, pruned_fasta => $pruned_reps );
-			}
-		}
-#	}
 }
 
 sub qsub_job {
@@ -914,7 +820,8 @@ sub launch_marker_build {
 	my $clean_reps = get_reps_filename( marker => $marker, updated => 1, clean => 1 );
 	push(@marray, "--unaligned=$clean_reps") if $dna==0;
 	qsub_job(script=>$bs, qsub_args => $qsub_args, job_ids=>\%jobids, script_args=>\@marray );
-	return @{keys(%jobids)}[0];
+	my @jabbar = keys(%jobids);
+	return $jabbar[0];
 }
 
 =head2 update_rna
@@ -951,91 +858,6 @@ sub update_rna {
 	}
 #	close $AAID;
 
-}
-	
-
-=head2 make_codon_submarkers
-
-Find groups of closely related taxa that would be better analyzed with DNA sequence rather than protein
-
-=cut
-
-sub make_codon_submarkers {
-	my %args = @_;
-	my $marker_dir = $args{marker_dir} || miss("marker_dir");
-	chdir($marker_dir);
-
-	# this is the maximum distance in amino acid substitutions per site that are allowed
-	# on any branch of the tree relating members of a group
-	# TODO: tune this value
-	my $max_aa_branch_distance = 0.2;
-	my ($idtref, $mtiref) = read_gene_ids( file => "$marker_dir/".get_gene_id_file(dna=>0) );
-	my %id_to_taxon = %$idtref;
-	my %marker_taxon_to_id = %$mtiref;
-
-	($idtref, $mtiref) = read_gene_ids( file => "$marker_dir/".get_gene_id_file(dna=>1) );
-	my %codon_id_to_taxon = %$idtref;
-	my %codon_marker_taxon_to_id = %$mtiref;
-
-	my @subalignments;    # list of subalignments created that will later need marker packages made
-	
-	# the following file will provide a mapping of AA gene ID to submarker
-	my $SUBTABLE = ps_open( ">submarkers.txt" );
-	my @marker_list = Phylosift::Utilities::gather_markers();
-	unshift( @marker_list, "concat" );
-	foreach my $marker (@marker_list) {
-		next unless Phylosift::Utilities::is_protein_marker( marker => $marker );
-		my $aa_tree = get_fasttree_tre_filename( marker => $marker, dna => 0, updated => 1, pruned => 0 );
-		my $codon_alignment = get_fasta_filename( marker => $marker, dna => 1, updated => 1, pruned => 0 );
-		# clean out any stale version of this marker
-		my $sub_pack = get_marker_package( marker => $marker, dna => 1, updated => 1, pruned => 0, sub_marker=>'*' );
-		debug "removing $sub_pack\n";
-		`rm -rf $sub_pack`;
-		next unless -e $codon_alignment;
-		my $alnio = Bio::AlignIO->new(-file => $codon_alignment );
-		my $aln = $alnio->next_aln();
-
-		# get groups of taxa that are close
-		my $GROUP_TABLE = ps_open("segment_tree $aa_tree $max_aa_branch_distance |");
-		my %gene_groups;
-		my $group_id = 1;
-		while( my $group_line = <$GROUP_TABLE>) {			
-			chomp($group_line);
-			my @gene_ids = split( /\t/, $group_line );
-
-			# create a new subalignment file
-			my $subalignment = get_fasta_filename( marker => $marker, dna => 1, updated => 1, pruned => 0, sub_marker => $group_id );
-			my $SUBALN = ps_open( ">$subalignment" );
-
-			# map the gene ID from aa tree into the corresponding ID in the codon data
-			foreach my $gene (@gene_ids) {
-				my $taxon     = $id_to_taxon{$gene};
-				if(!defined($codon_marker_taxon_to_id{$marker}{$taxon})){
-					croak("Error: codon table missing taxon $taxon in marker $marker");
-				}
-				my @codon_ids = @{ $codon_marker_taxon_to_id{$marker}{$taxon} };
-
-				# write each sequence into the subalignment
-				foreach my $id (@codon_ids) {
-					foreach my $seq ( $aln->each_seq_with_id($id) ) {
-						print $SUBALN ">$id\n";
-						print $SUBALN $seq->seq() . "\n";
-					}
-					my $codon_taxon     = $codon_id_to_taxon{$id};
-					if($codon_taxon ne $taxon){
-						croak("Error: inconsistent taxa in AA and Codon data. AA: $taxon, Codon: $codon_taxon, aa gene: $gene, codon gene: $id, marker: $marker");
-					}
-				}
-				
-
-				# add the mapping from gene ID to submarker to the table
-				print $SUBTABLE "$gene\t$marker\t$taxon\t$group_id\n";
-			}
-			close $SUBALN;
-			$group_id++;
-		}
-	}
-	close $SUBTABLE;
 }
 
 =head2 make_constrained_tree
