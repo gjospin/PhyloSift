@@ -885,13 +885,10 @@ sub get_hits_contigs {
 		}
 		if($add){
 			# include this hit
-			my @hitdata = [
+			$contig_hits{$query}->[$i] = [
 				$markerName, $bitScore,   $query_start,
 				$query_end,  $frameshift, $pid 
 			];
-			# . "_" . $suff++  ## what to do about suffix?
-			push( @{ $contig_hits{$query} }, @hitdata ) unless defined($contig_hits{$query});
-			$contig_hits{$query}->[$i] = @hitdata;
 			$hit_counts{$markerName}=0 unless exists $hit_counts{$markerName};
 			$hit_counts{$markerName}++;
 			$hit_counts_total++;
