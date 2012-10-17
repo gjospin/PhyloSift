@@ -536,12 +536,14 @@ sub demux_sequences {
 			my $newline1;
 			while ( $newline1 = get_next_line( buffer => $readtype->{buffer}, buffer_index => \$buffer_index, FILE => $F1IN ) ) {
 				last if $newline1 =~ /^>/;
+				chomp($lines1[1]) if defined($lines1[1]);
 				$lines1[1] .= $newline1;
 			}
 			my $newline2;
 			if ( defined($F2IN) ) {
 				while ( $newline2 = <$F2IN> ) {
 					last if $newline2 =~ /^>/;
+					chomp($lines2[1]) if defined($lines2[1]);
 					$lines2[1] .= $newline2;
 				}
 			}
@@ -549,6 +551,7 @@ sub demux_sequences {
 				@lines2 = ( $newline1, "" );
 				while ( $newline1 = get_next_line( buffer => $readtype->{buffer}, buffer_index => \$buffer_index, FILE => $F1IN ) ) {
 					last if $newline1 =~ /^>/;
+					chomp($lines1[1]) if defined($lines1[1]);
 					$lines1[1] .= $newline1;
 				}
 			}
@@ -790,9 +793,27 @@ sub translate_frame {
 	return $return_seq->seq();
 }
 
+sub is_overlapping {
+	my %args = @_;
+	my $prevhit = $args{prevhit} || miss("prevhit");
+	my $start = $args{start} || miss("start");
+	my $end = $args{end} || miss("end");
+	my $max_hit_overlap = $Phylosift::Settings::max_hit_overlap;
+	
+	return 1 if( $prevhit->[2] < $prevhit->[3]
+					&& $start < $end
+					&& $prevhit->[2] < $end - $max_hit_overlap
+					&& $start + $max_hit_overlap < $prevhit->[3] );
+	return 1 if ( $prevhit->[2] > $prevhit->[3]
+					&& $start > $end
+					&& $prevhit->[3] < $start - $max_hit_overlap
+					&& $end + $max_hit_overlap < $prevhit->[2] );
+	return 0;
+}
+
 =head2 get_hits_contigs
 
-parse the blast file
+parse the LASTAL results
 
 =cut
 
@@ -803,130 +824,78 @@ sub get_hits_contigs {
 	my $searchtype = $args{searchtype}
 	  || miss("searchtype");    # can be blastx or lastal
 	my $pid      = $args{pid} || miss("pid");
-	my $prev_hit = "";
-	my $suff     = 0;
 	my %hit_counts = ();
 	my $hit_counts_total = 0;
 # key is a contig name
 # value is an array of arrays, each one has [marker,bit_score,left-end,right-end,suffix]
 	my %contig_hits;
 	my %contig_top_bitscore;
-	my $max_hit_overlap = $Phylosift::Settings::max_hit_overlap;
 
 	# return empty if there is no data
 	return \%contig_hits unless defined( fileno $HITSTREAM );
 	while (<$HITSTREAM>) {
-
-		# read a blast line
+		# read a lastal line
 		next if ( $_ =~ /^#/ );
 		chomp($_);
-		my (
-			$query, $subject,     $two,       $three, $four,
-			$five,  $query_start, $query_end, $eight, $nine,
-			$ten,   $bitScore,    $frameshift
-		);
-		if ( $searchtype eq "blastx" ) {
-			(
-				$query, $subject, $two,         $three,
-				$four,  $five,    $query_start, $query_end,
-				$eight, $nine,    $ten,         $bitScore
-			) = split( /\t/, $_ );
-		}
-		else {
+		my ($query, $subject, $query_start, $query_end, $bitScore, $frameshift);
 
-			# read table in lastal format
-			my @dat = split( /\t/, $_ );
-			$bitScore    = $dat[0];
-			$subject     = $dat[1];
-			$query       = $dat[6];
-			$query_start = $dat[7] + 1;
-			$query_end   = $query_start + $dat[8] - 1;
-			if ( $dat[9] eq "-" ) {
-
-				# reverse strand match
-				$query_start = $dat[10] - $dat[7];
-				$query_end   = $query_start - $dat[8] + 1;
-			}
-			$frameshift = $dat[11];
+		# read table in lastal format
+		my @dat = split( /\t/, $_ );
+		$bitScore    = $dat[0];
+		$subject     = $dat[1];
+		$query       = $dat[6];
+		$query_start = $dat[7] + 1;
+		$query_end   = $query_start + $dat[8] - 1;
+		if ( $dat[9] eq "-" ) {
+			# reverse strand match
+			$query_start = $dat[10] - $dat[7];
+			$query_end   = $query_start - $dat[8] + 1;
 		}
+		$frameshift = $dat[11];
 
 		# get the marker name
 		my @marker = split( /\_\_/, $subject );    # this is soooo ugly
 		my $markerName = $marker[0];
 		next unless (exists $markers{$markerName});
 		
-
 		# running on long reads or an assembly
 		# allow each region of a sequence to have a top hit
 		# do not allow overlap
 		
+		my $i = 0;
+		my $add = 0;
 		if ( defined( $contig_top_bitscore{$query} ) ) {
-			my $i = 0;
-			for ( ; $i < @{ $contig_hits{$query} } ; $i++ ) {
+			my $cur_hitcount = scalar( @{ $contig_hits{$query} } );
+			for ( ; $i < $cur_hitcount; $i++ ) {
 				my $prevhitref = $contig_hits{$query}->[$i];
-				my @prevhit    = @$prevhitref;
-
 				# is there enough overlap to consider these the same?
 				# if so, take the new one if it has higher bitscore
-				if (   $prevhit[2] < $prevhit[3]
-					&& $query_start < $query_end
-					&& $prevhit[2] < $query_end - $max_hit_overlap
-					&& $query_start + $max_hit_overlap < $prevhit[3] )
+				if(is_overlapping(prevhit => $prevhitref, start=>$query_start, end=>$query_end))
 				{
-
-	  # debug "Found overlap $query and $markerName, $query_start:$query_end\n";
-					$contig_hits{$query}->[$i] = [
-						$markerName, $bitScore,   $query_start,
-						$query_end,  $frameshift, $pid 
-					  ]
-					  if ( $bitScore > $prevhit[1] );
-					last;
-				}
-
-				# now check the same for reverse-strand hits
-				if (   $prevhit[2] > $prevhit[3]
-					&& $query_start > $query_end
-					&& $prevhit[3] < $query_start - $max_hit_overlap
-					&& $query_end + $max_hit_overlap < $prevhit[2] )
-				{
-
-	  # debug "Found overlap $query and $markerName, $query_start:$query_end\n";
-					$contig_hits{$query}->[$i] = [
-						$markerName, $bitScore,   $query_start,
-						$query_end,  $frameshift, $pid 
-					  ]
-					  if ( $bitScore > $prevhit[1] );
+					$add = 1 if $bitScore > $prevhitref->[1];
 					last;
 				}
 			}
-			if ( $i == @{ $contig_hits{$query} } ) {
-
-				#increment the suffix
-				$suff++;
-
-				# no overlap was found, include this hit
-				my @hitdata = [
-					$markerName, $bitScore,   $query_start,
-					$query_end,  $frameshift, $pid . "_" . $suff
-				];
-				$hit_counts{$markerName}=0 unless exists $hit_counts{$markerName};
-				$hit_counts{$markerName}++;
-				$hit_counts_total++;
-				push( @{ $contig_hits{$query} }, @hitdata );
-			}
+			# add if we didn't find any overlap
+			$add = 1 if ( $i == $cur_hitcount );
 		}
 		elsif ( !defined( $contig_top_bitscore{$query} ) ) {
-			$hit_counts{$markerName}=0 unless exists $hit_counts{$markerName};
-			$hit_counts{$markerName}++;
-			$hit_counts_total++;
+			$add = 1;
+			$contig_top_bitscore{$query}{$markerName} = $bitScore;
+		}
+		if($add){
+			# include this hit
 			my @hitdata = [
 				$markerName, $bitScore,   $query_start,
 				$query_end,  $frameshift, $pid 
 			];
-			push( @{ $contig_hits{$query} }, @hitdata );
-			$contig_top_bitscore{$query}{$markerName} = $bitScore;
+			# . "_" . $suff++  ## what to do about suffix?
+			push( @{ $contig_hits{$query} }, @hitdata ) unless defined($contig_hits{$query});
+			$contig_hits{$query}->[$i] = @hitdata;
+			$hit_counts{$markerName}=0 unless exists $hit_counts{$markerName};
+			$hit_counts{$markerName}++;
+			$hit_counts_total++;
 		}
-		$prev_hit = $query;
 	}
 	foreach my $marker (keys %hit_counts){
 		if($hit_counts_total > $Phylosift::Settings::CHUNK_MAX_SEQS/10 && $hit_counts{$marker}/$hit_counts_total > 0.5 ){
@@ -939,75 +908,6 @@ sub get_hits_contigs {
 			}
 		}
 	}
-	return \%contig_hits;
-}
-
-=head2 get_hits
-
-parse the blast file, return a hash containing hits to reads
-
-=cut
-
-sub get_hits {
-	my %args       = @_;
-	my $self       = $args{self} || miss("self");
-	my $HITSTREAM  = $args{HITSTREAM} || miss("HISTREAM");
-	my $searchtype = $args{searchtype} || miss("searchtype");
-	my %markerTopScores;
-	my %topScore = ();
-	my %contig_hits;
-
-	# return empty if there is no data
-	return \%contig_hits unless defined( fileno $HITSTREAM );
-	while (<$HITSTREAM>) {
-		chomp($_);
-		next if ( $_ =~ /^#/ );
-		last if ( $_ =~ /^>>>/ );    # rapsearch end signal
-		my (
-			$query, $subject, $two,         $three,
-			$four,  $five,    $query_start, $query_end,
-			$eight, $nine,    $ten,         $bitScore
-		) = split( /\t/, $_ );
-		if ( !defined($subject) ) {
-			debug "Undefined subject $_\n";
-		}
-		my $markerName =
-		  get_marker_name( subject => $subject, search_type => $searchtype );
-		next unless (exists $markers{$markerName});
-#parse once to get the top score for each marker (if isolate is ON, assume best hit comes first)
-		if ( $Phylosift::Settings::isolate ) {
-
-		   # running on a genome assembly, allow only 1 hit per marker (TOP hit)
-			if ( !defined( $markerTopScores{$markerName} )
-				|| $markerTopScores{$markerName} < $bitScore )
-			{
-				$markerTopScores{$markerName} = $bitScore;
-			}
-			my @hitdata = [ $markerName, $bitScore, $query_start, $query_end ];
-			if (  !$Phylosift::Settings::besthit
-				&& $markerTopScores{$markerName} <
-				$bitScore + $best_hits_bit_score_range)
-			{
-				push( @{ $contig_hits{$query} }, @hitdata );
-			}
-			elsif ( $markerTopScores{$markerName} <= $bitScore ) {
-				push( @{ $contig_hits{$query} }, @hitdata );
-			}
-		}
-		else {
-
-			# running on short reads, just do one marker per read
-			$topScore{$query} = 0 unless exists $topScore{$query};
-
-			#only keep the top hit
-			if ( $topScore{$query} <= $bitScore ) {
-				$contig_hits{$query} =
-				  [ [ $markerName, $bitScore, $query_start, $query_end ] ];
-				$topScore{$query} = $bitScore;
-			}    #else do nothing
-		}
-	}
-	close($HITSTREAM);
 	return \%contig_hits;
 }
 
@@ -1045,9 +945,8 @@ sub write_candidates {
 	my %args          = @_;
 	my $self          = $args{self} || miss("self");
 	my $contigHitsRef = $args{hitsref} || miss("hitsref");
-	my $type          = $args{searchtype}
-	  || ""
-	  ; # search type -- candidate filenames will have this name embedded, enables parallel output from different programs
+	# search type -- candidate filenames will have this name embedded, enables parallel output from different programs
+	my $type          = $args{searchtype} || ""; 
 	my $reads_file = $args{reads}      || miss("reads");
 	my $process_id = $args{process_id} || miss("process id");
 	my $chunk      = $args{chunk}      || miss("chunk");
@@ -1055,47 +954,42 @@ sub write_candidates {
 	my %markerHits;
 	my $align_fraction = $Phylosift::Settings::align_fraction;
 	debug "ReadsFile:  $self->{\"readsFile\"}" . "\n";
-	my $seqin = Phylosift::Utilities::open_SeqIO_object( file => $reads_file );
+	my $SEQIN = ps_open($reads_file);
 
-	while ( my $seq = $seqin->next_seq ) {
-
+	# input file is FastA with one sequence per line
+	# parsing is very simple, just alternate lines.
+	while ( my $idline = <$SEQIN> ) {
+		chomp $idline;
+		my $id = $1 if $idline =~ /^>(.+)/;
+		my $seq = <$SEQIN>;
+		chomp $seq;
 		# skip this one if there are no hits
-		next unless ( exists $contig_hits{ $seq->id } );
-		for ( my $i = 0 ; $i < @{ $contig_hits{ $seq->id } } ; $i++ ) {
-			my $cur_hit_ref = $contig_hits{ $seq->id }->[$i];
-			my @cur_hit     = @$cur_hit_ref;
-			my $markerHit   = $cur_hit[0];
-			my $start       = $cur_hit[2];
-			my $end         = $cur_hit[3];
-			my $suff        = $cur_hit[5];
-			( $start, $end ) = ( $end, $start )
-			  if ( $start > $end );    # swap if start bigger than end
+		next unless ( exists $contig_hits{ $id } );
+		my $cur_hit_count = scalar(@{ $contig_hits{ $id } });
+		for ( my $i = 0 ; $i < $cur_hit_count; $i++ ) {
+			my $cur_hit = $contig_hits{ $id }->[$i];
+			my $markerHit   = $cur_hit->[0];
+			my $start       = $cur_hit->[2];
+			my $end         = $cur_hit->[3];
+			my $suff        = $cur_hit->[5];
+			( $start, $end ) = ( $end, $start ) if ( $start > $end );    # swap if start bigger than end
 
-# check to ensure hit covers enough of the marker
-# TODO: make this smarter about boundaries, e.g. allow a smaller fraction to hit
-# if it looks like the query seq goes off the marker boundary
-			$markerLength{$markerHit} = Phylosift::Utilities::get_marker_length(
-				self   => $self,
-				marker => $markerHit
-			) unless exists $markerLength{$markerHit};
-			if ( !defined($markerHit) || !defined( $markerLength{$markerHit} ) )
-			{
+			# check to ensure hit covers enough of the marker
+			# TODO: make this smarter about boundaries, e.g. allow a smaller fraction to hit
+			# if it looks like the query seq goes off the marker boundary
+			$markerLength{$markerHit} = Phylosift::Utilities::get_marker_length(self => $self, marker => $markerHit) unless exists $markerLength{$markerHit};
+			if ( !defined($markerHit) || !defined( $markerLength{$markerHit} ) ){
 				debug "no alignment length for marker $markerHit\n";
-
-				#				debug $markerLength{$markerHit} . "\n";
 				next;
 			}
-			my $min_len =
-			    $markerLength{$markerHit} < $seq->length
-			  ? $markerLength{$markerHit}
-			  : $seq->length;
+			my $min_len = $markerLength{$markerHit} < length($seq) ? $markerLength{$markerHit} : length($seq);
 			next unless ( ( $end - $start ) / $min_len >= $align_fraction );
 
 	  # ensure flanking region is a multiple of 3 to avoid breaking frame in DNA
-			my $seqLength = length( $seq->seq );
+			my $seqLength = length($seq);
 			my $new_seq;
-			$new_seq = substr( $seq->seq, $start, $end - $start );
-			my $new_id = $seq->id;
+			$new_seq = substr( $seq, $start, $end - $start );
+			my $new_id = $id;
 			my $coord = ".$start.$end";
 			if($Phylosift::Settings::paired){
 				#when working with paired data, move the mateID to the end of the string
@@ -1103,16 +997,14 @@ sub write_candidates {
 			}else{
 				$new_id =~ s/(\d+)/$1$coord/;
 			}
-			#$new_id .= "_p$suff" if ( $Phylosift::Settings::isolate );
 
 			#if we're working from DNA then need to translate to protein
 			if ( $self->{"dna"} && $type !~ /\.rna/ ) {
-
 				# check for frameshifts
 				# frameshift from lastal is a string of <block>,<gaps>,<block>
 				# where blocks are aligned chunks and gaps are of the form X:Y
 				# listing number of gaps in ref and query seq, respectively
-				my $frameshift = $cur_hit[4];
+				my $frameshift = $cur_hit->[4];
 
 # debug $seq->id ." Frameshift $frameshift, start $start, end $end, seqlen ".$seq->length."\n";
 				my @frames = split( /,/, $frameshift );
@@ -1126,39 +1018,31 @@ sub write_candidates {
 
 				# check length again in AA units
 				$min_len =
-				    $markerLength{$markerHit} < $seq->length / 3
+				    $markerLength{$markerHit} < length($seq) / 3
 				  ? $markerLength{$markerHit}
-				  : $seq->length / 3;
+				  : length($seq) / 3;
 				next unless ( $aln_len / $min_len >= $align_fraction );
 
 				# construct the DNA sequence to translate
 				my $dna_seq = "";
 				my $cs      = $start;
-				my $fstart =
-				  $cur_hit[2] > $cur_hit[3] ? scalar(@frames) - 1 : 0;
-				my $fdiff = $cur_hit[2] > $cur_hit[3] ? -1 : 1;
-				for (
-					my $fI = $fstart ;
-					$fI >= 0 && $fI < @frames ;
-					$fI += $fdiff
-				  )
+				my $fstart = $cur_hit->[2] > $cur_hit->[3] ? scalar(@frames) - 1 : 0;
+				my $fdiff = $cur_hit->[2] > $cur_hit->[3] ? -1 : 1;
+				for( my $fI = $fstart; $fI >= 0 && $fI < @frames; $fI += $fdiff)
 				{
 					my $frame = $frames[$fI];
 					if ( $frame =~ /(\d+):-*(\d+)/ ) {
 						my $fs = $2;
 						$fs *= -1 if $frame =~ /:-/;
 						$cs += $fs;
-
-						#						debug "Found frameshift, $fs bases\n";
-					}
-					else {
-						$dna_seq .=
-						  $seq->subseq( $cs, $cs + ( $frame * 3 ) - 1 );
+					} else {
+						$dna_seq .= substr( $seq, $cs, $frame * 3 );
+#						$dna_seq .= $seq->subseq( $cs, $cs + ( $frame * 3 ) - 1 );
 						$cs += $frame * 3;
 					}
 				}
 				my $strand = 1;    # forward or reverse strand?
-				$strand *= -1 if ( $cur_hit[2] > $cur_hit[3] );
+				$strand *= -1 if ( $cur_hit->[2] > $cur_hit->[3] );
 				$new_seq = translate_frame(
 					id                => $new_id,
 					seq               => $dna_seq,
@@ -1166,27 +1050,29 @@ sub write_candidates {
 					marker            => $markerHit,
 					reverse_translate => $self->{"dna"}
 				);
-				$new_seq =~ s/\*/X/g
-				  ; # bioperl uses * for stop codons but we want to give X to hmmer later
-			}
-			elsif ( $type =~ /\.rna/ && $cur_hit[2] > $cur_hit[3] ) {
-
+				# bioperl uses * for stop codons but we want to give X to hmmer later
+				$new_seq =~ s/\*/X/g; 
+			}elsif ( $type =~ /\.rna/ && $cur_hit->[2] > $cur_hit->[3] ) {
 				# check if we need to reverse complement this one
 				$new_seq =~ tr/ACGTacgt/TGCAtgca/;
 				$new_seq = reverse($new_seq);
 			}
-			$markerHits{$markerHit} = ""
-			  unless defined( $markerHits{$markerHit} );
+			$markerHits{$markerHit} = "" unless defined( $markerHits{$markerHit} );
 			$markerHits{$markerHit} .= ">" . $new_id . "\n" . $new_seq . "\n";
 		}
+
+		# ensure memory gets freed
+		for ( my $i = 0 ; $i < $cur_hit_count; $i++ ) {
+			$contig_hits{ $id }->[$i] = undef;
+		}
+		$contig_hits{ $id } = undef;
 	}
-	debug "$type Got " . scalar( keys %markerHits ) . " markers with hits\n";
-	
-	
+	debug "$type Got " . scalar( keys %markerHits ) . " markers with hits\n";	
+
+
 	
 	#write the read+ref_seqs for each markers in the list
 	foreach my $marker ( keys %markerHits ) {
-
 		#writing the hits to the candidate file
 		my $candidate_file = Phylosift::Utilities::get_candidate_file(
 			self   => $self,
@@ -1206,10 +1092,12 @@ sub write_candidates {
 				chunk  => $chunk
 			);
 			my $FILE_OUT = ps_open( ">$candidate_file" . "." . $process_id );
-			print $FILE_OUT $markerNuc{$marker}
-			  if defined( $markerNuc{$marker} );
+			print $FILE_OUT $markerNuc{$marker} if defined( $markerNuc{$marker} );
 			close($FILE_OUT);
 		}
+		# force memory free
+		$markerHits{$marker} = undef;
+		$markerNuc{$marker} = undef;
 	}
 	%markerNuc=();
 	%contig_hits =();
