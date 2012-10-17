@@ -544,16 +544,9 @@ sub generate_fasttree {
 	my $FILEHANDLE = ps_open($aln_file);
 	my %type = %{ Phylosift::Utilities::get_sequence_input_type($FILEHANDLE) };
 	close($FILEHANDLE);
-	if ( $type{seqtype} eq "dna" ) {
-		debug "DNA alignment detected\n";
-`$Phylosift::Settings::fasttree -nt -gtr -log "$target_dir/$core.log" "$aln_file" > "$target_dir/$core.tree" 2> /dev/null`;
-	}
-	else {
-		debug "NOT DNA detected\n";
-		debug "ALN : $aln_file\n";
-		debug "tree : $target_dir/$core.tree\n";
-`$Phylosift::Settings::fasttree -log "$target_dir/$core.log" "$aln_file" > "$target_dir/$core.tree" 2> /dev/null`;
-	}
+	my $extra_args = $type{seqtype} eq "dna" ? " -nt -gtr " : "";
+	debug "DNA alignment detected\n" if ($type{seqtype} eq "dna");
+	system("$Phylosift::Settings::fasttree $extra_args -log \"$target_dir/$core.log\" \"$aln_file\" > \"$target_dir/$core.tree\" ");
 	return ( "$target_dir/$core.tree", "$target_dir/$core.log" );
 }
 
