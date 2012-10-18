@@ -134,9 +134,7 @@ if you don't export anything, such as for a purely object-oriented module.
 =cut
 
 my $continue = 0;
-my ( $mode, $readsFile, $readsFile_2, $fileName, $fileDir, $blastDir, $alignDir,
-	$treeDir )
-  = "";
+my ( $mode, $readsFile, $readsFile_2, $fileName, $fileDir, $blastDir, $alignDir, $treeDir ) = "";
 my ( $sec, $min, $hour, $mday, $mon, $year, $wday, $yday, $isdst ) = 0;
 my $workingDir = getcwd;
 
@@ -157,8 +155,6 @@ sub run {
 	Phylosift::Utilities::data_checks( self => $self );
 	file_check( self => $self );
 	directory_prep( self => $self, force => $force, cont => $continue );
-	$self->{"readsFile"} = prep_isolate_files( self => $self, file => $self->{"readsFile"} )
-	  if defined($Phylosift::Settings::isolate) && $Phylosift::Settings::isolate == 1;
 
 	# Forcing usage of updated markers
 	debug "Using updated markers\n" if $Phylosift::Settings::updated;
@@ -253,8 +249,7 @@ sub file_check {
 
 	#check if the input file is a file and not a directory
 	if ( !-f $self->{"readsFile"} ) {
-		croak( $self->{"readsFile"}
-			  . " is not a plain file, could be a directory\n" );
+		croak( $self->{"readsFile"} . " is not a plain file, could be a directory\n" );
 	}
 	if ( $self->{"readsFile_2"} ne "" ) {
 
@@ -265,8 +260,7 @@ sub file_check {
 
 		#check if the input file is a file and not a directory
 		if ( !-e $self->{"readsFile_2"} ) {
-			croak( $self->{"readsFile_2"}
-				  . " is not a plain file, could be a directory\n" );
+			croak( $self->{"readsFile_2"} . " is not a plain file, could be a directory\n" );
 		}
 	}
 	return $self;
@@ -287,43 +281,10 @@ sub run_program_check {
 	my $progCheck = Phylosift::Utilities::program_checks($self);
 	if ( $progCheck != 0 ) {
 		croak "A required program was not found during the checks aborting\n";
-	}
-	elsif ( $progCheck == 0 ) {
+	}elsif ( $progCheck == 0 ) {
 		debug "All systems are good to go, continuing the screening\n";
 	}
 	return $self;
-}
-
-=head2 prep_isolate_files
-=over
-
-=item *
-
-Process an input file for isolate mode.  Creates a temporary input file that contains only a single
-sequence entry.  TODO: this could be made more elegant by storing a mapping between sequence entries
-and isolate names in memory and using that at later stages of the pipeline
-
-=back
-
-=cut
-
-sub prep_isolate_files {
-	my %args    = @_;
-	my $self    = $args{self} || miss("self");
-	my $file    = $args{file} || miss("file");
-	my $OUTFILE =
-	  ps_open( ">" . $Phylosift::Settings::file_dir . "/isolates.fasta" );
-	my $ISOLATEFILE = ps_open($file);
-	debug "Operating on isolate file $file\n";
-	print $OUTFILE ">" . basename($file) . "\n";
-	while ( my $line = <$ISOLATEFILE> ) {
-		next if $line =~ /^>/;
-		print $OUTFILE $line;
-	}
-	close $ISOLATEFILE;
-	close $OUTFILE;
-	$self->{"readsFile"} = "isolates.fasta";
-	return $Phylosift::Settings::file_dir . "/isolates.fasta";
 }
 
 =head2 directoryPrep
@@ -352,8 +313,7 @@ sub directory_prep {
 				  . "Either delete that run from "
 				  . $Phylosift::Settings::file_dir
 				  . ", or force overwrite with the -f command-line option\n" );
-		}
-		else {
+		} else {
 			debug
 			  "Found directory already existing, continuing a previous run\n";
 		}
@@ -381,11 +341,7 @@ sub taxonomy_assignments {
 	my $markListRef = $args{marker} || miss("marker");
 	my $chunk       = $args{chunk};
 	Phylosift::Utilities::start_timer( name => "taxonomy assignments" );
-	Phylosift::Summarize::summarize(
-		self             => $self,
-		marker_reference => $markListRef,
-		chunk            => $chunk
-	);
+	Phylosift::Summarize::summarize( self => $self, marker_reference => $markListRef, chunk => $chunk );
 	Phylosift::Utilities::end_timer( name => "taxonomy assignments" );
 	return $self;
 }
@@ -418,11 +374,7 @@ sub run_pplacer {
 	my $chunk       = $args{chunk};
 	debug "PPLACER MARKS @{$markListRef}\n";
 	Phylosift::Utilities::start_timer( name => "runPPlacer" );
-	Phylosift::pplacer::pplacer(
-		self             => $self,
-		marker_reference => $markListRef,
-		chunk            => $chunk
-	);
+	Phylosift::pplacer::pplacer( self => $self, marker_reference => $markListRef, chunk => $chunk );
 	Phylosift::Utilities::end_timer( name => "runPPlacer" );
 	return $self;
 }
@@ -448,13 +400,7 @@ sub run_marker_align {
 
 	#Align Markers
 	my $threadNum = 1;
-	Phylosift::MarkerAlign::MarkerAlign(
-		self             => $self,
-		marker_reference => $markRef,
-		chunk            => $chunk
-	);
-
-#    Phylosift::BeastInterface::Export(self=>$self, marker_reference=>$markRef, output_file=>$Phylosift::Settings::file_dir."/beast.xml");
+	Phylosift::MarkerAlign::MarkerAlign( self => $self, marker_reference => $markRef, chunk => $chunk );
 	Phylosift::Utilities::end_timer( name => "Alignments" );
 	return $self;
 }
@@ -478,10 +424,7 @@ sub run_search {
 	`rm "$blastDir"/*` if (<"$blastDir"/*>);
 
 	#run Searches
-	Phylosift::FastSearch::run_search(
-		self             => $self,
-		marker_reference => $markerListRef
-	);
+	Phylosift::FastSearch::run_search(self => $self, marker_reference => $markerListRef);
 	Phylosift::Utilities::end_timer( name => "runBlast" );
 	return $self;
 }
