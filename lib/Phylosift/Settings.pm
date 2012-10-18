@@ -24,9 +24,7 @@ sub set_default {
 	my $param = $args{parameter};
 	my $value = $args{value};
 	my $force = $args{force} || 0;
-	if ( !defined(${$param}) ) {
-		${$param} = $value;
-	}elsif($force){
+	if ( !defined(${$param}) || $force ) {
 		${$param} = $value;
 	}
 }
