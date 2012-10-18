@@ -91,7 +91,6 @@ sub run_search {
 	  if ( exists $self->{"readsFile_2"}
 		&& length( $self->{"readsFile_2"} ) > 0 );
 
-   # need to use BLAST for isolate mode, since RAP only handles very short reads
    # ensure databases and sequences are prepared for search
 	prep_and_clean( self => $self );
 
