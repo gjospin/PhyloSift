@@ -87,9 +87,7 @@ sub run_search {
 	debug "Input type is $type->{seqtype}, $type->{format}\n";
 
 	#making sure $type->{paired} is set so we create the appropriate variables
-	$type->{paired} = 1
-	  if ( exists $self->{"readsFile_2"}
-		&& length( $self->{"readsFile_2"} ) > 0 );
+	$type->{paired} = 1 if ( exists $self->{"readsFile_2"} && length( $self->{"readsFile_2"} ) > 0 );
 
    # ensure databases and sequences are prepared for search
 	prep_and_clean( self => $self );
@@ -1032,7 +1030,7 @@ sub write_candidates {
 						$fs *= -1 if $frame =~ /:-/;
 						$cs += $fs;
 					} else {
-						$dna_seq .= substr( $seq, $cs, $frame * 3 );
+						$dna_seq .= substr( $seq, $cs - 1, $frame * 3 );
 #						$dna_seq .= $seq->subseq( $cs, $cs + ( $frame * 3 ) - 1 );
 						$cs += $frame * 3;
 					}
