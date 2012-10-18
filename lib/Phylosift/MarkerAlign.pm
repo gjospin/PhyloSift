@@ -157,9 +157,12 @@ sub compute_hits_summary{
 
 sub set_default_values{
 	my %args = @_;
-	my $self = $args{self};
-	my $minres = $Phylosift::Settings::isolate && $Phylosift::Settings::besthit ? 40 : 20;
-	Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::min_aligned_residues,value=>$minres);
+	my $post = $args{post} || 0;
+	if($post){
+		my $minres = $Phylosift::Settings::isolate && $Phylosift::Settings::besthit ? 40 : 20;
+		debug "minres $minres isolate $Phylosift::Settings::isolate, $Phylosift::Settings::besthit\n";
+		Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::min_aligned_residues,value=>$minres);
+	}
 	Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::rna_split_size,value=>500);
 	Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::gap_character,value=>"-");
 	Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::cm_align_long_tau,value=>"1e-6");
@@ -305,6 +308,8 @@ sub writeAlignedSeq {
 	return if $seq_count > 0 && $Phylosift::Settings::besthit;
 	my $aligned_count = 0;
 	$aligned_count++ while $prev_seq =~ m/[A-Z]/g;
+	debug "min res for $prev_name is $aligned_count, threshold $Phylosift::Settings::min_aligned_residues\n" if $prev_name =~ /\d+\.\d+\.\d+/;
+	debug "seq is $prev_seq\n" if $prev_name =~ /\d+\.\d+\.\d+/;
 	return if $aligned_count < $Phylosift::Settings::min_aligned_residues;
 
 	#substitute all the non letter or number characters into _ in the IDs to avoid parsing issues in tree viewing programs or others
@@ -687,6 +692,7 @@ sub concatenate_alignments {
 				if ( $line =~ />(\d+)\.(.+)/ ) {
 					$seq_count++;
 					$id = $1;
+					$id = 1 if $Phylosift::Settings::isolate;
 					my $coords = $2;
 					$id_coords{$id} = [] unless defined( $id_coords{$id} );
 					push( @{$id_coords{$id}}, $coords );
