@@ -62,22 +62,28 @@ sub initialize {
 	my $readsFile_2 = $args{file_2} || "";
 	debug "READSFILE\t" . $readsFile . "\n" if length($readsFile_2);
 	my $position = rindex( $readsFile, "/" );
-	$self->{"fileName"} =
-	  substr( $readsFile, $position + 1, length($readsFile) - $position - 1 );
+	$self->{"fileName"} = substr( $readsFile, $position + 1, length($readsFile) - $position - 1 );
 	$self->{"workingDir"}  = getcwd;
 	$self->{"mode"}        = $mode;
 	$self->{"readsFile"}   = $readsFile;
 	$self->{"readsFile_2"} = $readsFile_2;
 
 	unless ( defined($Phylosift::Settings::file_dir) ) {
-		$Phylosift::Settings::file_dir =
-		  $self->{"workingDir"} . "/PS_temp/" . $self->{"fileName"};
+		$Phylosift::Settings::file_dir = $self->{"workingDir"} . "/PS_temp/" . $self->{"fileName"};
 	}
 	$self->{"blastDir"} = $Phylosift::Settings::file_dir . "/blastDir";
 	$self->{"alignDir"} = $Phylosift::Settings::file_dir . "/alignDir";
 	$self->{"treeDir"}  = $Phylosift::Settings::file_dir . "/treeDir";
 	$self->{"dna"}      = 0;
 	%{ $self->{"read_names"} } = ();
+	
+	# process defaults again now that command-line params have been parsed,
+	# just in case any defaults depend on command-line settings
+	Phylosift::FastSearch::set_default_values(post=>1);
+	Phylosift::MarkerAlign::set_default_values(post=>1);
+	Phylosift::pplacer::set_default_values(post=>1);
+	Phylosift::Summarize::set_default_values(post=>1);
+	
 	return $self;
 }
 
