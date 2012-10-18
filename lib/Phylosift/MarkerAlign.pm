@@ -575,30 +575,6 @@ sub alignAndMask {
 				merge_alignment( self => $self, alignment_file => $outputFastaDNA, type => 'DNA' );
 			}
 		}
-		# get rid of the process IDs -- they break concatenation
-		if ( $Phylosift::Settings::isolate ) {
-			strip_trailing_ids( alignment_file => $outputFastaAA );
-			strip_trailing_ids( alignment_file => $self->{"alignDir"} . "/$mbname$chunky.unmasked" );
-			if ( Phylosift::Utilities::is_protein_marker( marker => $marker ) ) {
-				strip_trailing_ids( alignment_file => $outputFastaDNA ) if -e $outputFastaDNA;
-			}
-		}
-	}
-}
-
-sub strip_trailing_ids {
-	my %args     = @_;
-	my $ali_file = $args{alignment_file};
-	return unless -f $ali_file;
-	my $ALI_IN   = ps_open($ali_file);
-	my @ali      = <$ALI_IN>;
-	my $ALI_OUT  = ps_open( ">" . $ali_file );
-	foreach my $line (@ali) {
-		chomp $line;
-		if ( $line =~ /^>/ ) {
-			$line =~ s/_\d+$//g;
-		}
-		print $ALI_OUT "$line\n";
 	}
 }
 
