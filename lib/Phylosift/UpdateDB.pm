@@ -687,13 +687,20 @@ sub create_taxon_id_table {
 		if ( $line =~ /^>(.+)/ ) {
 			my $header = $1;
 #			if ( $header =~ /\.(\d+?)\.fasta/ ) {
+			my $ncbi = 1;
 			if ( $header =~ /^(\d+?)\./ ) {
 				my $taxon_id=$1;
-				next unless defined $taxon_id;
-				next if $taxon_id < 100;
-				next if is_unclassified(taxon_id=>$taxon_id);
-				print $OUTPUT "$header\t$taxon_id\n";
-				$alltaxa->{$1}=1;
+				$ncbi = 0 unless defined $taxon_id;
+				$ncbi = 0 if $taxon_id < 100;
+				$ncbi = 0 if is_unclassified(taxon_id=>$taxon_id);
+				if($ncbi){
+					print $OUTPUT "$header\t$taxon_id\n";
+					$alltaxa->{$1}=1;
+				}
+			}
+			if( $header !~ /^\d+?\./ || $ncbi == 0){
+				my $name = $1 if $header =~ /^(.+?)\.\d+.+/;
+				print $OUTPUT "$header\t$name\n";
 			}
 		}
 	}
@@ -723,6 +730,7 @@ sub filter_short_and_unclassified_seqs_from_fasta {
 	my $PRUNEDFASTA = ps_open( ">" . $output_fasta );
 	my $curhdr = "";
 	my $curseq = "";
+	my %known;
 	while ( my $line = <$FASTA> ) {
 		chomp $line;
 		if ( $line =~ /^>(.+)/ ) {
@@ -731,7 +739,8 @@ sub filter_short_and_unclassified_seqs_from_fasta {
 				my $known_pct = 100*(length($curseq)-$glen) / length($curseq);
 #				my $taxon_id = $1 if $curhdr =~ /\.(\d+?)\.fasta/;
 				my $taxon_id = $1 if $curhdr =~ />(\d+?)\./;
-				print $PRUNEDFASTA "$curhdr\n$curseq\n" if $known_pct > $min_pct && !is_unclassified(taxon_id=>$taxon_id);
+				print $PRUNEDFASTA "$curhdr\n$curseq\n" if $known_pct > $min_pct && !is_unclassified(taxon_id=>$taxon_id) && !defined($known{$curhdr});
+				$known{$curhdr}=1;
 				$curseq = "";
 			}
 			$curhdr = $line;
@@ -744,7 +753,7 @@ sub filter_short_and_unclassified_seqs_from_fasta {
 		my $known_pct = 100*(length($curseq)-$glen) / length($curseq);
 #		my $taxon_id = $1 if $curhdr =~ /\.(\d+?)\.fasta/;
 		my $taxon_id = $1 if $curhdr =~ />(\d+?)\./;
-		print $PRUNEDFASTA "$curhdr\n$curseq\n" if $known_pct > $min_pct && !is_unclassified(taxon_id=>$taxon_id);
+		print $PRUNEDFASTA "$curhdr\n$curseq\n" if $known_pct > $min_pct && !is_unclassified(taxon_id=>$taxon_id) && !defined($known{$curhdr});
 	}
 }
 
