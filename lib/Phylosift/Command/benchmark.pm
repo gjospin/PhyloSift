@@ -18,7 +18,8 @@ sub usage_desc { "benchmark %o" }
 
 sub options {
 	return (
-		[ "output=s",  "Path to write benchmark results", { default => "./" }],
+		[ "output=s",         "Path to write benchmark results", { default => "./" }],
+		[ "summary-file=s",  "Taxonomic summary input file", ],
 	);
 }
 
@@ -45,10 +46,11 @@ sub execute {
 	my $ps = new Phylosift::Phylosift();
 	Phylosift::Utilities::program_checks();
 	Phylosift::Utilities::data_checks( self => $ps );
-	$ps->{"readsFile"} = @$args[0];
-	$ps->{"fileDir"} = "PS_temp/".@$args[0]; # oh gawd so UGLY.
+	$ps->{"fileDir"} = "PS_temp/".@$args[0]; # this is the default location after running `phylosift all`
+	my $summary = "PS_temp/".@$args[0]."/sequence_taxa.txt";
+	$summary = $opt->{summary_file} if defined($opt->{summary_file});
 
-	Phylosift::Benchmark::run_benchmark( self => $ps, output_path => $opt->{output} );
+	Phylosift::Benchmark::run_benchmark( self => $ps, reads_file => @$args[0], output_path => $opt->{output}, summary_file => $summary );
 }
 
 1;

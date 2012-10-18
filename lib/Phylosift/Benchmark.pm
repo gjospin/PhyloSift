@@ -25,15 +25,18 @@ my %refTaxa              = ();
 sub run_benchmark {
     my %args = @_;
     my $self        = $args{self} || miss("self");
+    my $reads_file = $args{reads_file} || miss("reads_file");
     my $output_path = $args{output_path} || miss("output_path");
+    my $summary_file = $args{summary_file} || miss("summary_file");
 	my ($nimref, $inmref) = Phylosift::Summarize::read_ncbi_taxon_name_map();
 	%nameidmap = %$nimref;
 	%idnamemap  = %$inmref;
 	print STDERR "parse_simulated_reads\n";
-	my ($refTaxa_ref, $taxon_read_counts,$taxonomy_counts) = parse_simulated_reads( file_name=>$self->{"readsFile"} );
+	my ($refTaxa_ref, $taxon_read_counts,$taxonomy_counts) = parse_simulated_reads( file_name=>$reads_file );
 	%refTaxa = %$refTaxa_ref;
-	my ($top_place,$all_place) = read_seq_summary( self=>$self, output_path=>$output_path,read_source=> \%readSource );
+	my ($top_place,$all_place) = read_seq_summary( self=>$self, output_path=>$output_path,read_source=> \%readSource, summary_file => $summary_file );
 	
+	`mkdir -p $output_path`;
 	$taxon_read_counts->{""}=0;	# define this to process all taxa at once
 	foreach my $taxon(keys(%$taxon_read_counts)){
 		$taxon = undef if $taxon eq "";
@@ -42,12 +45,12 @@ sub run_benchmark {
 	
 		$taxon = ".$taxon" if defined($taxon);
 		$taxon = "" unless defined($taxon);
-		my $report_file    = $output_path . "/" . $self->{"readsFile"} . "$taxon.tophit.csv";
+		my $report_file    = "$output_path/$reads_file$taxon.tophit.csv";
 		report_csv( self=>$self, report_file=>$report_file, mtref=>$tp_prec, read_number=>$read_count );
-		$report_file    = $output_path . "/" . $self->{"readsFile"} . "$taxon.tophit.recall.csv";
+		$report_file    = "$output_path/$reads_file$taxon.tophit.recall.csv";
 		report_csv( self=>$self, report_file=>$report_file, mtref=>$tp_rec, read_number=>1 );
 	
-		my $allmass_report_file    = $output_path . "/" . $self->{"readsFile"} . "$taxon.mass.csv";
+		my $allmass_report_file    = "$output_path/$reads_file$taxon.mass.csv";
 		report_csv( self=>$self, report_file=>$allmass_report_file, mtref=>$mass_prec, read_number=>$mass_reads );
 	}
 }
@@ -63,8 +66,8 @@ sub read_seq_summary {
     my %args = @_;
     my $self        = $args{self} || miss("self");
 	my $readSource  =$args{read_source} || miss("read_source");
-	my $targetDir   = $self->{"fileDir"};
-	my $FILE_IN = ps_open( $targetDir . "/sequence_taxa.txt" );
+	my $summary_file = $args{summary_file};
+	my $FILE_IN = ps_open( $summary_file );
 	my %topReadScore   = ();
 	my %allPlacedScore = ();
 
