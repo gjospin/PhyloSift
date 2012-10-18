@@ -308,16 +308,10 @@ sub writeAlignedSeq {
 	return if $seq_count > 0 && $Phylosift::Settings::besthit;
 	my $aligned_count = 0;
 	$aligned_count++ while $prev_seq =~ m/[A-Z]/g;
-	debug "min res for $prev_name is $aligned_count, threshold $Phylosift::Settings::min_aligned_residues\n" if $prev_name =~ /\d+\.\d+\.\d+/;
-	debug "seq is $prev_seq\n" if $prev_name =~ /\d+\.\d+\.\d+/;
 	return if $aligned_count < $Phylosift::Settings::min_aligned_residues;
 
 	#substitute all the non letter or number characters into _ in the IDs to avoid parsing issues in tree viewing programs or others
 	my $new_name = $prev_name;
-	#my $new_name = Phylosift::Summarize::tree_name( name => $prev_name );
-	#add a paralog ID if there was more than one good hit for this sequence
-	my $randy = int(rand(2000000000));	# paralogs need to be unique so they are not merged later
-	#$new_name .= "_p$seq_count.$randy" if exists( $self->{"read_names"}{$new_name} ) && $seq_count > 0;
 	$self->{"read_names"}{$new_name} = () if ( !exists $self->{"read_names"}{$new_name} );
 	push( @{ $self->{"read_names"}{$new_name} }, $prev_name );
 
@@ -692,7 +686,7 @@ sub concatenate_alignments {
 				if ( $line =~ />(\d+)\.(.+)/ ) {
 					$seq_count++;
 					$id = $1;
-					$id = 1 if $Phylosift::Settings::isolate;
+					$id = basename($self->{"readsFile"}) if $Phylosift::Settings::isolate && $Phylosift::Settings::besthit;
 					my $coords = $2;
 					$id_coords{$id} = [] unless defined( $id_coords{$id} );
 					push( @{$id_coords{$id}}, $coords );
