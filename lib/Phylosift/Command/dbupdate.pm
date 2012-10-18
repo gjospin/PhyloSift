@@ -18,12 +18,13 @@ sub usage_desc { "dbupdate %o" }
 
 sub options {
 	return (
-		[ "repository=s",  "Path to repository for local copies of NCBI and EBI genome databases", { required => 1 }],
-		[ "destination=s", "Path to destination for updated markers", { required => 1 }],
-		[ "knockouts=s",   "File containing a list of taxon IDs to exclude from the database"],
-		[ "local-storage=s",  "Path to local storage for results of scanning genomes for markers", {required => 1}],
+		[ "repository=s",    "Path to repository for local copies of NCBI and EBI genome databases", { required => 1 }],
+		[ "destination=s",   "Path to destination for updated markers", { required => 1 }],
+		[ "knockouts=s",     "File containing a list of taxon IDs to exclude from the database"],
+		[ "local-storage=s", "Path to local storage for results of scanning genomes for markers", {required => 1}],
 		[ "base-markers=s",  "Path to base markers to add to updated set", {required => 1}],
-		[ "skip-download",  "Skip downloading new data from external repositories"],
+		[ "skip-download",   "Skip downloading new data from external repositories"],
+		[ "skip-scan",       "Skip scanning any new genomes for homologs to the marker database"],
 	);
 }
 
@@ -82,14 +83,16 @@ sub execute {
 		Phylosift::UpdateDB::get_ncbi_finished_genomes( directory => $ncbi_finished_repository );
 		Phylosift::UpdateDB::get_ncbi_wgs_genomes( directory => $ncbi_wgs_repository );
 	}
-	Phylosift::UpdateDB::find_new_genomes( genome_directory => $ncbi_finished_repository, results_directory => $local, files => \@new_genomes );
-	Phylosift::UpdateDB::find_new_genomes( genome_directory => $ncbi_draft_repository,    results_directory => $local, files => \@new_genomes );
-	Phylosift::UpdateDB::find_new_genomes( genome_directory => $ncbi_wgs_repository,      results_directory => $local, files => \@new_genomes );
-	Phylosift::UpdateDB::find_new_genomes( genome_directory => $ebi_repository,           results_directory => $local, files => \@new_genomes );
-	Phylosift::UpdateDB::find_new_genomes( genome_directory => $local_repository,         results_directory => $local, files => \@new_genomes );
-	Phylosift::UpdateDB::qsub_updates( local_directory => $local, files => \@new_genomes );
-	debug "Updating NCBI tree and taxon map...";
-	Phylosift::UpdateDB::update_ncbi_taxonomy( repository => $destination );
+	if (!defined( $opt->{skip_scan} )){
+		Phylosift::UpdateDB::find_new_genomes( genome_directory => $ncbi_finished_repository, results_directory => $local, files => \@new_genomes );
+		Phylosift::UpdateDB::find_new_genomes( genome_directory => $ncbi_draft_repository,    results_directory => $local, files => \@new_genomes );
+		Phylosift::UpdateDB::find_new_genomes( genome_directory => $ncbi_wgs_repository,      results_directory => $local, files => \@new_genomes );
+		Phylosift::UpdateDB::find_new_genomes( genome_directory => $ebi_repository,           results_directory => $local, files => \@new_genomes );
+		Phylosift::UpdateDB::find_new_genomes( genome_directory => $local_repository,         results_directory => $local, files => \@new_genomes );
+		Phylosift::UpdateDB::qsub_updates( local_directory => $local, files => \@new_genomes );
+		debug "Updating NCBI tree and taxon map...";
+		Phylosift::UpdateDB::update_ncbi_taxonomy( repository => $destination );
+	}
 	Phylosift::UpdateDB::collate_markers( local_directory => $local, marker_dir => $marker_dir, taxon_knockouts => $taxon_knockouts );
 	
 	#Phylosift::UpdateDB::join_trees( marker_dir => $marker_dir );
