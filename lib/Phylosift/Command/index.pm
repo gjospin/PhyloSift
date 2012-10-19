@@ -1,4 +1,5 @@
 package Phylosift::Command::index;
+use Phylosift::Command::all;
 use Phylosift -command;
 use Phylosift::Settings;
 use Phylosift::Phylosift;
@@ -30,6 +31,7 @@ sub validate {
 sub execute {
 	my ($self, $opt, $args) = @_;
 	Phylosift::Command::sanity_check();
+	Phylosift::Command::all::load_opt(opt=>$opt);
 
 	my $ps = new Phylosift::Phylosift();
 	Phylosift::Utilities::program_checks();
