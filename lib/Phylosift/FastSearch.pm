@@ -797,14 +797,12 @@ sub is_overlapping {
 	my $end = $args{end} || miss("end");
 	my $max_hit_overlap = $Phylosift::Settings::max_hit_overlap;
 	
-	return 1 if( $prevhit->[2] < $prevhit->[3]
-					&& $start < $end
-					&& $prevhit->[2] < $end - $max_hit_overlap
-					&& $start + $max_hit_overlap < $prevhit->[3] );
-	return 1 if ( $prevhit->[2] > $prevhit->[3]
-					&& $start > $end
-					&& $prevhit->[3] < $start - $max_hit_overlap
-					&& $end + $max_hit_overlap < $prevhit->[2] );
+	my $s = $start < $end ? $start : $end;
+	my $e = $start >= $end ? $start : $end;
+	my $ph2 = $prevhit->[2] < $prevhit->[3] ? $prevhit->[2] : $prevhit->[3];
+	my $ph3 = $prevhit->[2] >= $prevhit->[3] ? $prevhit->[2] : $prevhit->[3];
+	
+	return 1 if( $ph2 < $e - $max_hit_overlap && $s + $max_hit_overlap < $ph3 );
 	return 0;
 }
 
