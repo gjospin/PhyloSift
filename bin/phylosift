@@ -8,6 +8,3 @@ use Phylosift;
 Phylosift->run();
 
 exit 0;
-
-
-

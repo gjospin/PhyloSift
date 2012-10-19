@@ -461,6 +461,7 @@ sub read_name_map {
 	my $marker = $args{marker} || miss("marker");
 	return \%namemap if %namemap;
 	my $id_file = Phylosift::Utilities::get_gene_id_file(marker=>$marker);
+	return unless -e $id_file;
 	my $NAMETABLE = ps_open( $id_file );
 	while ( my $line = <$NAMETABLE> ) {
 		chomp $line;
@@ -480,6 +481,7 @@ sub name_taxa_in_jplace {
 
 	# read in the taxon name map
 	my $namemap = read_name_map(marker=>$marker);
+	return unless defined($namemap);
 	Phylosift::Summarize::read_ncbi_taxon_name_map();
 
 	# parse the tree file to get leaf node names
