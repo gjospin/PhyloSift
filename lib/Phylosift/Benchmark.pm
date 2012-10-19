@@ -114,10 +114,12 @@ sub compute_top_place_precision {
 		next if(defined($target_taxon) && $true_taxon ne $target_taxon);
 		$all_positive++;
 
-#		print "Read $readID first tax is $topReadScore{$readID}->[1]\n";
 		my @ancArrayRead = get_ancestor_array( tax_id=>$topReadScore{$readID}->[1] );
 		next unless @ancArrayRead > 0;
 		next unless defined($ancArrayRead[0]);
+		if(!defined($true_taxon)){
+			croak "Taxon unknown for read $readID\nCheck that your sequence data contains the true taxon ID label, and that sequence names in your taxonomic prediction file match it.\n";
+		}
 		my @tt           = Phylosift::Summarize::get_taxon_info(taxon=>$true_taxon);
 		my @firstTaxon   = Phylosift::Summarize::get_taxon_info( taxon=>$ancArrayRead[0] );
 #		print "Read $readID assigned to $firstTaxon[0], true $tt[0]\n";
