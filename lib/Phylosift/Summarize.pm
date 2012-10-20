@@ -9,6 +9,7 @@ use Bio::Phylo;
 use Bio::Phylo::Forest::Tree;
 use IO::File;
 use JSON;
+use File::Basename;
 
 set_default_values();
 
@@ -700,7 +701,13 @@ sub rename_sequences {
 	}
 	close($FH_MAP);
 
-	#open all the
+	# when running in isolate mode we want the resulting sequence names to include the filename
+	if($Phylosift::Settings::isolate){
+		foreach my $k(keys(%name_mapping)){
+			$name_mapping{$k} = basename($self->{"readsFile"}).":".$name_mapping{$k};
+		}
+	}
+
 	my @array_to_rename = ();
 	push( @array_to_rename, glob( $self->{"blastDir"} . "/*.ffn.$chunk*" ) );
 	push( @array_to_rename, glob( $self->{"blastDir"} . "/*.aa.$chunk*" ) );
@@ -708,12 +715,17 @@ sub rename_sequences {
 	push( @array_to_rename, glob( $self->{"alignDir"} . "/*.newCandidate.aa.$chunk" ) );
 	push( @array_to_rename, glob( $self->{"alignDir"} . "/*.$chunk.unmasked" ) );
 	push( @array_to_rename, glob( $self->{"alignDir"} . "/*.codon.updated*.$chunk.fasta" ) );
+	push( @array_to_rename, glob( $self->{"alignDir"} . "/*.updated.fasta" ) );
+	push( @array_to_rename, glob( $self->{"alignDir"} . "/*.newCandidate.aa" ) );
+	push( @array_to_rename, glob( $self->{"alignDir"} . "/*.unmasked" ) );
+	push( @array_to_rename, glob( $self->{"alignDir"} . "/*.codon.updated*.fasta" ) );
 	push( @array_to_rename, glob( $self->{"treeDir"} . "/*.updated.$chunk.jplace" ) );
 	push( @array_to_rename, glob( $self->{"treeDir"} . "/*.codon.updated.sub1.$chunk.jplace" ) );
 	push( @array_to_rename, glob( $Phylosift::Settings::file_dir . "/*.jplace" ) );
 	push( @array_to_rename, glob( $Phylosift::Settings::file_dir . "/sequence_taxa*.$chunk.txt" ) );
 	debug "FILE DIR : ".$Phylosift::Settings::file_dir ."\n";
 	foreach my $file (@array_to_rename) {
+		debug "Renaming $file\n";
 		my $FH  = ps_open($file);
 		my $TMP = ps_open(">$file.tmp");
 		if ( $file =~ m/\.jplace/ ) {
