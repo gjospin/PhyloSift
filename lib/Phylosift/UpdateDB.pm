@@ -1043,6 +1043,8 @@ sub package_markers {
 	system("rm -f *.updated.reps");
 	system("rm -f core.*");
 	system("rm -f ps_build_marker.*");
+	system("rm -rf */temp_ref");
+	
 	
 	chdir( $marker_dir . "/../" );
 	system("pwd");
