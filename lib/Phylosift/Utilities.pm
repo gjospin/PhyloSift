@@ -1658,7 +1658,7 @@ sub index_marker_db {
 		my $DBOUT = $RNADBOUT;
 		$DBOUT = $PDBOUT if is_protein_marker( marker => $marker );
 		unless ( -f $marker_rep ) {
-			warn "Warning: marker $marker appears to be missing data\n";
+			warn "Warning: marker $marker appears to be missing data\n" if ($marker !~ /\.short/);
 			next;
 		}
 		print $MARKERLISTOUT "$marker\n";
@@ -1766,7 +1766,6 @@ sub gather_markers {
 		while ( my $line = <$MLIST> ) {
 			chomp $line;
 			next if $line =~ /PMPROK/;
-			next if $line =~ /DNGNGWU/;
 			next if $line =~ /concat/;
 			next if $line =~ /representatives/;
 			next if $line =~ /.updated$/;         # just include the base version name
