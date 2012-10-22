@@ -324,19 +324,34 @@ The new package will be automatically included in any future runs of the PhyloSi
 
 
 
-\subsection*{Simulated data}
-    - How they were generated
-    - Building PhyloSift DBs without test datasets
-\subsubsection*{Precision, recall, and F1}
-\subsubsection*{Relationship between F1 and neighbor taxon density}
+\subsection*{Bayesian hypothesis testing for the presence of phylogenetic lineages}
+In the context of microbial forensics, a practicioner might want to test for the presence of a particular lineage of interest in a metagenomic sample.
+PhyloSift provides a means to conduct Bayesian hypothesis testing for the presence of reads belonging to organisms that have diverged along specific branches of the reference phylogeny.
 
-\subsubsection*{Community structure accuracy}
-RMSD or other metric?
+In order to describe the Bayesian hypothesis test we introduce the following notation: assume we are given a reference phylogenetic tree $T$ consisting of $n > 1$ branches $\{t_1 \dots t_n\}$. 
+Further assume we are given a collection $S$ of sequences $s_1 \dots s_m$ which are homologous to and aligned to the sequences at the leaf nodes of the reference phylogeny. 
+We denote the marginal likelihood that a particular sequence $s_j$ diverged along branch $t_i$ of the reference phylogeny as $P(s_j|t_i)$.
+Calculation of this marginal likelihood is implemented in the pplacer software and described elsewhere~\cite{Matsen2010}.
+
+The null hypothesis we wish to test is that there are no reads diverging from a set of one or more lineages of interest $T_x \subseteq T$.
+We can express the marginal likelihood of the null hypothesis $M_0$ as:
+\begin{equation}\label{eqn:null}
+P(D|M_0) = \prod_{s_j \in S} 1 - \sum_{t_i \in T_x} P(s_j|t_i)
+\end{equation}
+which can be interpreted as the product over all reads of the probability that the read does not derive from a lineage of interest in $T_x$.
+The marginal likelihood of the alternative hypothesis, e.g. that one or more reads derive from a lineage in $T_x$, can simply be expressed as:
+\begin{equation}\label{eqn:alt}
+P(D|M_1) = 1-P(D|M_0)
+\end{equation}
+Using these marginal likelihoods we can construct a Bayes factor:
+\begin{equation}\label{eqn:alt}
+K=\frac{P(D|M_0)}{P(D|M_1)}
+\end{equation}
 
 \subsubsection*{Accuracy on particular taxonomic groups}
 Bacteria, Arch, Eukarya, viral
 
-\subsection*{Application to human microbiome data}
+\subsection*{Application to human microbiome data: community structure comparison}
 
 To understand how community structure analysis with PhyloSift compares to similar analysis based on 16s rRNA amplicon sequencing we study a recently published human microbiome dataset where samples were sequenced both by a 16s amplicon and a shotgun metagenome approach~\cite{Yatsunenko2012}.
 In that study, fecal material was collected from infants and adults at diverse geographical locations and subjected to sequencing.
@@ -344,7 +359,7 @@ Over 600 samples were sequenced using the 16S amplicon protocol.
 Of those 110 were also subjected to metagenomic shotgun sequencing using 454 pyrosequencing chemistry.
 Here we apply PhyloSift to the 110 metagenomic samples and conduct a community structure comparison among the samples, and additionally replicate the Yatsunenko et al. QIIME analyses on this subset of data.
 
-All QIIME analyses were carried out using release 1.5.0 of the QIIME software toolkit, using the workflow and parameters reported by Yatsunenko et al. The Greengenes reference database (collapsed at 97\% identity) was used to carry out a closed-reference OTU picking protocol at 97\% sequence identity with uclust. All reads which matched database sequences at this level were retained for downstream processing, while non-matching sequences were excluded from further analyses. Parameters for the pick_otus.py script were executed as follows: --max_accepts 1 --max_rejects 8 --stepwords 8 --word_length 8. OTUs were given a taxonomic assignment according to the corresponding reference sequence in the Greengenes database. Rarefaction and PCoA analyses were carried out using the alpha_diversity.py and beta_diversity_through_plots.py workflows. A full list of these QIIME commands and output files have been publicly deposited in Dryad (Accession number XXXXX).
+All QIIME analyses were carried out using release 1.5.0 of the QIIME software toolkit, using the workflow and parameters reported by Yatsunenko et al. The Greengenes reference database (collapsed at 97\% identity) was used to carry out a closed-reference OTU picking protocol at 97\% sequence identity with uclust. All reads which matched database sequences at this level were retained for downstream processing, while non-matching sequences were excluded from further analyses. Parameters for the pick\_otus.py script were executed as follows: --max\_accepts 1 --max\_rejects 8 --stepwords 8 --word\_length 8. OTUs were given a taxonomic assignment according to the corresponding reference sequence in the Greengenes database. Rarefaction and PCoA analyses were carried out using the alpha\_diversity.py and beta\_diversity\_through\_plots.py workflows. A full list of these QIIME commands and output files have been publicly deposited in Dryad (Accession number XXXXX).
 
 PhyloSift processed each of the 110 samples, requiring an average of 35 minutes CPU time per sample.
 The majority of CPU time is spent in phylogenetic placement of reads.
@@ -394,7 +409,7 @@ Figure~\ref{fig:kronaplots} shows two such plots for samples from a 1 month old 
 The analysis of human fecal microbial communities we describe was possible with a median of only 50 Mbp sequence data per sample.
 Current Illumina HiSeq 2000 instruments generate up to 40 Gbp per lane, suggesting that up to 800 samples could be processed in a single Illumina lane and yield similar findings.
 Based on current Illumina sequencing service provider costs this suggests large-scale gut metagenome surveys could be conducted for as little as to \$2.50 to \$5 per sample in sequencing costs.
-
+Library preparation reagents would dominate the overall cost of such studies, as current kits from Illumina require about \$40 per sample.
 
 \subsection*{Limitations and scope}
   - Fundamental limits to computational methods -- resolving linkage among polymorphisms in a population
