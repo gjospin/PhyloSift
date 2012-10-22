@@ -20,6 +20,7 @@ sub options {
 	return (
 		[ "output=s",         "Path to write benchmark results", { default => "./" }],
 		[ "summary-file=s",  "Taxonomic summary input file", ],
+		[ "curve_path=s", "Path to write precision-recall curve data", { default => "./"}],
 	);
 }
 

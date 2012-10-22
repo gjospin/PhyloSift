@@ -27,6 +27,7 @@ sub run_benchmark {
     my $reads_file = $args{reads_file} || miss("reads_file");
     my $output_path = $args{output_path} || miss("output_path");
     my $summary_file = $args{summary_file} || miss("summary_file");
+    my $curve_path = $args{pr_curve} || miss("pr_curve");
 	my ($nimref, $inmref) = Phylosift::Summarize::read_ncbi_taxon_name_map();
 	%nameidmap = %$nimref;
 	%idnamemap  = %$inmref;
@@ -52,6 +53,7 @@ sub run_benchmark {
 		my $allmass_report_file    = "$output_path/$reads_file$taxon.mass.csv";
 		report_csv( report_file=>$allmass_report_file, mtref=>$mass_prec, read_number=>$mass_reads );
 	}
+	compute_precision_recall_curve( reads_file=>$reads_file, top_place=>$top_place, curve_path=>$curve_path, taxon_counts=>$taxonomy_counts );
 }
 
 =head2 read_seq_summary
@@ -100,6 +102,7 @@ sub compute_top_place_precision {
     my $thref = $args{top_place} || miss("top_place");    
     my $true_counts = $args{true_taxon_counts};
     my $target_taxon = $args{target_taxon};
+    my $read = $args{read}; # optional argument for computing for one read only
     my %topReadScore = %$thref;
     my %denominator;
     my %recall;
@@ -107,24 +110,66 @@ sub compute_top_place_precision {
 	my %matchTop = ();
 	init_taxonomy_levels( ncbi_hash => \%matchTop );
 	my $all_positive = 0;
-	foreach my $readID ( keys %topReadScore ) {
-		#look at each taxonomic level for each read
-		my $true_taxon    = $readSource{$readID};
-		# only evaluate this read if it came from the target organism
-		next if(defined($target_taxon) && $true_taxon ne $target_taxon);
-		$all_positive++;
+	
+	# if computing for one read only
+	if(defined($read)) {
+	    my $readID = $read;
+	    #look at each taxonomic level for each read
+        my $true_taxon    = $readSource{$readID};
+        # only evaluate this read if it came from the target organism
+        next if(defined($target_taxon) && $true_taxon ne $target_taxon);
+        $all_positive++;
 
-		my @ancArrayRead = get_ancestor_array( tax_id=>$topReadScore{$readID}->[1] );
-		next unless @ancArrayRead > 0;
-		next unless defined($ancArrayRead[0]);
-		if(!defined($true_taxon)){
+        my @ancArrayRead = get_ancestor_array( tax_id=>$topReadScore{$readID}->[1] );
+        next unless @ancArrayRead > 0;
+        next unless defined($ancArrayRead[0]);
+        if(!defined($true_taxon)){
+            croak "Taxon unknown for read $readID\nCheck that your sequence data contains the true taxon ID label, and that sequence names in your taxonomic prediction file match it.\n";
+        }
+        my @tt           = Phylosift::Summarize::get_taxon_info(taxon=>$true_taxon);
+        my @firstTaxon   = Phylosift::Summarize::get_taxon_info( taxon=>$ancArrayRead[0] );
+#       print "Read $readID assigned to $firstTaxon[0], true $tt[0]\n";
+        foreach my $id (@ancArrayRead) {
+            if ( exists $refTaxa{$true_taxon}{$id} ) {
+                my @currTaxon = Phylosift::Summarize::get_taxon_info(taxon=>$id);
+                my $currRank  = $currTaxon[1];
+                $matchTop{$currRank} = 0 unless exists( $matchTop{$currRank} );
+                $matchTop{$currRank}++;
+                if(defined($target_taxon)){
+                    $recall{$currRank}=$matchTop{$currRank} / $true_counts->{$true_taxon}{$currRank};
+                }else{
+                    $recall{$currRank}=$matchTop{$currRank} / $true_counts->{""}{$currRank};
+                }
+            }
+        }
+
+        my @true_ancestry = get_ancestor_array( tax_id=>$true_taxon );
+        foreach my $id (@true_ancestry) {
+            my @currTaxon = Phylosift::Summarize::get_taxon_info(taxon=>$id);
+            my $currRank  = $currTaxon[1];
+#           debug "Read $readID rank $currRank tid $currTaxon[2]\n";
+            $denominator{$currRank} = 0 unless exists( $denominator{$currRank} );
+            $denominator{$currRank}++;
+        }
+	}else {
+	   foreach my $readID ( keys %topReadScore ) {
+		  #look at each taxonomic level for each read
+		  my $true_taxon    = $readSource{$readID};
+		  # only evaluate this read if it came from the target organism
+		  next if(defined($target_taxon) && $true_taxon ne $target_taxon);
+		  $all_positive++;
+
+		  my @ancArrayRead = get_ancestor_array( tax_id=>$topReadScore{$readID}->[1] );
+		  next unless @ancArrayRead > 0;
+		  next unless defined($ancArrayRead[0]);
+		  if(!defined($true_taxon)){
 			croak "Taxon unknown for read $readID\nCheck that your sequence data contains the true taxon ID label, and that sequence names in your taxonomic prediction file match it.\n";
-		}
-		my @tt           = Phylosift::Summarize::get_taxon_info(taxon=>$true_taxon);
-		my @firstTaxon   = Phylosift::Summarize::get_taxon_info( taxon=>$ancArrayRead[0] );
+		  }
+		  my @tt           = Phylosift::Summarize::get_taxon_info(taxon=>$true_taxon);
+		  my @firstTaxon   = Phylosift::Summarize::get_taxon_info( taxon=>$ancArrayRead[0] );
 #		print "Read $readID assigned to $firstTaxon[0], true $tt[0]\n";
-		foreach my $id (@ancArrayRead) {
-			if ( exists $refTaxa{$true_taxon}{$id} ) {
+		  foreach my $id (@ancArrayRead) {
+			 if ( exists $refTaxa{$true_taxon}{$id} ) {
 				my @currTaxon = Phylosift::Summarize::get_taxon_info(taxon=>$id);
 				my $currRank  = $currTaxon[1];
 				$matchTop{$currRank} = 0 unless exists( $matchTop{$currRank} );
@@ -145,6 +190,7 @@ sub compute_top_place_precision {
 			$denominator{$currRank} = 0 unless exists( $denominator{$currRank} );
 			$denominator{$currRank}++;
 		}
+	  }
 	}
 	return (\%matchTop, $all_positive, \%recall, \%denominator);
 }
@@ -367,6 +413,66 @@ sub get_ancestor_array {
 		$curID = ${ $parent->{$curID} }[0];
 	}
 	return @ancestor;
+}
+
+=head2 compute_precision_recall_curve
+Takes an array of top read scores, sorts them from lowest to highest and
+calls plot_precision_recall_curve to make a PR curve. Returns data structure 
+tbd.  Only run when option provided? Uses $topReadScore{$readID}->[0]
+=cut
+
+sub compute_precision_recall_curve {
+    my %args         = @_;
+    my $reads_file   = $args{reads_file} || miss("reads_file");
+    my $thref        = $args{top_place} || miss("top_place");
+    my $curve_path   = $args{curve_path} || miss("curve_path");
+    my $taxonomy_counts = $args{taxon_counts} || miss("taxon_counts");
+    my %topReadScore = %$thref;
+    my %sortedScores = ();
+    my @readScores = ( );
+    
+    foreach my $read (keys(%topReadScore)) {
+        my $score = $topReadScore{$read}->[0];
+        push($score, @readScores);
+        my ($tp_prec, $read_count, $tp_rec, $allpos) = compute_top_place_precision( top_place=>$thref, true_taxon_counts=>$taxonomy_counts, read=>$read);
+        my @array = ($tp_prec, $tp_rec);
+        $sortedScores{$score} = \@array;
+    }
+    my @scores = sort{$a <=> $b} @readScores;
+    
+    foreach my $score (@scores) {
+       plot_precision_recall_curve( reads_file=>$reads_file, curve_path=>$curve_path, precision=>$sortedScores{$score}->[0], recall=>$sortedScores{$score}->[1]); 
+    }   
+        
+        
+    
+    
+        
+    
+}
+
+=head2 plot_precision_recall_curve
+Takes array of sorted scores and iterates through them to plot the curve. 
+Returns data structure tbd.  Called from within compute_precision_recall_curve
+=cut
+
+sub plot_precision_recall_curve {
+    my %args       = @_;
+    my $reads_file = $args{reads_file} || miss("reads_file");
+    my $curve_path = $args{curve_path} || miss("curve_path");
+    my $precision  = $args{precision} || miss("precision");
+    my $recall     = $args{recall} || miss("recall");
+    my $curve_file = $curve_path . "/" . $reads_file . "pr_curve.txt";
+    
+    unless ( -e $curve_file) {
+        my $PRCURVE = ps_open( ">$curve_file" );
+        print $PRCURVE "$precision\t$recall\n";
+        close $PRCURVE;
+    }
+    
+    my $PRCURVE = ps_open( ">>$curve_file" );
+    print $PRCURVE "$precision\t$recall\n";
+    close $PRCURVE;  
 }
 
 =head1 SUPPORT
