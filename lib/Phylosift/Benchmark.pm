@@ -39,13 +39,13 @@ sub run_benchmark {
 	$taxon_read_counts->{""}=0;	# define this to process all taxa at once
 	foreach my $taxon(keys(%$taxon_read_counts)){
 		$taxon = undef if $taxon eq "";
-		my ($tp_prec, $read_count, $tp_rec) = compute_top_place_precision( top_place=>$top_place, target_taxon=>$taxon, true_taxon_counts=>$taxonomy_counts);
+		my ($tp_prec, $read_count, $tp_rec, $allpos) = compute_top_place_precision( top_place=>$top_place, target_taxon=>$taxon, true_taxon_counts=>$taxonomy_counts);
 		my ($mass_prec, $mass_reads) = compute_mass_precision( all_place=>$all_place, target_taxon=>$taxon);
 	
 		$taxon = ".$taxon" if defined($taxon);
 		$taxon = "" unless defined($taxon);
 		my $report_file    = "$output_path/$reads_file$taxon.tophit.csv";
-		report_csv( report_file=>$report_file, mtref=>$tp_prec, read_number=>$read_count );
+		report_csv( report_file=>$report_file, mtref=>$tp_prec, read_number=>$read_count, allpos => $allpos );
 		$report_file    = "$output_path/$reads_file$taxon.tophit.recall.csv";
 		report_csv( report_file=>$report_file, mtref=>$tp_rec, read_number=>1 );
 	
@@ -101,6 +101,7 @@ sub compute_top_place_precision {
     my $true_counts = $args{true_taxon_counts};
     my $target_taxon = $args{target_taxon};
     my %topReadScore = %$thref;
+    my %denominator;
     my %recall;
     	
 	my %matchTop = ();
@@ -135,8 +136,17 @@ sub compute_top_place_precision {
 				}
 			}
 		}
+
+		my @true_ancestry = get_ancestor_array( tax_id=>$true_taxon );
+		foreach my $id (@true_ancestry) {
+			my @currTaxon = Phylosift::Summarize::get_taxon_info(taxon=>$id);
+			my $currRank  = $currTaxon[1];
+#			debug "Read $readID rank $currRank tid $currTaxon[2]\n";
+			$denominator{$currRank} = 0 unless exists( $denominator{$currRank} );
+			$denominator{$currRank}++;
+		}
 	}
-	return (\%matchTop, $all_positive, \%recall);
+	return (\%matchTop, $all_positive, \%recall, \%denominator);
 }
 
 sub compute_mass_precision {	
@@ -229,9 +239,12 @@ sub report_timing {
 sub as_percent {
     my %args = @_;
 	my $num   = $args{num};
+	my $level = $args{level} || miss("level");
 	my $denom =$args{denom};
-	if ( defined $num && defined $denom && $denom > 0 ) {
-		my $pretty = sprintf( "%.4f", 100 * $num / $denom );
+	my $def =$args{def};
+	my $dd = $denom->{$level} || $def;
+	if ( defined $num->{$level} && defined $dd && $dd > 0 ) {
+		my $pretty = sprintf( "%.4f", 100 * $num->{$level} / $dd );
 		return $pretty;
 	}
 	return "";
@@ -242,6 +255,7 @@ sub report_csv {
 	my $report_file   = $args{report_file} || miss("report_file");
 	my $mtref         = $args{mtref} || miss("mtref");
 	my $readNumber    = $args{read_number};
+	my $allpos        = $args{allpos};
 	my %matchTop      = %$mtref;
 
 	unless ( -f $report_file ) {
@@ -249,20 +263,20 @@ sub report_csv {
 		print $TOPHITS "Date,Superkingdom,Phylum,Subphylum,Class,Order,Family,Genus,Species,Subspecies\n";
 		close $TOPHITS;
 	}
-	my $date = Phylosift::Utilities::get_date_YYYYMMDD();
+	my $date = Phylosift::Utilities::get_date_YYYYMMDD();	
 
 	# append an entry to the tophits file
 	my $TOPHITS = ps_open(">>$report_file" );
 	print $TOPHITS $date;
-	print $TOPHITS "," . as_percent( num=>$matchTop{"superkingdom"}, denom=>$readNumber );
-	print $TOPHITS "," . as_percent( num=>$matchTop{"phylum"},       denom=>$readNumber );
-	print $TOPHITS "," . as_percent( num=>$matchTop{"subphylum"},    denom=>$readNumber );
-	print $TOPHITS "," . as_percent( num=>$matchTop{"class"},        denom=>$readNumber );
-	print $TOPHITS "," . as_percent( num=>$matchTop{"order"},        denom=>$readNumber );
-	print $TOPHITS "," . as_percent( num=>$matchTop{"family"},       denom=>$readNumber );
-	print $TOPHITS "," . as_percent( num=>$matchTop{"genus"},        denom=>$readNumber );
-	print $TOPHITS "," . as_percent( num=>$matchTop{"species"},      denom=>$readNumber );
-	print $TOPHITS "," . as_percent( num=>$matchTop{"subspecies"},   denom=>$readNumber );
+	print $TOPHITS "," . as_percent( num=>$mtref, level=>"superkingdom", denom=>$allpos, def=>$readNumber);
+	print $TOPHITS "," . as_percent( num=>$mtref, level=>"phylum", denom=>$allpos, def=>$readNumber);
+	print $TOPHITS "," . as_percent( num=>$mtref, level=>"subphylum", denom=>$allpos, def=>$readNumber);
+	print $TOPHITS "," . as_percent( num=>$mtref, level=>"class", denom=>$allpos, def=>$readNumber);
+	print $TOPHITS "," . as_percent( num=>$mtref, level=>"order", denom=>$allpos, def=>$readNumber);
+	print $TOPHITS "," . as_percent( num=>$mtref, level=>"family", denom=>$allpos, def=>$readNumber);
+	print $TOPHITS "," . as_percent( num=>$mtref, level=>"genus", denom=>$allpos, def=>$readNumber);
+	print $TOPHITS "," . as_percent( num=>$mtref, level=>"species", denom=>$allpos, def=>$readNumber);
+	print $TOPHITS "," . as_percent( num=>$mtref, level=>"subspecies", denom=>$allpos, def=>$readNumber);
 	print $TOPHITS "\n";
 }
 
