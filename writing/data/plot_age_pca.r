@@ -93,8 +93,8 @@ dev.off()
 
 pdf("allofem.pdf")
 par(mfrow=c(2,2))
-plot(-amp16s$X1[1:ll],amp16s$X2[1:ll],pch=16,col=colors[logages+1],xlab="PC1 ",ylab="PC2 ", main="QIIME on 16S rRNA amplicons")
+plot(-amp16s$X1[1:ll],amp16s$X2[1:ll],pch=16,col=colors[logages+1],xlab="PC1 (50.8%)",ylab="PC2 (9.72%)", main="QIIME on 16S rRNA amplicons")
 plot(-meta16s$X1[1:ll],-meta16s$X2[1:ll],pch=16,col=colors[logagesqiimeta+1],xlab="PC1 (38.9%)",ylab="PC2 (17.9%)", main="QIIME on metagenomic 16S rRNA")
-plot(-phy16$V2,phy16$V3,pch=16,col=colors[logagesphy16+1],xlab="PC1 ",ylab="PC2 ", main="phylosift on metagenomic 16S rRNA")
+plot(-phy16$V2,phy16$V3,pch=16,col=colors[logagesphy16+1],xlab="PC1 (62.2%)",ylab="PC2 (13.7%)", main="phylosift on metagenomic 16S rRNA")
 plot(phypro$V2,phypro$V3,pch=16,col=colors[logagesphy+1],xlab="PC1 (59.9%)",ylab="PC2 (15.2%)", main="phylosift on metagenomic proteins")
 
