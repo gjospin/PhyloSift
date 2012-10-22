@@ -7,7 +7,10 @@ use Carp;
 use Phylosift::Utilities qw(debug);
 
 sub description {
-	return "phylosift simulate - simulate sequencing from a metagenomic sample";
+	return qq{phylosift simulate - simulate sequencing from a metagenomic sample
+Example: 
+> phylosift.pl sim --output=/home/user/sim1 --genome_dir=genomes --genome_count=10 --read_count=100000
+};
 }
 
 sub abstract {

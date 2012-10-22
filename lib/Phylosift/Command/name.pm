@@ -7,11 +7,11 @@ use Carp;
 use Phylosift::Utilities qw(debug);
 
 sub description {
-	return "phylosift name <filename>- Renames the files in the available directories";
+	return "phylosift name <filename>- Swap the original sequence names back into output files";
 }
 
 sub abstract {
-	return "Renames the sequence IDs for all the available directories to the original IDs";
+	return "Replaces phylosift's own sequence IDs with the original IDs found in the input file header";
 }
 
 sub usage_desc { "name <sequence file> [pair sequence file]" }
