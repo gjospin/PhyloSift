@@ -7,23 +7,33 @@ use Carp;
 use Phylosift::Utilities qw(debug);
 
 sub description {
-	return "phylosift name <filename>- Renames the files in the available directories";
+	return "phylosift name <filename>- Swap the original sequence names back into output files";
 }
 
 sub abstract {
-	return "Renames the sequence IDs for all the available directories to the original IDs";
+	return "Replaces phylosift's own sequence IDs with the original IDs found in the input file header";
 }
 
 sub usage_desc { "name <sequence file> [pair sequence file]" }
 
 
+sub name_opts {
+	my %opts = (
+		besthit => [ "besthit",      "When there are multiple hits to the same read, keeps only the best hit to that read", {default => 0}],
+		isolate => [ "isolate",      "Use this mode if you are running data from an isolate genome", {default => 0}],
+	);
+	return %opts;
+}
+
 sub options {
-	my @opts = ();
-	return @opts;
+	my %opts = name_opts();
+	%opts = (Phylosift::Command::all::all_opts(), %opts);
+	return values(%opts);
 }
 
 sub validate {
 	my ($self, $opt, $args) = @_;
+	print "args is ".join(" ",@$args)."\n";
 	$self->usage_error("phylosift name requires at least the filename as an argument") if @$args ==0 ;
 	$self->usage_error("phylosift name can only have the filename(s) as an argument") if @$args > 2;
 }

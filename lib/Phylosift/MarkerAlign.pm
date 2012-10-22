@@ -160,7 +160,6 @@ sub set_default_values{
 	my $post = $args{post} || 0;
 	if($post){
 		my $minres = $Phylosift::Settings::isolate && $Phylosift::Settings::besthit ? 40 : 20;
-		debug "minres $minres isolate $Phylosift::Settings::isolate, $Phylosift::Settings::besthit\n";
 		Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::min_aligned_residues,value=>$minres);
 	}
 	Phylosift::Settings::set_default(parameter=>\$Phylosift::Settings::rna_split_size,value=>500);

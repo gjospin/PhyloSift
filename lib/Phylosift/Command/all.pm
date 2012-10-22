@@ -8,7 +8,18 @@ use Phylosift::Utilities qw(debug);
 use Phylosift::Command::search;
 
 sub description {
-	return "phylosift all - run all steps for phylogenetic analysis of genomic or metagenomic sequence data";
+	return qq{phylosift all - run all steps for phylogenetic analysis of genomic or metagenomic sequence data
+Examples
+==========================================
+> phylosift.pl all --output=my_results --paired illumina_reads.fastq
+This command analyzes paired-end FastQ format sequence reads and stores the results in a directory called my_results.
+
+> phylosift.pl all --output=genome genome_assembly.fasta
+This command will analyze the fasta format genome assembly in genome_assembly.fasta and store the results in a directory called genome.
+
+> phylosift.pl all proteins.fa
+This example searches a set of protein sequences. When --output is not given, the results go to a directory called PS_temp/<filename>
+};
 }
 
 sub abstract {

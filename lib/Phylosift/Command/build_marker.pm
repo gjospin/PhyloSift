@@ -26,7 +26,7 @@ sub usage_desc { "build_marker %o" }
 sub options {
 	return (
 		[ "force|f",        "Overwrites a previous Phylosift run with the same file name"],
-		[ "alignment=s",    "A multiple sequence alignment of the gene family", { required => 1 }],
+		[ "alignment=s",    "A multiple sequence alignment of the gene family"],
 		[ "update-only",    "Generate an updated marker only, no new HMM"],
 		[ "unaligned=s",    "Unaligned and unmasked sequences corresponding from the gene family"],
 		[ "reps_pd=f",      "Specify the minimum divergence between representative sequences", { default => 0.1 }], 

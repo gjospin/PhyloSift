@@ -478,9 +478,9 @@ sub demux_sequences {
 
 			#add the reads to file lookup
 			if ( $lines1[0] =~ m/^@(\S+)(\/\d)/ && $paired ) {
-				print $IDFILE "$1 $seq_count\n";
-			} elsif ( $lines1[0] =~ m/^@(\S+)/ ) {
-				print $IDFILE "$1 $seq_count\n";
+				print $IDFILE "$1\t$seq_count\n";
+			} elsif ( $lines1[0] =~ m/^@(.+)/ ) {
+				print $IDFILE "$1\t$seq_count\n";
 			}
 
 			$lines1[0] = "\@$seq_count";
@@ -570,9 +570,9 @@ sub demux_sequences {
 			$lines2[1] .= "\n";
 			#add the reads to file lookup
 			if ( $lines1[0] =~ m/^>(\S+)(\/\d)/ && $paired ) {
-				print $IDFILE "$1 $seq_count\n";
-			} elsif ( $lines1[0] =~ m/^>(\S+)/ ) {
-				print $IDFILE "$1 $seq_count\n";
+				print $IDFILE "$1\t$seq_count\n";
+			} elsif ( $lines1[0] =~ m/^>(.+)/ ) {
+				print $IDFILE "$1\t$seq_count\n";
 			}
 
 			$lines1[0] = ">$seq_count";

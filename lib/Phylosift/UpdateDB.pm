@@ -1031,23 +1031,20 @@ sub package_markers {
 	foreach my $marker (@markerlist) {
 		# copy the base marker into our directory 
 		`cp -r $base_marker_dir/$marker/ $marker_dir`;
+		`cp -r $base_marker_dir/$marker.short/ $marker_dir` if -d "$base_marker_dir/$marker.short/";
 	}
 
 	
 	# clean up some stuff that really shouldn't be packaged
+	chdir($marker_dir);
 	system("rm -f *.fasttree.log");
 	system("rm -f *.updated*fasta");
 	system("rm -f *.reps.clean");
 	system("rm -f *.updated.reps");
-	system("rm -f *.updated*geneids");
 	system("rm -f core.*");
-	system("rm -f *.tmpread.jplace");
-	system("rm -f *.ncbi_subtree");
-	system("mv ncbi_tree.updated.tre ncbi.safekeeping");
-	system("mv concat.updated.tre concat.safekeeping");
-	system("rm -f *.updated*tre");
-	system("mv concat.safekeeping concat.updated.tre");
-	system("mv ncbi.safekeeping ncbi_tree.updated.tre");
+	system("rm -f ps_build_marker.*");
+	system("rm -rf */temp_ref");
+	
 	
 	chdir( $marker_dir . "/../" );
 	system("pwd");
