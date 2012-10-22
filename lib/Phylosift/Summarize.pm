@@ -283,21 +283,40 @@ sub write_sequence_taxa_summary {
 					$unique_names{$name_ref} = 1;
 				}
 				foreach my $name_ref ( keys(%unique_names) ) {
-					$name_ref =~ m/(\S+)\.(\d+\.\d+)/;
+				    my $coord1 = "";
+				    my $coord2 = "";
+				    if($name_ref =~ m/^(\S+)\.(\d+\.\d+)\.(\d+\.\d+)/){
 					$name_ref = $1;
-					my $coord = $2;
-					print $SEQUENCETAXA "$name_ref\t$coord\t$taxon_id\t$taxon_level\t$taxon_name\t"
+					$coord1 = $2;
+					$coord2 = $3;
+				    }elsif($name_ref =~ m/(\S+)\.(\d+\.\d+)/){
+					$name_ref = $1;
+					$coord1 = $2;
+				    }
+				    print $SEQUENCETAXA "$name_ref\t$coord1\t$taxon_id\t$taxon_level\t$taxon_name\t"
 					  . $placements->{$qname}{$taxon_id} . "\t" . join( "\t", keys( %{ $sequence_markers->{$qname} } ) ). "\n";
+				    print $SEQUENCETAXA "$name_ref\t$coord2\t$taxon_id\t$taxon_level\t$taxon_name\t"
+					. $placements->{$qname}{$taxon_id} . "\t" . join( "\t", keys( %{ $sequence_markers->{$qname} } ) ). "\n" if $coord2 ne "";
 				}
 			}
 		}
 		foreach my $name_ref ( keys(%unique_names) ) {
 			if ( defined( $unclassifiable->{$qname} ) ) {
-				$name_ref =~ m/(\S+)\.(\d+\.\d+)/;
+			    my $coord1 = "";
+			    my $coord2 = "";
+			    if($name_ref =~ m/^(\S+)\.(\d+\.\d+)\.(\d+\.\d+)/){
 				$name_ref = $1;
-				my $coord = $2;
-				print $SEQUENCETAXA "$name_ref\t$coord\tUnknown\tUnknown\tUnclassifiable\t" . ( $unclassifiable->{$qname} / $placecount ) . "\t"
-				  . $unclassifiable->{$qname} . "\t" . join( "\t", keys( %{ $sequence_markers->{$qname} } ) ) . "\n";
+				$coord1 = $2;
+				$coord2 = $3;
+			    }elsif($name_ref =~ m/(\S+)\.(\d+\.\d+)/){
+				$name_ref = $1;
+				$coord1 = $2;
+			    }
+			    print $SEQUENCETAXA "$name_ref\t$coord1\tUnknown\tUnknown\tUnclassifiable\t" . ( $unclassifiable->{$qname} / $placecount ) . "\t"
+				. $unclassifiable->{$qname} . "\t" . join( "\t", keys( %{ $sequence_markers->{$qname} } ) ) . "\n";
+			    print $SEQUENCETAXA "$name_ref\t$coord2\tUnknown\tUnknown\tUnclassifiable\t" . ( $unclassifiable->{$qname} / $placecount ) . "\t"
+				. $unclassifiable->{$qname} . "\t" . join( "\t", keys( %{ $sequence_markers->{$qname} } ) ) . "\n" if $coord2 ne "";
+
 			}
 		}
 
@@ -309,8 +328,20 @@ sub write_sequence_taxa_summary {
 			$taxon_name  = "Unknown" unless defined($taxon_name);
 			if ( exists $self->{"read_names"}{$qname} ) {
 				foreach my $name_ref ( keys(%unique_names) ) {
-					print $SEQUENCESUMMARY "$name_ref\t$taxon_id\t$taxon_level\t$taxon_name\t" . $readsummary->{$taxon_id} . "\t"
-					  . join( "\t", keys( %{ $sequence_markers->{$qname} } ) ) . "\n";
+				    my $coord1 = "";
+				    my $coord2 = "";
+				    if($name_ref =~ m/^(\S+)\.(\d+\.\d+)\.(\d+\.\d+)/){
+					$name_ref = $1;
+					$coord1 = $2;
+					$coord2 = $3;
+				    }elsif($name_ref =~ m/(\S+)\.(\d+\.\d+)/){
+					$name_ref = $1;
+					$coord1 = $2;
+				    }
+				    print $SEQUENCESUMMARY "$name_ref\t$coord1\t$taxon_id\t$taxon_level\t$taxon_name\t" . $readsummary->{$taxon_id} . "\t"
+					. join( "\t", keys( %{ $sequence_markers->{$qname} } ) ) . "\n";
+				    print $SEQUENCESUMMARY "$name_ref\t$coord2\t$taxon_id\t$taxon_level\t$taxon_name\t" . $readsummary->{$taxon_id} . "\t"                                                                                                                
+					. join( "\t", keys( %{ $sequence_markers->{$qname} } ) ) . "\n" if $coord2 ne "";
 				}
 			}
 
@@ -732,7 +763,7 @@ sub rename_sequences {
 		}else{
 			while (<$FH>) {
 				$_ =~ s/^>(\d+)\./>$name_mapping{$1}\./g; #fasta files
-				$_ =~ s/^(\d+)\./$name_mapping{$1}\./g; #summary files
+				$_ =~ s/^(\d+)/$name_mapping{$1}/g; #summary files
 				print $TMP $_;
 			}
 		}
