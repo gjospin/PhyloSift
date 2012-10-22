@@ -696,7 +696,7 @@ sub rename_sequences {
 	my $FH_MAP       = ps_open( $self->{"blastDir"} . "/lookup_ID.$chunk.tbl" );
 	while (<$FH_MAP>) {
 		chomp($_);
-		my @line = split( / /, $_ );
+		my @line = split( /\t/, $_ );
 		$name_mapping{ $line[1] } = $line[0];
 	}
 	close($FH_MAP);
@@ -725,7 +725,6 @@ sub rename_sequences {
 	push( @array_to_rename, glob( $Phylosift::Settings::file_dir . "/sequence_taxa*.$chunk.txt" ) );
 	debug "FILE DIR : ".$Phylosift::Settings::file_dir ."\n";
 	foreach my $file (@array_to_rename) {
-		debug "Renaming $file\n";
 		my $FH  = ps_open($file);
 		my $TMP = ps_open(">$file.tmp");
 		if ( $file =~ m/\.jplace/ ) {
