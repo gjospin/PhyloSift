@@ -596,7 +596,7 @@ sub demux_sequences {
 			# send the reads to the reads file to write candidates later
 			print $READS_PIPE $lines1[0] . $lines1[1] unless $completed_chunk;
 			print $READS_PIPE $lines2[0] . $lines2[1] if @lines2 && !$completed_chunk;
-			print $lines2[0] . $lines2[1] if @lines2 && !$completed_chunk;
+
 			@lines1 = ( $newline1, "" );
 			@lines2 = ( $newline2, "" );
 		}
