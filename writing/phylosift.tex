@@ -344,9 +344,12 @@ The marginal likelihood of the alternative hypothesis, e.g. that one or more rea
 P(D|M_1) = 1-P(D|M_0)
 \end{equation}
 Using these marginal likelihoods we can construct a Bayes factor:
-\begin{equation}\label{eqn:alt}
+\begin{equation}\label{eqn:bayesfactor}
 K=\frac{P(D|M_0)}{P(D|M_1)}
 \end{equation}
+
+The Bayes factor $K$ can then be interpreted with respect to how strongly the null hypothesis is rejected by the data.
+
 
 \subsubsection*{Accuracy on particular taxonomic groups}
 Bacteria, Arch, Eukarya, viral
@@ -391,7 +394,7 @@ We also investigated the diversity of microbes in the fecal samples.
 Classic measures of species diversity such as alpha and beta diversity have been applied to microbial communities by collapsing sequences to operational taxonomic units (OTUs).
 More recently, phylogenetic diversity (PD)~\cite{Faith1992} has been applied to metagenomic data, yielding a diversity metric that does not require defining OTUs~\cite{Kembel2011}.
 In the present work we compute phylogenetic diversity on the placed reads, using the attachment points of reads to the reference tree as the basis for the diversity calculation.
-Figure~\ref{fig:phyloage} shows the phylogenetic diversity present in the fecal samples as a function of age.
+Figure~\ref{fig:agediversity} shows the phylogenetic diversity present in the fecal samples as a function of age.
 We observe a general trend where phylogenetic diversity grows quickly with age, presumably due to colonization of the infant gut, then continues to grow slowly throughout adult life.
 We also plot a variant of the PD metric called abundance-weighted phylogenetic diversity, where diversity contributed by each lineage is weighted by its relative abundance.
 Abundance-weighted PD exhibits a similar age-association, but values for individual samples shift relative to population median values.
@@ -455,9 +458,9 @@ Funding from Dept. of Homeland Security, DOE.
 
 \begin{figure}[hp]
 \begin{center}
-\includegraphics[width=4in]{figures/age_pca.pdf}
+\includegraphics[width=6in]{figures/allofem.pdf}
 \end{center}
-\caption{\textbf{Edge PCA analysis of human fecal samples.} 110 metagenomic samples were processed using PhyloSift and their community composition compared using Edge PCA.}
+\caption{\textbf{Comparison of QIIME PCA and edge PCA analysis of human fecal samples.} Samples from 107 (FIXME) individuals were analyzed by PCA to evaluate trends in community composition with respect to host age. 16S rDNA amplicon data and metagenomic data from the same samples was processed using QIIME and PhyloSift. QIIME analyzed the amplicon data (top left) and 16S rDNA reads extracted from the metagenomic data (top right) using a reference-based OTU picking strategy. PhyloSift analyzed the same metagenomic 16S rDNA reads (bottom left) and reads from the elite marker gene families (bottom right). Each PCA approach gives qualitatively similar results.}
 \label{fig:agepca}
 \end{figure}
 
@@ -474,7 +477,7 @@ Funding from Dept. of Homeland Security, DOE.
 \includegraphics[width=4in]{figures/phylo_diversity.pdf}
 \end{center}
 \caption{\textbf{Relationship betwen fecal community phylogenetic diversity and host age.} 110 metagenomic samples were processed using PhyloSift and their phylogenetic diversity analyzed using two metrics. Unweighted phylogenetic diversity simply measures the total branch length of the reference tree covered by placed reads from a sample. Abundance-weighted phylogenetic diversity adjusts these values by the abundance of each lineage in the sample. In both cases, a log-linear relationship between host age and fecal community phylogenetic diversity can be observed.}
-\label{fig:pcaphylo}
+\label{fig:agediversity}
 \end{figure}
 
 \begin{figure}[hp]
