@@ -429,7 +429,10 @@ sub compute_precision_recall_curve {
     my $taxonomy_counts = $args{taxon_counts} || miss("taxon_counts");
     my %topReadScore = %$thref;
     my %sortedScores = ();
-    my @readScores = ( );
+    my @readScores = ();
+    my %prec = ();
+    my %rec = ();
+    my %counts = ();
     
     foreach my $read (keys(%topReadScore)) {
         my $score = $topReadScore{$read}->[0];
@@ -438,10 +441,19 @@ sub compute_precision_recall_curve {
         my @array = ($tp_prec, $tp_rec);
         $sortedScores{$score} = \@array;
     }
-    my @scores = sort{$a <=> $b} @readScores;
+    my @scores = sort{$b <=> $a} @readScores;
     
     foreach my $score (@scores) {
-       plot_precision_recall_curve( reads_file=>$reads_file, curve_path=>$curve_path, precision=>$sortedScores{$score}->[0], recall=>$sortedScores{$score}->[1]); 
+       foreach my $level (%{$sortedScores{$score}->[0]}) {
+           $counts{$level} = 0 unless defined $counts{$level};
+           $prec{$level} = $sortedScores{$score}->[0]->{$level} + $prec{$level} * $counts{$level};
+           $counts{$level}++;
+           $prec{$level} /= $counts{$level};
+       }
+       foreach my $level (%{$sortedScores{$score}->[1]}) {
+           $rec{$level} += $sortedScores{$score}->[1]->{$level};
+       }
+       plot_precision_recall_curve( reads_file=>$reads_file, curve_path=>$curve_path, precision=>\%prec, recall=>\%rec); 
     }   
         
         
