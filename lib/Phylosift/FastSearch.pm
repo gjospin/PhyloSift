@@ -547,7 +547,7 @@ sub demux_sequences {
 				while ( $newline1 = get_next_line( buffer => $readtype->{buffer}, buffer_index => \$buffer_index, FILE => $F1IN ) ) {
 					last if $newline1 =~ /^>/;
 					chomp($lines1[1]) if defined($lines1[1]);
-					$lines1[1] .= $newline1;
+					$lines2[1] .= $newline1;
 				}
 			}
 
@@ -562,7 +562,12 @@ sub demux_sequences {
 					$lines2[0] =~ s/^(\S+)/$1\/2/g;
 				}
 			}
-
+			#removing possible \n in the middle of the sequence
+			$lines1[1] =~ s/\n//g;
+			$lines2[1] =~ s/\n//g;
+			#add a \n at the end of the sequence to comply with fasta format
+			$lines1[1] .= "\n";
+			$lines2[1] .= "\n";
 			#add the reads to file lookup
 			if ( $lines1[0] =~ m/^>(\S+)(\/\d)/ && $paired ) {
 				print $IDFILE "$1 $seq_count\n";
@@ -581,16 +586,17 @@ sub demux_sequences {
 
 			# if reads are long, do RNA search with lastal
 			print $LAST_RNA_PIPE $lines1[0] . $lines1[1] unless $completed_chunk;
-			print $LAST_RNA_PIPE $lines2[0] . $lines2[1] if defined($F2IN) && !$completed_chunk;
-
+			print $LAST_RNA_PIPE $lines2[0] . $lines2[1] if @lines2 && !$completed_chunk;
+			
 			# send the reads to last
 			print $last_pipe $lines1[0] . $lines1[1] unless $completed_chunk;
-			print $last_pipe $lines2[0] . $lines2[1] if defined($F2IN) && !$completed_chunk;
+			print $last_pipe $lines2[0] . $lines2[1] if @lines2 && !$completed_chunk;
 
 			#
 			# send the reads to the reads file to write candidates later
 			print $READS_PIPE $lines1[0] . $lines1[1] unless $completed_chunk;
-			print $READS_PIPE $lines2[0] . $lines2[1] if defined($F2IN) && !$completed_chunk;
+			print $READS_PIPE $lines2[0] . $lines2[1] if @lines2 && !$completed_chunk;
+			print $lines2[0] . $lines2[1] if @lines2 && !$completed_chunk;
 			@lines1 = ( $newline1, "" );
 			@lines2 = ( $newline2, "" );
 		}
