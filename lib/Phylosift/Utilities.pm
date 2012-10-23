@@ -269,27 +269,7 @@ sub program_checks {
 																 prog_path => $Phylosift::Settings::ps_path
 									  )
 	);
-	Phylosift::Settings::set_default(
-									  parameter => \$Phylosift::Settings::bowtie2align,
-									  value     => get_program_path(
-																 prog_name => "bowtie2-align",
-																 prog_path => $Phylosift::Settings::bowtie2_path
-									  )
-	);
 
-	if ( $Phylosift::Settings::bowtie2align eq "" ) {
-
-		#program not found return;
-		carp("bowtie2 not found");
-		return 1;
-	}
-	Phylosift::Settings::set_default(
-									  parameter => \$Phylosift::Settings::bowtie2build,
-									  value     => get_program_path(
-																 prog_name => "bowtie2-build",
-																 prog_path => $Phylosift::Settings::bowtie2_path
-									  )
-	);
 	return 0;
 }
 
@@ -1575,13 +1555,13 @@ sub get_rapsearch_db {
 	return get_db(%args);
 }
 
-=head2 get_bowtie2_db
+=head2 get_rna_db
 
-returns the name and path of the bowtie2 DB
+returns the name and path of the RNA DB
 
 =cut
 
-sub get_bowtie2_db {
+sub get_rna_db {
 	my %args = @_;
 	$args{db_name} = "rnadb";
 	return get_db(%args);
@@ -1621,7 +1601,7 @@ sub get_candidate_file {
 
 =head2 index_marker_db
 
-Indexes the marker database for searches with rapsearch2, blastall, and bowtie2
+Indexes the marker database for searches with Lastal
 Input: marker list and self
 
 =cut
@@ -1635,10 +1615,10 @@ sub index_marker_db {
 	
 	# use alignments to make an unaligned fasta database containing everything
 	# strip gaps from the alignments
-	my $bowtie2_db       = get_bowtie2_db( path => $path );
-	my $bowtie2_db_fasta = "$bowtie2_db.fasta";
+	my $rna_db       = get_rna_db( path => $path );
+	my $rna_db_fasta = "$rna_db.fasta";
 	my $PDBOUT           = ps_open( ">" . get_blastp_db( path => $path ) );
-	my $RNADBOUT         = ps_open( ">" . $bowtie2_db_fasta );
+	my $RNADBOUT         = ps_open( ">" . $rna_db_fasta );
 	my $MARKERLISTOUT    = ps_open(">$path/marker_list.txt");
 	foreach my $marker (@markers) {
 		my $marker_rep = get_marker_rep_file(
@@ -1686,10 +1666,9 @@ sub index_marker_db {
 	unlink("$path/rep.dbfasta");    # don't need this anymore!
 
 
-	# make a bowtie2 database
-	if ( -e $bowtie2_db_fasta && -s $bowtie2_db_fasta > 100 ) {
-		`cd "$path" ; $Phylosift::Settings::lastdb "$bowtie2_db" "$bowtie2_db_fasta"`;
-		`cd "$path" ; $Phylosift::Settings::bowtie2build "$bowtie2_db_fasta" "$bowtie2_db"`;
+	# make a rna database
+	if ( -e $rna_db_fasta && -s $rna_db_fasta > 100 ) {
+		`cd "$path" ; $Phylosift::Settings::lastdb "$rna_db" "$rna_db_fasta"`;
 	}
 
 	# now create the .hmm files if they aren't already present
