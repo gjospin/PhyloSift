@@ -200,13 +200,14 @@ sub run {
 sub run_later_stages {
 	my %args = @_;
 	my $self = $args{self} || miss("self");
+	my $continue = $args{cont} || miss ("Continue value");
 	if ( $self->{"mode"} eq 'align' ) {
 		$self = run_marker_align(@_);
-		$self->{"mode"} = 'placer' if $args{cont};
+		$self->{"mode"} = 'placer' if $continue;
 	}
 	if ( $self->{"mode"} eq 'placer' ) {
 		$self = run_pplacer(@_);
-		$self->{"mode"} = 'summarize' if $args{cont};
+		$self->{"mode"} = 'summarize' if $continue;
 	}
 	if ( $self->{"mode"} eq 'summarize' ) {
 		$self = taxonomy_assignments(@_);
