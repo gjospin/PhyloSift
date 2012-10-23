@@ -231,7 +231,7 @@ sub has_chunk_completed {
 	my $chunk    = $args{chunk};
 	my $run_file = Phylosift::Utilities::get_run_info_file( self => $self );
 	my $grep     = `grep "Chunk $chunk completed" $run_file`;
-	return 1 if defined $grep && length($grep) > 0;
+	return 1 if defined $grep && length($grep) > 0 && !$Phylosift::Settings::force;
 	return 0;
 }
 
@@ -1070,7 +1070,7 @@ Generates the blastable database using the marker representatives
 sub prep_and_clean {
 	my %args = @_;
 	my $self = $args{self} || miss("self");
-
+	`rm -rf "$self->{"blastDir"}"` if $Phylosift::Settings::force;
 	#create a directory for the Reads file being processed.
 	`mkdir "$Phylosift::Settings::file_dir"` unless ( -e $Phylosift::Settings::file_dir );
 	`mkdir "$self->{"blastDir"}"`            unless ( -e $self->{"blastDir"} );
