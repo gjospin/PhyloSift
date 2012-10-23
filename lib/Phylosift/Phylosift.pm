@@ -178,6 +178,8 @@ sub run {
 		Phylosift::Summarize::print_run_info( self => $self, OUTPUT => $RUNINFO );
 		$self = run_search( self => $self, cont => $continue, marker => \@markers );
 
+		$self->{"mode"} = 'align' if $continue;
+	
 		debug "MODE :: " . $self->{"mode"} . "\n";
 	}
 	debug "MODE :: " . $self->{"mode"} . "\n";
@@ -200,9 +202,11 @@ sub run_later_stages {
 	my $self = $args{self} || miss("self");
 	if ( $self->{"mode"} eq 'align' ) {
 		$self = run_marker_align(@_);
+		$self->{"mode"} = 'placer' if $args{cont};
 	}
 	if ( $self->{"mode"} eq 'placer' ) {
 		$self = run_pplacer(@_);
+		$self->{"mode"} = 'summarize' if $args{cont};
 	}
 	if ( $self->{"mode"} eq 'summarize' ) {
 		$self = taxonomy_assignments(@_);
@@ -378,7 +382,6 @@ sub run_pplacer {
 	my $continue    = $args{cont} || 0;
 	my $markListRef = $args{marker} || miss("marker");
 	my $chunk       = $args{chunk};
-	debug "PPLACER MARKS @{$markListRef}\n";
 	Phylosift::Utilities::start_timer( name => "runPPlacer" );
 	Phylosift::pplacer::pplacer( self => $self, marker_reference => $markListRef, chunk => $chunk );
 	Phylosift::Utilities::end_timer( name => "runPPlacer" );
