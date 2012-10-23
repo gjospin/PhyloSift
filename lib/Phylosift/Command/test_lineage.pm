@@ -116,8 +116,8 @@ sub execute {
 		$bf_numer *= (1.0-$mass);
 	}
 	
-	print "Null hypothesis: taxa in this group have zero abundance in the sample\n";
-	my $bf = $bf_numer == 1 ? "Infinite -- target is beyond limit of detection" : ($bf_numer / (1-$bf_numer));
+	print "\nNull hypothesis: taxa in this group have zero abundance in the sample\n";
+	my $bf = $bf_numer == 1 ? "Zero -- target is beyond limit of detection" : ((1-$bf_numer) / ($bf_numer));
 	print "\nBayes factor: $bf\n\n";
 	print "Strength of null hypothesis rejection:\n";
 	print "< 1\t Null hypothesis supported\n";
@@ -125,7 +125,7 @@ sub execute {
 	print "3-10\tSubstantial\n";
 	print "10-30\tStrong\n";
 	print "30-100\tVery Strong\n";
-	print ">100\tDecisive\n";
+	print ">100\tDecisive\n\n";
 }
 
 1;
