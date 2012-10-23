@@ -122,7 +122,7 @@ sub run_search {
 		$completed_chunk = 1 if $start_chunk > $chunkI;
 
 		# need to run this even if chunk is done so that we advance through the input file
-		# TODO: don't launch lastal or bowtie unless really needed
+		# TODO: don't launch lastal on RNA unless really needed
 		my $finished = launch_searches(
 										self     => $self,
 										readtype => $type,
@@ -191,8 +191,6 @@ sub set_default_values {
 	Phylosift::Settings::set_default( parameter => \$Phylosift::Settings::CHUNK_MAX_SEQS,            value => $default_chunk_size );
 	Phylosift::Settings::set_default( parameter => \$Phylosift::Settings::lastal_evalue,             value => "-e75" );
 	Phylosift::Settings::set_default( parameter => \$Phylosift::Settings::lastal_rna_evalue,         value => "-e75" );
-	Phylosift::Settings::set_default( parameter => \$Phylosift::Settings::bowtie_maxins,             value => "1000" );
-	Phylosift::Settings::set_default( parameter => \$Phylosift::Settings::bowtie_aln,                value => "--local" );
 	Phylosift::Settings::set_default( parameter => \$Phylosift::Settings::max_hit_overlap,           value => 10 );
 	Phylosift::Settings::set_default( parameter => \$Phylosift::Settings::discard_length,            value => 30 );
 	Phylosift::Settings::set_default( parameter => \$Phylosift::Settings::best_hits_bit_score_range, value => 30 );
@@ -233,7 +231,7 @@ sub has_chunk_completed {
 	my $chunk    = $args{chunk};
 	my $run_file = Phylosift::Utilities::get_run_info_file( self => $self );
 	my $grep     = `grep "Chunk $chunk completed" $run_file`;
-	return 1 if defined $grep && length($grep) > 0;
+	return 1 if defined $grep && length($grep) > 0 && !$Phylosift::Settings::force;
 	return 0;
 }
 
@@ -265,7 +263,7 @@ sub launch_searches {
 	}
 	my $rna_procs = 0;
 	if ( $readtype->{seqtype} eq "dna"
-		 && -e Phylosift::Utilities::get_bowtie2_db( self => $self ) . ".prj" )
+		 && -e Phylosift::Utilities::get_rna_db( self => $self ) . ".prj" )
 	{
 		`mkfifo "$last_rna_pipe"`;
 		$rna_procs = 1;
@@ -296,7 +294,7 @@ sub launch_searches {
 				$candidate_type = ".lastal";
 			} elsif ( $count == $Phylosift::Settings::threads + 1 ) {
 
-				if ( !-e Phylosift::Utilities::get_bowtie2_db( self => $self ) . ".prj" ) {
+				if ( !-e Phylosift::Utilities::get_rna_db( self => $self ) . ".prj" ) {
 					debug "Exiting process $count because rna db not found\n";
 					my $lrp1 = ps_open($last_rna_pipe);
 					`rm -f $last_rna_pipe`;
@@ -334,8 +332,6 @@ sub launch_searches {
 		push( @LAST_PIPE_ARRAY, ps_open(">$last_pipe") );
 	}
 
-	#	debug "TESTING" . $args{readtype}->{paired};
-	#	$BOWTIE2_R2_PIPE = ps_open(">$bowtie2_r2_pipe") if $args{readtype}->{paired};
 	debug "Opening $reads_file\n";
 	my $READS_PIPE    = ps_open("+>$reads_file");
 	my $LAST_RNA_PIPE = ps_open(">$last_rna_pipe");
@@ -498,14 +494,6 @@ sub demux_sequences {
 
 			print $LAST_RNA_PIPE @lines1 unless $completed_chunk;
 			print $LAST_RNA_PIPE @lines2 if @lines2 && !$completed_chunk;
-
-			#print $LAST_RNA_PIPE $lines1[0] . $lines1[1] unless $completed_chunk;
-			#print $LAST_RNA_PIPE $lines2[0] . $lines2[1] if @lines2 && !$completed_chunk;
-
-			# send the reads to bowtie
-			#print $LAST_RNA_PIPE @lines1 unless $completed_chunk;
-			#print $LAST_RNA_PIPE @lines2 if @lines2 && !$completed_chunk;
-			#			print $BOWTIE2_PIPE2 @lines2 if defined($F2IN);
 
 			#
 			# send the reads to lastal (convert to fasta)
@@ -722,7 +710,7 @@ sub lastal_table_rna {
 	my %args       = @_;
 	my $self       = $args{self} || miss("self");
 	my $query_file = $args{query_file} || miss("query_file");
-	my $db         = Phylosift::Utilities::get_bowtie2_db( self => $self );
+	my $db         = Phylosift::Utilities::get_rna_db( self => $self );
 
 	#my $lastal_cmd =
 	#"$Phylosift::Settings::lastal $Phylosift::Settings::lastal_rna_evalue -f0 $db \"$query_file\" |";
@@ -731,36 +719,6 @@ sub lastal_table_rna {
 	$lastal_cmd .= "-f0 $db \"$query_file\" |";
 	debug "Running $lastal_cmd";
 	my $HISTREAM = ps_open($lastal_cmd);
-	return $HISTREAM;
-}
-
-=head2 bowtie2
-
-runs bowtie2 on a single or pair of query files (or named pipes)
-returns a stream file handle
-
-=cut
-
-sub bowtie2 {
-	my %args     = @_;
-	my $self     = $args{self} || miss("self");
-	my $readtype = $args{readtype} || miss("readtype");
-	debug "INSIDE bowtie2\n";
-	my $bowtie2_cmd =
-	    "$Phylosift::Settings::bowtie2align -x "
-	  . Phylosift::Utilities::get_bowtie2_db( self => $self )
-	  . " $Phylosift::Settings::bowtie_quiet --maxins $Phylosift::Settings::bowtie_maxins $Phylosift::Settings::bowtie_aln ";
-	$bowtie2_cmd .= " -f " if $args{readtype}->{format} eq "fasta";
-
-	#	if ( $args{readtype}->{paired} ) {
-	#		$bowtie2_cmd .= " -1 $args{reads1} -2 $args{reads2} ";
-	#	} else {
-	$bowtie2_cmd .= " -U \"$args{reads1}\" ";
-
-	#	}
-	$bowtie2_cmd .= " |";
-	debug "Running $bowtie2_cmd";
-	my $HISTREAM = ps_open($bowtie2_cmd);
 	return $HISTREAM;
 }
 
@@ -1112,7 +1070,7 @@ Generates the blastable database using the marker representatives
 sub prep_and_clean {
 	my %args = @_;
 	my $self = $args{self} || miss("self");
-
+	`rm -rf "$self->{"blastDir"}"` if $Phylosift::Settings::force;
 	#create a directory for the Reads file being processed.
 	`mkdir "$Phylosift::Settings::file_dir"` unless ( -e $Phylosift::Settings::file_dir );
 	`mkdir "$self->{"blastDir"}"`            unless ( -e $self->{"blastDir"} );
