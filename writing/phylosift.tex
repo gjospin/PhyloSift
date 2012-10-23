@@ -325,9 +325,14 @@ The new package will be automatically included in any future runs of the PhyloSi
 
 
 \subsection*{Bayesian hypothesis testing for the presence of phylogenetic lineages}
-In the context of microbial forensics, a practicioner might want to test for the presence of a particular lineage of interest in a metagenomic sample.
-PhyloSift provides a means to conduct Bayesian hypothesis testing for the presence of reads belonging to organisms that have diverged along specific branches of the reference phylogeny.
+In the context of microbial forensics, a practicioner might want to test for the presence of a particular lineage of interest in a metagenomic sample. 
+Phylogenetic analysis of metagenomic reads has the potential to offer resolution beyond what would be available from taxonomic methods for metagenomics.
+Whereas taxonomic methods can provide resolution at specific levels in the taxonomic hierarchy, such as species, genus, etc., phylogenetic methods might be able to distinguish different subtypes of named species or novel lineages at higher taxonomic levels.
+Phylogenetic methods are limited only by the resolution of the reference genome phylogeny. 
+Phylogenetic inference has the further advantage that it is based on a statistical model of sequence change where the marginal likelihood of the data given the model P(D|M) is well defined, making it possible to conduct model-based hypothesis tests using phylogenies.
+Taxonomic analysis methods for metagenomics are frequently based on machine learning classification methods which do not always lend themselves to such hypothesis testing.
 
+PhyloSift provides a means to conduct Bayesian hypothesis testing for the presence of reads belonging to organisms that have diverged along specific branches of the reference phylogeny.
 In order to describe the Bayesian hypothesis test we introduce the following notation: assume we are given a reference phylogenetic tree $T$ consisting of $n > 1$ branches $\{t_1 \dots t_n\}$. 
 Further assume we are given a collection $S$ of sequences $s_1 \dots s_m$ which are homologous to and aligned to the sequences at the leaf nodes of the reference phylogeny. 
 We denote the marginal likelihood that a particular sequence $s_j$ diverged along branch $t_i$ of the reference phylogeny as $P(s_j|t_i)$.
@@ -350,6 +355,7 @@ K=\frac{P(D|M_0)}{P(D|M_1)}
 
 The Bayes factor $K$ can then be interpreted with respect to how strongly the null hypothesis is rejected by the data.
 
+In the current revision of PhyloSift, Bayesian hypothesis tests can be applied to a concatenated alignment of the 40 elite gene families or any other single marker gene, and can either be applied to phylogenies inferred from amino acid or codon-aligned DNA sequences.
 
 \subsubsection*{Accuracy on particular taxonomic groups}
 Bacteria, Arch, Eukarya, viral
@@ -460,7 +466,7 @@ Funding from Dept. of Homeland Security, DOE.
 \begin{center}
 \includegraphics[width=6in]{figures/allofem.pdf}
 \end{center}
-\caption{\textbf{Comparison of QIIME PCA and edge PCA analysis of human fecal samples.} Samples from 107 (FIXME) individuals were analyzed by PCA to evaluate trends in community composition with respect to host age. 16S rDNA amplicon data and metagenomic data from the same samples was processed using QIIME and PhyloSift. QIIME analyzed the amplicon data (top left) and 16S rDNA reads extracted from the metagenomic data (top right) using a reference-based OTU picking strategy. PhyloSift analyzed the same metagenomic 16S rDNA reads (bottom left) and reads from the elite marker gene families (bottom right). Each PCA approach gives qualitatively similar results.}
+\caption{\textbf{Comparison of QIIME PCA and edge PCA analysis of human fecal samples.} Samples from 107 (FIXME) individuals were analyzed by PCA to evaluate trends in community composition with respect to host age. 16S rDNA amplicon data and metagenomic data from the same samples was processed using QIIME and PhyloSift. QIIME analyzed the amplicon data (top left) and 16S rDNA reads extracted from the metagenomic data (top right) using a reference-based OTU picking strategy. PhyloSift analyzed the same metagenomic 16S rDNA reads (bottom left) and reads matching the 40 elite gene families (bottom right). Each PCA approach gives qualitatively similar results.}
 \label{fig:agepca}
 \end{figure}
 
