@@ -765,7 +765,9 @@ sub rename_sequences {
 			for ( my $i = 0 ; $i < @{ $json_data->{placements} } ; $i++ ) {
 				my $placement = $json_data->{placements}->[$i];
 				for ( my $j = 0 ; $j < @{ $placement->{nm} } ; $j++ ) {
-					$placement->{nm}->[$j]->[0] =~ s/^(\d+)\./$name_mapping{$1}\./;
+					if($placement->{nm}->[$j]->[0] =~ m/^(\d+)/){
+						$placement->{nm}->[$j]->[0] =~ s/^(\d+)\./$name_mapping{$1}\./ if(exists $name_mapping{$1});
+					}
 				}
 			}
 
@@ -773,8 +775,11 @@ sub rename_sequences {
 			print $TMP encode_json($json_data);	
 		}else{
 			while (<$FH>) {
-				$_ =~ s/^>(\d+)\./>$name_mapping{$1}\./g; #fasta files
-				$_ =~ s/^(\d+)/$name_mapping{$1}/g; #summary files
+				if($_ =~ m/^>(\d+)/){
+					$_ =~ s/^>(\d+)\./>$name_mapping{$1}\./g if(exists $name_mapping{$1}); #fasta files
+				}elsif($_ =~ m/^(\d+)/){
+					$_ =~ s/^(\d+)/$name_mapping{$1}/g if(exists $name_mapping{$1}); #summary files
+				}
 				print $TMP $_;
 			}
 		}
@@ -782,6 +787,8 @@ sub rename_sequences {
 		close($TMP);
 		`mv "$file.tmp" "$file"`;
 	}
+	my $cmd = "rm $self->{\"blastDir\"}" . "/lookup_ID.$chunk.tbl";
+	`$cmd`; #remove the lookup table so we don't try to rename sequences after it has already been done.
 }
 
 sub read_deleted_nodes {

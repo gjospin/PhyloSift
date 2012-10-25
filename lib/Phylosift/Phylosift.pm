@@ -200,7 +200,7 @@ sub run {
 sub run_later_stages {
 	my %args = @_;
 	my $self = $args{self} || miss("self");
-	my $continue = $args{cont} || miss ("Continue value");
+	my $continue = $args{cont};
 	if ( $self->{"mode"} eq 'align' ) {
 		$self = run_marker_align(@_);
 		$self->{"mode"} = 'placer' if $continue;
