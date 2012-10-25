@@ -180,6 +180,7 @@ sub build_marker {
 	`$taxit_cmd`;
 
 	`rm -f "$target_dir/$core.pda"` if -e "$target_dir/$core.pda";
+	`rm -f "$target_dir/$core.pda"` if -e "$target_dir/$core.pruned.pda";
 	`rm -f "$target_dir/$core.tree"`;
 	`rm -f "$target_dir/$core.log"`;
 	`rm -f "$target_dir/$core.aln"`;
