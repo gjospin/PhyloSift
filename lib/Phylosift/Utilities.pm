@@ -217,17 +217,6 @@ sub program_checks {
 									  )
 	);
 	Phylosift::Settings::set_default(
-									  parameter => \$Phylosift::Settings::raxml,
-									  value     => get_program_path(
-																 prog_name => "raxmlHPC",
-																 prog_path => $Phylosift::Settings::ps_path
-									  )
-	);
-	if ( $Phylosift::Settings::raxml eq "" ) {
-		carp("raxmlHPC was not found\n");
-		return 1;
-	}
-	Phylosift::Settings::set_default(
 									  parameter => \$Phylosift::Settings::readconciler,
 									  value     => get_program_path(
 																 prog_name => "readconciler",

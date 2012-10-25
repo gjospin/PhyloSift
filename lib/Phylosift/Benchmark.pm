@@ -349,11 +349,11 @@ sub parse_simulated_reads {
 		my $taxon;
 		if($_ =~  m/^>/){
 	#		$_ =~ m/^>(\S+).*SOURCE_\d+="(.*)"/;  # for metasim header format
-			$_ =~ m/^>(\S+).*reference=(\d+)/;  # grinder header format
+			$_ =~ m/^>(\S+.*reference=(\d+))/;  # grinder header format
 			$read_id = $1;
 			$taxon = $2;
 		}elsif($_ =~  m/^@/){
-			$_ =~ m/^@(\S+).*reference=(\d+)/;  # grinder header format	
+			$_ =~ m/^@(\S+.*reference=(\d+))/;  # grinder header format	
 			$read_id = $1;
 			$taxon = $2;
 		}else{
