@@ -53,7 +53,7 @@ sub run_benchmark {
 		my $allmass_report_file    = "$output_path/$reads_file$taxon.mass.csv";
 		report_csv( report_file=>$allmass_report_file, mtref=>$mass_prec, read_number=>$mass_reads );
 	}
-	compute_precision_recall_curve( reads_file=>$reads_file, top_place=>$top_place, curve_path=>$curve_path, taxon_counts=>$taxonomy_counts );
+#	compute_precision_recall_curve( reads_file=>$reads_file, top_place=>$top_place, curve_path=>$curve_path, taxon_counts=>$taxonomy_counts );
 }
 
 =head2 read_seq_summary
@@ -347,14 +347,13 @@ sub parse_simulated_reads {
 	while (<$FILE_IN>) {
 		my $read_id;
 		my $taxon;
-		if($_ =~  m/^>/){
-	#		$_ =~ m/^>(\S+).*SOURCE_\d+="(.*)"/;  # for metasim header format
+		if($_ =~  m/^>(.+)/){
+			$read_id = $1;
 			$_ =~ m/^>(\S+.*reference=(\d+))/;  # grinder header format
-			$read_id = $1;
 			$taxon = $2;
-		}elsif($_ =~  m/^@/){
-			$_ =~ m/^@(\S+.*reference=(\d+))/;  # grinder header format	
+		}elsif($_ =~  m/^@(.+)/){
 			$read_id = $1;
+			$_ =~ m/^@(\S+.*reference=(\d+))/;  # grinder header format	
 			$taxon = $2;
 		}else{
 			next;
