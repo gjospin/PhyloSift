@@ -3,6 +3,7 @@ use Phylosift -command;
 use Phylosift::Settings;
 use Phylosift::Phylosift;
 use Phylosift::Simulations;
+use File::Basename;
 use Carp;
 use Phylosift::Utilities qw(debug);
 
@@ -48,7 +49,7 @@ sub execute {
 	Phylosift::Utilities::program_checks();
 	Phylosift::Utilities::data_checks( self => $ps );
 	$ps->{"fileDir"} = "PS_temp/".@$args[0]; # this is the default location after running `phylosift all`
-	my $summary = "PS_temp/".@$args[0]."/sequence_taxa.txt";
+	my $summary = "PS_temp/".basename(@$args[0])."/sequence_taxa.txt";
 	$summary = $opt->{summary_file} if defined($opt->{summary_file});
 
 	Phylosift::Benchmark::run_benchmark( self => $ps, reads_file => @$args[0], output_path => $opt->{output}, summary_file => $summary, pr_curve=>$opt->{curve_path} );
