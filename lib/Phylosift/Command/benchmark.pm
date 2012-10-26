@@ -51,7 +51,7 @@ sub execute {
 	my $summary = "PS_temp/".@$args[0]."/sequence_taxa.txt";
 	$summary = $opt->{summary_file} if defined($opt->{summary_file});
 
-	Phylosift::Benchmark::run_benchmark( self => $ps, reads_file => @$args[0], output_path => $opt->{output}, summary_file => $summary );
+	Phylosift::Benchmark::run_benchmark( self => $ps, reads_file => @$args[0], output_path => $opt->{output}, summary_file => $summary, pr_curve=>$opt->{curve_path} );
 }
 
 1;
