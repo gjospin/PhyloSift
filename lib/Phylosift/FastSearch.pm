@@ -518,10 +518,10 @@ sub demux_sequences {
 
 			#removing possible \n in the middle of the sequence
 			$lines1[1] =~ s/\n//g;
-			$lines2[1] =~ s/\n//g;
+			$lines2[1] =~ s/\n//g if defined($lines2[1]);
 			#add a \n at the end of the sequence to comply with fasta format
 			$lines1[1] .= "\n";
-			$lines2[1] .= "\n";
+			$lines2[1] .= "\n" if defined($lines2[1]);
 			#add the reads to file lookup
 #			if ( $lines1[0] =~ m/^>(\S+)(\/\d)/ && $paired ) {
 			$lines1[0] =~ s/^>//;
@@ -555,7 +555,7 @@ sub demux_sequences {
 			print $READS_PIPE $lines2[0] . $lines2[1] if @lines2 && !$completed_chunk;
 
 			@lines1 = ( $newline1, "" );
-			@lines2 = ( $newline2, "" );
+			@lines2 = ( $newline2, "" ) if @lines2 && !$completed_chunk;
 		}
 		$lastal_index++;
 		$lastal_index = $lastal_index % $lastal_threads;
