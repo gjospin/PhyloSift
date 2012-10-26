@@ -457,9 +457,7 @@ sub demux_sequences {
 			    print $IDFILE "$lines2[0]\t$seq_count/2\n" ;
 			}
 
-			$lines1[0] = "\@$seq_count";
-			$lines1[0] .= "/1" if $paired;
-			$lines1[0] .= "\n";
+			$lines1[0] = "\@$seq_count/1\n";
 			if ($paired) {
 				$lines2[0] = "\@$seq_count";
 				$lines2[0] .= "/2" if $paired;
@@ -526,14 +524,17 @@ sub demux_sequences {
 			$lines2[1] .= "\n";
 			#add the reads to file lookup
 #			if ( $lines1[0] =~ m/^>(\S+)(\/\d)/ && $paired ) {
-			print $IDFILE "$lines1[0]\t$seq_count\n";
+			$lines1[0] =~ s/^>//;
+			chomp($lines1[0]);
+			print $IDFILE "$lines1[0]\t$seq_count/1\n";
 #			} elsif ( $lines1[0] =~ m/^>(.+)/ ) {
-			print $IDFILE "$lines2[0]\t$seq_count\n" if defined($lines2[0]);
-#			}
+			if(defined $lines2[0]){
+			    $lines2[0] =~ s/^>//;
+			    chomp($lines2[0]);
+			    print $IDFILE "$lines2[0]\t$seq_count/2\n" if defined($lines2[0]);
+			}
 
-			$lines1[0] = ">$seq_count";
-			$lines1[0] .= "/1" if $paired;
-			$lines1[0] .= "\n";
+			$lines1[0] = ">$seq_count/1\n";
 			if ($paired) {
 				$lines2[0] = ">$seq_count";
 				$lines2[0] .= "/2" if $paired;
