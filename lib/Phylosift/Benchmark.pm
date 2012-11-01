@@ -474,15 +474,17 @@ sub plot_precision_recall_curve {
     my $precision  = $args{precision} || miss("precision");
     my $recall     = $args{recall} || miss("recall");
     my $curve_file = $curve_path . "/" . $reads_file . "pr_curve.txt";
-    
-    unless ( -e $curve_file) {
-        my $PRCURVE = ps_open( ">$curve_file" );
-        print $PRCURVE "$precision\t$recall\n";
-        close $PRCURVE;
-    }
-    
+     
     my $PRCURVE = ps_open( ">>$curve_file" );
-    print $PRCURVE "$precision\t$recall\n";
+    print $PRCURVE "Superkingdom: $$precision{superkingdom}\t$$recall{superkingdom}\n";
+    print $PRCURVE "Phylum: $$precision{phylum}\t$$recall{phylum}\n";
+    print $PRCURVE "Subphylum: $$precision{subphylum}\t$$recall{subphylum}\n";
+    print $PRCURVE "Class: $$precision{class}\t$$recall{class}\n";
+    print $PRCURVE "Order: $$precision{order}\t$$recall{order}\n";
+    print $PRCURVE "Family: $$precision{family}\t$$recall{family}\n";
+    print $PRCURVE "Genus: $$precision{genus}\t$$recall{genus}\n";
+    print $PRCURVE "Species: $$precision{species}\t$$recall{species}\n";
+    print $PRCURVE "Subspecies: $$precision{subspecies}\t$$recall{subspecies}\n";
     close $PRCURVE;  
 }
 
