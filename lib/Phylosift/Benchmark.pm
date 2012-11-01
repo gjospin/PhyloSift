@@ -53,7 +53,7 @@ sub run_benchmark {
 		my $allmass_report_file    = "$output_path/$reads_file$taxon.mass.csv";
 		report_csv( report_file=>$allmass_report_file, mtref=>$mass_prec, read_number=>$mass_reads );
 	}
-#	compute_precision_recall_curve( reads_file=>$reads_file, top_place=>$top_place, curve_path=>$curve_path, taxon_counts=>$taxonomy_counts );
+	compute_precision_recall_curve( reads_file=>$reads_file, top_place=>$top_place, curve_path=>$curve_path, taxon_counts=>$taxonomy_counts );
 }
 
 =head2 read_seq_summary
@@ -473,7 +473,7 @@ sub plot_precision_recall_curve {
     my $curve_path = $args{curve_path} || miss("curve_path");
     my $precision  = $args{precision} || miss("precision");
     my $recall     = $args{recall} || miss("recall");
-    my $curve_file = $curve_path . "/" . $reads_file . "pr_curve.txt";
+    my $curve_file = $curve_path . "/" . $reads_file . ".pr_curve.txt";
      
     my $PRCURVE = ps_open( ">>$curve_file" );
     print $PRCURVE "Superkingdom: $$precision{superkingdom}\t$$recall{superkingdom}\n";
