@@ -25,6 +25,7 @@ sub options {
 		[ "base-markers=s",  "Path to base markers to add to updated set", {required => 1}],
 		[ "skip-download",   "Skip downloading new data from external repositories"],
 		[ "skip-scan",       "Skip scanning any new genomes for homologs to the marker database"],
+		[ "keep-paralogs", "Don't discard paralogs when building trees and fasta files"],
 	);
 }
 
@@ -38,7 +39,7 @@ sub load_opt {
 	$Phylosift::Settings::configuration = $opt->{config};
 	$Phylosift::Settings::disable_update_check = $opt->{disable_updates};
 	$Phylosift::Settings::my_debug = $opt->{debug};
-
+	$Phylosift::Settings::keep_paralogs = $opt->{keep_paralogs};
 	$Phylosift::Utilities::debuglevel = $Phylosift::Settings::my_debug || 0;	
 }
 
@@ -76,6 +77,8 @@ sub execute {
 	
 	# force use of the new NCBI data
 	$Phylosift::Utilities::ncbi_dir = "$repository/ncbi/";
+	Phylosift::UpdateDB::update_ncbi_taxonomy( repository =>
+							   $destination );
 	
 	if (!defined( $opt->{skip_download} )){
 		Phylosift::UpdateDB::get_ebi_genomes( directory => $ebi_repository );

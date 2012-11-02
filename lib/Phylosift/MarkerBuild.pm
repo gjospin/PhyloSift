@@ -174,7 +174,7 @@ sub build_marker {
 #use taxit to create a new reference package required for running PhyloSift
 #needed are : 1 alignment file, 1 representatives fasta file, 1 hmm profile, 1 tree file, 1 log tree file.
 	my $taxdb_opts = ""; # add taxit-friendly taxon labels if available
-	$taxdb_opts = "-i $target_dir/seq_ids.csv -T $target_dir/taxa.csv" if -e "$target_dir/taxa.csv" && -s "$target_dir/taxa.csv" > 0;
+	#$taxdb_opts = "-i $target_dir/seq_ids.csv -T $target_dir/taxa.csv" if -e "$target_dir/taxa.csv" && -s "$target_dir/taxa.csv" > 0;
 	my $taxit_cmd = "cd \"$target_dir\";taxit create -c -d \"Creating a reference package for PhyloSift for the $core marker\" -l \"$core\" -f \"$clean_aln\" -t \"$fasttree_file\" $taxdb_opts -s \"$tree_log_file\" -P \"$core\"";
 	debug "Running $taxit_cmd\n";
 	`$taxit_cmd`;
@@ -206,7 +206,7 @@ sub create_taxon_table {
 	my %allanc;
 	while(my $line = <$TAXIN>){
 		chomp $line;
-		my ($seq_name, $tid) = split(/\s+/, $line);
+		my ($seq_name, $tid) = split(/\t/, $line);
 		my $seq_id = $id_map->{$seq_name};
 		next unless $tid;
 		my @tinfo = Phylosift::Summarize::get_taxon_info(taxon=>$tid); # lookup will check for any merging
@@ -400,10 +400,10 @@ sub generate_id_to_taxonid_map {
 
 	while (<$FHIN>) {
 		chomp($_);
-		my @line = split( /\s/, $_ );
-		$_ =~ m/^(\S+)\s+(\S+)$/;
-		my $id      = $1;
-		my $taxonid = $2;
+		my @line = split( /\t/, $_ );
+#		$_ =~ m/^(\S+)\s+(\S+)$/;
+		my $id      = $line[0];
+		my $taxonid = $line[1];
 		if ( exists $map_hash{$id} ) {
 			print $FHOUT $marker . "\t" 
 			  . $taxonid . "\t"

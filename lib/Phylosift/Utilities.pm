@@ -1733,10 +1733,11 @@ sub gather_markers {
 		my $MLIST = ps_open("find $path -maxdepth 2 -mindepth 1 -type d |");
 		while ( my $line = <$MLIST> ) {
 			chomp $line;
+			debug "$line\n";
 			next if $line =~ /PMPROK/;
 			next if $line =~ /concat/;
 			next if $line =~ /representatives/;
-			next if $line =~ /.updated$/;         # just include the base version name
+#			next if $line =~ /.updated$/;         # just include the base version name
 			next if $line =~ /codon.updated.sub\d+$/;    # just include the base version name
 			$line = substr( $line, length($path) + 1 );
 
@@ -1749,6 +1750,7 @@ sub gather_markers {
 			$marker_lookup{$baseline} = $line;
 			push( @marks, $line );
 		}
+		debug("Found ".scalar(@marks)." markers\n");
 	}
 	# always sort these, since the concats need to be used in the same order every time
 	return sort @marks;
