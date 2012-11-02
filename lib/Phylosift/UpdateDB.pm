@@ -270,8 +270,8 @@ sub get_ncbi_draft_genomes {
 		my $catline   = join( " ", @tarfiles );
 		$catline =~ s/\n//g;
 		`rm -f "$fasta_out"`;
-		`cat "$catline" >> "$fasta_out"` if ( $tarstatus == 0 );
-		`rm "$catline"`;
+		`cat $catline >> "$fasta_out"` if ( $tarstatus == 0 );
+		`rm $catline`;
 	}
 }
 
