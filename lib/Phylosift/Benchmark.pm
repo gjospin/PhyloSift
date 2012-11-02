@@ -86,6 +86,7 @@ sub read_seq_summary {
 
 		#keep only the top hits for all ranks for each Read
 		my @array = ( $probability, $taxPlacementID[2], scalar(@readAncestor) );
+		print "read is $read\n";
 		print "topreadscore: $topReadScore{$read}->[0]\n";
 		if ( !exists $topReadScore{$read} || $topReadScore{$read}->[0] < $probability ) {
 			$topReadScore{$read} = \@array;
