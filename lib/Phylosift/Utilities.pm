@@ -1626,7 +1626,9 @@ sub index_marker_db {
 		#debug "marker rep file $marker_rep\n";
 		my $DBOUT = $RNADBOUT;
 		$DBOUT = $PDBOUT if is_protein_marker( marker => $marker );
+		next if(!is_protein_marker( marker => $marker ) && $marker =~ /\.short/);
 		unless ( -f $marker_rep ) {
+			warn "$marker_rep not found.\n";
 			warn "Warning: marker $marker appears to be missing data\n" if ($marker !~ /\.short/);
 			next;
 		}
