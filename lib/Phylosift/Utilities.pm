@@ -217,17 +217,6 @@ sub program_checks {
 									  )
 	);
 	Phylosift::Settings::set_default(
-									  parameter => \$Phylosift::Settings::raxml,
-									  value     => get_program_path(
-																 prog_name => "raxmlHPC",
-																 prog_path => $Phylosift::Settings::ps_path
-									  )
-	);
-	if ( $Phylosift::Settings::raxml eq "" ) {
-		carp("raxmlHPC was not found\n");
-		return 1;
-	}
-	Phylosift::Settings::set_default(
 									  parameter => \$Phylosift::Settings::readconciler,
 									  value     => get_program_path(
 																 prog_name => "readconciler",
@@ -1637,7 +1626,9 @@ sub index_marker_db {
 		#debug "marker rep file $marker_rep\n";
 		my $DBOUT = $RNADBOUT;
 		$DBOUT = $PDBOUT if is_protein_marker( marker => $marker );
+		next if(!is_protein_marker( marker => $marker ) && $marker =~ /\.short/);
 		unless ( -f $marker_rep ) {
+			warn "$marker_rep not found.\n";
 			warn "Warning: marker $marker appears to be missing data\n" if ($marker !~ /\.short/);
 			next;
 		}

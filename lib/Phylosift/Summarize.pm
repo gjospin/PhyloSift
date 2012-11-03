@@ -250,7 +250,7 @@ sub write_sequence_taxa_summary {
 	my $sequence_markers = $args{sequence_markers} || miss("sequence_markers");
 	my $chunk = $args{chunk};
 	my $chunky = defined($chunk) ? ".$chunk" : "";
-	
+	debug "Writting sequences\n";
 	my $SEQUENCETAXA = ps_open( ">$Phylosift::Settings::file_dir/sequence_taxa$chunky.txt" );
 	my $SEQUENCESUMMARY = ps_open( ">$Phylosift::Settings::file_dir/sequence_taxa_summary$chunky.txt" );
 	foreach my $qname ( keys(%$placements) ) {
@@ -284,40 +284,45 @@ sub write_sequence_taxa_summary {
 					$unique_names{$name_ref} = 1;
 				}
 				foreach my $name_ref ( keys(%unique_names) ) {
-				    my $coord1 = "";
-				    my $coord2 = "";
-				    if($name_ref =~ m/^(\S+)\.(\d+\.\d+)\.(\d+\.\d+)/){
-					$name_ref = $1;
-					$coord1 = $2;
-					$coord2 = $3;
-				    }elsif($name_ref =~ m/(\S+)\.(\d+\.\d+)/){
-					$name_ref = $1;
-					$coord1 = $2;
+				    my %coords = ();
+				    my @coord_split = split(/\./, $name_ref);
+				    $name_ref =  shift(@coord_split); #removes the first element of the array
+				    for(my $i = 0; $i < @coord_split; $i=$i+3){
+					my $start = $coord_split[$i+1];
+					my $end = $coord_split[$i+2];
+					if(defined( $coords{$coord_split[$i]} )){
+					    $coords{$coord_split[$i]} .= ".$start.$end";
+					}else{
+					    $coords{$coord_split[$i]} = "$start.$end";
+					}
 				    }
-				    print $SEQUENCETAXA "$name_ref\t$coord1\t$taxon_id\t$taxon_level\t$taxon_name\t"
-					  . $placements->{$qname}{$taxon_id} . "\t" . join( "\t", keys( %{ $sequence_markers->{$qname} } ) ). "\n";
-				    print $SEQUENCETAXA "$name_ref\t$coord2\t$taxon_id\t$taxon_level\t$taxon_name\t"
-					. $placements->{$qname}{$taxon_id} . "\t" . join( "\t", keys( %{ $sequence_markers->{$qname} } ) ). "\n" if $coord2 ne "";
+				    foreach my $mate(keys %coords){
+					print $SEQUENCETAXA "$name_ref/$mate\t$coords{$mate}\t$taxon_id\t$taxon_level\t$taxon_name\t"
+					    . $placements->{$qname}{$taxon_id} . "\t" . join( "\t", keys( %{ $sequence_markers->{$qname} } ) ). "\n";
+				    }
+				    %coords=();
+				    @coord_split=();
 				}
 			}
 		}
 		foreach my $name_ref ( keys(%unique_names) ) {
 			if ( defined( $unclassifiable->{$qname} ) ) {
-			    my $coord1 = "";
-			    my $coord2 = "";
-			    if($name_ref =~ m/^(\S+)\.(\d+\.\d+)\.(\d+\.\d+)/){
-				$name_ref = $1;
-				$coord1 = $2;
-				$coord2 = $3;
-			    }elsif($name_ref =~ m/(\S+)\.(\d+\.\d+)/){
-				$name_ref = $1;
-				$coord1 = $2;
+			    my %coords = ();
+			    my @coord_split = split(/\./, $name_ref);
+			    $name_ref =  shift(@coord_split); #removes the first element of the array                                                                                                                                                                 
+			    for(my $i = 0; $i < @coord_split; $i=$i+3){
+				if(defined( $coords{$coord_split[$i]} )){
+				    $coords{$coord_split[$i]} .= ".$coord_split[$i+1].$coord_split[$i+2]";
+				}else{
+				    $coords{$coord_split[$i]} = "$coord_split[$i+1].$coord_split[$i+2]";
+				}
 			    }
-			    print $SEQUENCETAXA "$name_ref\t$coord1\tUnknown\tUnknown\tUnclassifiable\t" . ( $unclassifiable->{$qname} / $placecount ) . "\t"
-				. $unclassifiable->{$qname} . "\t" . join( "\t", keys( %{ $sequence_markers->{$qname} } ) ) . "\n";
-			    print $SEQUENCETAXA "$name_ref\t$coord2\tUnknown\tUnknown\tUnclassifiable\t" . ( $unclassifiable->{$qname} / $placecount ) . "\t"
-				. $unclassifiable->{$qname} . "\t" . join( "\t", keys( %{ $sequence_markers->{$qname} } ) ) . "\n" if $coord2 ne "";
-
+			    foreach my $mate (keys %coords){
+				print $SEQUENCETAXA "$name_ref/$mate\t$coords{$mate}\tUnknown\tUnknown\tUnclassifiable\t" . ( $unclassifiable->{$qname} / $placecount ) . "\t"
+				    . $unclassifiable->{$qname} . "\t" . join( "\t", keys( %{ $sequence_markers->{$qname} } ) ) . "\n";
+			    }
+			    %coords=();
+			    @coord_split=();
 			}
 		}
 
@@ -329,20 +334,23 @@ sub write_sequence_taxa_summary {
 			$taxon_name  = "Unknown" unless defined($taxon_name);
 			if ( exists $self->{"read_names"}{$qname} ) {
 				foreach my $name_ref ( keys(%unique_names) ) {
-				    my $coord1 = "";
-				    my $coord2 = "";
-				    if($name_ref =~ m/^(\S+)\.(\d+\.\d+)\.(\d+\.\d+)/){
-					$name_ref = $1;
-					$coord1 = $2;
-					$coord2 = $3;
-				    }elsif($name_ref =~ m/(\S+)\.(\d+\.\d+)/){
-					$name_ref = $1;
-					$coord1 = $2;
+				    my %coords = ();
+                                    my @coord_split = split(/\./, $name_ref);
+                                    $name_ref =  shift(@coord_split); #removes the first element of the array                                                                                                                                                                 
+                                    for(my $i = 0; $i < @coord_split; $i=$i+3){
+                                        if(defined( $coords{$coord_split[$i]} )){
+                                            $coords{$coord_split[$i]} .= ".$coord_split[$i+1].$coord_split[$i+2]";
+                                        }else{
+                                            $coords{$coord_split[$i]} = "$coord_split[$i+1].$coord_split[$i+2]";
+                                        }
+                                    }
+				    foreach my $mate (keys %coords){
+					print $SEQUENCESUMMARY "$name_ref/$mate\t$coords{$mate}\t$taxon_id\t$taxon_level\t$taxon_name\t" . $readsummary->{$taxon_id} . "\t"
+					    . join( "\t", keys( %{ $sequence_markers->{$qname} } ) ) . "\n";
 				    }
-				    print $SEQUENCESUMMARY "$name_ref\t$coord1\t$taxon_id\t$taxon_level\t$taxon_name\t" . $readsummary->{$taxon_id} . "\t"
-					. join( "\t", keys( %{ $sequence_markers->{$qname} } ) ) . "\n";
-				    print $SEQUENCESUMMARY "$name_ref\t$coord2\t$taxon_id\t$taxon_level\t$taxon_name\t" . $readsummary->{$taxon_id} . "\t"                                                                                                                
-					. join( "\t", keys( %{ $sequence_markers->{$qname} } ) ) . "\n" if $coord2 ne "";
+				
+				    %coords=();
+				    @coord_split=();
 				}
 			}
 
@@ -729,6 +737,7 @@ sub rename_sequences {
 		chomp($_);
 		my @line = split( /\t/, $_ );
 		$name_mapping{ $line[1] } = $line[0];
+#		debug "$line[1]\t$line[0].\n";
 	}
 	close($FH_MAP);
 
@@ -742,19 +751,16 @@ sub rename_sequences {
 	my @array_to_rename = ();
 	push( @array_to_rename, glob( $self->{"blastDir"} . "/*.ffn.$chunk*" ) );
 	push( @array_to_rename, glob( $self->{"blastDir"} . "/*.aa.$chunk*" ) );
-	push( @array_to_rename, glob( $self->{"alignDir"} . "/*.updated.$chunk.fasta" ) );
 	push( @array_to_rename, glob( $self->{"alignDir"} . "/*.newCandidate.aa.$chunk" ) );
 	push( @array_to_rename, glob( $self->{"alignDir"} . "/*.$chunk.unmasked" ) );
-	push( @array_to_rename, glob( $self->{"alignDir"} . "/*.codon.updated*.$chunk.fasta" ) );
 	push( @array_to_rename, glob( $self->{"alignDir"} . "/*.updated.fasta" ) );
 	push( @array_to_rename, glob( $self->{"alignDir"} . "/*.newCandidate.aa" ) );
 	push( @array_to_rename, glob( $self->{"alignDir"} . "/*.unmasked" ) );
+	push( @array_to_rename, glob( $self->{"alignDir"} . "/*.$chunk.fasta" ) );
 	push( @array_to_rename, glob( $self->{"alignDir"} . "/*.codon.updated*.fasta" ) );
-	push( @array_to_rename, glob( $self->{"treeDir"} . "/*.updated.$chunk.jplace" ) );
-	push( @array_to_rename, glob( $self->{"treeDir"} . "/*.codon.updated.sub1.$chunk.jplace" ) );
+	push( @array_to_rename, glob( $self->{"treeDir"} . "/*.$chunk.jplace" ) );
 	push( @array_to_rename, glob( $Phylosift::Settings::file_dir . "/*.jplace" ) );
 	push( @array_to_rename, glob( $Phylosift::Settings::file_dir . "/sequence_taxa*.$chunk.txt" ) );
-	debug "FILE DIR : ".$Phylosift::Settings::file_dir ."\n";
 	foreach my $file (@array_to_rename) {
 		my $FH  = ps_open($file);
 		my $TMP = ps_open(">$file.tmp");
@@ -766,7 +772,8 @@ sub rename_sequences {
 				my $placement = $json_data->{placements}->[$i];
 				for ( my $j = 0 ; $j < @{ $placement->{nm} } ; $j++ ) {
 					if($placement->{nm}->[$j]->[0] =~ m/^(\d+)/){
-						$placement->{nm}->[$j]->[0] =~ s/^(\d+)\./$name_mapping{$1}\./ if(exists $name_mapping{$1});
+					    $placement->{nm}->[$j]->[0] =~ s/^(\d+)\.(\d)/$1\/$2/; #formatting the ID to match the lookup table
+					    $placement->{nm}->[$j]->[0] =~ s/^(\d+\/\d)/$name_mapping{$1}/ ;
 					}
 				}
 			}
@@ -775,10 +782,12 @@ sub rename_sequences {
 			print $TMP encode_json($json_data);	
 		}else{
 			while (<$FH>) {
-				if($_ =~ m/^>(\d+)/){
-					$_ =~ s/^>(\d+)\./>$name_mapping{$1}\./g if(exists $name_mapping{$1}); #fasta files
-				}elsif($_ =~ m/^(\d+)/){
-					$_ =~ s/^(\d+)/$name_mapping{$1}/g if(exists $name_mapping{$1}); #summary files
+				if($_ =~ m/^>\d+/){
+				    $_ =~ s/^>(\d+)\.(\d)/>$1\/$2/;
+					$_ =~ s/^>(\d+\/\d)/>$name_mapping{$1}/g ; #fasta files
+				}elsif($_ =~ m/^\d+\/\d/){
+				    $_ =~ s/^(\d+)\.(\d)/$1\/$2/;
+					$_ =~ s/^(\d+\/\d)/$name_mapping{$1}/g ; #summary files
 				}
 				print $TMP $_;
 			}

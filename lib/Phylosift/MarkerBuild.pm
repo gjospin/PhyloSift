@@ -125,14 +125,15 @@ sub build_marker {
 			pda_file        => $rep_file,
 			target_dir      => $target_dir,
 			fasta_reference => $fasta_file,
-			id_map          => \%id_map
+			id_map          => \%id_map,
+			core            => $core,
 		) if -e $fasta_file;
 	}else{
 		#use all the sequences for representatives
 		`cp $fasta_file $target_dir/$core.rep` if -e $fasta_file;
 	}
 	
-	create_taxon_table(target_dir=>$target_dir, mapping=>$mapping, id_map => \%id_map );
+	create_taxon_table(target_dir=>$target_dir, mapping=>$mapping, id_map => \%id_map ) if defined($mapping);
 
 	if ( defined $mapping ) {
 		my $tmp_jplace     = $target_dir . "/" . $core . ".tmpread.jplace";
@@ -598,8 +599,8 @@ sub get_fasta_from_pda_representatives {
 	my $target_dir      = $args{target_dir} || miss("target_dir");
 	my $reference_fasta = $args{fasta_reference} || miss("fasta_reference");
 	my $id_map_ref      = $args{id_map} || miss("id_map");
+	my $core            = $args{core} || miss("core");
 	my %id_map          = %{$id_map_ref};
-	my ( $core, $path, $ext ) = fileparse( $pda_file, qr/\.[^.]*$/ );
 
 	#reading the pda file to get the representative IDs
 	my $REPSIN        = Phylosift::Utilities::ps_open($pda_file);

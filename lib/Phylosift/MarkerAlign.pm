@@ -593,15 +593,7 @@ sub merge_alignment {
 	my %coord = ();
 	while ( my $seq = $seq_IO->next_seq() ) {
 		my $core = "";
-		if ( $seq->id =~ m/^(\S+)(\.\d+\.\d+)_(\d+)$/ ) {
-			$core = $1;
-			if(exists $coord{$core}){
-				$coord{$core} .= $2 if exists $coord{$core};
-			}else{
-				$coord{$core} = $2;
-			}
-		} else {
-			$seq->id =~ m/^(\S+)(\.\d+\.\d+)/;
+		if ( $seq->id =~ m/^(\d+)(\.\d+\.\d+\.\d+)$/ ) {
 			$core = $1;
 			if(exists $coord{$core}){
 				$coord{$core} .= $2 if exists $coord{$core};
@@ -609,9 +601,6 @@ sub merge_alignment {
 				$coord{$core} = $2;
 			}
 		}
-		$self->{"read_names"}{$core} = () if ( !exists $self->{"read_names"}{$core} );
-		push( @{ ${ $self->{"read_names"} }{$core} }, $self->{"read_names"}{ $seq->id }[0] )
-		  unless defined( @{ ${ $self->{"read_names"} }{$core} } ) && scalar( @{ ${ $self->{"read_names"} }{$core} } == 2 ); #both pairs have been added already
 		if ( exists $seqs{$core} ) {
 			my @seq1 = split( //, $seqs{$core} );
 			my @seq2 = split( //, $seq->seq );
@@ -712,7 +701,7 @@ sub concatenate_alignments {
 		my $gcount = ( $concat_aln{$id} =~ tr/-// );
 		next if ( $gcount == length( $concat_aln{$id} ) );    # don't write an all-gap seq. these can slip through sometimes.
 		                                                      # write
-		print $ALNOUT ">$id.".join(",",@{$id_coords{$id}})."\n$concat_aln{$id}\n";
+		print $ALNOUT ">$id.".join(".",@{$id_coords{$id}})."\n$concat_aln{$id}\n";
 	}
 }
 

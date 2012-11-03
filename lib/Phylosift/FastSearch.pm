@@ -442,46 +442,22 @@ sub demux_sequences {
 				}
 			}
 
-			#adding /1 and /2 to reads if the IDs are the same
-			if ( defined( $lines2[0] ) ) {
-				$lines1[0] =~ m/^(\S+)/;
-				my $id1 = $1;
-				$lines2[0] =~ m/^(\S+)/;
-				my $id2 = $1;
-				if ( $id1 eq $id2 ) {
-					$lines1[0] =~ s/^(\S+)/$1\/1/g;
-					$lines2[0] =~ s/^(\S+)/$1\/2/g;
-				} elsif ( $id1 =~ m/\/(\d)$/ && $id2 !~ m/\/\d$/ ) {
-					my $ending = $1;
-					if ( $ending == 1 ) {
-						$lines2[0] =~ s/^(\S+)/$1\/2/g;
-					} elsif ( $ending == 2 ) {
-						$lines2[0] =~ s/^(\S+)/$1\/1/g;
-					}
-				} elsif ( $id1 !~ m/\/\d$/ && $id2 =~ m/\/(\d)$/ ) {
-					my $ending = $1;
-					if ( $ending == 1 ) {
-						$lines1[0] =~ s/^(\S+)/$1\/2/g;
-					} elsif ( $ending == 2 ) {
-						$lines1[0] =~ s/^(\S+)/$1\/1/g;
-					}
-				}
-			}
-
 			# quality trim the read(s)
 			qtrim_read( read => \@lines1, quality => $quality_threshold, readtype => $readtype );
 			qtrim_read( read => \@lines2, quality => $quality_threshold, readtype => $readtype ) if defined( $lines2[0] );
 
 			#add the reads to file lookup
-			if ( $lines1[0] =~ m/^@(\S+)(\/\d)/ && $paired ) {
-				print $IDFILE "$1\t$seq_count\n";
-			} elsif ( $lines1[0] =~ m/^@(.+)/ ) {
-				print $IDFILE "$1\t$seq_count\n";
+			
+#			if ( $lines1[0] =~ m/^@(\S+)(\/\d)/ && $paired ) {
+			chomp($lines1[0]);
+			print $IDFILE "$lines1[0]\t$seq_count/1\n";
+#			} elsif ( $lines1[0] =~ m/^@(.+)/ ) {
+			if(defined($lines2[0])){
+			    chomp($lines2[0]);
+			    print $IDFILE "$lines2[0]\t$seq_count/2\n" ;
 			}
 
-			$lines1[0] = "\@$seq_count";
-			$lines1[0] .= "/1" if $paired;
-			$lines1[0] .= "\n";
+			$lines1[0] = "\@$seq_count/1\n";
 			if ($paired) {
 				$lines2[0] = "\@$seq_count";
 				$lines2[0] .= "/2" if $paired;
@@ -539,33 +515,26 @@ sub demux_sequences {
 				}
 			}
 
-			#adding /1 and /2 to reads if the IDs are the same
-			if ( defined( $lines2[0] ) ) {
-				$lines1[0] =~ m/^(\S+)/;
-				my $id1 = $1;
-				$lines2[0] =~ m/^(\S+)/;
-				my $id2 = $1;
-				if ( $id1 eq $id2 ) {
-					$lines1[0] =~ s/^(\S+)/$1\/1/g;
-					$lines2[0] =~ s/^(\S+)/$1\/2/g;
-				}
-			}
+
 			#removing possible \n in the middle of the sequence
 			$lines1[1] =~ s/\n//g;
-			$lines2[1] =~ s/\n//g;
+			$lines2[1] =~ s/\n//g if defined($lines2[1]);
 			#add a \n at the end of the sequence to comply with fasta format
 			$lines1[1] .= "\n";
-			$lines2[1] .= "\n";
+			$lines2[1] .= "\n" if defined($lines2[1]);
 			#add the reads to file lookup
-			if ( $lines1[0] =~ m/^>(\S+)(\/\d)/ && $paired ) {
-				print $IDFILE "$1\t$seq_count\n";
-			} elsif ( $lines1[0] =~ m/^>(.+)/ ) {
-				print $IDFILE "$1\t$seq_count\n";
+#			if ( $lines1[0] =~ m/^>(\S+)(\/\d)/ && $paired ) {
+			$lines1[0] =~ s/^>//;
+			chomp($lines1[0]);
+			print $IDFILE "$lines1[0]\t$seq_count/1\n";
+#			} elsif ( $lines1[0] =~ m/^>(.+)/ ) {
+			if(defined $lines2[0]){
+			    $lines2[0] =~ s/^>//;
+			    chomp($lines2[0]);
+			    print $IDFILE "$lines2[0]\t$seq_count/2\n" if defined($lines2[0]);
 			}
 
-			$lines1[0] = ">$seq_count";
-			$lines1[0] .= "/1" if $paired;
-			$lines1[0] .= "\n";
+			$lines1[0] = ">$seq_count/1\n";
 			if ($paired) {
 				$lines2[0] = ">$seq_count";
 				$lines2[0] .= "/2" if $paired;
@@ -586,7 +555,7 @@ sub demux_sequences {
 			print $READS_PIPE $lines2[0] . $lines2[1] if @lines2 && !$completed_chunk;
 
 			@lines1 = ( $newline1, "" );
-			@lines2 = ( $newline2, "" );
+			@lines2 = ( $newline2, "" ) if @lines2 && !$completed_chunk;
 		}
 		$lastal_index++;
 		$lastal_index = $lastal_index % $lastal_threads;
@@ -944,12 +913,12 @@ sub write_candidates {
 			$new_seq = substr( $seq, $start, $end - $start );
 			my $new_id = $id;
 			my $coord = ".$start.$end";
-			if($Phylosift::Settings::paired){
-				#when working with paired data, move the mateID to the end of the string
-				$new_id =~ s/(\d+)(\/\d)/$1$coord$2/;
-			} else {
-				$new_id =~ s/(\d+)/$1$coord/;
-			}
+#			if($Phylosift::Settings::paired){
+#				#when working with paired data, move the mateID to the end of the string
+#				$new_id =~ s/(\d+)(\/\d)/$1$coord$2/;
+#			} else {
+				$new_id =~ s/^(\d+)\/(\d)/$1.$2$coord/;
+#			}
 
 			#if we're working from DNA then need to translate to protein
 			if ( $self->{"dna"} && $type !~ /\.rna/ ) {
