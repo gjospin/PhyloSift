@@ -435,7 +435,7 @@ sub compute_precision_recall_curve {
     
     foreach my $read (keys(%topReadScore)) {
         my $score = $topReadScore{$read}->[0];
-        push($score, @readScores);
+        push(@readScores, $score);
         my ($tp_prec, $read_count, $tp_rec, $allpos) = compute_top_place_precision( top_place=>$thref, true_taxon_counts=>$taxonomy_counts, read=>$read);
         my @array = ($tp_prec, $tp_rec);
         $sortedScores{$score} = \@array;

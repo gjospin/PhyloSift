@@ -11,6 +11,7 @@ use Phylosift::MarkerBuild;
 use Bio::Phylo::IO qw(parse unparse);
 use LWP::Simple;
 use FindBin;
+use Scalar::Util qw(looks_like_number);
 
 =head1 NAME
 
@@ -306,9 +307,9 @@ sub qsub_updates {
 	my $local_directory = $args{local_directory} || miss ("local_directory");
 	my $files       = $args{files} || miss("files");
 	my $extended    = $args{extended} || 0;
-	my $params;
+	my $params="";
 	$params = " --updated_markers=0 --extended " if $extended;
-	$params = " --isolate --besthit " if !$extended;
+	#$params = " --isolate --besthit " if !$extended;
 
 	# qsub a slew of phylosift jobs and have them report results to a local directory on this host for concatenation
 	my $hostname = `hostname`;
@@ -324,17 +325,18 @@ sub qsub_updates {
 #\$ -V
 #\$ -S /bin/bash
 
-WORKDIR=/state/partition1/koadman/phylosift/\$JOB_ID
+WORKDIR=/state/partition1/gjospin/phylosift/\$JOB_ID
 mkdir -p \$WORKDIR
 if [ \$? -gt 0 ]; then
-    WORKDIR=/data/scratch/koadman/phylosift/\$JOB_ID
-	mkdir -p \$WORKDIR
+   WORKDIR=/data/scratch/gjospin/phylosift/\$JOB_ID
+   mkdir -p \$WORKDIR
 fi
 cd \$WORKDIR
 
 export PATH="\$PATH:$ps"
 $ps/phylosift search $params \$1
 $ps/phylosift align $params \$1
+$ps/phylosift name $params --isolate \$1
 rm -rf PS_temp/*/treeDir
 rm -rf PS_temp/*/blastDir
 rm -rf PS_temp/*/isolates.fasta
@@ -681,14 +683,16 @@ sub create_taxon_id_table {
 	my $alignment = $args{alignment} || miss("alignment");
 	my $output = $args{output} || miss("output");
 	my $alltaxa = $args{alltaxa} || miss("alltaxa");
+#	print "OUTPUT :$output\n";
 	my $OUTPUT = ps_open( ">$output" );
 	my $INALN = ps_open( $alignment );
 	while ( my $line = <$INALN> ) {
 		if ( $line =~ /^>(.+)/ ) {
 			my $header = $1;
-#			if ( $header =~ /\.(\d+?)\.fasta/ ) {
-			my $ncbi = 1;
-			if ( $header =~ /^(\d+?)\./ ) {
+			my $ncbi = 0;
+			if ( $header =~ /\.(\d+?)\.fasta/ ) {
+#			if ( $header =~ /^(\d+?)\./ ) {
+			    $ncbi =1;
 				my $taxon_id=$1;
 				$ncbi = 0 unless defined $taxon_id;
 				$ncbi = 0 if $taxon_id < 100;
@@ -698,7 +702,7 @@ sub create_taxon_id_table {
 					$alltaxa->{$1}=1;
 				}
 			}
-			if( $header !~ /^\d+?\./ || $ncbi == 0){
+			if( $ncbi == 0){
 				my $name = $1 if $header =~ /^(.+?)\.\d+.+/;
 				print $OUTPUT "$header\t$name\n";
 			}
@@ -710,8 +714,10 @@ sub create_taxon_id_table {
 sub is_unclassified {
 	my %args = @_;
 	my $taxon_id = $args{taxon_id} || miss("taxon_id");
+	return 0 unless looks_like_number($taxon_id);
 	my $parent = Phylosift::Summarize::read_ncbi_taxonomy_structure();
 	my $t=$taxon_id;
+#	print $taxon_id."\n";
 	# need to remove anything that NCBI considers "unclassified", currently taxon node ID 12908.
 	for(; defined($t) && $t != 1; $t = $parent->{$t}->[0]){
 		last if $t == 12908;
@@ -728,6 +734,7 @@ sub filter_short_and_unclassified_seqs_from_fasta {
 	# create a pruned fasta
 	my $FASTA = ps_open( $input_fasta );
 	my $PRUNEDFASTA = ps_open( ">" . $output_fasta );
+#	print "OUTPUTFASTA $output_fasta\n";
 	my $curhdr = "";
 	my $curseq = "";
 	my %known;
@@ -737,9 +744,12 @@ sub filter_short_and_unclassified_seqs_from_fasta {
 			if(length($curseq) > 0){
 				my $glen = $curseq =~ tr/-/-/;
 				my $known_pct = 100*(length($curseq)-$glen) / length($curseq);
-#				my $taxon_id = $1 if $curhdr =~ /\.(\d+?)\.fasta/;
-				my $taxon_id = $1 if $curhdr =~ />(\d+?)\./;
-				print $PRUNEDFASTA "$curhdr\n$curseq\n" if $known_pct > $min_pct && !is_unclassified(taxon_id=>$taxon_id) && !defined($known{$curhdr});
+#				print $curhdr."\n";
+				my $taxon_id = $1 if $curhdr =~ /\.(\d+?)\.fasta/;
+				$taxon_id = $1 if !defined($taxon_id) && $curhdr =~ /^>(\S+)\.fasta/;
+#				my $taxon_id = $1 if $curhdr =~ />(\d+?)\./;
+#				print "TAXON : $taxon_id\n";
+				print $PRUNEDFASTA "$curhdr\n$curseq\n" if $known_pct > $min_pct && ((!is_unclassified(taxon_id=>$taxon_id) && !defined($known{$curhdr}) || $Phylosift::Settings::keep_paralogs));
 				$known{$curhdr}=1;
 				$curseq = "";
 			}
@@ -751,9 +761,11 @@ sub filter_short_and_unclassified_seqs_from_fasta {
 	if(length($curseq) > 0){
 		my $glen = $curseq =~ tr/-/-/;
 		my $known_pct = 100*(length($curseq)-$glen) / length($curseq);
-#		my $taxon_id = $1 if $curhdr =~ /\.(\d+?)\.fasta/;
-		my $taxon_id = $1 if $curhdr =~ />(\d+?)\./;
-		print $PRUNEDFASTA "$curhdr\n$curseq\n" if $known_pct > $min_pct && !is_unclassified(taxon_id=>$taxon_id) && !defined($known{$curhdr});
+		my $taxon_id = $1 if $curhdr =~ /\.(\d+?)\.fasta/;
+		$taxon_id = $1 if !defined($taxon_id) && $curhdr =~ /^>(\S+)\.fasta/;
+		
+#		my $taxon_id = $1 if $curhdr =~ />(\d+?)\./;
+		print $PRUNEDFASTA "$curhdr\n$curseq\n" if $known_pct > $min_pct && ((!is_unclassified(taxon_id=>$taxon_id) && !defined($known{$curhdr}) || $Phylosift::Settings::keep_paralogs));
 	}
 }
 
