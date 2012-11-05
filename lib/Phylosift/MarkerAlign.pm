@@ -75,7 +75,7 @@ sub MarkerAlign {
 
 	# produce a concatenate alignment for the base marker package
 	unless ( $Phylosift::Settings::extended ) {
-		my @markeralignments = getPMPROKMarkerAlignmentFiles( self => $self, chunk => $chunk );
+		my @markeralignments = get_noncore_alignment_files( self => $self, chunk => $chunk );
 		
 		my $outputFastaAA = $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta( marker => "concat", chunk => $chunk );
 
@@ -89,7 +89,7 @@ sub MarkerAlign {
 		);
 
 		# now concatenate any DNA alignments
-		@markeralignments = getPMPROKMarkerAlignmentFiles( self => $self, chunk => $chunk, dna => 1 );
+		@markeralignments = get_noncore_alignment_files( self => $self, chunk => $chunk, dna => 1 );
 		my $output_fasta_DNA = $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta( marker => "concat", dna => 1, chunk => $chunk );
 		concatenate_alignments(
 								self           => $self,
@@ -636,7 +636,15 @@ sub merge_alignment {
 	close($FH);
 }
 
-sub getPMPROKMarkerAlignmentFiles {
+=head get_noncore_alignment_files
+
+Gathers the filenames for alignment files in the AlignDir for a specific chunk and sequence type (DNA/protein)
+Returns an Array of filenames
+Skips all Core marker names
+
+=cut
+
+sub get_noncore_alignment_files {
 	my %args             = @_;
 	my $self             = $args{self} || miss("self");
 	my $chunk            = $args{chunk};
