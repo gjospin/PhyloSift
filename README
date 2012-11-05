@@ -38,6 +38,8 @@ Or using compressed paired FastQ data from an Illumina instrument:
 Results will be stored in a new directory called "results".
 
 See `results/sequences.fasta.html` for a visual summary of the sequence data.
+Run `javaws results/sequences.fasta.jnlp` to browse a phylogeny with branches thickened by 
+relative abundance in the sample.
 
 == Detailed installation instructions ==
 
