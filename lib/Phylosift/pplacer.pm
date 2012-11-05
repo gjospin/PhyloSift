@@ -300,7 +300,7 @@ sub place_reads{
 	}
 
 	my $options = $marker eq "concat" ? "--groups $Phylosift::Settings::pplacer_groups" : "";
-	$options .= " --mmap-file abracadabra " if ($marker =~ /18s/ || $marker =~ /16s/ || $marker eq "concat");
+	$options .= " --mmap-file abracadabra " if (($marker =~ /18s/ || $marker =~ /16s/ || $marker eq "concat") && Phylosift::Utilities::get_available_memory() < 8000000 );
 	$options .= " -p " if( $Phylosift::Settings::bayes ); # calc posterior probabilities. this is slow.
 
 	$marker_package .= ".short" if $short_rna;

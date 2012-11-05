@@ -1756,6 +1756,28 @@ sub gather_markers {
 	return sort @marks;
 }
 
+=head2 get_available_memory
+
+Reads total installed memory on the system
+
+=cut
+
+sub get_available_memory{
+	my $mem = 4000000; #default 4Gigs
+	if ($^O =~ m/darwin/) {
+                my $inf = `/usr/sbin/system_profiler SPHardwareDataType | grep Memory`;
+                if ($inf =~ /      Memory: (\d+) GB/){
+                        $mem = $1 * 1048576;
+                }
+        } else {
+                my $inf = `cat /proc/meminfo | grep MemTotal`;
+                if ($inf =~ /MemTotal:\s+(\d+) kB/){
+                        $mem = $1;
+                }
+        }
+    return $mem
+}
+
 =head2 get_sequence_input_type
 
 Checks whether input is FastA, FastQ, which quality type (33 or 64), and DNA or AA
