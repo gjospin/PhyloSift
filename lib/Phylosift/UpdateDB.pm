@@ -281,6 +281,19 @@ sub get_ncbi_draft_genomes {
 	}
 }
 
+=head2 set_default_values
+
+Sets default values for UpdateDB parameters
+
+=cut
+sub set_default_values{
+	Phylosift::Settings::set_default( parameter => \$Phylosift::Settings::MAX_SGE_JOBS,            value => 5000 );
+	Phylosift::Settings::set_default( parameter => \$Phylosift::Settings::WORKDIR_normal,            value => "/state/partition1/koadman/phylosift/" );
+	Phylosift::Settings::set_default( parameter => \$Phylosift::Settings::WORKDIR_fatnode,            value => "/data/scratch/koadman/phylosift/" );
+	
+	
+}
+
 sub find_new_genomes {
 	my %args        = @_;
 	my $genome_dir  = $args{genome_directory} || miss("genome_directory");
@@ -304,9 +317,6 @@ sub find_new_genomes {
 		}
 	}
 }
-
-# limit on the number of jobs that can be queued to SGE at once
-use constant MAX_SGE_JOBS => 5000;
 
 sub qsub_updates {
 	my %args            = @_;
@@ -332,10 +342,10 @@ sub qsub_updates {
 #\$ -V
 #\$ -S /bin/bash
 
-WORKDIR=/state/partition1/gjospin/phylosift/\$JOB_ID
+WORKDIR=$Phylosift::Settings::WORKDIR_normal\$JOB_ID
 mkdir -p \$WORKDIR
 if [ \$? -gt 0 ]; then
-   WORKDIR=/data/scratch/gjospin/phylosift/\$JOB_ID
+   WORKDIR=$Phylosift::Settings::WORKDIR_fatnode\$JOB_ID
    mkdir -p \$WORKDIR
 fi
 cd \$WORKDIR
@@ -362,7 +372,7 @@ EOF
 		qsub_job( script => "/tmp/pssge.sh", job_ids => \%jobids, script_args => [$file] );
 
 		# check whether we've hit the limit for queued jobs, and rest if needed
-		if ( $job_count == MAX_SGE_JOBS ) {
+		if ( $job_count == $Phylosift::Settings::MAX_SGE_JOBS ) {
 			wait_for_jobs( job_ids => \%jobids, min_remaining => 20 );
 			%jobids    = ();
 			$job_count = 0;
