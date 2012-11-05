@@ -96,24 +96,24 @@ sub get_program_path {
 	# if a path was already given try that first
 	if (    defined($progpath)
 		 && $progpath ne ""
-		 && -x $progpath . "/" . $progname )
+		 && -x $progpath."/".$progname )
 	{
-		$progcheck = $progpath . "/" . $progname;
+		$progcheck = $progpath."/".$progname;
 	}
 
 	# then check the directories from where the script is running
-	$progcheck = $Bin . "/" . $progname
-	  unless ( $progcheck =~ /$progname/ || !( -x $Bin . "/" . $progname ) );
-	$progcheck = $Bin . "/bin/" . $progname
+	$progcheck = $Bin."/".$progname
+	  unless ( $progcheck =~ /$progname/ || !( -x $Bin."/".$progname ) );
+	$progcheck = $Bin."/bin/".$progname
 	  unless ( $progcheck =~ /$progname/
-			   || !( -x $Bin . "/bin/" . $progname ) );
+			   || !( -x $Bin."/bin/".$progname ) );
 
 	# then check the OS and use Mac binaries if needed
 	if ( $^O =~ /arwin/ ) {
-		$progcheck = $Bin . "/../osx/" . $progname
+		$progcheck = $Bin."/../osx/".$progname
 		  unless ( $progcheck =~ /$progname/
-				   && !( -x $Bin . "/" . $progname ) );
-		$progcheck = $Bin . "/../osx/" . $progname
+				   && !( -x $Bin."/".$progname ) );
+		$progcheck = $Bin."/../osx/".$progname
 		  if ( $progcheck =~ /$Bin\/bin/ );    # don't use the linux binary!
 	}
 
@@ -161,7 +161,7 @@ sub program_checks {
 		if ( $1 < 10 ) {
 
 			# pplacer was found but the version doesn't match the one tested with Phylosift
-			carp( "Warning : a different version of pplacer was found. PhyloSift was tested with pplacer v1.1.alpha10\n" );
+			carp("Warning : a different version of pplacer was found. PhyloSift was tested with pplacer v1.1.alpha10\n");
 		}
 	}
 	Phylosift::Settings::set_default(
@@ -274,8 +274,8 @@ sub read_marker_summary {
 	my $directory   = $args{path} || miss("marker_summary Path");
 	my %return_hash = ();
 	return \%return_hash unless -e "$directory/marker_summary.txt";
-	my $IN     = ps_open( $directory . "/marker_summary.txt" );
-	my $header = <$IN>;                                           #read header line
+	my $IN     = ps_open( $directory."/marker_summary.txt" );
+	my $header = <$IN>;                                         #read header line
 	while (<$IN>) {
 		chomp($_);
 		my @line = split( /\t/, $_ );
@@ -318,11 +318,11 @@ sub print_marker_summary {
 	my $self        = $args{self} || miss("PS object");
 	my $dir         = $args{path} || miss("marker_summary path");
 	my $summary_ref = $args{summary} || miss("Summary hash");
-	my $OUT         = ps_open( ">" . $dir . "/marker_summary.txt" );
+	my $OUT         = ps_open( ">".$dir."/marker_summary.txt" );
 	my %summary     = %{$summary_ref};
 	my $total       = 0;
 	foreach my $marker ( sort keys %summary ) {
-		print $OUT $marker . "\t" . $summary{$marker} . "\n" if $summary{$marker} > 0;
+		print $OUT $marker."\t".$summary{$marker}."\n" if $summary{$marker} > 0;
 		$total += $summary{$marker} unless $marker eq 'concat';
 	}
 	print $OUT "total\t$total\n";
@@ -341,15 +341,15 @@ sub get_data_path {
 	my $datapath  = $args{data_path};
 	my $datacheck = "";
 	if ( defined($datapath) && $datapath ne "" ) {
-		$datacheck = $datapath . "/" . $dataname;
+		$datacheck = $datapath."/".$dataname;
 	} else {
 		my $scriptpath = dirname($0);
 		$scriptpath =~ s/bin\/?$//g;
-		$datacheck = $scriptpath . "/share/phylosift/" . $dataname;
+		$datacheck = $scriptpath."/share/phylosift/".$dataname;
 		return $datacheck if ( -x $datacheck );
 
 		# if the system data dir doesn't exist, default to the user's home
-		$datacheck = $ENV{"HOME"} . "/share/phylosift/" . $dataname;
+		$datacheck = $ENV{"HOME"}."/share/phylosift/".$dataname;
 	}
 	return $datacheck;
 }
@@ -383,7 +383,8 @@ sub download_data {
 		File::Fetch->import();
 	};
 	if ($@) {
-		croak(    "Unable to load perl module File::Fetch. Can not download marker database.\nPlease use cpan to install File::Fetch or download and install the markers manually.\n"
+		croak(
+			"Unable to load perl module File::Fetch. Can not download marker database.\nPlease use cpan to install File::Fetch or download and install the markers manually.\n"
 		);
 	} else {
 
@@ -420,15 +421,13 @@ sub marker_update_check {
 	my $url         = $args{url};
 	my $marker_path = $args{dir};
 
-	
-
 	debug "Skipping check for marker updates on server\n"
-	  if $Phylosift::Settings::disable_update_check && ! $self->{"removed_markers"};
+	  if $Phylosift::Settings::disable_update_check && !$self->{"removed_markers"};
 	return
-	  if $Phylosift::Settings::disable_update_check && ! $self->{"removed_markers"};    # bail out if we're not supposed to be here
-	#return
-	#  if defined($Phylosift::Settings::marker_update_check)
-	#  && $Phylosift::Settings::marker_update_check == 0;
+	  if $Phylosift::Settings::disable_update_check && !$self->{"removed_markers"};    # bail out if we're not supposed to be here
+	                                                                                   #return
+	                                                                                   #  if defined($Phylosift::Settings::marker_update_check)
+	                                                                                   #  && $Phylosift::Settings::marker_update_check == 0;
 
 	eval {
 		require LWP::Simple;
@@ -444,18 +443,18 @@ sub marker_update_check {
 
 		my ( $content_type, $document_length, $modified, $expires, $server ) = head($url);
 		$modified_time = $modified;
-		debug "MARKER_PATH : " . $marker_path . "\nURL : $url\n";
+		debug "MARKER_PATH : ".$marker_path."\nURL : $url\n";
 
 		if ( -x $marker_path ) {
 			my ( $m_url, $m_timestamp ) = get_marker_version( path => $marker_path );
 			if ( defined($m_url) ) {
 				$m_url =~ s/\/\//\//g;
 				$m_url =~ s/http:/http:\//g;
-				debug "TEST LOCAL :" . localtime($m_timestamp) . "\n";
+				debug "TEST LOCAL :".localtime($m_timestamp)."\n";
 				if ( !defined($modified_time) ) {
 					warn "Warning: unable to connect to marker update server, please check your internet connection\n";
 				} elsif ( $modified_time > $m_timestamp ) {
-					debug "TEST REMOTE:" . localtime($modified_time) . "\n";
+					debug "TEST REMOTE:".localtime($modified_time)."\n";
 					warn "Found newer version of the marker data\n";
 					$get_new_markers = 1;
 				} elsif ( $url ne $m_url ) {
@@ -488,7 +487,7 @@ sub marker_update_check {
 		print $VOUT "$url\n";
 		print $VOUT "$modified_time\n";
 	}
-	if($get_new_markers || $self->{"removed_markers"}){
+	if ( $get_new_markers || $self->{"removed_markers"} ) {
 		my @markers = gather_markers( self => $self, path => $marker_path, force_gather => 1 );
 		index_marker_db( self => $self, markers => \@markers, path => $marker_path );
 	}
@@ -526,14 +525,15 @@ sub data_checks {
 															  data_path => $Phylosift::Settings::marker_path
 									  )
 	);
+
 	#checking if the PMMPROK markers are present at the same time as DNGNGWU markers
-	my @pmprok = glob("$Phylosift::Settings::marker_dir/PMPROK*");
+	my @pmprok  = glob("$Phylosift::Settings::marker_dir/PMPROK*");
 	my @dngngwu = glob("$Phylosift::Settings::marker_dir/DNGNGWU*");
-	if(scalar(@pmprok) > 0 && scalar(@dngngwu) > 0 ){
-		warn ("Old AND new core markers detected. Removing the old version\nForcing a re-index of the reference database...\n");
+	if ( scalar(@pmprok) > 0 && scalar(@dngngwu) > 0 ) {
+		warn("Old AND new core markers detected. Removing the old version\nForcing a re-index of the reference database...\n");
 		my $cmd = "rm -rf $Phylosift::Settings::marker_dir/PMPROK*";
 		`$cmd`;
-		$self->{"removed_markers"}=1;
+		$self->{"removed_markers"} = 1;
 	}
 	marker_update_check(
 						 self => $self,
@@ -569,7 +569,7 @@ sub data_checks {
 	);
 	debug "DIR : $Phylosift::Settings::ncbi_dir\n";
 	debug "Skipping check for NCBI updates on server\n" if $Phylosift::Settings::disable_update_check;
-	return                                              if $Phylosift::Settings::disable_update_check;
+	return if $Phylosift::Settings::disable_update_check;
 	my ( $content_type, $document_length, $modified_time, $expires, $server ) = head("$Phylosift::Settings::ncbi_url");
 	if ( -x $Phylosift::Settings::ncbi_dir ) {
 		my $ncbi_time = ( stat($Phylosift::Settings::ncbi_dir) )[9];
@@ -578,7 +578,7 @@ sub data_checks {
 		} elsif ( $modified_time > $ncbi_time ) {
 			warn "Found newer version of NCBI taxonomy data!\n";
 			warn "Downloading from $Phylosift::Settings::ncbi_url\n";
-			download_data(          url         => $Phylosift::Settings::ncbi_url,
+			download_data( url         => $Phylosift::Settings::ncbi_url,
 						   destination => $Phylosift::Settings::ncbi_dir );
 		}
 	} else {
@@ -587,7 +587,7 @@ sub data_checks {
 		}
 		warn "Unable to find NCBI taxonomy data!\n";
 		warn "Downloading from $Phylosift::Settings::ncbi_url\n";
-		download_data(       url         => $Phylosift::Settings::ncbi_url,
+		download_data( url         => $Phylosift::Settings::ncbi_url,
 					   destination => $Phylosift::Settings::ncbi_dir );
 	}
 }
@@ -639,7 +639,7 @@ sub fasta2stockholm {
 	# check all seqs are same length
 	my $length;
 	my $lname;
-	for ( my $sI = 0 ; $sI < @name ; $sI++ ) {
+	for ( my $sI = 0; $sI < @name; $sI++ ) {
 		my $nname = $name[$sI];
 		my $sseq  = $seq[$sI];
 		my $l     = length $sseq;
@@ -654,7 +654,7 @@ sub fasta2stockholm {
 
 	# print Stockholm output
 	print $STOCKOUT "# STOCKHOLM 1.0\n";
-	for ( my $sI = 0 ; $sI < @name ; $sI++ ) {
+	for ( my $sI = 0; $sI < @name; $sI++ ) {
 		print $STOCKOUT $name[$sI], " ", $seq[$sI], "\n";
 	}
 	print $STOCKOUT "//\n";
@@ -716,10 +716,10 @@ sub printseq {
 	my @seq   = @{ $args{seq} };
 	my @names = @{ $args{names} };
 	my $out   = "";
-	for ( my $j = 0 ; $j < @names ; $j++ ) {
+	for ( my $j = 0; $j < @names; $j++ ) {
 		$out .= ">$names[$j]\n";
-		for ( my $i = 0 ; $i < length( $seq[$j] ) ; $i += $args{columns} ) {
-			$out .= substr( $seq[$j], $i, $args{columns} ) . "\n";
+		for ( my $i = 0; $i < length( $seq[$j] ); $i += $args{columns} ) {
+			$out .= substr( $seq[$j], $i, $args{columns} )."\n";
 		}
 	}
 	return $out;
@@ -819,7 +819,7 @@ Determines the filesystem path to a marker. Searches for the marker in the base 
 =cut
 
 sub get_marker_path {
-	my %args   = @_;
+	my %args = @_;
 	my $marker = $args{marker} || miss("marker");
 
 	# check for old-style marker first
@@ -997,7 +997,7 @@ sub get_marker_taxon_map {
 	my $marker_path = get_marker_path( self => $self, marker => $marker );
 	my $bname       = get_marker_basename( marker => $marker );
 	my $decorated   = get_decorated_marker_name(%args);
-	my $deco = "$marker_path/$decorated/$decorated.taxonmap";
+	my $deco        = "$marker_path/$decorated/$decorated.taxonmap";
 	return $deco if -e $deco;
 	return "$marker_path/$decorated/$bname.taxonmap";
 }
@@ -1019,7 +1019,7 @@ sub get_decorated_marker_name {
 	  if ( $updated || $Phylosift::Settings::updated ) && !$Phylosift::Settings::extended && $name !~ /^1[68]s/;
 
 	# rna markers don't get pruned
-	$name .= ".sub" . $sub_marker if defined($sub_marker);
+	$name .= ".sub".$sub_marker if defined($sub_marker);
 	return $name;
 }
 
@@ -1030,13 +1030,13 @@ Returns the gene id file name
 =cut
 
 sub get_gene_id_file {
-	my %args = @_;
-	my $marker = $args{marker} || miss("marker");	
-	my $dna = $args{dna} || 0;
+	my %args        = @_;
+	my $marker      = $args{marker} || miss("marker");
+	my $dna         = $args{dna} || 0;
 	my $marker_path = get_marker_path( marker => $marker );
 	my $bname       = get_marker_basename( marker => $marker );
 	my $decorated   = get_decorated_marker_name(%args);
-	my $deco = "$marker_path/$decorated/$decorated.gene_map";
+	my $deco        = "$marker_path/$decorated/$decorated.gene_map";
 	return $deco if -e $deco;
 	return "$Phylosift::Settings::marker_dir/gene_ids.codon.txt" if $dna;
 	return "$Phylosift::Settings::marker_dir/gene_ids.aa.txt";
@@ -1267,18 +1267,18 @@ sub concatenate_alignments {
 	my $self          = $args{self};
 	my $outputFasta   = $args{output_fasta};
 	my $outputMrBayes = $args{output_bayes};
-	my $gapmultiplier = $args{gap_multiplier};                               # 1 for protein, 3 for reverse-translated DNA
+	my $gapmultiplier = $args{gap_multiplier};                           # 1 for protein, 3 for reverse-translated DNA
 	my $aln_ref       = $args{alignments};
 	my @alignments    = @$aln_ref;
 	my $catobj        = 0;
 	my $MRBAYES       = ps_open(">$outputMrBayes");
-	my $partlist      = "partition genes = " . scalar(@alignments) . ": ";
+	my $partlist      = "partition genes = ".scalar(@alignments).": ";
 	my $prevlen       = 0;
 	foreach my $file (@alignments) {
 		my $aln;
 		my $marker = basename($file);
 		$gapmultiplier = 1 if ( $marker =~ /16s/ || $marker =~ /18s/ );
-		$marker =~ s/\..+//g;                                                # FIXME: this should really come from a list of markers
+		$marker =~ s/\..+//g;                                            # FIXME: this should really come from a list of markers
 		unless ( -e $file ) {
 
 			# this marker doesn't exist, need to create a dummy with the right number of gap columns
@@ -1303,7 +1303,7 @@ sub concatenate_alignments {
 		$csname =~ s/\..+//g;
 		$partlist .= "," if $catobj != 0;
 		$partlist .= $csname;
-		print $MRBAYES "charset $csname = " . ( $prevlen + 1 ) . "-" . ( $prevlen + $aln->length() ) . "\n";
+		print $MRBAYES "charset $csname = ".( $prevlen + 1 )."-".( $prevlen + $aln->length() )."\n";
 		$prevlen += $aln->length();
 		my $prevseq = 0;
 		my $newaln = $aln->select( 1, 1 );
@@ -1376,7 +1376,7 @@ sub concatenate_alignments {
 	# (naughty BioPerl! time out for you!!)
 	my $FA       = ps_open($outputFasta);
 	my @fa_lines = <$FA>;
-	my $FA_REOUT = ps_open( ">" . $outputFasta );
+	my $FA_REOUT = ps_open( ">".$outputFasta );
 	foreach my $line (@fa_lines) {
 		$line =~ s/\/\d-\d+//g;
 		print $FA_REOUT $line;
@@ -1453,10 +1453,10 @@ sub open_SeqIO_object {
 		$format = $args{format};
 	}
 	if ( $args{file} =~ /\.gz$/ ) {
-		$io_object = Bio::SeqIO->new(       -file   => "zcat \"$args{file}\" |",
+		$io_object = Bio::SeqIO->new( -file   => "zcat \"$args{file}\" |",
 									  -format => $format );
 	} elsif ( $args{file} =~ /\.bz2$/ ) {
-		$io_object = Bio::SeqIO->new(       -file   => "bzcat \"$args{file}\" |",
+		$io_object = Bio::SeqIO->new( -file   => "bzcat \"$args{file}\" |",
 									  -format => $format );
 	} else {
 		$io_object = Bio::SeqIO->new( -file => $args{file}, -format => $format );
@@ -1493,9 +1493,9 @@ sub get_db {
 	my $self    = $args{self};                                       # optional argument;
 	my $db_name = $args{db_name};
 	if ( defined($self) && !defined( $args{path} ) ) {
-		return $Phylosift::Settings::markers_extended_dir . "/$db_name"
+		return $Phylosift::Settings::markers_extended_dir."/$db_name"
 		  if defined($Phylosift::Settings::extended) && $Phylosift::Settings::extended;
-		return $Phylosift::Settings::marker_dir . "/$db_name";
+		return $Phylosift::Settings::marker_dir."/$db_name";
 	}
 	return "$path/$db_name";
 }
@@ -1600,15 +1600,15 @@ sub index_marker_db {
 	my $self    = $args{self};
 	my $path    = $args{path};
 	my @markers = @{ $args{markers} };
-	debug "Indexing " . scalar(@markers) . " in $path\n";
-	
+	debug "Indexing ".scalar(@markers)." in $path\n";
+
 	# use alignments to make an unaligned fasta database containing everything
 	# strip gaps from the alignments
-	my $rna_db       = get_rna_db( path => $path );
-	my $rna_db_fasta = "$rna_db.fasta";
-	my $PDBOUT           = ps_open( ">" . get_blastp_db( path => $path ) );
-	my $RNADBOUT         = ps_open( ">" . $rna_db_fasta );
-	my $MARKERLISTOUT    = ps_open(">$path/marker_list.txt");
+	my $rna_db        = get_rna_db( path => $path );
+	my $rna_db_fasta  = "$rna_db.fasta";
+	my $PDBOUT        = ps_open( ">".get_blastp_db( path => $path ) );
+	my $RNADBOUT      = ps_open( ">".$rna_db_fasta );
+	my $MARKERLISTOUT = ps_open(">$path/marker_list.txt");
 	foreach my $marker (@markers) {
 		my $marker_rep = get_marker_rep_file(
 											  self    => $args{self},
@@ -1619,22 +1619,24 @@ sub index_marker_db {
 										   self    => $args{self},
 										   marker  => $marker,
 										   updated => 0
-		  )
-		  unless -e $marker_rep;
+		) unless -e $marker_rep;
+
 		#debug "marker $marker is protein\n"
-		  #if is_protein_marker( marker => $marker );
+		#if is_protein_marker( marker => $marker );
 		#debug "marker rep file $marker_rep\n";
 		my $DBOUT = $RNADBOUT;
 		$DBOUT = $PDBOUT if is_protein_marker( marker => $marker );
+		next if ( !is_protein_marker( marker => $marker ) && $marker =~ /\.short/ );
 		unless ( -f $marker_rep ) {
-			warn "Warning: marker $marker appears to be missing data\n" if ($marker !~ /\.short/);
+			warn "$marker_rep not found.\n";
+			warn "Warning: marker $marker appears to be missing data\n" if ( $marker !~ /\.short/ );
 			next;
 		}
 		print $MARKERLISTOUT "$marker\n";
 		my $INALN = ps_open($marker_rep);
 		while ( my $line = <$INALN> ) {
 			if ( $line =~ /^>(.+)/ ) {
-				print $DBOUT "\n>$marker" . "__$1\n";
+				print $DBOUT "\n>$marker"."__$1\n";
 			} else {
 				$line =~ s/[-\.\n\r]//g;
 				$line =~ tr/a-z/A-Z/;
@@ -1645,15 +1647,14 @@ sub index_marker_db {
 	print $PDBOUT "\n";
 	print $RNADBOUT "\n";
 	close $MARKERLISTOUT;
-	close $PDBOUT;    # be sure to flush I/O
+	close $PDBOUT;                        # be sure to flush I/O
 	close $RNADBOUT;
 	my $blastp_db = get_blastp_db( path => $path );
 	`mv "$blastp_db" "$path/rep.dbfasta"`;
 
 	# make a last database
 	`cd "$path" ; $Phylosift::Settings::lastdb -s 900M -p replast rep.dbfasta`;
-	unlink("$path/rep.dbfasta");    # don't need this anymore!
-
+	unlink("$path/rep.dbfasta");          # don't need this anymore!
 
 	# make a rna database
 	if ( -e $rna_db_fasta && -s $rna_db_fasta > 100 ) {
@@ -1737,7 +1738,7 @@ sub gather_markers {
 			next if $line =~ /PMPROK/;
 			next if $line =~ /concat/;
 			next if $line =~ /representatives/;
-			next if $line =~ /.updated$/;         # just include the base version name
+			next if $line =~ /.updated$/;                # just include the base version name
 			next if $line =~ /codon.updated.sub\d+$/;    # just include the base version name
 			$line = substr( $line, length($path) + 1 );
 
@@ -1750,8 +1751,9 @@ sub gather_markers {
 			$marker_lookup{$baseline} = $line;
 			push( @marks, $line );
 		}
-		debug("Found ".scalar(@marks)." markers\n");
+		debug( "Found ".scalar(@marks)." markers\n" );
 	}
+
 	# always sort these, since the concats need to be used in the same order every time
 	return sort @marks;
 }
@@ -1836,7 +1838,7 @@ sub get_sequence_input_type {
 	$type{seqtype} = "protein" if ( $dnacount < $allcount * 0.75 );
 	$type{seqtype} = "dna"
 	  if ( $type{format} eq "fastq" );    # nobody using protein fastq (yet)
-	debug "TYPE : " . $type{seqtype} . "\n";
+	debug "TYPE : ".$type{seqtype}."\n";
 	$type{qtype} = "phred64" if $minq < 255;
 	$type{qtype} = "phred33" if $minq < 64;
 	$type{paired} = 0;                    # TODO: detect interleaved read pairing
@@ -1863,7 +1865,7 @@ sub get_sequence_input_type_quickndirty {
 	my $seqtype      = "dna";
 	my $length       = "long";
 	my $format       = "unknown";
-	for ( my $i = 0 ; $i < 200 ; $i++ ) {
+	for ( my $i = 0; $i < 200; $i++ ) {
 		my $seekpos = int( rand( $filesize - 100 ) );
 		$seekpos = 0
 		  if ( $i == 0 );    # always start with the first line in case the sequence is on a single line!
@@ -1964,12 +1966,12 @@ sub alignment_to_fasta {
 	my $target_dir = $args{target_dir};
 	my ( $core, $path, $ext ) = fileparse( $aln_file, qr/\.[^.]*$/ );
 	my $in = open_SeqIO_object( file => $aln_file );
-	my $FILEOUT = ps_open( ">" . $target_dir . "/" . $core . ".fasta" );
+	my $FILEOUT = ps_open( ">".$target_dir."/".$core.".fasta" );
 	while ( my $seq_object = $in->next_seq() ) {
 		my $seq = $seq_object->seq;
 		my $id  = $seq_object->id;
 		$seq =~ s/-\.//g;    # shouldnt be any gaps
-		print $FILEOUT ">" . $id . "\n" . $seq . "\n";
+		print $FILEOUT ">".$id."\n".$seq."\n";
 	}
 	close($FILEOUT);
 	return "$target_dir/$core.fasta";
@@ -2034,7 +2036,7 @@ sub unalign_sequences {
 		my $seq = $seq_object->seq;
 		my $id  = $seq_object->id;
 		$seq =~ s/[-\.]//g;    # shouldnt be any gaps
-		print $FILEOUT ">" . $id . "\n" . $seq . "\n";
+		print $FILEOUT ">".$id."\n".$seq."\n";
 		$seq_count++;
 	}
 	close($FILEOUT);
@@ -2050,7 +2052,7 @@ returns the path to the run_info_file
 sub get_run_info_file {
 	my %args = @_;
 	my $self = $args{self} || miss("PS object");
-	return $Phylosift::Settings::file_dir . "/run_info.txt";
+	return $Phylosift::Settings::file_dir."/run_info.txt";
 }
 
 =head1 AUTHOR
