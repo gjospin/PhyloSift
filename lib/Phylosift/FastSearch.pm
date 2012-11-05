@@ -444,8 +444,8 @@ sub demux_sequences {
 			}
 
 			# quality trim the read(s)
-			qtrim_read( read => \@lines1, quality => $quality_threshold, readtype => $readtype );
-			qtrim_read( read => \@lines2, quality => $quality_threshold, readtype => $readtype ) if defined( $lines2[0] );
+			qtrim_read( read => \@lines1, quality => $Phylosift::Settings::quality_threshold, readtype => $readtype );
+			qtrim_read( read => \@lines2, quality => $Phylosift::Settings::quality_threshold, readtype => $readtype ) if defined( $lines2[0] );
 
 			#add the reads to file lookup
 
