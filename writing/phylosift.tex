@@ -71,9 +71,10 @@
 }
 % Insert Author names, affiliations and corresponding author email.
 \\
-Person A$^{1}$, 
-Person B$^{1,2,3}$, 
-Person C$^{1,\ast}$
+Aaron E. Darling$^{1,\ast}$,
+Guillaume Jospin$^{1}$, 
+Holly M. Bik$^{1}$,
+Jonathan A. Eisen$^{2,3}$
 \\
 \bf{1} Genome Center, University of California-Davis, California, United States of America
 \\
@@ -94,21 +95,66 @@ blahdeeblah, blah blah
 
 \section*{Introduction}
 
-The emerging practice of metagenomics has for the first time offered a glimpse of the genetic structure of uncultured microbial communities.
-In its current form however, metagenomics destroys some of the most valuable information present in a sample: genetic linkage.
-In nearly all metagenomic sample processing methods, cells from the microbial community are lysed together to obtain the DNA.
-This practice causes DNA from many different cells to mix together, so that the cellular compartmentalization of individual genotypes is lost.
-Long chromosome-scale DNA fragments are then typically broken by mechanical or enzymatic means into fragments small enough for processing with current sequencing chemistries. 
+Metagenomic approaches have revolutionized biology, revealing the vastness of uncharacterized microbial diversity and  offering an important first glimpse into the genetic structure of uncultured microbial communities.
+However, in its current form, metagenomics destroys some of the most valuable information present in a sample: genetic linkage. Loss of information occurs in two ways: during sample extraction and size selection of fragments for sequencing.
+In nearly all metagenomic sample processing methods, cells from the microbial community are lysed together to obtain a common pool of DNA.
+This practice causes DNA from many different cells to mix together, so that the cellular compartmentalization of individual genotypes is destroyed.
+Subsequently, long chromosome-scale DNA fragments are typically broken by mechanical or enzymatic means into fragments small enough for processing with current sequencing chemistries. 
 The resulting sequenced fragments are usually less than 1Kbp (though sometimes 10-20kbp). 
-The shearing further destroys genetic linkage information, because information on how the short fragments were arranged into chromosome-scale molecules is lost.
+Such shearing results in further loss of  genetic linkage information, since this method removes our ability to infer how short DNA fragments were arranged into chromosome-scale molecules.
 
-Improved sample-processing workflows might preserve the genetic linkage information of a microbial community through the sequencing process.
+Metagenomic approaches ultimately aim to characterize ecosystem function, and thus knowledge of individual genomes (including taxonomic classification and functional potential) will be imperative for piecing together our understanding of microbial assemblages. In practice, improved sample processing methods could potentially retain the genetic linkage information of a microbial community throughout the sequencing process.
 High throughput single-cell genomics (e.g. applied to thousands of cells) offers an alternative to the standard metagenomics workflow that preserves information about the compartmentalization of genetic material into cells. 
 However, single-cell genomics currently presents its own challenges associated with isolating individual cells from certain types of samples and amplifying the {DNA} from a single cell to attain the minimum quantity required for sequencing. 
-Furthermore, single-cell genomics has extensive equipment requirements and is highly sensitive to contamination by foreign DNA, requiring rigorous laboratory and reagent decontamination.
+Single-cell approaches also have extensive equipment requirements and are highly sensitive to contamination by foreign DNA, requiring rigorous laboratory and reagent decontamination. Furthermore, the interpretation and downstream analysis of single-cell data is complicated by empirical methodology (uneven amplification, sequence chimeras) and computational pipelines that are not yet optimized for single-cell genome assembly; in some cases shotgun metagenomic approaches may result in more extensive genome coverage and a less fragmented view of a given microbial genome ~\cite{Stepanauskas2012}. 
 
-Given the current limitations of metagenomics, practitioners resort to computational methods to reconstruct the genetic architecture of a microbial community after sequencing.
-Computational methods have demonstrated promise for metagenomic analysis and a wide range of approaches have been explored.
+Given the current empirical limitations, practitioners most often resort to computational methods for reconstructing the genetic architecture of a microbial community after sequencing. 
+Molecular evolution, the joint processes of DNA replication with mutation and natural selection acting on those mutations, provides the primary signal for most metagenome analysis methods. 
+As species diverge, differences such as nucleotide substitutions, insertions, deletions, and genomic rearrangements accumulate in their genomes, and these differences can be leveraged to infer a sequence's origin in a mixed metagenomic sample.
+Computational methods have so far demonstrated substantial promise for metagenomic analysis, with a wide range of approaches explored to date. Previous work has typically focused on a number of central problems, including taxonomic classification of sequences, estimation of community structure and relative abundances of organisms, and "binning" approaches that sort sequences into groups corresponding to some meaningful characteristic. Each of these issues are interrelated, and many computational methods attempt to simultaneously address two or more of these problems.
+
+\subsection*{Previous work}
+
+\subsubsection*{Whole metagenome binning}
+Approaches for binning metagenomic reads fall into two categories: composition classifiers and identity/homology classifiers. 
+Composition classifiers utilize the properties of the sequences themselves (e.g. GC content or oligonucleotide frequency) to bin nucleotide data into distinct groups, with the assumption that these characteristics contain useful phylogenetic signals~\cite{Campbell1999}~\cite{Karlin1997}. Each "bin" aims to encapsulate a distinct taxonomic entity or putative gene family, meaning that sequence fragments placed into the same group could be interpreted to have similar genomic features (and potentially represent linkage in the case of taxonomic bins). 
+Existing composition classifiers include TACOA (supervised classification using k-nearest neighbors) ~\cite{Diaz2009}, PhyloPythia (multiclass support vector machine classifier using oligonucleotide frequencies) ~\cite{Mchardy2006} \& PhyloPythiaS ~\cite{Patil2011}, and Eu-Detect (oligonucleotide binning to separate eukaryote sequences in feature vector space) ~\cite{Mohammed2011}. Additional methods such as Self-Organizing Maps (e.g. eSOMS ~\cite {Dick2009}) utilize tetranucleotide frequencies in combination with read abundance information to produce visual "maps" displaying different bins. 
+
+Alternatively, binning methods can compare metagenome reads against reference databases to obtain sequence identity information and putative homology. Popular tools for identity/homology classification include MEGAN (a Lowest Common Ancestor algorithm that summarizes BLAST outputs to assign taxonomy)~\cite{Huson2007}, SORT-Items (reciprocal BLAST approach to detect significant orthology)~\cite{Haque2009}, NBC (Naive Bayesian Classifier)~\cite{Rosen2011}, MTR (a variation on Lowest Common Ancestor approaches that uses multiple taxonomic ranks)~\cite{Gori2011}, and ProViDE (analysis of alignment parameter thresholds, specifically customized for classifying viral sequences)~\cite{Ghosh2011}.
+
+
+Each type of binning method has benefits and drawbacks. Composition classifiers are arguably less biased because they can often analyze a larger proportion of metagenome data (versus methods that search for orthologous genes and/or rely on reference databases of known sequences). However, composition-based methods can become less useful for classifying complex environmental samples (increased noise results in lower low taxonomic resolution). Identity/homology binning methods can be more intuitive for investigating biological patterns, being easier to apply and resulting in more informative data outputs (e.g. hierarchical taxonomy).  However, BLAST-based approaches are notorious ambiguous; sequence identity does not incorporate underlying models of evolution (unlike phylogeny-based approaches), and thus does not necessarily return the closest relative from a group of database sequences. In addition, novel sequences often return ambiguous classifications or no match at all, particularly if no close relative is present amongst reference database sequences. In any case, the incompleteness of reference databases often becomes a limiting factor in metagenome sequence analysis.
+
+\subsubsection*{Estimating community composition from amplicon data}
+High-throughput sequencing methods often leverage information from marker gene amplicons (orthologous loci such as 16S/18S rRNA) to infer microbial community structure. In contrast to shotgun metagenomic approaches, amplicon data can potentially offer deeper views (capturing information from rare taxa) and require less starting genomic material because of the inherent requirement of PCR amplification. Since rRNA surveys offer a  "standardized" snapshot of microbial communities compared to shotgun metagenome approaches (information from a single genetic locus, often utilizing common primer sets and hypervariable regions across studies), the focus of amplicon 
+
+rRNA surveys produce a "standardized" snapshot of microbial communities, by using PCR approaches to target a specific 
+
+Because these methods utilize a well-characterized, homologous loci, software pipelines for amplicon data have expanded to include a suite of ecological and diversity analyses, including rarefaction (e.g. analyses for Chao1 estimation, OTU richness, or phylogenetic diversity as implemented in QIIME ~\cite{Caporaso2010}),  
+
+Databases fro rRNA further developed so more reference sequences to use in compasirons/classifications
+
+Community structure and organism relative abundance information - data processing is a challenge. Problems with rare sequences - errors, chimeras, or rare biosphere? Hard to detect bioinformatically.
+
+The limitations of BLAST-based approaches have long been apparent for high-throughput rRNA amplicon studies,  The nature of ribosomal locus (conserved and slowly evolving) and its long use in phylogenetic studies has made such sequences ideal for tree-based analysis. However, until recently sequence length and computational requirements hindered the application of explicitly phylogenetic approaches.
+
+Tools that are currently implemented: Rarefaction curves, Unifrac distances, PCoA, Jacknife cluster analysis
+
+Taxonomic classification - largely BLAST-based, which is complicated when reference databases are spare or database sequences have uninformative labels. Need to move toward phylo frameworks. Also incorporating evolutionary information gives a clearer answer. Also Challenge - definitely figuring out what species are present in my sample (fine scale resolution).
+
+      - QIIME]\cite{Caporaso2010} 
+      - OCTU?
+      - PhylOTU\cite{Sharpton2011}
+      
+\subsubsection*{Community composition from metagenomes}
+Similar to amplicon studies, shotgun metagenomic approaches are now incorporating "phylogenomic" approaches classify metagenome reads and determine community composition.  
+
+      - AMPHORA~\cite{WuEisen2008}, MLTreeMap~\cite{Stark2010}
+      - AMPHORA2~\cite{Wu2012}, MetaPhyler~\cite{Liu2010} 
+      - MetaPHlan~\cite{Segata2012}
+      - EMIRGE~\cite{Miller2011}
+
+
 Metagenome analysis usually addresses one or more of the following problems:
 \begin{itemize}
 \item Taxonomic classification of sequences
@@ -118,8 +164,8 @@ Metagenome analysis usually addresses one or more of the following problems:
 Each of these problems are inter-related and many methods address two or more of these at once.
 \textit{Question: should we define each of these problems?}
 
-Molecular evolution, the joint processes of DNA replication with mutation and natural selection acting on those mutations, provides the primary signal for most metagenome analysis methods.
-As species diverge, differences such as nucleotide substitutions, insertions, deletions, and genomic rearrangements accumulate in their genomes, and these differences can be leveraged to infer a sequence's origin in a mixed metagenomic sample.
+Paragraph overview of HMMs and probabilistic models here? Why are these preferable over other alignment/BLAST metagenome mining methods?
+
 
 In the present manuscript, we introduce a new method for reconstructing the genetic architecture of a metagenomic sample and for comparison of community structure among multiple related samples.
 The new method leverages explicitly phylogenetic models of molecular evolution. 
@@ -127,23 +173,6 @@ We contribute an open-source implementation of the method that has been engineer
 Finally, we compare the features of the new method to some related methods to provide readers with insight into when use of the new method is and is not appropriate.
 
 
-\subsection*{Previous work}
-blahblah
-
-\subsubsection*{Whole metagenome binning}
-- composition classifiers
-  - TACOA~\cite{Diaz2009}, PhyloPythia 1 \& 2\cite{Patil2011},Eu-Detect\cite{Mohammed2011},ProViDE~\cite{Ghosh2011}
-- identity/homology classifiers
-  - MEGAN~\cite{Huson2007}, SORT-Items~\cite{Haque2009}, NBC~\cite{Rosen2011}, MTR~\cite{Gori2011}, others
-\subsubsection*{Estimating community composition from amplicon data}
-      - QIIME
-      - OCTU?
-      - PhylOTU
-\subsubsection*{Community composition from metagenomes}
-      - AMPHORA\cite{WuEisen2008}, MLTreeMap\cite{Stark2010}
-      - AMPHORA2, MetaPhyler
-      - MetaPHlan
-      - EMIRGE\cite{Miller2011}
 
 % You may title this section "Methods" or "Models". 
 % "Models" is not a valid title for PLoS ONE authors. However, PLoS ONE
