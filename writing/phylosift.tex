@@ -96,16 +96,16 @@ blahdeeblah, blah blah
 
 The emerging practice of metagenomics has for the first time offered a glimpse of the genetic structure of uncultured microbial communities.
 In its current form however, metagenomics destroys some of the most valuable information present in a sample: genetic linkage.
-In nearly all metagenomic sample processing methods, cells from the microbial community are lysed together to obtain the DNA.
-This practice causes DNA from many different cells to mix together, so that the cellular compartmentalization of individual genotypes is lost.
-Long chromosome-scale DNA fragments are then typically broken by mechanical or enzymatic means into fragments small enough for processing with current sequencing chemistries. 
+In nearly all metagenomic sample processing methods, cells from the microbial community are lysed together to obtain the {DNA}.
+This practice causes {DNA} from many different cells to mix together, so that the cellular compartmentalization of individual genotypes is lost.
+Long chromosome-scale {DNA} fragments are then typically broken by mechanical or enzymatic means into fragments small enough for processing with current sequencing chemistries. 
 The resulting sequenced fragments are usually less than 1Kbp (though sometimes 10-20kbp). 
 The shearing further destroys genetic linkage information, because information on how the short fragments were arranged into chromosome-scale molecules is lost.
 
 Improved sample-processing workflows might preserve the genetic linkage information of a microbial community through the sequencing process.
 High throughput single-cell genomics (e.g. applied to thousands of cells) offers an alternative to the standard metagenomics workflow that preserves information about the compartmentalization of genetic material into cells. 
 However, single-cell genomics currently presents its own challenges associated with isolating individual cells from certain types of samples and amplifying the {DNA} from a single cell to attain the minimum quantity required for sequencing. 
-Furthermore, single-cell genomics has extensive equipment requirements and is highly sensitive to contamination by foreign DNA, requiring rigorous laboratory and reagent decontamination.
+Furthermore, single-cell genomics has extensive equipment requirements and is highly sensitive to contamination by foreign {DNA}, requiring rigorous laboratory and reagent decontamination.
 
 Given the current limitations of metagenomics, practitioners resort to computational methods to reconstruct the genetic architecture of a microbial community after sequencing.
 Computational methods have demonstrated promise for metagenomic analysis and a wide range of approaches have been explored.
@@ -118,7 +118,7 @@ Metagenome analysis usually addresses one or more of the following problems:
 Each of these problems are inter-related and many methods address two or more of these at once.
 \textit{Question: should we define each of these problems?}
 
-Molecular evolution, the joint processes of DNA replication with mutation and natural selection acting on those mutations, provides the primary signal for most metagenome analysis methods.
+Molecular evolution, the joint processes of {DNA} replication with mutation and natural selection acting on those mutations, provides the primary signal for most metagenome analysis methods.
 As species diverge, differences such as nucleotide substitutions, insertions, deletions, and genomic rearrangements accumulate in their genomes, and these differences can be leveraged to infer a sequence's origin in a mixed metagenomic sample.
 
 In the present manuscript, we introduce a new method for reconstructing the genetic architecture of a metagenomic sample and for comparison of community structure among multiple related samples.
@@ -158,36 +158,39 @@ The analysis can be decomposed into four stages: 1. searching input sequences fo
 \subsection*{Detailed PhyloSift client workflow}
 \subsubsection*{Sequence identity search}
 This first step in a PhyloSift analysis aims to identify regions of the input sequences that may be homologous to gene families in the reference database.
-Input sequences to this step can be of any length ranging from short 30nt next-generation sequence reads to fully assembled genomes.
+Input sequences to this step can be of any length ranging from short 30nt next-generation sequence reads to fully assembled genomes or metagenomes.
 Recognized input formats include FastA and FastQ (paired, unpaired, phred33, phred64, and/or interleaved pairing), and these can optionally be supplied as bzip2 or gzip compressed data files. 
+Sequence input can be streamed via stdin or unix named pipes.
 Amino acid input sequences can also be processed.
 
-PhyloSift uses LAST~\cite{Kiełbasa2011} and bowtie2~\cite{Langmead2009} for sequence similarity search against the reference databases.
-We evaluated many possible search algorithms and implementations before finally selecting LAST and bowtie2. 
-Other options we evaluated were BLAST~\cite{Altschul1997}, BLAST+~\cite{Camacho2009}, and RAPsearch2~\cite{Zhao2011}.
+PhyloSift uses LAST~\cite{Kiełbasa2011} for sequence similarity search against the reference databases.
+We evaluated many possible search algorithms and implementations before finally selecting LAST. 
+Other options we evaluated were BLAST~\cite{Altschul1997}, BLAST+~\cite{Camacho2009}, and RAPsearch2~\cite{Zhao2011}, and bowtie2~\cite{Langmead2009}.
 Given the large volume of sequence data that must be processed, a key evaluation criterion was algorithm efficiency both in CPU time and memory requirements. 
-A second criterion is the ability to perform six-frame translated searches of DNA sequence against an amino acid database with the possibility to tolerate frame-shift errors in the sequence.
+A second criterion is the ability to perform six-frame translated searches of {DNA} sequence against an amino acid database with the possibility to tolerate frame-shift errors in the sequence.
 Among the evaluated methods, BLAST and BLAST+ were slowest (data not shown) and frameshift detection was non-functional in the version of BLAST+ we obtained from NCBI. We excluded these from futher consideration.
 RAPsearch2 was much more computationally efficient than either BLAST or BLAST+, but the version we obtained could not process sequences > 1kbp and did not support frameshift detection.
- In our testing, LAST was able to process sequence data as quickly as RAPsearch2 (e.g. orders of magnitude more quickly than BLAST) and supports both frameshift detection and input sequences of arbitrary length.
-LAST also supports all three of the primary search types we require: DNA vs. DNA, DNA vs. AA, and AA vs. AA.
-We also evaluated bowtie2, a program typically used for mapping reads to a reference genome, for the purpose of screening reads against a database of noncoding RNA sequences (currently 16S and 18S).
-Relative to LAST, bowtie2 is able to identify similarity to the RNA database sequences much more quickly.
-Therefore we implemented bowtie2 to search short sequences against the RNA databases and LAST for all other search types.
-One minor shortcoming of LAST is that current versions do not support multithreaded parallelism.
-PhyloSift implements optional process-level parallelism at this stage by spawning multiple LAST searches against the protein database.
+In our testing, LAST was able to process sequence data as quickly as RAPsearch2 (e.g. orders of magnitude more quickly than BLAST) and supports both frameshift detection and input sequences of arbitrary length.
+LAST also supports all three of the primary search types we require: {DNA} vs. {DNA}, {DNA} vs. AA, and AA vs. AA.
+We also evaluated bowtie2, a program typically used for mapping reads to a reference genome, for the purpose of screening reads against a database of noncoding {RNA} sequences (currently 16S and 18S).
+bowtie2 does not offer translated amino-acid searches. 
+Relative to LAST, bowtie2 is able to identify similarity to the {RNA} database sequences more quickly.
+However, even though the speedup over LAST was substantial (data not shown), the compute time saved is small relative to the total time consumed in the complete phylosift client workflow.
+Therefore we decided to use only LAST since using only a single local alignment search tool simplifies the code.
+One shortcoming of LAST is that current versions do not support multithreaded parallelism.
+PhyloSift implements optional process-level parallelism by spawning multiple LAST searches against the protein database.
 
 One feature of reference gene family sequences being searched at this stage bears special mention.
-During database construction (described elsewhere) a representative subset of all available sequences are selected from each gene family to be searched at this stage.
+During database construction (described elsewhere) a representative subset of all available sequences are selected from each gene family to be searched in the search stage.
 These representatives are chosen to span the phylogenetic diversity of the gene family without including closely related sequences (see Section~\ref{sec:dbupdate}).
 This is important because part of LAST's fast heuristic to identify candidate regions to align involves eliminating redundant and repetitive $k$-mers from the search space~\cite{Kiełbasa2011}.
 A database constructed with all sequences (and not just divergent representatives) could in principle reduce sensitivity in aligning reads to those database sequences.
 
-The result of this stage is a set of candidate amino acid sequences that are similar to each gene family in the database and (if DNA was used as input) the corresponding untranslated DNA sequences.
+The result of the search stage is a set of candidate amino acid sequences that are similar to each gene family in the database and (if {DNA} was used as input) the corresponding untranslated {DNA} sequences.
 
 \subsubsection*{Alignment to reference multiple alignment}
-Prior to this stage all input sequence regions with putative homology to reference gene families have been identified and extracted.
-In this stage, each candidate sequence is added to an amino acid multiple sequence alignment of the reference gene family.
+Prior to the alignment stage all input sequence regions with putative homology to reference gene families have been identified and extracted.
+In this stage, each candidate sequence is added to an amino acid or {RNA} multiple sequence alignment of the reference gene family.
 If the input sequences were {DNA}, a codon multiple sequence alignment congruent to the amino acid alignment is also generated.
 
 PhyloSift applies the \texttt{hmmalign} program from the HMMER 3.0 software~\cite{Eddy2011} to add the candidate sequences to reference multiple sequence alignments.
@@ -197,7 +200,7 @@ We acknowledge that application of a profile-HMM to align highly divergent seque
 
 Finally, PhyloSift concatenates the alignments of the 40 elite markers to a single multiple sequence alignment.
 
-PhyloSift treats input sequences with similarity to non-coding RNAs differently than protein genes.
+PhyloSift treats input sequences with similarity to non-coding {RNA}s differently than protein genes.
 These sequences are aligned using Infernal's \texttt{cmalign} program.
 Sequences longer than XXnt are aligned using the global alignment option.
 Short sequences are aligned with the local alignment option using a banding threshold of $1x10^{-20}$.
@@ -252,7 +255,7 @@ Most small viral genomes lack homologs of these gene families.
 
 In addition to the elite 40 families, the PhyloSift database also includes four additional sets of gene families:
 \begin{itemize}
-\item \textbf{16s and 18s ribosomal RNA genes}
+\item \textbf{16s and 18s ribosomal {RNA} genes}
 \item \textbf{mitochondrial gene families}
 \item \textbf{Eukaryote-specific gene families}
 \item \textbf{Viral gene families}
@@ -355,7 +358,7 @@ K=\frac{P(D|M_0)}{P(D|M_1)}
 
 The Bayes factor $K$ can then be interpreted with respect to how strongly the null hypothesis is rejected by the data.
 
-In the current revision of PhyloSift, Bayesian hypothesis tests can be applied to a concatenated alignment of the 40 elite gene families or any other single marker gene, and can either be applied to phylogenies inferred from amino acid or codon-aligned DNA sequences.
+In the current revision of PhyloSift, Bayesian hypothesis tests can be applied to a concatenated alignment of the 40 elite gene families or any other single marker gene, and can either be applied to phylogenies inferred from amino acid or codon-aligned {DNA} sequences.
 
 \subsubsection*{Accuracy on particular taxonomic groups}
 Bacteria, Arch, Eukarya, viral
@@ -456,7 +459,7 @@ Funding from Dept. of Homeland Security, DOE.
 \begin{figure}[hp]
 \begin{center}
 %\includegraphics[trim=0 5.25in 0.5in 1.25in,clip,width=6.5in]{figures/Phylosift_overview_vector.pdf}
-\includegraphics[width=6.5in]{figures/Phylosift_overview_vector.pdf}
+\includegraphics[width=6.5in]{figures/Phylosift_overview_oct2012_vector.pdf}
 \end{center}
 \caption{\textbf{PhyloSift client workflow.} This workflow is applied to the user's sequence data.}
 \label{fig:overview}
