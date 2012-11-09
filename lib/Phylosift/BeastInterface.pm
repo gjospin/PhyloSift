@@ -52,7 +52,7 @@ sub Export($$$) {
 		my $trimfinalFile = Phylosift::Utilities::get_trimfinal_marker_file( self => $self, marker => $marker );
 		my $treeFile = Phylosift::Utilities::get_tree_marker_file( self => $self, marker => $marker );
 		my $treeStatsFile = Phylosift::Utilities::get_tree_stats_marker_file( self => $self, marker => $marker );
-		my $readAlignmentFile = $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta_AA( marker => $marker );
+		my $readAlignmentFile = $self->{"alignDir"}."/".Phylosift::Utilities::get_aligner_output_fasta_AA( marker => $marker );
 		if ( !-e "$trimfinalFastaFile" ) {
 			`cp "$trimfinalFile" "$trimfinalFastaFile"`;
 		}
@@ -67,7 +67,7 @@ sub Export($$$) {
 	my @metareadseqs;
 	foreach my $marker ( @{$markRef} ) {
 		my $trimfinalFastaFile = Phylosift::Utilities::get_trimfinal_fasta_marker_file( self => $self, marker => $marker );
-		my $readAlignmentFile = $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta_AA( marker => $marker );
+		my $readAlignmentFile = $self->{"alignDir"}."/".Phylosift::Utilities::get_aligner_output_fasta_AA( marker => $marker );
 
 		# read the alignment of reads
 		my $in = Bio::AlignIO->new( -file => $readAlignmentFile, '-format' => 'fasta' );
@@ -125,12 +125,12 @@ sub writeXML {
 	my $metareadseqsref = $args{meta_reads_seqs_reference} || miss("meta_reads_seqs_reference");
 	my $alignioref      = $args{alignio_reference} || miss("alignio_reference");
 	my $metaalignioref  = $args{meta_alignio_reference} || miss("meta_alignio_reference");
-	my $cmult           = $args{cmult} || miss("cmult");                       # 1 for amino acid, 3 for codons
+	my $cmult           = $args{cmult} || miss("cmult");                                           # 1 for amino acid, 3 for codons
 	my %refseqs         = %$refseqsref;
 	my @metareadseqs    = @$metareadseqsref;
 	my @alignio         = @$alignioref;
 	my @metaalignio     = @$metaalignioref;
-	my $ALLXML = ps_open( ">$xmlfile" );
+	my $ALLXML          = ps_open(">$xmlfile");
 	print $ALLXML "<beast>\n";
 	print $ALLXML "\t<taxa id=\"taxa\">\n";
 
@@ -148,7 +148,7 @@ sub writeXML {
 	print $ALLXML "\t</taxa>\n";
 	my @genenames;
 	my @markers = @{$markRef};
-	for ( my $i = 0 ; $i < @markers ; $i++ ) {
+	for ( my $i = 0; $i < @markers; $i++ ) {
 		my $genename = $markers[$i];
 		$genename =~ s/\..+//g;
 		push( @genenames, $genename );
@@ -163,7 +163,7 @@ sub writeXML {
 			$taxon =~ s/.+\-//g;
 			print $ALLXML "\t\t<sequence>\n";
 			print $ALLXML "\t\t<taxon idref=\"$taxon\"/>\n";
-			print $ALLXML "\t\t" . $seq->seq() . "\n";
+			print $ALLXML "\t\t".$seq->seq()."\n";
 			print $ALLXML "\t\t</sequence>\n";
 			$seentaxa{$taxon} = 1;
 			$curlen = length( $seq->seq() );
@@ -174,7 +174,7 @@ sub writeXML {
 			#			print STDERR "Missing sequence for taxon $taxon in gene $genename.  Filling with gaps.\n";
 			print $ALLXML "\t\t<sequence>\n";
 			print $ALLXML "\t\t<taxon idref=\"$taxon\"/>\n";
-			print $ALLXML "\t\t" . "-" x $curlen . "\n";
+			print $ALLXML "\t\t"."-" x $curlen."\n";
 			print $ALLXML "\t\t</sequence>\n";
 		}
 
@@ -183,7 +183,7 @@ sub writeXML {
 			print $ALLXML "\t\t<sequence>\n";
 			my $seqid = $seq->id();
 			print $ALLXML "\t\t<taxon idref=\"$seqid\"/>\n";
-			print $ALLXML "\t\t" . $seq->seq() . "\n";
+			print $ALLXML "\t\t".$seq->seq()."\n";
 			print $ALLXML "\t\t</sequence>\n";
 		}
 		print $ALLXML "\t</alignment>\n";

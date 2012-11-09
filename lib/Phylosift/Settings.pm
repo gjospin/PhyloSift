@@ -24,7 +24,7 @@ sub set_default {
 	my $param = $args{parameter};
 	my $value = $args{value};
 	my $force = $args{force} || 0;
-	if ( !defined(${$param}) || $force ) {
+	if ( !defined( ${$param} ) || $force ) {
 		${$param} = $value;
 	}
 }
@@ -88,4 +88,5 @@ See http://dev.perl.org/licenses/ for more information.
 
 
 =cut
+
 1;    # End of Phylosift::pplacer.pm

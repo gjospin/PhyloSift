@@ -27,6 +27,7 @@ Phylosift::HTMLReport - support for generating HTML reports summarizing results
 Version 0.01
 
 =cut
+
 our $VERSION = '0.01';
 
 =head1 SYNOPSIS
@@ -42,11 +43,12 @@ if you don't export anything, such as for a purely object-oriented module.
 =head2 begin_report
 
 =cut
+
 sub begin_report {
-	my %args            = @_;
-	my $self            = $args{self} || miss("self");
-	my $file            = $args{file} || "krona.html";
-	my $OUTPUT = IO::File->new( ">$file" );
+	my %args   = @_;
+	my $self   = $args{self} || miss("self");
+	my $file   = $args{file} || "krona.html";
+	my $OUTPUT = IO::File->new(">$file");
 	print $OUTPUT <<EOF;
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
@@ -71,23 +73,23 @@ sub add_jnlp {
 	my $self   = $args{self} || miss("self");
 	my $marker = $args{marker} || miss("marker");
 	my $OUTPUT = $args{OUTPUT} || miss("OUTPUT");
-	my $xml = $args{xml} || miss("xml");
-	my $jnlp = $Phylosift::Settings::file_dir."/".$self->{"fileName"}.".jnlp";
+	my $xml    = $args{xml} || miss("xml");
+	my $jnlp   = $Phylosift::Settings::file_dir."/".$self->{"fileName"}.".jnlp";
 	print $OUTPUT <<EOF;
 <a href="file://$jnlp">View phylogenetic placements</a>
 EOF
-	write_jnlp(self=>$self, marker=>$marker, jnlp=>$jnlp, xml=>$xml);
+	write_jnlp( self => $self, marker => $marker, jnlp => $jnlp, xml => $xml );
 }
 
 sub write_jnlp {
-	my %args   = @_;
-	my $self   = $args{self} || miss("self");
-	my $marker = $args{marker} || miss("marker");
-	my $xml    = $args{xml} || miss("xml");
-	my $jnlp = $args{jnlp};
-	my $JOUT = ps_open(">$jnlp");
+	my %args     = @_;
+	my $self     = $args{self} || miss("self");
+	my $marker   = $args{marker} || miss("marker");
+	my $xml      = $args{xml} || miss("xml");
+	my $jnlp     = $args{jnlp};
+	my $JOUT     = ps_open(">$jnlp");
 	my $forester = abs_path($0);
-	$forester = dirname($forester) . "/forester.jar";
+	$forester = dirname($forester)."/forester.jar";
 	my $jnlp_base = dirname($jnlp);
 	my $jnlp_name = basename($jnlp);
 	print $JOUT <<EOF;
@@ -116,15 +118,16 @@ EOF
 
 my $xml;
 my %ncbi_summary;
+
 sub add_krona {
 	my %args            = @_;
 	my $self            = $args{self} || miss("self");
 	my $OUTPUT          = $args{OUTPUT} || miss("output");
-	my $summary = $args{summary} || miss ("summary");
+	my $summary         = $args{summary} || miss("summary");
 	my $KRONA_THRESHOLD = $Phylosift::Settings::krona_threshold;
-	%ncbi_summary       = ();
-	%ncbi_summary       = %$summary;
-	
+	%ncbi_summary = ();
+	%ncbi_summary = %$summary;
+
 	$xml = new XML::Writer( OUTPUT => $OUTPUT );
 	$xml->startTag( "krona", "collapse" => "false", "key" => "true" );
 	$xml->startTag( "attributes", "magnitude" => "abundance" );
@@ -142,29 +145,28 @@ sub add_krona {
 
 	# FIXME: work with other taxonomy trees
 	my $taxonomy = Bio::Phylo::IO->parse(
-		'-file'   => "$Phylosift::Settings::marker_dir/ncbi_tree.updated.tre",
-		'-format' => 'newick',
+										  '-file'   => "$Phylosift::Settings::marker_dir/ncbi_tree.updated.tre",
+										  '-format' => 'newick',
 	)->first;
 
 	debug "visitor\n";
 	my $root = $taxonomy->get_root;
-	debug "Root node id " . $root->get_name . "\n";
-	debug "Root node read count " . $ncbi_summary{ $root->get_name } . "\n";
+	debug "Root node id ".$root->get_name."\n";
+	debug "Root node read count ".$ncbi_summary{ $root->get_name }."\n";
 
-   # write out abundance for nodes that have > $KRONA_THRESHOLD probability mass
+	# write out abundance for nodes that have > $KRONA_THRESHOLD probability mass
 	$root->visit_depth_first(
 		-pre => sub {
 			my $node = shift;
 			my $name = $node->get_name;
 			return
 			  unless ( defined( $ncbi_summary{$name} )
-				&& $ncbi_summary{$name} / $ncbi_summary{1} > $KRONA_THRESHOLD );
+					   && $ncbi_summary{$name} / $ncbi_summary{1} > $KRONA_THRESHOLD );
 			my ( $taxon_name, $taxon_level, $taxon_id ) = Phylosift::Summarize::get_taxon_info( taxon => $name );
 			$xml->startTag(
-				"node",
-				"name" => $taxon_name,
-				"href" =>
-"http://www.ncbi.nlm.nih.gov/Taxonomy/Browser/wwwtax.cgi?id=$name"
+							"node",
+							"name" => $taxon_name,
+							"href" => "http://www.ncbi.nlm.nih.gov/Taxonomy/Browser/wwwtax.cgi?id=$name"
 			);
 			$xml->startTag("abundance");
 			$xml->startTag("val");
@@ -177,7 +179,7 @@ sub add_krona {
 			my $name = $node->get_name;
 			return
 			  unless ( defined( $ncbi_summary{$name} )
-				&& $ncbi_summary{$name} / $ncbi_summary{1} > $KRONA_THRESHOLD );
+					   && $ncbi_summary{$name} / $ncbi_summary{1} > $KRONA_THRESHOLD );
 			$xml->endTag("node");
 		},
 		-no_sister => sub {
@@ -185,7 +187,7 @@ sub add_krona {
 			my $name = $node->get_name;
 			return
 			  unless ( defined( $ncbi_summary{$name} )
-				&& $ncbi_summary{$name} / $ncbi_summary{1} > $KRONA_THRESHOLD );
+					   && $ncbi_summary{$name} / $ncbi_summary{1} > $KRONA_THRESHOLD );
 			$xml->endTag("node");
 		}
 	);
@@ -193,26 +195,24 @@ sub add_krona {
 
 	$xml->endTag("krona");
 	$xml->end();
-	
+
 }
 
-sub add_run_info()
-{
-	my %args            = @_;
-	my $self            = $args{self} || miss("self");
-	my $OUTPUT          = $args{OUTPUT};
+sub add_run_info() {
+	my %args   = @_;
+	my $self   = $args{self} || miss("self");
+	my $OUTPUT = $args{OUTPUT};
 	print $OUTPUT "\n</div><div style=\"position:absolute;bottom:0;\">\n";
 	Phylosift::Summarize::print_run_info( self => $self, OUTPUT => $OUTPUT, newline => "<br/>\n" );
 	print $OUTPUT "</div></body></html>\n";
 }
 
 sub finalize {
-	my %args    = @_;
-	my $self    = $args{self} || miss("self");
-	my $OUTPUT  = $args{OUTPUT} || miss("OUTPUT");
+	my %args   = @_;
+	my $self   = $args{self} || miss("self");
+	my $OUTPUT = $args{OUTPUT} || miss("OUTPUT");
 	$OUTPUT->close();
 }
-
 
 =head1 AUTHOR
 
@@ -272,4 +272,5 @@ See http://dev.perl.org/licenses/ for more information.
 
 
 =cut
+
 1;    # End of Phylosift::pplacer.pm
