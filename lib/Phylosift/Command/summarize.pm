@@ -28,8 +28,7 @@ sub options {
 
 sub validate {
 	my ( $self, $opt, $args ) = @_;
-
-	$self->usage_error("phylosift summarize requires exactly one or two file name arguments to run") unless @$args == 1 || @$args == 2;
+	Phylosift::Command::all::validate(@_);
 }
 
 sub execute {
