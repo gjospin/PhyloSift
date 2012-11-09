@@ -76,6 +76,7 @@ $ncbi_url = "http://edhar.genomecenter.ucdavis.edu/~koadman/ncbi.tgz";
 #
 #$CHUNK_MAX_SEQS = 20000;
 #$CHUNK_MAX_SIZE = 10000000;
+#$quality_threshold = 20;
 
 #lastal parameters
 #$lastal_evalue = "-e75";
@@ -118,3 +119,16 @@ $align_fraction_isolate = 0.8; # use this align_fraction when in isolate mode on
 # Summarize
 #
 #$krona_threshold = 0.01;
+
+
+#
+# UpdateDB
+#
+#$MAX_SGE_JOBS = 5000;
+#$WORKDIR_normal = "/state/partition1/koadman/phylosift/";
+#$WORKDIR_fatnode = "/data/scratch/koadman/phylosift/";
+#$repository = "";
+#$destination = "";
+#$taxon_knockouts = "";
+#$local_storage = "";
+#$base_markers = "";

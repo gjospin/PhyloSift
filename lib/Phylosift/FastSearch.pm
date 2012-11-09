@@ -72,7 +72,7 @@ sub run_search {
 	my $self       = $args{self} || miss("PS object");
 	my $markersRef = $args{marker_reference} || miss("marker_reference");
 	%markers = map { $_ => 1 } @{$markersRef};
-	debug "USING " . keys(%markers) . "\n";
+	debug "USING ".keys(%markers)."\n";
 	my $position = rindex( $self->{"readsFile"}, "/" );
 	$self->{"readsFile"} =~ m/(\w+)\.?(\w*)$/;
 
@@ -94,7 +94,7 @@ sub run_search {
 	#making sure $type->{paired} is set so we create the appropriate variables
 	$type->{paired} = 1 if ( exists $self->{"readsFile_2"} && length( $self->{"readsFile_2"} ) > 0 );
 
-   # ensure databases and sequences are prepared for search
+	# ensure databases and sequences are prepared for search
 	prep_and_clean( self => $self );
 
 	#read_marker_lengths( self => $self );
@@ -110,11 +110,11 @@ sub run_search {
 	my $F2IN;
 	$F2IN = Phylosift::Utilities::open_sequence_file( file => $self->{"readsFile_2"} )
 	  if length( $self->{"readsFile_2"} ) > 0;
-	my $RUNINFO = ps_open( ">>" . Phylosift::Utilities::get_run_info_file( self => $self ) );
+	my $RUNINFO = ps_open( ">>".Phylosift::Utilities::get_run_info_file( self => $self ) );
 
 	# launch the searches
 	my $start_chunk = defined($Phylosift::Settings::start_chunk) ? $Phylosift::Settings::start_chunk : 1;
-	for ( my $chunkI = 1 ; ; $chunkI++ ) {
+	for ( my $chunkI = 1;; $chunkI++ ) {
 
 		#reads the marker_summary.txt from blastDir
 
@@ -166,7 +166,7 @@ sub compute_hits_summary {
 	my $self                    = $args{self} || miss("PS Object");
 	my $marker_hits_numbers_ref = Phylosift::Utilities::read_marker_summary( self => $self, path => $self->{"blastDir"} );
 	my %marker_hits_numbers     = %{$marker_hits_numbers_ref};
-	my @candidates              = glob( $self->{"blastDir"} . "/*.aa.$chunk*" );
+	my @candidates              = glob( $self->{"blastDir"}."/*.aa.$chunk*" );
 	foreach my $cand_file (@candidates) {
 		my $grep_cmd = "grep '>' -c $cand_file";
 		$cand_file =~ m/blastDir\/([^\.]+)/;
@@ -211,10 +211,10 @@ sub clean_chunk_directory {
 	my $self  = $args{self};
 	my $chunk = $args{chunk};
 	return if $Phylosift::Utilities::debuglevel >= 1;    #Do not clean if debug is present
-	my $remove_aa  = "rm " . $self->{"blastDir"} . "/*.aa.$chunk*";
-	my $remove_ffn = "rm " . $self->{"blastDir"} . "/*.ffn.$chunk*";
+	my $remove_aa  = "rm ".$self->{"blastDir"}."/*.aa.$chunk*";
+	my $remove_ffn = "rm ".$self->{"blastDir"}."/*.ffn.$chunk*";
 	debug("Cleaning the Search directory for chunk $chunk\n");
-	my @array_to_delete = glob( $self->{"blastDir"} . "/*.ffn.$chunk*" );
+	my @array_to_delete = glob( $self->{"blastDir"}."/*.ffn.$chunk*" );
 	`$remove_aa`;                                        #deletes the aa files
 	`$remove_ffn` if @array_to_delete;                   #added check to prevent an error when using AA sequences;
 }
@@ -252,18 +252,18 @@ sub launch_searches {
 	my $FILE1         = $args{FILE1};
 	my $FILE2         = $args{FILE2};
 	my $chunky        = defined($chunk) ? ".$chunk" : "";
-	my $reads_file    = $dir . "/reads.fasta$chunky";
-	my $last_rna_pipe = $dir . "/last_rna.pipe";
+	my $reads_file    = $dir."/reads.fasta$chunky";
+	my $last_rna_pipe = $dir."/last_rna.pipe";
 	debug "Making fifos\n";
 	my @last_pipe_array = ();
 
-	for ( my $i = 0 ; $i <= $Phylosift::Settings::threads - 1 ; $i++ ) {
-		push( @last_pipe_array, $dir . "/last_$i.pipe" );
+	for ( my $i = 0; $i <= $Phylosift::Settings::threads - 1; $i++ ) {
+		push( @last_pipe_array, $dir."/last_$i.pipe" );
 		`mkfifo "$dir/last_$i.pipe"`;
 	}
 	my $rna_procs = 0;
 	if ( $readtype->{seqtype} eq "dna"
-		 && -e Phylosift::Utilities::get_rna_db( self => $self ) . ".prj" )
+		 && -e Phylosift::Utilities::get_rna_db( self => $self ).".prj" )
 	{
 		`mkfifo "$last_rna_pipe"`;
 		$rna_procs = 1;
@@ -273,7 +273,7 @@ sub launch_searches {
 		$last_rna_pipe = "/dev/null";
 	}
 	my @children;
-	for ( my $count = 1 ; $count <= $Phylosift::Settings::threads + $rna_procs ; $count++ ) {
+	for ( my $count = 1; $count <= $Phylosift::Settings::threads + $rna_procs; $count++ ) {
 		my $pid = fork();
 		if ($pid) {
 
@@ -294,13 +294,13 @@ sub launch_searches {
 				$candidate_type = ".lastal";
 			} elsif ( $count == $Phylosift::Settings::threads + 1 ) {
 
-				if ( !-e Phylosift::Utilities::get_rna_db( self => $self ) . ".prj" ) {
+				if ( !-e Phylosift::Utilities::get_rna_db( self => $self ).".prj" ) {
 					debug "Exiting process $count because rna db not found\n";
 					my $lrp1 = ps_open($last_rna_pipe);
 					`rm -f $last_rna_pipe`;
 					exit 0;
 				} else {
-					$hitstream = lastal_table_rna(                self       => $self,
+					$hitstream = lastal_table_rna( self       => $self,
 												   query_file => $last_rna_pipe );
 				}
 				$candidate_type = ".lastal.rna";
@@ -408,11 +408,12 @@ sub demux_sequences {
 	my $readtype             = $args{readtype};
 	my @lines1;
 	my @lines2;
-	my $lookup_id_filename = $self->{"blastDir"} . "/lookup_ID.$chunk.tbl";
+	my $lookup_id_filename = $self->{"blastDir"}."/lookup_ID.$chunk.tbl";
 	my $IDFILE             = ps_open(">$lookup_id_filename");
 	my $lastal_index       = 0;
 	my $lastal_threads     = scalar(@LAST_PIPE_ARRAY);
 	my $completed_chunk    = has_chunk_completed( self => $self, chunk => $chunk );
+
 	# the following two variables track how far we are through a chunk
 	my $seq_count    = 0;
 	my $seq_size     = 0;
@@ -432,29 +433,30 @@ sub demux_sequences {
 
 			#
 			# FASTQ format
-			for ( my $i = 1 ; $i < 4 ; $i++ ) {
+			for ( my $i = 1; $i < 4; $i++ ) {
 				$lines1[$i] = get_next_line( buffer => $readtype->{buffer}, buffer_index => \$buffer_index, FILE => $F1IN );
 				$lines2[$i] = <$F2IN> if defined($F2IN);
 			}
 			if ( $paired && !defined($F2IN) ) {
-				for ( my $i = 0 ; $i < 4 ; $i++ ) {
+				for ( my $i = 0; $i < 4; $i++ ) {
 					$lines2[$i] = get_next_line( buffer => $readtype->{buffer}, buffer_index => \$buffer_index, FILE => $F1IN );
 				}
 			}
 
 			# quality trim the read(s)
-			qtrim_read( read => \@lines1, quality => $quality_threshold, readtype => $readtype );
-			qtrim_read( read => \@lines2, quality => $quality_threshold, readtype => $readtype ) if defined( $lines2[0] );
+			qtrim_read( read => \@lines1, quality => $Phylosift::Settings::quality_threshold, readtype => $readtype );
+			qtrim_read( read => \@lines2, quality => $Phylosift::Settings::quality_threshold, readtype => $readtype ) if defined( $lines2[0] );
 
 			#add the reads to file lookup
-			
-#			if ( $lines1[0] =~ m/^@(\S+)(\/\d)/ && $paired ) {
-			chomp($lines1[0]);
+
+			#			if ( $lines1[0] =~ m/^@(\S+)(\/\d)/ && $paired ) {
+			chomp( $lines1[0] );
 			print $IDFILE "$lines1[0]\t$seq_count/1\n";
-#			} elsif ( $lines1[0] =~ m/^@(.+)/ ) {
-			if(defined($lines2[0])){
-			    chomp($lines2[0]);
-			    print $IDFILE "$lines2[0]\t$seq_count/2\n" ;
+
+			#			} elsif ( $lines1[0] =~ m/^@(.+)/ ) {
+			if ( defined( $lines2[0] ) ) {
+				chomp( $lines2[0] );
+				print $IDFILE "$lines2[0]\t$seq_count/2\n";
 			}
 
 			$lines1[0] = "\@$seq_count/1\n";
@@ -476,13 +478,13 @@ sub demux_sequences {
 			$lines1[0] =~ s/^@/>/g;
 			$lines2[0] =~ s/^@/>/g if @lines2;
 
-			print $last_pipe $lines1[0] . $lines1[1] unless $completed_chunk;
-			print $last_pipe $lines2[0] . $lines2[1] if @lines2 && !$completed_chunk;
+			print $last_pipe $lines1[0].$lines1[1] unless $completed_chunk;
+			print $last_pipe $lines2[0].$lines2[1] if @lines2 && !$completed_chunk;
 
 			#
 			# send the reads to the reads file in fasta format to write candidates later
-			print $READS_PIPE $lines1[0] . $lines1[1] unless $completed_chunk;
-			print $READS_PIPE $lines2[0] . $lines2[1] if @lines2 && !$completed_chunk;
+			print $READS_PIPE $lines1[0].$lines1[1] unless $completed_chunk;
+			print $READS_PIPE $lines2[0].$lines2[1] if @lines2 && !$completed_chunk;
 
 			#
 			# prepare for next loop iter
@@ -495,14 +497,14 @@ sub demux_sequences {
 			my $newline1;
 			while ( $newline1 = get_next_line( buffer => $readtype->{buffer}, buffer_index => \$buffer_index, FILE => $F1IN ) ) {
 				last if $newline1 =~ /^>/;
-				chomp($lines1[1]) if defined($lines1[1]);
+				chomp( $lines1[1] ) if defined( $lines1[1] );
 				$lines1[1] .= $newline1;
 			}
 			my $newline2;
 			if ( defined($F2IN) ) {
 				while ( $newline2 = <$F2IN> ) {
 					last if $newline2 =~ /^>/;
-					chomp($lines2[1]) if defined($lines2[1]);
+					chomp( $lines2[1] ) if defined( $lines2[1] );
 					$lines2[1] .= $newline2;
 				}
 			}
@@ -510,28 +512,30 @@ sub demux_sequences {
 				@lines2 = ( $newline1, "" );
 				while ( $newline1 = get_next_line( buffer => $readtype->{buffer}, buffer_index => \$buffer_index, FILE => $F1IN ) ) {
 					last if $newline1 =~ /^>/;
-					chomp($lines1[1]) if defined($lines1[1]);
+					chomp( $lines1[1] ) if defined( $lines1[1] );
 					$lines2[1] .= $newline1;
 				}
 			}
 
-
 			#removing possible \n in the middle of the sequence
 			$lines1[1] =~ s/\n//g;
-			$lines2[1] =~ s/\n//g if defined($lines2[1]);
+			$lines2[1] =~ s/\n//g if defined( $lines2[1] );
+
 			#add a \n at the end of the sequence to comply with fasta format
 			$lines1[1] .= "\n";
-			$lines2[1] .= "\n" if defined($lines2[1]);
+			$lines2[1] .= "\n" if defined( $lines2[1] );
+
 			#add the reads to file lookup
-#			if ( $lines1[0] =~ m/^>(\S+)(\/\d)/ && $paired ) {
+			#			if ( $lines1[0] =~ m/^>(\S+)(\/\d)/ && $paired ) {
 			$lines1[0] =~ s/^>//;
-			chomp($lines1[0]);
+			chomp( $lines1[0] );
 			print $IDFILE "$lines1[0]\t$seq_count/1\n";
-#			} elsif ( $lines1[0] =~ m/^>(.+)/ ) {
-			if(defined $lines2[0]){
-			    $lines2[0] =~ s/^>//;
-			    chomp($lines2[0]);
-			    print $IDFILE "$lines2[0]\t$seq_count/2\n" if defined($lines2[0]);
+
+			#			} elsif ( $lines1[0] =~ m/^>(.+)/ ) {
+			if ( defined $lines2[0] ) {
+				$lines2[0] =~ s/^>//;
+				chomp( $lines2[0] );
+				print $IDFILE "$lines2[0]\t$seq_count/2\n" if defined( $lines2[0] );
 			}
 
 			$lines1[0] = ">$seq_count/1\n";
@@ -542,17 +546,17 @@ sub demux_sequences {
 			}
 
 			# if reads are long, do RNA search with lastal
-			print $LAST_RNA_PIPE $lines1[0] . $lines1[1] unless $completed_chunk;
-			print $LAST_RNA_PIPE $lines2[0] . $lines2[1] if @lines2 && !$completed_chunk;
-			
+			print $LAST_RNA_PIPE $lines1[0].$lines1[1] unless $completed_chunk;
+			print $LAST_RNA_PIPE $lines2[0].$lines2[1] if @lines2 && !$completed_chunk;
+
 			# send the reads to last
-			print $last_pipe $lines1[0] . $lines1[1] unless $completed_chunk;
-			print $last_pipe $lines2[0] . $lines2[1] if @lines2 && !$completed_chunk;
+			print $last_pipe $lines1[0].$lines1[1] unless $completed_chunk;
+			print $last_pipe $lines2[0].$lines2[1] if @lines2 && !$completed_chunk;
 
 			#
 			# send the reads to the reads file to write candidates later
-			print $READS_PIPE $lines1[0] . $lines1[1] unless $completed_chunk;
-			print $READS_PIPE $lines2[0] . $lines2[1] if @lines2 && !$completed_chunk;
+			print $READS_PIPE $lines1[0].$lines1[1] unless $completed_chunk;
+			print $READS_PIPE $lines2[0].$lines2[1] if @lines2 && !$completed_chunk;
 
 			@lines1 = ( $newline1, "" );
 			@lines2 = ( $newline2, "" ) if @lines2 && !$completed_chunk;
@@ -627,15 +631,15 @@ sub qtrim_read {
 	}
 
 	# Clip the read
-	@$read[1] = substr( $seq, 0, $endpoint ) . "\n";
-	@$read[3] = substr( @$read[3], 0, $endpoint ) . "\n";
+	@$read[1] = substr( $seq,      0, $endpoint )."\n";
+	@$read[3] = substr( @$read[3], 0, $endpoint )."\n";
 }
 
 sub read_marker_lengths {
 	my %args = @_;
 	my $self = $args{self};
 	foreach my $marker ( keys(%markers) ) {
-		$markerLength{$marker} = Phylosift::Utilities::get_marker_length(       self   => $self,
+		$markerLength{$marker} = Phylosift::Utilities::get_marker_length( self   => $self,
 																		  marker => $marker );
 	}
 }
@@ -711,9 +715,9 @@ sub translate_frame {
 
 		#$id = Phylosift::Summarize::tree_name( name => $id );
 		if ( exists $markerNuc{$marker} ) {
-			$markerNuc{$marker} .= ">" . $id . "\n" . $new_seq->seq . "\n";
+			$markerNuc{$marker} .= ">".$id."\n".$new_seq->seq."\n";
 		} else {
-			$markerNuc{$marker} = ">" . $id . "\n" . $new_seq->seq . "\n";
+			$markerNuc{$marker} = ">".$id."\n".$new_seq->seq."\n";
 		}
 	}
 	$return_seq = $new_seq->translate();
@@ -721,18 +725,18 @@ sub translate_frame {
 }
 
 sub is_overlapping {
-	my %args = @_;
-	my $prevhit = $args{prevhit} || miss("prevhit");
-	my $start = $args{start} || miss("start");
-	my $end = $args{end} || miss("end");
+	my %args            = @_;
+	my $prevhit         = $args{prevhit} || miss("prevhit");
+	my $start           = $args{start} || miss("start");
+	my $end             = $args{end} || miss("end");
 	my $max_hit_overlap = $Phylosift::Settings::max_hit_overlap;
-	
-	my $s = $start < $end ? $start : $end;
-	my $e = $start >= $end ? $start : $end;
-	my $ph2 = $prevhit->[2] < $prevhit->[3] ? $prevhit->[2] : $prevhit->[3];
+
+	my $s   = $start < $end                  ? $start        : $end;
+	my $e   = $start >= $end                 ? $start        : $end;
+	my $ph2 = $prevhit->[2] < $prevhit->[3]  ? $prevhit->[2] : $prevhit->[3];
 	my $ph3 = $prevhit->[2] >= $prevhit->[3] ? $prevhit->[2] : $prevhit->[3];
-	
-	return 1 if( $ph2 < $e - $max_hit_overlap && $s + $max_hit_overlap < $ph3 );
+
+	return 1 if ( $ph2 < $e - $max_hit_overlap && $s + $max_hit_overlap < $ph3 );
 	return 0;
 }
 
@@ -743,13 +747,13 @@ parse the LASTAL results
 =cut
 
 sub get_hits_contigs {
-	my %args       = @_;
-	my $self       = $args{self} || miss("self");
-	my $HITSTREAM  = $args{HITSTREAM} || miss("HITSTREAM");
-	my $searchtype = $args{searchtype} || miss("searchtype");    # can be blastx or lastal
-	my $pid      = $args{pid} || miss("pid");
+	my %args             = @_;
+	my $self             = $args{self} || miss("self");
+	my $HITSTREAM        = $args{HITSTREAM} || miss("HITSTREAM");
+	my $searchtype       = $args{searchtype} || miss("searchtype");    # can be blastx or lastal
+	my $pid              = $args{pid} || miss("pid");
 	my $prev_hit         = "";
-	my %hit_counts = ();
+	my %hit_counts       = ();
 	my $hit_counts_total = 0;
 
 	# key is a contig name
@@ -760,10 +764,11 @@ sub get_hits_contigs {
 	# return empty if there is no data
 	return \%contig_hits unless defined( fileno $HITSTREAM );
 	while (<$HITSTREAM>) {
+
 		# read a lastal line
 		next if ( $_ =~ /^#/ );
 		chomp($_);
-		my ($query, $subject, $query_start, $query_end, $bitScore, $frameshift);
+		my ( $query, $subject, $query_start, $query_end, $bitScore, $frameshift );
 
 		# read table in lastal format
 		my @dat = split( /\t/, $_ );
@@ -773,6 +778,7 @@ sub get_hits_contigs {
 		$query_start = $dat[7] + 1;
 		$query_end   = $query_start + $dat[8] - 1;
 		if ( $dat[9] eq "-" ) {
+
 			# reverse strand match
 			$query_start = $dat[10] - $dat[7];
 			$query_end   = $query_start - $dat[8] + 1;
@@ -782,49 +788,47 @@ sub get_hits_contigs {
 		# get the marker name
 		my @marker = split( /\_\_/, $subject );    # this is soooo ugly
 		my $markerName = $marker[0];
-		next unless (exists $markers{$markerName});
-		
+		next unless ( exists $markers{$markerName} );
+
 		# running on long reads or an assembly
 		# allow each region of a sequence to have a top hit
 		# do not allow overlap
-		
-		my $i = 0;
+
+		my $i   = 0;
 		my $add = 0;
 		if ( defined( $contig_top_bitscore{$query} ) ) {
 			my $cur_hitcount = scalar( @{ $contig_hits{$query} } );
 			for ( ; $i < $cur_hitcount; $i++ ) {
 				my $prevhitref = $contig_hits{$query}->[$i];
+
 				# is there enough overlap to consider these the same?
 				# if so, take the new one if it has higher bitscore
-				if(is_overlapping(prevhit => $prevhitref, start=>$query_start, end=>$query_end))
-				{
+				if ( is_overlapping( prevhit => $prevhitref, start => $query_start, end => $query_end ) ) {
 					$add = 1 if $bitScore > $prevhitref->[1];
 					last;
 				}
 			}
+
 			# add if we didn't find any overlap
 			$add = 1 if ( $i == $cur_hitcount );
-		}
-		elsif ( !defined( $contig_top_bitscore{$query} ) ) {
+		} elsif ( !defined( $contig_top_bitscore{$query} ) ) {
 			$add = 1;
 			$contig_top_bitscore{$query}{$markerName} = $bitScore;
 		}
-		if($add){
+		if ($add) {
+
 			# include this hit
-			$contig_hits{$query}->[$i] = [
-				$markerName, $bitScore,   $query_start,
-				$query_end,  $frameshift, $pid 
-			];
-			$hit_counts{$markerName}=0 unless exists $hit_counts{$markerName};
+			$contig_hits{$query}->[$i] = [ $markerName, $bitScore, $query_start, $query_end, $frameshift, $pid ];
+			$hit_counts{$markerName} = 0 unless exists $hit_counts{$markerName};
 			$hit_counts{$markerName}++;
 			$hit_counts_total++;
 		}
 	}
-	foreach my $marker (keys %hit_counts){
-		if($hit_counts_total > $Phylosift::Settings::CHUNK_MAX_SEQS/10 && $hit_counts{$marker}/$hit_counts_total > 0.5 ){
-			if($self->{"custom_chunk_size"} ==0){
+	foreach my $marker ( keys %hit_counts ) {
+		if ( $hit_counts_total > $Phylosift::Settings::CHUNK_MAX_SEQS / 10 && $hit_counts{$marker} / $hit_counts_total > 0.5 ) {
+			if ( $self->{"custom_chunk_size"} == 0 ) {
 				my $warning = "\n\n\nDetected large number of hits to the marker $marker with Default chunk size used.\n";
-				$warning .=  "This will require a large amount of memory. \n";
+				$warning .= "This will require a large amount of memory. \n";
 				$warning .= "Manually tune the number of sequences to be processed per chunks in phylosiftrc\n\n\n";
 				Phylosift::Utilities::print_bat_signal();
 				croak $warning;
@@ -867,15 +871,16 @@ sub write_candidates {
 	my %args          = @_;
 	my $self          = $args{self} || miss("self");
 	my $contigHitsRef = $args{hitsref} || miss("hitsref");
+
 	# search type -- candidate filenames will have this name embedded, enables parallel output from different programs
-	my $type          = $args{searchtype} || ""; 
+	my $type       = $args{searchtype} || "";
 	my $reads_file = $args{reads}      || miss("reads");
 	my $process_id = $args{process_id} || miss("process id");
 	my $chunk      = $args{chunk}      || miss("chunk");
 	my %contig_hits = %$contigHitsRef;
 	my %markerHits;
 	my $align_fraction = $Phylosift::Settings::align_fraction;
-	debug "ReadsFile:  $self->{\"readsFile\"}" . "\n";
+	debug "ReadsFile:  $self->{\"readsFile\"}"."\n";
 	my $SEQIN = ps_open($reads_file);
 
 	# input file is FastA with one sequence per line
@@ -885,43 +890,47 @@ sub write_candidates {
 		my $id = $1 if $idline =~ /^>(.+)/;
 		my $seq = <$SEQIN>;
 		chomp $seq;
+
 		# skip this one if there are no hits
-		next unless ( exists $contig_hits{ $id } );
-		my $cur_hit_count = scalar(@{ $contig_hits{ $id } });
-		for ( my $i = 0 ; $i < $cur_hit_count; $i++ ) {
-			my $cur_hit = $contig_hits{ $id }->[$i];
-			my $markerHit   = $cur_hit->[0];
-			my $start       = $cur_hit->[2];
-			my $end         = $cur_hit->[3];
-			my $suff        = $cur_hit->[5];
+		next unless ( exists $contig_hits{$id} );
+		my $cur_hit_count = scalar( @{ $contig_hits{$id} } );
+		for ( my $i = 0; $i < $cur_hit_count; $i++ ) {
+			my $cur_hit   = $contig_hits{$id}->[$i];
+			my $markerHit = $cur_hit->[0];
+			my $start     = $cur_hit->[2];
+			my $end       = $cur_hit->[3];
+			my $suff      = $cur_hit->[5];
 			( $start, $end ) = ( $end, $start ) if ( $start > $end );    # swap if start bigger than end
 
 			# check to ensure hit covers enough of the marker
 			# TODO: make this smarter about boundaries, e.g. allow a smaller fraction to hit
 			# if it looks like the query seq goes off the marker boundary
-			$markerLength{$markerHit} = Phylosift::Utilities::get_marker_length(self => $self, marker => $markerHit) unless exists $markerLength{$markerHit};
-			if ( !defined($markerHit) || !defined( $markerLength{$markerHit} ) ){
+			$markerLength{$markerHit} = Phylosift::Utilities::get_marker_length( self => $self, marker => $markerHit ) unless exists $markerLength{$markerHit};
+			if ( !defined($markerHit) || !defined( $markerLength{$markerHit} ) ) {
 				debug "no alignment length for marker $markerHit\n";
 				next;
 			}
 			my $min_len = $markerLength{$markerHit} < length($seq) ? $markerLength{$markerHit} : length($seq);
 			next unless ( ( $end - $start ) / $min_len >= $align_fraction );
 
-	  # ensure flanking region is a multiple of 3 to avoid breaking frame in DNA
+			# ensure flanking region is a multiple of 3 to avoid breaking frame in DNA
 			my $seqLength = length($seq);
 			my $new_seq;
 			$new_seq = substr( $seq, $start, $end - $start );
 			my $new_id = $id;
-			my $coord = ".$start.$end";
-#			if($Phylosift::Settings::paired){
-#				#when working with paired data, move the mateID to the end of the string
-#				$new_id =~ s/(\d+)(\/\d)/$1$coord$2/;
-#			} else {
-				$new_id =~ s/^(\d+)\/(\d)/$1.$2$coord/;
-#			}
+			my $coord  = ".$start.$end";
+
+			#			if($Phylosift::Settings::paired){
+			#				#when working with paired data, move the mateID to the end of the string
+			#				$new_id =~ s/(\d+)(\/\d)/$1$coord$2/;
+			#			} else {
+			$new_id =~ s/^(\d+)\/(\d)/$1.$2$coord/;
+
+			#			}
 
 			#if we're working from DNA then need to translate to protein
 			if ( $self->{"dna"} && $type !~ /\.rna/ ) {
+
 				# check for frameshifts
 				# frameshift from lastal is a string of <block>,<gaps>,<block>
 				# where blocks are aligned chunks and gaps are of the form X:Y
@@ -944,15 +953,13 @@ sub write_candidates {
 				  ? $markerLength{$markerHit}
 				  : length($seq) / 3;
 				next unless ( $aln_len / $min_len >= $align_fraction );
-				
-				
+
 				# construct the DNA sequence to translate
 				my $dna_seq = "";
 				my $cs      = $start;
-				my $fstart = $cur_hit->[2] > $cur_hit->[3] ? scalar(@frames) - 1 : 0;
-				my $fdiff = $cur_hit->[2] > $cur_hit->[3] ? -1 : 1;
-				for( my $fI = $fstart; $fI >= 0 && $fI < @frames; $fI += $fdiff)
-				{
+				my $fstart  = $cur_hit->[2] > $cur_hit->[3] ? scalar(@frames) - 1 : 0;
+				my $fdiff   = $cur_hit->[2] > $cur_hit->[3] ? -1 : 1;
+				for ( my $fI = $fstart; $fI >= 0 && $fI < @frames; $fI += $fdiff ) {
 					my $frame = $frames[$fI];
 					if ( $frame =~ /(\d+):-*(\d+)/ ) {
 						my $fs = $2;
@@ -972,26 +979,30 @@ sub write_candidates {
 											marker            => $markerHit,
 											reverse_translate => $self->{"dna"}
 				);
+
 				# bioperl uses * for stop codons but we want to give X to hmmer later
-				$new_seq =~ s/\*/X/g; 
-			}elsif ( $type =~ /\.rna/ && $cur_hit->[2] > $cur_hit->[3] ) {
+				$new_seq =~ s/\*/X/g;
+			} elsif ( $type =~ /\.rna/ && $cur_hit->[2] > $cur_hit->[3] ) {
+
 				# check if we need to reverse complement this one
 				$new_seq =~ tr/ACGTacgt/TGCAtgca/;
 				$new_seq = reverse($new_seq);
 			}
 			$markerHits{$markerHit} = "" unless defined( $markerHits{$markerHit} );
-			$markerHits{$markerHit} .= ">" . $new_id . "\n" . $new_seq . "\n";
+			$markerHits{$markerHit} .= ">".$new_id."\n".$new_seq."\n";
 		}
 
 		# ensure memory gets freed
-		for ( my $i = 0 ; $i < $cur_hit_count; $i++ ) {
-			$contig_hits{ $id }->[$i] = undef;
+		for ( my $i = 0; $i < $cur_hit_count; $i++ ) {
+			$contig_hits{$id}->[$i] = undef;
 		}
-		$contig_hits{ $id } = undef;
+		$contig_hits{$id} = undef;
 	}
-	debug "$type Got " . scalar( keys %markerHits ) . " markers with hits\n";	
+	debug "$type Got ".scalar( keys %markerHits )." markers with hits\n";
+
 	#write the read+ref_seqs for each markers in the list
 	foreach my $marker ( keys %markerHits ) {
+
 		#writing the hits to the candidate file
 		my $candidate_file = Phylosift::Utilities::get_candidate_file(
 																	   self   => $self,
@@ -999,7 +1010,7 @@ sub write_candidates {
 																	   type   => $type,
 																	   chunk  => $chunk
 		);
-		my $FILE_OUT = ps_open( ">$candidate_file" . "." . $process_id );
+		my $FILE_OUT = ps_open( ">$candidate_file".".".$process_id );
 		print $FILE_OUT $markerHits{$marker};
 		close($FILE_OUT);
 		if ( $self->{"dna"} && $type !~ /\.rna/ ) {
@@ -1010,13 +1021,14 @@ sub write_candidates {
 																		dna    => 1,
 																		chunk  => $chunk
 			);
-			my $FILE_OUT = ps_open( ">$candidate_file" . "." . $process_id );
+			my $FILE_OUT = ps_open( ">$candidate_file".".".$process_id );
 			print $FILE_OUT $markerNuc{$marker} if defined( $markerNuc{$marker} );
 			close($FILE_OUT);
 		}
+
 		# force memory free
 		$markerHits{$marker} = undef;
-		$markerNuc{$marker} = undef;
+		$markerNuc{$marker}  = undef;
 	}
 	%markerNuc   = ();
 	%contig_hits = ();
@@ -1040,9 +1052,10 @@ sub prep_and_clean {
 	my %args = @_;
 	my $self = $args{self} || miss("self");
 	`rm -rf "$self->{"blastDir"}"` if $Phylosift::Settings::force;
+
 	#create a directory for the Reads file being processed.
 	`mkdir "$Phylosift::Settings::file_dir"` unless ( -e $Phylosift::Settings::file_dir );
-	`mkdir "$self->{"blastDir"}"`            unless ( -e $self->{"blastDir"} );
+	`mkdir "$self->{"blastDir"}"` unless ( -e $self->{"blastDir"} );
 	return $self;
 }
 
