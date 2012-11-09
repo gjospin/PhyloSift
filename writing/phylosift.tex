@@ -295,29 +295,35 @@ The quality of these genomes can be highly variable, ranging from low-quality dr
 PhyloSift's database update mechanism incorporates some basic quality control mechanisms.
 \subsubsection*{Acquire new genome data}
 The PhyloSift database update module maintains a local repository of all known and processed genomes.
-When a new update is initiated, the database update module identifies any new genomes available in the NCBI finished, NCBI draft, NCBI WGS, and EBI viral, organelle, bacterial, archaeal, and eukaryal databases. 
+When a new update is initiated, the database update module identifies any new genomes available in the NCBI finished, NCBI draft, NCBI WGS, and EBI viral, organelle, bacterial, archaeal, and eukaryal databases.
+Any new genomes are fetched and stored in the local repository.
 \subsubsection*{Gene family search and alignment workflow on each genome}
 In this stage, we run the search and alignment stages of the previously described PhyloSift client workflow for each new genome.
 After this stage, the regions from each new genome that are highly similar to gene families in the database are identified, extracted, and aligned using the family's profile HMM.
 A complete multiple alignment for each family is then created by adding the aligned regions from each genome to a single multiple alignment file.
-Because each region has been aligned to the same profile HMM (or covarion model) and non-aligning sites in the query genome removed, generation of a new multiple alignment is a simple matter of concatenating the individual alignments.
+Because each region has been aligned to the same profile HMM (or covarion model for noncoding genes) and non-aligning sites in the query genome removed, generation of a new multiple alignment is a simple matter of concatenating the individual alignments.
 
-Codon alignments are also generated for each protein-coding gene family at this stage.
-\subsubsection*{Phylogenetic inference}
+PhyloSift also generates codon alignments for each protein-coding gene family at this stage.
+\subsubsection*{Phylogenetic inference and pruning}
 The next step of database update involves constructing a phylogenetic tree for each gene family.
 Currently PhyloSift employs FastTree 2.1~\cite{Price2010} to generate approximate maximum likelihood trees for this task.
+PhyloSift also infers separate trees for the codon and amino acid alignments of each gene family. 
 
-PhyloSift also infers trees on codon alignments. 
+Reference databases frequently contain genomes for a multitude of closely related strains. 
+In many gene families, the gene sequences present in genomes of closely related strains may be indistinguishable from one another.
+Identical gene sequences would create uncertainty in the placement of reads in a strain group.
+In order to reduce compute time and memory requirements, closely related sequences are pruned from the PhyloSift reference database. 
+Pruning is done with an algorithm that maximizes phylogenetic diversity of the sequence set without including any sequence pairs separated by fewer than X amino acid (or nucleotide) substitutions per site.
+Here X is a configurable variable with default value 0.01 (FIXME!).
 
 \subsubsection*{Selection of representatives for similarity search}
-The PhyloSift client workflow uses LAST and bowtie2 to search for similarity between input sequences and reference sequences.
+The PhyloSift client workflow uses LAST to search for similarity between input sequences and reference sequences.
 During the database update the set of reference sequences is updated to include representatives of any newly sequenced genomes.
-The selection of representatives is guided by the phylogenetic tree inferred in the previous step.
-A set of sequences is selected that maximizes phylogenetic diversity of the set without including any sequence pairs separated by fewer than X amino acid substitutions per site.
-Here X is a configurable variable with default value 0.05.
+As above, we select a subset of sequences that maximize phylogenetic diversity while requiring sequence pairs to be separated by at least X amino acid substitutions per site.
+In this case, X defaults to 0.05 (FIXME).
 
 \subsubsection*{Taxonomic reconciliation}
-Many of the data sources for new genomes provide a taxonomic identifier for the genome that places it in the NCBI Taxonomy.
+Many of the data sources for new genomes provide a taxonomic identifier for the genome that places it in the NCBI taxonomy.
 Throughout the database update process, the associations between taxon ID and individual sequences are maintained.
 The tips of reconstructed phylogenies can therefore have some or all nodes annotated with the taxon ID associated with that tip.
 Given this information, PhyloSift generates a mapping of edges (e.g. the edge above each node) in the gene tree phylogeny to edges in the taxonomic tree.
@@ -343,8 +349,8 @@ PhyloSift also supports the addition of custom gene families to its database.
 To add a gene family to the database, a multiple sequence alignment must be provided.
 Optionally, a table mapping each sequence identifier in the alignment and its NCBI taxon ID may also be provided.
 Given these inputs, PhyloSift will construct a phylogenetic tree, create a pruned set of representative sequences for similarity searching, construct a profile HMM for alignment, and if taxon info was provided will also compute a reconciliation between the gene tree and taxonomy.
-The tree-building and reconciliation steps follows the approach outlined above in the PhyloSift database update workflow, with the exception that codon alignments are not generated.
-The resulting data is called a package, and is copied into the user's PhyloSift database.
+The tree-building and reconciliation steps follow the approach outlined above in the PhyloSift database update workflow, with the exception that codon alignments are not generated.
+The resulting data is called a ``package,'' and is copied into the user's PhyloSift database.
 The new package will be automatically included in any future runs of the PhyloSift client workflow.
 
 
@@ -352,28 +358,26 @@ The new package will be automatically included in any future runs of the PhyloSi
 % Results and Discussion can be combined.
 \section*{Results}
 
-
-
 \subsection*{Bayesian hypothesis testing for the presence of phylogenetic lineages}
 In the context of microbial forensics, a practicioner might want to test for the presence of a particular lineage of interest in a metagenomic sample. 
 Phylogenetic analysis of metagenomic reads has the potential to offer resolution beyond what would be available from taxonomic methods for metagenomics.
 Whereas taxonomic methods can provide resolution at specific levels in the taxonomic hierarchy, such as species, genus, etc., phylogenetic methods might be able to distinguish different subtypes of named species or novel lineages at higher taxonomic levels.
-Phylogenetic methods are limited only by the resolution of the reference genome phylogeny. 
+Phylogenetic methods are limited only by the resolution of the reference genome phylogeny and not by the resolution of manually curated taxonomies. 
 Phylogenetic inference has the further advantage that it is based on a statistical model of sequence change where the marginal likelihood of the data given the model P(D|M) is well defined, making it possible to conduct model-based hypothesis tests using phylogenies.
 Taxonomic analysis methods for metagenomics are frequently based on machine learning classification methods which do not always lend themselves to such hypothesis testing.
 
-PhyloSift provides a means to conduct Bayesian hypothesis testing for the presence of reads belonging to organisms that have diverged along specific branches of the reference phylogeny.
+PhyloSift provides a means to conduct Bayesian hypothesis testing for the presence of one or more query sequences belonging to organisms that have diverged along specific branches of the reference phylogeny.
 In order to describe the Bayesian hypothesis test we introduce the following notation: assume we are given a reference phylogenetic tree $T$ consisting of $n > 1$ branches $\{t_1 \dots t_n\}$. 
 Further assume we are given a collection $S$ of sequences $s_1 \dots s_m$ which are homologous to and aligned to the sequences at the leaf nodes of the reference phylogeny. 
 We denote the marginal likelihood that a particular sequence $s_j$ diverged along branch $t_i$ of the reference phylogeny as $P(s_j|t_i)$.
 Calculation of this marginal likelihood is implemented in the pplacer software and described elsewhere~\cite{Matsen2010}.
 
-The null hypothesis we wish to test is that there are no reads diverging from a set of one or more lineages of interest $T_x \subseteq T$.
+The null hypothesis we wish to test is that there are no sequences diverging from a set of one or more lineages of interest $T_x \subseteq T$.
 We can express the marginal likelihood of the null hypothesis $M_0$ as:
 \begin{equation}\label{eqn:null}
 P(D|M_0) = \prod_{s_j \in S} 1 - \sum_{t_i \in T_x} P(s_j|t_i)
 \end{equation}
-which can be interpreted as the product over all reads of the probability that the read does not derive from a lineage of interest in $T_x$.
+which can be interpreted as the product over all sequences of the probability that the sequence does not derive from a lineage of interest in $T_x$.
 The marginal likelihood of the alternative hypothesis, e.g. that one or more reads derive from a lineage in $T_x$, can simply be expressed as:
 \begin{equation}\label{eqn:alt}
 P(D|M_1) = 1-P(D|M_0)
@@ -387,18 +391,16 @@ The Bayes factor $K$ can then be interpreted with respect to how strongly the nu
 
 In the current revision of PhyloSift, Bayesian hypothesis tests can be applied to a concatenated alignment of the 40 elite gene families or any other single marker gene, and can either be applied to phylogenies inferred from amino acid or codon-aligned {DNA} sequences.
 
-\subsubsection*{Accuracy on particular taxonomic groups}
-Bacteria, Arch, Eukarya, viral
+\subsection*{Community structure comparison: application to human microbiome data}
 
-\subsection*{Application to human microbiome data: community structure comparison}
-
+In addition to hypothesis testing for lineages, PhyloSift also provides a platform to conduct comparative analysis of microbial community structure directly from metagenomic data.
 To understand how community structure analysis with PhyloSift compares to similar analysis based on 16s rRNA amplicon sequencing we study a recently published human microbiome dataset where samples were sequenced both by a 16s amplicon and a shotgun metagenome approach~\cite{Yatsunenko2012}.
 In that study, fecal material was collected from infants and adults at diverse geographical locations and subjected to sequencing.
 Over 600 samples were sequenced using the 16S amplicon protocol.
 Of those 110 were also subjected to metagenomic shotgun sequencing using 454 pyrosequencing chemistry.
-Here we apply PhyloSift to the 110 metagenomic samples and conduct a community structure comparison among the samples, and additionally replicate the Yatsunenko et al. QIIME analyses on this subset of data.
+Here we apply PhyloSift to the 110 metagenomic samples and conduct a community structure comparison among the samples, and replicate the Yatsunenko \textit{et al.} QIIME analyses on this subset of data.
 
-All QIIME analyses were carried out using release 1.5.0 of the QIIME software toolkit, using the workflow and parameters reported by Yatsunenko et al. The Greengenes reference database (collapsed at 97\% identity) was used to carry out a closed-reference OTU picking protocol at 97\% sequence identity with uclust. All reads which matched database sequences at this level were retained for downstream processing, while non-matching sequences were excluded from further analyses. Parameters for the pick\_otus.py script were executed as follows: --max\_accepts 1 --max\_rejects 8 --stepwords 8 --word\_length 8. OTUs were given a taxonomic assignment according to the corresponding reference sequence in the Greengenes database. Rarefaction and PCoA analyses were carried out using the alpha\_diversity.py and beta\_diversity\_through\_plots.py workflows. A full list of these QIIME commands and output files have been publicly deposited in Dryad (Accession number XXXXX).
+All QIIME analyses were carried out using release 1.5.0 of the QIIME software toolkit, using the workflow and parameters reported by Yatsunenko \textit{et al}. The Greengenes reference database (collapsed at 97\% identity) was used to carry out a closed-reference OTU picking protocol at 97\% sequence identity with uclust. All reads which matched database sequences at this level were retained for downstream processing, while non-matching sequences were excluded from further analyses. Parameters for the pick\_otus.py script were as follows: --max\_accepts 1 --max\_rejects 8 --stepwords 8 --word\_length 8. Taxonomic assignments for OTUs were given by the Greengenes database. Rarefaction and PCoA analyses were carried out using the alpha\_diversity.py and beta\_diversity\_through\_plots.py workflows. A full list of these QIIME commands and output files have been publicly deposited in Dryad (Accession number XXXXX).
 
 PhyloSift processed each of the 110 samples, requiring an average of 35 minutes CPU time per sample.
 The majority of CPU time is spent in phylogenetic placement of reads.
@@ -422,9 +424,11 @@ Whereas the first principal component agrees strongly with the analysis reported
 Extreme samples on the 2nd principal component (PC2) are very young infants whose fecal microbiota appear to be dominated not by Bifidobacteria, but instead by members of the genus Enterobacter and family Lactobacillales (see Figure~\ref{fig:pcaphylo}, right).
 One possible explanation for this observation may be an association with breast-feeding status of the infants.
 However, inspection of publicly available metadata did not reveal any clear assocation of PC2 with breastfeeding status or other recorded metadata.
-One possible explanation for why the current analysis identifies this dimension of community structure variation is that the set of 110 samples we analyzed does not include many of the adult samples from disparate geographical locations analyzed by Yatsunenko \textit{et al}.
+Another possibile explanation is mode of birth, vaginal or caesarian, however we have no information on mode of delivery for newborns in this dataset.
+We note that members of the Lactobacillales are abundant in the human vaginal tract, suggesting that newborns high on the 2nd principal component axis may be vaginally delivered if the two groups of newborns do indeed reflect differences in mode of delivery.
+Interestingly, the dimensions of community structure variation identified in the current set of 110 samples differ from those identified by Yatsunenko \textit{et al} in the larger set of 600 samples for which amplicon data are available.
 Geography and age were associated with most variation in their analysis of $>$600 samples, and the 110 metagenome samples are primarily from infants and do not equally represent that variation.
-We note that members of the Lactobacillales are abundant in the human vaginal tract, however no metadata on vaginal versus caesarian birth was available for these samples.
+It seems that age-related variation in the microbiome dominates the 110 metagenome samples.
 
 We also investigated the diversity of microbes in the fecal samples.
 Classic measures of species diversity such as alpha and beta diversity have been applied to microbial communities by collapsing sequences to operational taxonomic units (OTUs).
