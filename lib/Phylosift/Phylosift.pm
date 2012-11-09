@@ -172,6 +172,7 @@ sub run {
 	my $RUNINFO = ps_open( ">>".Phylosift::Utilities::get_run_info_file( self => $self ) );
 	Phylosift::Summarize::print_run_info( self => $self, OUTPUT => $RUNINFO );
 	close($RUNINFO);
+
 	#changed > to >> so that we append to that file every time a run is restarted and we can keep track if there was a change in DB or in command
 	#Also it prevents the file from being clobbered every time a run is restarted.
 	if ( $self->{"mode"} eq 'search' || $self->{"mode"} eq 'all' ) {
@@ -399,6 +400,7 @@ sub run_marker_align {
 
 	#clearing the alignment directory if needed
 	my $alignDir = $self->{"alignDir"};
+
 	#`rm "$alignDir"/*` if (<"$alignDir"/*>) && $Phylosift::Settings::force;
 
 	#Align Markers
@@ -423,8 +425,8 @@ sub run_search {
 	Phylosift::Utilities::start_timer( name => "runBlast" );
 
 	#clearing the blast directory
-	my $blastDir = $self->{"blastDir"};
-	`rm "$blastDir"/*` if (<"$blastDir"/*>);
+	#my $blastDir = $self->{"blastDir"};
+	#`rm "$blastDir"/*` if (<"$blastDir"/*>);
 
 	#run Searches
 	Phylosift::FastSearch::run_search( self => $self, marker_reference => $markerListRef );

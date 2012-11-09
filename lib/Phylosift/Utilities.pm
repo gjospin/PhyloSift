@@ -29,6 +29,7 @@ use vars qw[ @EXPORT @EXPORT_OK %EXPORT_TAGS @ISA ];
 );
 our $debuglevel = 0;
 my %timers;
+
 sub debug {
 	my $msg = shift;
 	my $msglevel = shift || 1;
@@ -383,8 +384,7 @@ sub download_data {
 		File::Fetch->import();
 	};
 	if ($@) {
-		croak(
-			"Unable to load perl module File::Fetch. Can not download marker database.\nPlease use cpan to install File::Fetch or download and install the markers manually.\n"
+		croak(    "Unable to load perl module File::Fetch. Can not download marker database.\nPlease use cpan to install File::Fetch or download and install the markers manually.\n"
 		);
 	} else {
 
@@ -569,7 +569,7 @@ sub data_checks {
 	);
 	debug "DIR : $Phylosift::Settings::ncbi_dir\n";
 	debug "Skipping check for NCBI updates on server\n" if $Phylosift::Settings::disable_update_check;
-	return if $Phylosift::Settings::disable_update_check;
+	return                                              if $Phylosift::Settings::disable_update_check;
 	my ( $content_type, $document_length, $modified_time, $expires, $server ) = head("$Phylosift::Settings::ncbi_url");
 	if ( -x $Phylosift::Settings::ncbi_dir ) {
 		my $ncbi_time = ( stat($Phylosift::Settings::ncbi_dir) )[9];
@@ -578,7 +578,7 @@ sub data_checks {
 		} elsif ( $modified_time > $ncbi_time ) {
 			warn "Found newer version of NCBI taxonomy data!\n";
 			warn "Downloading from $Phylosift::Settings::ncbi_url\n";
-			download_data( url         => $Phylosift::Settings::ncbi_url,
+			download_data(          url         => $Phylosift::Settings::ncbi_url,
 						   destination => $Phylosift::Settings::ncbi_dir );
 		}
 	} else {
@@ -587,7 +587,7 @@ sub data_checks {
 		}
 		warn "Unable to find NCBI taxonomy data!\n";
 		warn "Downloading from $Phylosift::Settings::ncbi_url\n";
-		download_data( url         => $Phylosift::Settings::ncbi_url,
+		download_data(       url         => $Phylosift::Settings::ncbi_url,
 					   destination => $Phylosift::Settings::ncbi_dir );
 	}
 }
@@ -819,7 +819,7 @@ Determines the filesystem path to a marker. Searches for the marker in the base 
 =cut
 
 sub get_marker_path {
-	my %args = @_;
+	my %args   = @_;
 	my $marker = $args{marker} || miss("marker");
 
 	# check for old-style marker first
@@ -1037,7 +1037,7 @@ sub get_gene_id_file {
 	my $bname       = get_marker_basename( marker => $marker );
 	my $decorated   = get_decorated_marker_name(%args);
 	my $deco        = "$marker_path/$decorated/$decorated.gene_map";
-	return $deco if -e $deco;
+	return $deco                                                 if -e $deco;
 	return "$Phylosift::Settings::marker_dir/gene_ids.codon.txt" if $dna;
 	return "$Phylosift::Settings::marker_dir/gene_ids.aa.txt";
 }
@@ -1397,11 +1397,12 @@ sub has_chunk_completed {
 	my $step     = $args{step} || miss("Step to look for in run_info.txt\n");
 	my $chunk    = $args{chunk};
 	my $run_file = Phylosift::Utilities::get_run_info_file( self => $self );
+
 	#return 0 if $Phylosift::Settings::force; # don't need to grep if force is set.
-	my $grep     = `grep "Chunk $chunk $step" $run_file`;
-	if(defined $grep && length $grep){
-		cleanup_chunk(self=> $self, step => $step, chunk => $chunk) if $Phylosift::Settings::force;
-		return 1 if !$Phylosift::Settings::force;
+	my $grep = `grep "Chunk $chunk $step" $run_file`;
+	if ( defined $grep && length $grep ) {
+		cleanup_chunk( self => $self, step => $step, chunk => $chunk ) if $Phylosift::Settings::force;
+		return 1 unless $Phylosift::Settings::force;
 	}
 	return 0;
 }
@@ -1412,30 +1413,30 @@ Removes chunk data from a specific step
 
 =cut
 
-sub cleanup_chunk{
-	my %args = @_;
-	my $self = $args{self} || miss("PS object");
-	my $step = $args{step} || miss("Step to clean up");
-	my $chunk = $args{chunk} || miss("Chunk targetted");
+sub cleanup_chunk {
+	my %args       = @_;
+	my $self       = $args{self} || miss("PS object");
+	my $step       = $args{step} || miss("Step to clean up");
+	my $chunk      = $args{chunk} || miss("Chunk targetted");
 	my $marker_ref = $args{markers};
 	my @files_list = ();
 	my $file;
-	if($step eq 'Search'){
-		push(@files_list, get_search_output_all_candidate(self=>$self,chunk=>$chunk));
-	}elsif($step eq 'Align'){
-		push(@files_list ,get_aligner_output_all_unmasked(self=>$self,chunk=>$chunk));
-		push(@files_list ,get_aligner_output_all_newCandidate(self=>$self,chunk=>$chunk));
-		push(@files_list ,get_aligner_output_all_fasta(self=>$self,chunk=>$chunk));
-	}elsif($step eq 'Place'){
-		push(@files_list ,get_place_output_all_jplace(self=>$self,chunk=>$chunk));
-	}elsif($step eq 'Summarize'){
-		push(@files_list ,get_taxa_90pct_HPD(self=>$self));
-		push(@files_list ,get_taxasummary(self=>$self));
-		push(@files_list ,get_summarize_output_all_sequence_taxa(self=>$self));
-		push(@files_list ,get_summarize_output_all_sequence_taxa_summary(self=>$self));
+	if ( $step eq 'Search' ) {
+		push( @files_list, get_search_output_all_candidate( self => $self, chunk => $chunk ) );
+	} elsif ( $step eq 'Align' ) {
+		push( @files_list, get_aligner_output_all_unmasked( self => $self, chunk => $chunk ) );
+		push( @files_list, get_aligner_output_all_newCandidate( self => $self, chunk => $chunk ) );
+		push( @files_list, get_aligner_output_all_fasta( self => $self, chunk => $chunk ) );
+	} elsif ( $step eq 'Place' ) {
+		push( @files_list, get_place_output_all_jplace( self => $self, chunk => $chunk ) );
+	} elsif ( $step eq 'Summarize' ) {
+		push( @files_list, get_taxa_90pct_HPD( self => $self ) );
+		push( @files_list, get_taxasummary( self => $self ) );
+		push( @files_list, get_summarize_output_all_sequence_taxa( self => $self ) );
+		push( @files_list, get_summarize_output_all_sequence_taxa_summary( self => $self ) );
 	}
-	return if @files_list == 0; # no need to do anything else if the list is empty
-	my $cmd = "rm ".join(' ', @files_list);
+	return if @files_list == 0;    # no need to do anything else if the list is empty
+	my $cmd = "rm ".join( ' ', @files_list );
 	`$cmd`;
 }
 
@@ -1444,11 +1445,11 @@ return an array of all candidate files in the blastDir for a specific chunk
 =cut
 
 sub get_search_output_all_candidate {
-	my %args              = @_;
-	my $self              = $args{self} || miss("PS object");
-	my $chunk             = $args{chunk} || miss("Chunk");
-	my @files_list=();
-	push(@files_list ,glob($self->{'blastDir'}."/*.candidate.*.$chunk.*"));
+	my %args       = @_;
+	my $self       = $args{self} || miss("PS object");
+	my $chunk      = $args{chunk} || miss("Chunk");
+	my @files_list = ();
+	push( @files_list, glob( $self->{'blastDir'}."/*.candidate.*.$chunk.*" ) );
 	return @files_list;
 }
 
@@ -1457,11 +1458,11 @@ return an array of all fasta files in the alignDir for a specific chunk
 =cut
 
 sub get_aligner_output_all_fasta {
-	my %args              = @_;
-	my $self              = $args{self} || miss("PS object");
-	my $chunk             = $args{chunk} || miss("Chunk");
-	my @files_list=();
-	push(@files_list ,glob($self->{'alignDir'}."/*.$chunk.fasta"));
+	my %args       = @_;
+	my $self       = $args{self} || miss("PS object");
+	my $chunk      = $args{chunk} || miss("Chunk");
+	my @files_list = ();
+	push( @files_list, glob( $self->{'alignDir'}."/*.$chunk.fasta" ) );
 	return @files_list;
 }
 
@@ -1470,11 +1471,11 @@ return an array of all newCandidate files in the alignDir
 =cut
 
 sub get_aligner_output_all_newCandidate {
-	my %args              = @_;
-	my $self              = $args{self} || miss("PS object");
-	my $chunk             = $args{chunk} || miss("Chunk");
-	my @files_list=();
-	push(@files_list ,glob($self->{'alignDir'}."/*.newCandidate.aa.$chunk"));
+	my %args       = @_;
+	my $self       = $args{self} || miss("PS object");
+	my $chunk      = $args{chunk} || miss("Chunk");
+	my @files_list = ();
+	push( @files_list, glob( $self->{'alignDir'}."/*.newCandidate.aa.$chunk" ) );
 	return @files_list;
 }
 
@@ -1483,11 +1484,11 @@ return an array of all unmasked files in the alignDir
 =cut
 
 sub get_aligner_output_all_unmasked {
-	my %args              = @_;
-	my $self              = $args{self} || miss("PS object");
-	my $chunk             = $args{chunk} || miss("Chunk");
-	my @files_list=();
-	push(@files_list ,glob($self->{'alignDir'}."/*.$chunk.unmasked"));
+	my %args       = @_;
+	my $self       = $args{self} || miss("PS object");
+	my $chunk      = $args{chunk} || miss("Chunk");
+	my @files_list = ();
+	push( @files_list, glob( $self->{'alignDir'}."/*.$chunk.unmasked" ) );
 	return @files_list;
 }
 
@@ -1496,11 +1497,11 @@ return an array of all jplace files in the treeDir for a specific chunk
 =cut
 
 sub get_place_output_all_jplace {
-	my %args              = @_;
-	my $self              = $args{self} || miss("PS object");
-	my $chunk             = $args{chunk} || miss("Chunk");
-	my @files_list=();
-	push(@files_list ,glob($self->{'blastDir'}."/*.$chunk.jplace"));
+	my %args       = @_;
+	my $self       = $args{self} || miss("PS object");
+	my $chunk      = $args{chunk} || miss("Chunk");
+	my @files_list = ();
+	push( @files_list, glob( $self->{'blastDir'}."/*.$chunk.jplace" ) );
 	return @files_list;
 }
 
@@ -1509,23 +1510,22 @@ return an array of all sequence_taxa files in the workingDir for a specific chun
 =cut
 
 sub get_summarize_output_all_sequence_taxa {
-	my %args              = @_;
-	my $self              = $args{self} || miss("PS object");
-	my $chunk             = $args{chunk} || miss("Chunk");
-	my @files_list=();
-	push(@files_list ,glob($Phylosift::Settings::file_dir."/sequence_taxa.*.txt"));
+	my %args       = @_;
+	my $self       = $args{self} || miss("PS object");
+	my @files_list = ();
+	push( @files_list, glob( $Phylosift::Settings::file_dir."/sequence_taxa.*.txt" ) );
 	return @files_list;
 }
+
 =head2 get_summarize_output_all_sequence_taxa_summary
 return an array of all sequence_taxa_summary files in the workingDir for a specific chunk
 =cut
 
 sub get_summarize_output_all_sequence_taxa_summary {
-	my %args              = @_;
-	my $self              = $args{self} || miss("PS object");
-	my $chunk             = $args{chunk} || miss("Chunk");
-	my @files_list=();
-	push(@files_list ,glob($Phylosift::Settings::file_dir."/sequence_taxa_summary.*.txt"));
+	my %args       = @_;
+	my $self       = $args{self} || miss("PS object");
+	my @files_list = ();
+	push( @files_list, glob( $Phylosift::Settings::file_dir."/sequence_taxa_summary.*.txt" ) );
 	return @files_list;
 }
 
@@ -1534,8 +1534,8 @@ return the path to taxasummary for the PS object
 =cut
 
 sub get_taxasummary {
-	my %args              = @_;
-	my $self              = $args{self} || miss("PS object");
+	my %args = @_;
+	my $self = $args{self} || miss("PS object");
 	return $Phylosift::Settings::file_dir."/taxasummary.txt";
 }
 
@@ -1544,8 +1544,8 @@ return the path to taxa_90pct_HPD for the PS object
 =cut
 
 sub get_taxa_90pct_HPD {
-	my %args              = @_;
-	my $self              = $args{self} || miss("PS object");
+	my %args = @_;
+	my $self = $args{self} || miss("PS object");
 	return $Phylosift::Settings::file_dir."/taxa_90pct_HPD.txt";
 }
 
@@ -1556,10 +1556,8 @@ sub start_timer {
 	my $t         = time;
 	my @timerval  = localtime($t);
 	$timers{$timername} = $t;
-	my $readable_time = sprintf( "%4d-%02d-%02d %02d:%02d:%02d",
-				   $timerval[5] + 1900,
-				   $timerval[4] + 1,
-				   $timerval[3], $timerval[2], $timerval[1], $timerval[0] );
+	my $readable_time =
+	  sprintf( "%4d-%02d-%02d %02d:%02d:%02d", $timerval[5] + 1900, $timerval[4] + 1, $timerval[3], $timerval[2], $timerval[1], $timerval[0] );
 	debug "Before $timername $readable_time\n" unless $silent;
 	return $readable_time;
 }
@@ -1573,10 +1571,10 @@ sub end_timer {
 	debug sprintf( "After $timername %4d-%02d-%02d %02d:%02d:%02d\n",
 				   $timerval[5] + 1900,
 				   $timerval[4] + 1,
-				   $timerval[3], $timerval[2], $timerval[1], $timerval[0] ) unless $silent;
+				   $timerval[3], $timerval[2], $timerval[1], $timerval[0] )
+	  unless $silent;
 	return $t - $timers{$timername};
 }
-
 
 =head2 marker_oldstyle
 
@@ -1622,10 +1620,10 @@ sub open_SeqIO_object {
 		$format = $args{format};
 	}
 	if ( $args{file} =~ /\.gz$/ ) {
-		$io_object = Bio::SeqIO->new( -file   => "zcat \"$args{file}\" |",
+		$io_object = Bio::SeqIO->new(       -file   => "zcat \"$args{file}\" |",
 									  -format => $format );
 	} elsif ( $args{file} =~ /\.bz2$/ ) {
-		$io_object = Bio::SeqIO->new( -file   => "bzcat \"$args{file}\" |",
+		$io_object = Bio::SeqIO->new(       -file   => "bzcat \"$args{file}\" |",
 									  -format => $format );
 	} else {
 		$io_object = Bio::SeqIO->new( -file => $args{file}, -format => $format );
@@ -1782,7 +1780,8 @@ sub index_marker_db {
 										   self    => $args{self},
 										   marker  => $marker,
 										   updated => 0
-		) unless -e $marker_rep;
+		  )
+		  unless -e $marker_rep;
 
 		#debug "marker $marker is protein\n"
 		#if is_protein_marker( marker => $marker );
@@ -1810,14 +1809,14 @@ sub index_marker_db {
 	print $PDBOUT "\n";
 	print $RNADBOUT "\n";
 	close $MARKERLISTOUT;
-	close $PDBOUT;                        # be sure to flush I/O
+	close $PDBOUT;    # be sure to flush I/O
 	close $RNADBOUT;
 	my $blastp_db = get_blastp_db( path => $path );
 	`mv "$blastp_db" "$path/rep.dbfasta"`;
 
 	# make a last database
 	`cd "$path" ; $Phylosift::Settings::lastdb -s 900M -p replast rep.dbfasta`;
-	unlink("$path/rep.dbfasta");          # don't need this anymore!
+	unlink("$path/rep.dbfasta");    # don't need this anymore!
 
 	# make a rna database
 	if ( -e $rna_db_fasta && -s $rna_db_fasta > 100 ) {
@@ -1927,20 +1926,20 @@ Reads total installed memory on the system
 
 =cut
 
-sub get_available_memory{
-	my $mem = 4000000; #default 4Gigs
-	if ($^O =~ m/darwin/) {
-                my $inf = `/usr/sbin/system_profiler SPHardwareDataType | grep Memory`;
-                if ($inf =~ /      Memory: (\d+) GB/){
-                        $mem = $1 * 1048576;
-                }
-        } else {
-                my $inf = `cat /proc/meminfo | grep MemTotal`;
-                if ($inf =~ /MemTotal:\s+(\d+) kB/){
-                        $mem = $1;
-                }
-        }
-    return $mem
+sub get_available_memory {
+	my $mem = 4000000;    #default 4Gigs
+	if ( $^O =~ m/darwin/ ) {
+		my $inf = `/usr/sbin/system_profiler SPHardwareDataType | grep Memory`;
+		if ( $inf =~ /      Memory: (\d+) GB/ ) {
+			$mem = $1 * 1048576;
+		}
+	} else {
+		my $inf = `cat /proc/meminfo | grep MemTotal`;
+		if ( $inf =~ /MemTotal:\s+(\d+) kB/ ) {
+			$mem = $1;
+		}
+	}
+	return $mem;
 }
 
 =head2 get_sequence_input_type

@@ -11,6 +11,7 @@ use Phylosift::Utilities qw(:all);
 use Phylosift::MarkerAlign;
 use Phylosift::Settings;
 use File::Basename;
+use Digest::MD5 qw(md5_hex);
 use POSIX qw(ceil floor);
 
 =head1 NAME
@@ -60,7 +61,7 @@ my $align_fraction = $Phylosift::Settings::align_fraction;
 # at least this amount of min[length(query),length(marker)] must align to be considered a hit
 my $align_fraction_isolate = $Phylosift::Settings::align_fraction_isolate;
 
-my @lookup_array      = ();
+my @lookup_array = ();
 my %markers;
 my %markerNuc = ();
 my %markerLength;
@@ -118,22 +119,24 @@ sub run_search {
 
 		my $completed_chunk = Phylosift::Utilities::has_chunk_completed( self => $self, chunk => $chunkI, step => "Search" );
 		$completed_chunk = 1 if $start_chunk > $chunkI;
-		my $start_search_time = start_timer(name => "start_search_$chunkI");
+		my $start_search_time = start_timer( name => "start_search_$chunkI" );
+
 		# need to run this even if chunk is done so that we advance through the input file
 		# TODO: don't launch lastal on RNA unless really needed
 		my $finished = launch_searches(
-										self     => $self,
-										readtype => $type,
-										dir      => $self->{"blastDir"},
-										contigs  => $contigs,
-										chunk    => $chunkI,
-										FILE1    => $F1IN,
-										FILE2    => $F2IN,
+										self                    => $self,
+										readtype                => $type,
+										dir                     => $self->{"blastDir"},
+										contigs                 => $contigs,
+										chunk                   => $chunkI,
+										FILE1                   => $F1IN,
+										FILE2                   => $F2IN,
 										chunk_completion_status => $completed_chunk
 		);
 		compute_hits_summary( self => $self, chunk => $chunkI );
-		my $end_search_time = start_timer(name=>"end_search_$chunkI", silent => 1);
-		print $RUNINFO "Chunk $chunkI Search completed\t$start_search_time\t$end_search_time\t".end_timer(name => "start_search_$chunkI", silent => 1)."\n" unless $completed_chunk;
+		my $end_search_time = start_timer( name => "end_search_$chunkI", silent => 1 );
+		print $RUNINFO "Chunk $chunkI Search completed\t$start_search_time\t$end_search_time\t".end_timer( name => "start_search_$chunkI", silent => 1 )."\n"
+		  unless $completed_chunk;
 		if ( !$completed_chunk && ( $self->{"mode"} eq "all" || $self->{"continue"} ) ) {
 
 			# fire up the next step!
@@ -228,20 +231,22 @@ the parent process writes sequence data to files, child processes launch a simil
 =cut
 
 sub launch_searches {
-	my %args          = @_;
-	my $self          = $args{self};
-	my $dir           = $args{dir} || miss("dir");
-	my $readtype      = $args{readtype} || miss("readtype");
-	my $chunk         = $args{chunk} || miss("chunk");
-	my $FILE1         = $args{FILE1};
-	my $FILE2         = $args{FILE2};
+	my %args                    = @_;
+	my $self                    = $args{self};
+	my $dir                     = $args{dir} || miss("dir");
+	my $readtype                = $args{readtype} || miss("readtype");
+	my $chunk                   = $args{chunk} || miss("chunk");
+	my $FILE1                   = $args{FILE1};
+	my $FILE2                   = $args{FILE2};
 	my $chunk_completion_status = $args{chunk_completion_status};
-	my $chunky        = defined($chunk) ? ".$chunk" : "";
-	my $reads_file    = $dir."/reads.fasta$chunky";
-	my $last_rna_pipe = $dir."/last_rna.pipe";
+	my $chunky                  = defined($chunk) ? ".$chunk" : "";
+	my $reads_file              = $dir."/reads.fasta$chunky";
+	my $last_rna_pipe           = $dir."/last_rna.pipe";
 	debug "Making fifos\n";
 	my @last_pipe_array = ();
-	$chunk_completion_status = Phylosift::Utilities::has_chunk_completed( self => $self, chunk => $chunk, step => "Search" ) unless defined $chunk_completion_status;
+	$chunk_completion_status = Phylosift::Utilities::has_chunk_completed( self => $self, chunk => $chunk, step => "Search" )
+	  unless defined $chunk_completion_status;
+
 	for ( my $i = 0; $i <= $Phylosift::Settings::threads - 1; $i++ ) {
 		push( @last_pipe_array, $dir."/last_$i.pipe" );
 		`mkfifo "$dir/last_$i.pipe"`;
@@ -285,7 +290,7 @@ sub launch_searches {
 					`rm -f $last_rna_pipe`;
 					exit 0;
 				} else {
-					$hitstream = lastal_table_rna( self       => $self,
+					$hitstream = lastal_table_rna(                self       => $self,
 												   query_file => $last_rna_pipe );
 				}
 				$candidate_type = ".lastal.rna";
@@ -325,16 +330,16 @@ sub launch_searches {
 	# child processes run the search on incoming sequences
 	debug "Octopus is handing out sequences\n";
 	my $finished = demux_sequences(
-									lastal_pipes  => \@LAST_PIPE_ARRAY,
-									LAST_RNA_PIPE => $LAST_RNA_PIPE,
-									dna           => $self->{"dna"},
-									FILE1         => $FILE1,
-									FILE2         => $FILE2,
-									reads_pipe    => $READS_PIPE,
-									readtype      => $readtype,
-									chunk         => $chunk,
-									self          => $self,
-									chunk_completion_status=> $chunk_completion_status
+									lastal_pipes            => \@LAST_PIPE_ARRAY,
+									LAST_RNA_PIPE           => $LAST_RNA_PIPE,
+									dna                     => $self->{"dna"},
+									FILE1                   => $FILE1,
+									FILE2                   => $FILE2,
+									reads_pipe              => $READS_PIPE,
+									readtype                => $readtype,
+									chunk                   => $chunk,
+									self                    => $self,
+									chunk_completion_status => $chunk_completion_status
 	);
 
 	# join with children when the searches are done
@@ -400,10 +405,12 @@ sub demux_sequences {
 	my $lastal_threads     = scalar(@LAST_PIPE_ARRAY);
 	my $completed_chunk    = $args{completed_chunk};
 	$completed_chunk = Phylosift::Utilities::has_chunk_completed( self => $self, chunk => $chunk, step => "Search" ) unless defined $completed_chunk;
+
 	# the following two variables track how far we are through a chunk
 	my $seq_count    = 0;
 	my $seq_size     = 0;
 	my $buffer_index = 0;
+	my $md5_object   = Digest::MD5->new;
 	if ( defined( $self->{"stashed_lines"} ) ) {
 		$lines1[0] = $self->{"stashed_lines"}[0];
 		$lines2[0] = $self->{"stashed_lines"}[1] if defined( $self->{"stashed_lines"}[1] );
@@ -439,11 +446,13 @@ sub demux_sequences {
 			chomp( $lines1[0] );
 
 			print $IDFILE "$lines1[0]\t$seq_count/1\n" unless $completed_chunk;
+			$md5_object->add( $lines1[0] )             unless $completed_chunk;
 
 			#			} elsif ( $lines1[0] =~ m/^@(.+)/ ) {
 			if ( defined( $lines2[0] ) ) {
 				chomp( $lines2[0] );
-				print $IDFILE "$lines2[0]\t$seq_count/2\n" unless $completed_chunk;;
+				print $IDFILE "$lines2[0]\t$seq_count/2\n" unless $completed_chunk;
+				$md5_object->add( $lines2[0] )             unless $completed_chunk;
 			}
 
 			$lines1[0] = "\@$seq_count/1\n";
@@ -517,12 +526,14 @@ sub demux_sequences {
 			$lines1[0] =~ s/^>//;
 			chomp( $lines1[0] );
 			print $IDFILE "$lines1[0]\t$seq_count/1\n" unless $completed_chunk;
+			$md5_object->add( $lines2[0] )             unless $completed_chunk;
 
 			#			} elsif ( $lines1[0] =~ m/^>(.+)/ ) {
 			if ( defined $lines2[0] ) {
 				$lines2[0] =~ s/^>//;
 				chomp( $lines2[0] );
 				print $IDFILE "$lines2[0]\t$seq_count/2\n" unless $completed_chunk;
+				$md5_object->add( $lines2[0] )             unless $completed_chunk;
 			}
 
 			$lines1[0] = ">$seq_count/1\n";
@@ -561,6 +572,13 @@ sub demux_sequences {
 	close($LAST_RNA_PIPE);
 	close($READS_PIPE);
 	debug "Octopus handed out $seq_count sequences\n";
+
+	#printing the MD5 checksum to the run_info file.
+	unless ($completed_chunk) {
+		open( RUNINFO, ">>".Phylosift::Utilities::get_run_info_file( self => $self ) );
+		print RUNINFO "Chunk 1 sequences processed ".$md5_object->hexdigest."\n";
+		close(RUNINFO);
+	}
 
 	# if there is more sequence, save the header we currently have for later
 	if ( defined( $lines1[0] ) ) {
@@ -618,7 +636,7 @@ sub qtrim_read {
 	}
 
 	# Clip the read
-	@$read[1] = substr( $seq,      0, $endpoint )."\n";
+	@$read[1] = substr( $seq, 0, $endpoint )."\n";
 	@$read[3] = substr( @$read[3], 0, $endpoint )."\n";
 }
 
@@ -626,7 +644,7 @@ sub read_marker_lengths {
 	my %args = @_;
 	my $self = $args{self};
 	foreach my $marker ( keys(%markers) ) {
-		$markerLength{$marker} = Phylosift::Utilities::get_marker_length( self   => $self,
+		$markerLength{$marker} = Phylosift::Utilities::get_marker_length(       self   => $self,
 																		  marker => $marker );
 	}
 }
@@ -1042,7 +1060,7 @@ sub prep_and_clean {
 
 	#create a directory for the Reads file being processed.
 	`mkdir "$Phylosift::Settings::file_dir"` unless ( -e $Phylosift::Settings::file_dir );
-	`mkdir "$self->{"blastDir"}"` unless ( -e $self->{"blastDir"} );
+	`mkdir "$self->{"blastDir"}"`            unless ( -e $self->{"blastDir"} );
 	return $self;
 }
 
