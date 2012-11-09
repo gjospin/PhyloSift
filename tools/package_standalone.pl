@@ -34,6 +34,7 @@ if (@ARGV>0 && $ARGV[0] eq "buildbot") # if buildbot
     `rm PhyloSift/.project`;
     `rm -rf PhyloSift/t`;
     `rm -rf PhyloSift/tools`;
+    `rm -rf PhyloSift/web`;
     
     # add bioperl-live (not on buildbot)
     `git clone git://github.com/bioperl/bioperl-live.git`;

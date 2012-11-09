@@ -255,7 +255,7 @@ PhyloSift includes the guppy program from pplacer, which in addition to Edge PCA
 
 \subsection*{Gene families used by PhyloSift}
 
-The standard PhyloSift database includes a set of 40 gene families previously identified as nearly universal among bacteria and archaea and in single-copy~\cite{Wu2012}.
+The standard PhyloSift database includes a set of 40 gene families previously identified as nearly universal among bacteria and archaea and in single-copy~\cite{DongyingWu2012}.
 In other work we have demonstrated that phylogenetic trees reconstructed on individual genes in this set are generally consistent with each other~\cite{Lang2012}, suggesting that concatenating alignments of these families will yield a valid and more powerful estimate of their phylogenetic history.
 During the database update process (described below), these gene families are automatically extended to include putative homologs from eukarya and some viruses with large genomes such as the Mimivirus.
 Most small viral genomes lack homologs of these gene families.
@@ -425,20 +425,34 @@ Figure~\ref{fig:kronaplots} shows two such plots for samples from a 1 month old 
 
 
 \section*{Discussion}
+- Detection of bioterror agents is important
+
+- Here we introduce a means to statistically test for lineages of interest directly from an uncultured DNA sample
   - Advantages to the approach taken by PhyloSift
   - Disadvantages
     - many
+
+
+
+- Advances in high throughput sample prep will make comparative metagenomics more tractable
 
 The analysis of human fecal microbial communities we describe was possible with a median of only 50 Mbp sequence data per sample.
 Current Illumina HiSeq 2000 instruments generate up to 40 Gbp per lane, suggesting that up to 800 samples could be processed in a single Illumina lane and yield similar findings.
 Based on current Illumina sequencing service provider costs this suggests large-scale gut metagenome surveys could be conducted for as little as to \$2.50 to \$5 per sample in sequencing costs.
 Library preparation reagents would dominate the overall cost of such studies, as current kits from Illumina require about \$40 per sample.
 
+- 
+  - Advantages to the approach taken by PhyloSift
+  - Disadvantages
+    - many
+
+
 \subsection*{Limitations and scope}
   - Fundamental limits to computational methods -- resolving linkage among polymorphisms in a population
 
+  - Recombination
 
-\subsection*{Future work}
+  - Uncertainty in taxonomic labeling
 
 
 \section*{Availability}

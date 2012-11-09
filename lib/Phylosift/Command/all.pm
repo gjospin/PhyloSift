@@ -56,8 +56,8 @@ sub options {
 	%opts = ( %opts, Phylosift::Command::summarize::summarize_opts() );
 
 	# all-specific options:
-	$opts{keep_search} => [ "keep_search", "Keeps the blastDir files (Default: Delete the blastDir files after every chunk)" ],
-	  return values(%opts);
+	$opts{keep_search} = [ "keep_search", "Keeps the blastDir files (Default: Delete the blastDir files after every chunk)" ];
+    return values(%opts);
 }
 
 sub validate {
