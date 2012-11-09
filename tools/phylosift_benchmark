@@ -46,7 +46,7 @@ for(my $bI=0; $bI<@benchmark_data; $bI++){
 
 	# now benchmark
 	my $summary = cwd()."/PS_temp/$seqname/sequence_taxa.txt";
-	Phylosift::Benchmark::run_benchmark(reads_file=>$seqname, output_path=>$report_path, summary_file=> pr_curve=>$report_path."prcurve");
+	Phylosift::Benchmark::run_benchmark(reads_file=>$seqname, output_path=>$report_path, summary_file=>$summary, pr_curve=>$report_path."prcurve");
 	
 	$times{$seqname} = $seconds;
 }
