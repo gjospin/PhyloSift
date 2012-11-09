@@ -43,10 +43,10 @@ sub execute {
 	Phylosift::Command::all::load_opt( opt => $opt );
 	$Phylosift::Settings::keep_search = 1;
 	Phylosift::Command::sanity_check();
-
 	my $ps = new Phylosift::Phylosift();
 	$ps = $ps->initialize( mode => "align", file_1 => @$args[0], file_2 => @$args[1] );
 	$ps->{"ARGV"} = \@ARGV;
+	croak "Place mode requires --chunks and --start_chunk to be specified\n" unless defined($Phylosift::Settings::chunks) && defined($Phylosift::Settings::start_chunk);
 	$ps->run( force => $Phylosift::Settings::force, custom => $Phylosift::Settings::custom, cont => $Phylosift::Settings::continue );
 }
 

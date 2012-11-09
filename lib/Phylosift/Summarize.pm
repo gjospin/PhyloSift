@@ -151,6 +151,10 @@ sub summarize {
 	my $chunk   = $args{chunk} || miss("chunk");
 	my $markRef = $args{marker_reference} || miss("marker_reference");    # list of the markers we're using
 	                                                                      #set_default_values(self=>$self);
+	                                                                      
+	my $start_summarize_time = start_timer(name => "start_summarize_$chunk", silent => 1);
+	my $completed_chunk = Phylosift::Utilities::has_chunk_completed( self => $self, chunk => $chunk, step => "Summarize" );
+	unless($completed_chunk){
 	read_ncbi_taxon_name_map();
 	read_ncbi_taxonomy_structure();
 	my $markerdir = $Phylosift::Settings::marker_dir;
@@ -251,6 +255,11 @@ sub summarize {
 	$self->{"read_names"} = ();    #clearing the hash from memory
 	merge_sequence_taxa( self => $self, chunk => $chunk );
 }
+	my $end_summarize_time = start_timer(name=>"end_summarize_$chunk", silent => 1);
+	my $RUNINFO = ps_open( ">>".Phylosift::Utilities::get_run_info_file( self => $self ) );
+	print $RUNINFO "Chunk $chunk Summarize completed\t$start_summarize_time\t$end_summarize_time\t".end_timer(name => "start_summarize_$chunk", silent => 1)."\n" unless $completed_chunk;
+	close($RUNINFO);
+}
 
 sub write_sequence_taxa_summary {
 	my %args             = @_;
@@ -262,8 +271,9 @@ sub write_sequence_taxa_summary {
 	my $chunky           = defined($chunk) ? ".$chunk" : "";
 	debug "Writting sequences\n";
 	my $SEQUENCETAXA    = ps_open(">$Phylosift::Settings::file_dir/sequence_taxa$chunky.txt");
+	print $SEQUENCETAXA "##Sequence_ID\tHit_Coordinates\tNCBI_Taxon_ID\tTaxon_Rank\tTaxon_Name\tProbability_Mass\tMarkers_Hit\n";
 	my $SEQUENCESUMMARY = ps_open(">$Phylosift::Settings::file_dir/sequence_taxa_summary$chunky.txt");
-
+	print $SEQUENCESUMMARY "#Sequence_ID\tHit_Coordinates\tNCBI_Taxon_ID\tTaxon_Rank\tTaxon_Name\tCumulative_Probability_Mass\tMarkers_Hit\n";
 	foreach my $qname ( keys(%$placements) ) {
 
 		# sum up all placements for this sequence, use to normalize
@@ -385,8 +395,7 @@ sub merge_sequence_taxa {
 	my %args              = @_;
 	my $self              = $args{self} || miss("PS Object");
 	my $chunk             = $args{chunk} || miss("chunk");
-	my $taxa_seed         = $Phylosift::Settings::file_dir."/sequence_taxa.*.txt";
-	my @taxa_files        = glob("$taxa_seed");
+	my @taxa_files        = get_summarize_output_all_sequence_taxa(self => $self);
 	my %placements        = ();
 	my %placement_markers = ();
 	my %all_summary;
@@ -402,6 +411,7 @@ sub merge_sequence_taxa {
 		my $TAXAIN = ps_open($taxa_file);
 		while (<$TAXAIN>) {
 			chomp($_);
+			next if $_ =~ m/^#/;
 			my @line         = split( /\t/, $_ );
 			my $read_id      = $line[0];
 			my $coord        = $line[1];
@@ -470,18 +480,19 @@ sub merge_sequence_taxa {
 	}
 
 	# write a single combined taxa summary
-	`cat $taxa_seed > $Phylosift::Settings::file_dir/sequence_taxa.txt`;
-	my $taxa_summary_seed = $Phylosift::Settings::file_dir."/sequence_taxa_summary.*.txt";
-	`cat $taxa_summary_seed > $Phylosift::Settings::file_dir/sequence_taxa_summary.txt`;
-
+	my $cat_taxa_cmd = "cat ".join(' ', @taxa_files);
+	`$cat_taxa_cmd >> $Phylosift::Settings::file_dir/sequence_taxa.txt`;
+	my $cat_taxa_summary_cmd = "cat ".join(' ', Phylosift::Utilities::get_summarize_output_all_sequence_taxa_summary(self=>$self));
+	`$cat_taxa_summary_cmd >> $Phylosift::Settings::file_dir/sequence_taxa_summary.txt`;
+	
 	my $MARKER_HITS = ps_open( ">".$Phylosift::Settings::file_dir."/marker_summary.txt" );
-	print $MARKER_HITS "Marker_name\tNumber of hits\n";
+	print $MARKER_HITS "#Marker_name\tNumber of hits\n";
 	foreach my $mname ( sort { $marker_number_hits{$b} <=> $marker_number_hits{$a} } keys %marker_number_hits ) {
 		print $MARKER_HITS "$mname\t$marker_number_hits{$mname}\n";
 	}
 	close($MARKER_HITS);
-	my $TAXAOUT = ps_open( ">".$Phylosift::Settings::file_dir."/taxasummary.txt" );
-
+	my $TAXAOUT = ps_open( ">".get_taxasummary(self => $self) );
+	print $TAXAOUT "#Taxon_ID\tTaxon_Rank\tTaxon_Name\tProbability_Mass\n";
 	# sort rest of taxa by descending abundance order
 	print $TAXAOUT "Unclassifiable\tUnknown\tUnknown\t$unclass_total\n";
 	foreach my $taxon ( sort { $ncbireads{$b} <=> $ncbireads{$a} } keys %ncbireads ) {
@@ -503,7 +514,8 @@ sub merge_sequence_taxa {
 
 	# write the taxa with 90% highest posterior density, assuming each read is an independent observation
 	my $taxasum    = 0;
-	my $TAXAHPDOUT = ps_open( ">".$Phylosift::Settings::file_dir."/taxa_90pct_HPD.txt" );
+	my $TAXAHPDOUT = ps_open( ">".get_taxa_90pct_HPD(self => $self) );
+	print $TAXAHPDOUT "#Taxon_ID\tTaxon_Rank\tTaxon_Name\tProbability_Mass\n";
 	foreach my $taxon ( sort { $ncbireads{$b} <=> $ncbireads{$a} } keys %ncbireads ) {
 		$taxasum += $ncbireads{$taxon};
 		my ( $taxon_name, $taxon_level, $taxon_id ) = get_taxon_info( taxon => $taxon );

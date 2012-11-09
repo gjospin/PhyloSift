@@ -41,6 +41,7 @@ sub execute {
 	my $ps = new Phylosift::Phylosift();
 	$ps = $ps->initialize( mode => "summarize", file_1 => @$args[0], file_2 => @$args[1] );
 	$ps->{"ARGV"} = \@ARGV;
+	croak "Summarize mode requires --chunks and --start_chunk to be specified\n" unless defined($Phylosift::Settings::chunks) && defined($Phylosift::Settings::start_chunk);
 	$ps->run( force => $Phylosift::Settings::force, custom => $Phylosift::Settings::custom, cont => $Phylosift::Settings::continue );
 }
 

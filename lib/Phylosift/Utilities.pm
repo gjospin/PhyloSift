@@ -28,7 +28,7 @@ use vars qw[ @EXPORT @EXPORT_OK %EXPORT_TAGS @ISA ];
 				 all => [ @EXPORT, @EXPORT_OK ],
 );
 our $debuglevel = 0;
-
+my %timers;
 sub debug {
 	my $msg = shift;
 	my $msglevel = shift || 1;
@@ -1383,31 +1383,200 @@ sub concatenate_alignments {
 	}
 	close $FA_REOUT;
 }
-my %timers;
+
+=head2 has_chunk_completed
+
+Checks to see if a chunk has completed the step specified
+returns 1 if it has and 0 if it hasn't
+Always return 0 if $Phylosift::Settings::force is set to 1
+=cut
+
+sub has_chunk_completed {
+	my %args     = @_;
+	my $self     = $args{self} || miss("PS object");
+	my $step     = $args{step} || miss("Step to look for in run_info.txt\n");
+	my $chunk    = $args{chunk};
+	my $run_file = Phylosift::Utilities::get_run_info_file( self => $self );
+	#return 0 if $Phylosift::Settings::force; # don't need to grep if force is set.
+	my $grep     = `grep "Chunk $chunk $step" $run_file`;
+	if(defined $grep && length $grep){
+		cleanup_chunk(self=> $self, step => $step, chunk => $chunk) if $Phylosift::Settings::force;
+		return 1 if !$Phylosift::Settings::force;
+	}
+	return 0;
+}
+
+=head2 cleanup_chunk
+
+Removes chunk data from a specific step
+
+=cut
+
+sub cleanup_chunk{
+	my %args = @_;
+	my $self = $args{self} || miss("PS object");
+	my $step = $args{step} || miss("Step to clean up");
+	my $chunk = $args{chunk} || miss("Chunk targetted");
+	my $marker_ref = $args{markers};
+	my @files_list = ();
+	my $file;
+	if($step eq 'Search'){
+		push(@files_list, get_search_output_all_candidate(self=>$self,chunk=>$chunk));
+	}elsif($step eq 'Align'){
+		push(@files_list ,get_aligner_output_all_unmasked(self=>$self,chunk=>$chunk));
+		push(@files_list ,get_aligner_output_all_newCandidate(self=>$self,chunk=>$chunk));
+		push(@files_list ,get_aligner_output_all_fasta(self=>$self,chunk=>$chunk));
+	}elsif($step eq 'Place'){
+		push(@files_list ,get_place_output_all_jplace(self=>$self,chunk=>$chunk));
+	}elsif($step eq 'Summarize'){
+		push(@files_list ,get_taxa_90pct_HPD(self=>$self));
+		push(@files_list ,get_taxasummary(self=>$self));
+		push(@files_list ,get_summarize_output_all_sequence_taxa(self=>$self));
+		push(@files_list ,get_summarize_output_all_sequence_taxa_summary(self=>$self));
+	}
+	return if @files_list == 0; # no need to do anything else if the list is empty
+	my $cmd = "rm ".join(' ', @files_list);
+	`$cmd`;
+}
+
+=head2 get_search_output_all_candidate
+return an array of all candidate files in the blastDir for a specific chunk
+=cut
+
+sub get_search_output_all_candidate {
+	my %args              = @_;
+	my $self              = $args{self} || miss("PS object");
+	my $chunk             = $args{chunk} || miss("Chunk");
+	my @files_list=();
+	push(@files_list ,glob($self->{'blastDir'}."/*.candidate.*.$chunk.*"));
+	return @files_list;
+}
+
+=head2 get_aligner_output_all_fasta
+return an array of all fasta files in the alignDir for a specific chunk
+=cut
+
+sub get_aligner_output_all_fasta {
+	my %args              = @_;
+	my $self              = $args{self} || miss("PS object");
+	my $chunk             = $args{chunk} || miss("Chunk");
+	my @files_list=();
+	push(@files_list ,glob($self->{'alignDir'}."/*.$chunk.fasta"));
+	return @files_list;
+}
+
+=head2 get_aligner_output_all_newCandidate
+return an array of all newCandidate files in the alignDir
+=cut
+
+sub get_aligner_output_all_newCandidate {
+	my %args              = @_;
+	my $self              = $args{self} || miss("PS object");
+	my $chunk             = $args{chunk} || miss("Chunk");
+	my @files_list=();
+	push(@files_list ,glob($self->{'alignDir'}."/*.newCandidate.aa.$chunk"));
+	return @files_list;
+}
+
+=head2 get_aligner_output_all_unmasked
+return an array of all unmasked files in the alignDir
+=cut
+
+sub get_aligner_output_all_unmasked {
+	my %args              = @_;
+	my $self              = $args{self} || miss("PS object");
+	my $chunk             = $args{chunk} || miss("Chunk");
+	my @files_list=();
+	push(@files_list ,glob($self->{'alignDir'}."/*.$chunk.unmasked"));
+	return @files_list;
+}
+
+=head2 get_place_output_all_jplace
+return an array of all jplace files in the treeDir for a specific chunk
+=cut
+
+sub get_place_output_all_jplace {
+	my %args              = @_;
+	my $self              = $args{self} || miss("PS object");
+	my $chunk             = $args{chunk} || miss("Chunk");
+	my @files_list=();
+	push(@files_list ,glob($self->{'blastDir'}."/*.$chunk.jplace"));
+	return @files_list;
+}
+
+=head2 get_summarize_output_all_sequence_taxa
+return an array of all sequence_taxa files in the workingDir for a specific chunk
+=cut
+
+sub get_summarize_output_all_sequence_taxa {
+	my %args              = @_;
+	my $self              = $args{self} || miss("PS object");
+	my $chunk             = $args{chunk} || miss("Chunk");
+	my @files_list=();
+	push(@files_list ,glob($Phylosift::Settings::file_dir."/sequence_taxa.*.txt"));
+	return @files_list;
+}
+=head2 get_summarize_output_all_sequence_taxa_summary
+return an array of all sequence_taxa_summary files in the workingDir for a specific chunk
+=cut
+
+sub get_summarize_output_all_sequence_taxa_summary {
+	my %args              = @_;
+	my $self              = $args{self} || miss("PS object");
+	my $chunk             = $args{chunk} || miss("Chunk");
+	my @files_list=();
+	push(@files_list ,glob($Phylosift::Settings::file_dir."/sequence_taxa_summary.*.txt"));
+	return @files_list;
+}
+
+=head2 get_taxasummary
+return the path to taxasummary for the PS object
+=cut
+
+sub get_taxasummary {
+	my %args              = @_;
+	my $self              = $args{self} || miss("PS object");
+	return $Phylosift::Settings::file_dir."/taxasummary.txt";
+}
+
+=head2 get_taxa_90pct_HPD
+return the path to taxa_90pct_HPD for the PS object
+=cut
+
+sub get_taxa_90pct_HPD {
+	my %args              = @_;
+	my $self              = $args{self} || miss("PS object");
+	return $Phylosift::Settings::file_dir."/taxa_90pct_HPD.txt";
+}
 
 sub start_timer {
 	my %args      = @_;
 	my $timername = $args{name};
+	my $silent    = $args{silent} || 0;
 	my $t         = time;
 	my @timerval  = localtime($t);
 	$timers{$timername} = $t;
-	debug sprintf( "Before $timername %4d-%02d-%02d %02d:%02d:%02d\n",
+	my $readable_time = sprintf( "%4d-%02d-%02d %02d:%02d:%02d",
 				   $timerval[5] + 1900,
 				   $timerval[4] + 1,
 				   $timerval[3], $timerval[2], $timerval[1], $timerval[0] );
+	debug "Before $timername $readable_time\n" unless $silent;
+	return $readable_time;
 }
 
 sub end_timer {
 	my %args      = @_;
 	my $timername = $args{name};
+	my $silent    = $args{silent} || 0;
 	my $t         = time;
 	my @timerval  = localtime($t);
 	debug sprintf( "After $timername %4d-%02d-%02d %02d:%02d:%02d\n",
 				   $timerval[5] + 1900,
 				   $timerval[4] + 1,
-				   $timerval[3], $timerval[2], $timerval[1], $timerval[0] );
+				   $timerval[3], $timerval[2], $timerval[1], $timerval[0] ) unless $silent;
 	return $t - $timers{$timername};
 }
+
 
 =head2 marker_oldstyle
 
@@ -1535,12 +1704,6 @@ Returns the name and path of the blast DB
 sub get_blastp_db {
 	my %args = @_;
 	$args{db_name} = "blastrep";
-	return get_db(%args);
-}
-
-sub get_rapsearch_db {
-	my %args = @_;
-	$args{db_name} = "rep";
 	return get_db(%args);
 }
 

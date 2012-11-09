@@ -53,7 +53,9 @@ sub pplacer {
 	my $markRef = $args{marker_reference} || miss("marker_reference");
 	my $chunk   = $args{chunk};
 	directoryPrepAndClean( self => $self );
-
+	my $start_place_time = start_timer(name => "start_place_$chunk", silent => 1);
+	my $completed_chunk = Phylosift::Utilities::has_chunk_completed( self => $self, chunk => $chunk, step => "Place" );
+	unless ($completed_chunk){
 	# if we have a coverage map then weight the placements
 	my $covref;
 	if ( defined($Phylosift::Settings::coverage) && $Phylosift::Settings::coverage ne "" ) {
@@ -104,6 +106,11 @@ sub pplacer {
 			}
 		}
 	}
+	}
+	my $end_place_time = start_timer(name=>"end_place_$chunk", silent => 1);
+	my $RUNINFO = ps_open( ">>".Phylosift::Utilities::get_run_info_file( self => $self ) );
+	print $RUNINFO "Chunk $chunk Place  completed\t$start_place_time\t$end_place_time\t".end_timer(name => "start_place_$chunk", silent => 1)."\n" unless $completed_chunk;
+	close($RUNINFO);
 	if ( defined($chunk) && $self->{"mode"} eq "all" ) {
 		Phylosift::Utilities::end_timer( name => "runPplacer" );
 		Phylosift::Utilities::start_timer( name => "runSummarize" );

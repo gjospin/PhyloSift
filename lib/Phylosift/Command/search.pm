@@ -44,7 +44,6 @@ sub execute {
 	Phylosift::Command::all::load_opt( opt => $opt );
 	$Phylosift::Settings::keep_search = 1;
 	Phylosift::Command::sanity_check();
-
 	my $ps = new Phylosift::Phylosift();
 	$ps = $ps->initialize( mode => "search", file_1 => @$args[0], file_2 => @$args[1] );
 	$ps->{"ARGV"} = \@ARGV;
