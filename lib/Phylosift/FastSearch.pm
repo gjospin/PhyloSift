@@ -526,7 +526,7 @@ sub demux_sequences {
 			$lines1[0] =~ s/^>//;
 			chomp( $lines1[0] );
 			print $IDFILE "$lines1[0]\t$seq_count/1\n" unless $completed_chunk;
-			$md5_object->add( $lines2[0] )             unless $completed_chunk;
+			$md5_object->add( $lines1[0] )             unless $completed_chunk;
 
 			#			} elsif ( $lines1[0] =~ m/^>(.+)/ ) {
 			if ( defined $lines2[0] ) {
