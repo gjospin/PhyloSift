@@ -286,7 +286,6 @@ sub launch_searches {
 
 				if ( !-e Phylosift::Utilities::get_rna_db( self => $self ).".prj" ) {
 					debug "Exiting process $count because rna db not found\n";
-					my $lrp1 = ps_open($last_rna_pipe);
 					`rm -f $last_rna_pipe`;
 					exit 0;
 				} else {
@@ -349,7 +348,7 @@ sub launch_searches {
 
 	# clean up
 	`rm -f "$reads_file"`;
-	`rm -f "$last_rna_pipe"`;
+	`rm -f "$last_rna_pipe" 2> /dev/null`;
 	foreach my $last_pipe (@last_pipe_array) {
 		`rm -f "$last_pipe"`;
 	}
