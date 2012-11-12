@@ -15,6 +15,7 @@ Phylosift::Comparison - compares phylogenetic structure across many samples
 Version 0.01
 
 =cut
+
 our $VERSION = '0.01';
 
 =head1 SYNOPSIS
@@ -32,7 +33,6 @@ sub compare {
 	my %args             = @_;
 	my $self             = $args{self} || miss("self");
 	my $parent_directory = $args{parent_dir} || miss("parent_dir");
-
 	# what do we want to accomplish with this?
 	# simplest approach:
 	# 1. take many jplace files on concat alignments
@@ -47,21 +47,21 @@ sub compare {
 	# 3. create a new concat package with the rppr voronoi taxa
 	# 4. re-place reads from each sample
 	# 5. now do the above steps listed in "simple approach"
-	my $JPLACES = ps_open( "ls -1 $parent_directory/*/treeDir/concat.trim.jplace |" );
+	my $JPLACES = ps_open("ls -1 $parent_directory/*/treeDir/concat.trim.jplace |");
 	my @files;
 	while ( my $file = <$JPLACES> ) {
 		chomp $file;
 		push( @files, $file );
 	}
-	my $squash_cl = "$Phylosift::Utilities::guppy squash --prefix squash " . join( " ", @files );
+	my $squash_cl = "$Phylosift::Utilities::guppy squash --prefix squash ".join( " ", @files );
 	print STDERR "Squashing with: $squash_cl ";
 	system($squash_cl);
 
 	#	output goes to cluster.tre
-	my $pca_cl = "$Phylosift::Utilities::guppy pca --prefix pca " . join( " ", @files );
+	my $pca_cl = "$Phylosift::Utilities::guppy pca --prefix pca ".join( " ", @files );
 	print STDERR "pca with: $pca_cl ";
 	system($pca_cl);
-	my $merge_cl = "$Phylosift::Utilities::guppy merge -o $parent_directory/merged.jplace " . join( " ", @files );
+	my $merge_cl = "$Phylosift::Utilities::guppy merge -o $parent_directory/merged.jplace ".join( " ", @files );
 	system($merge_cl);
 	my @processfiles = @files;
 	unshift( @files, "$parent_directory/merged.jplace" );
@@ -145,4 +145,5 @@ See http://dev.perl.org/licenses/ for more information.
 
 
 =cut
+
 1;    # End of Phylosift::Comparison.pm

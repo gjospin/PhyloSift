@@ -170,7 +170,170 @@ journal = {Nature Methods},
 year = {2011},
 pages = {191-192}
 }
+@article{Lang2012,
+title={Phylogeny of bacterial and archaeal genomes using conserved genes: supertrees and supermatrices},
+author={J M Lang and A E Darling and J A Eisen},
+pages={submitted},
+journal={PLoS One},
+year={2012}
+}
+@article{Yatsunenko2012,
+title={Human gut microbiome viewed across age and geography},
+author={Tanya Yatsunenko and Federico E. Rey and Mark J. Manary and Indi Trehan and Maria Gloria Dominguez-Bello, Monica Contreras and Magda Magris and Glida Hidalgo and Robert N. Baldassano and Andrey P. Anokhin and Andrew C. Heath and Barbara Warner and Jens Reeder and Justin Kuczynski and J. Gregory Caporaso and Catherine A. Lozupone and Christian Lauber and Jose Carlos Clemente and Dan Knights and Rob Knight	and Jeffrey I. Gordon},
+journal={Nature},
+volume={486},
+pages={222–227},
+year=2012
+}
 
+@article{Price2010,
+    author = {Price, Morgan N. AND Dehal, Paramvir S. AND Arkin, Adam P.},
+    journal = {PLoS ONE},
+    publisher = {Public Library of Science},
+    title = {FastTree 2 – Approximately Maximum-Likelihood Trees for Large Alignments},
+    year = {2010},
+    month = {03},
+    volume = {5},
+    url = {http://dx.doi.org/10.1371%2Fjournal.pone.0009490},
+    pages = {e9490},
+    abstract = {<sec>
+<title>Background</title>
+<p>We recently described FastTree, a tool for inferring phylogenies for alignments with up to hundreds of thousands of sequences. Here, we describe improvements to FastTree that improve its accuracy without sacrificing scalability.</p>
+</sec><sec>
+<title>Methodology/Principal Findings</title>
+<p>Where FastTree 1 used nearest-neighbor interchanges (NNIs) and the minimum-evolution criterion to improve the tree, FastTree 2 adds minimum-evolution subtree-pruning-regrafting (SPRs) and maximum-likelihood NNIs. FastTree 2 uses heuristics to restrict the search for better trees and estimates a rate of evolution for each site (the “CAT” approximation). Nevertheless, for both simulated and genuine alignments, FastTree 2 is slightly more accurate than a standard implementation of maximum-likelihood NNIs (PhyML 3 with default settings). Although FastTree 2 is not quite as accurate as methods that use maximum-likelihood SPRs, most of the splits that disagree are poorly supported, and for large alignments, FastTree 2 is 100–1,000 times faster. FastTree 2 inferred a topology and likelihood-based local support values for 237,882 distinct 16S ribosomal RNAs on a desktop computer in 22 hours and 5.8 gigabytes of memory.</p>
+</sec><sec>
+<title>Conclusions/Significance</title>
+<p>FastTree 2 allows the inference of maximum-likelihood phylogenies for huge alignments. FastTree 2 is freely available at <ext-link xmlns:xlink="http://www.w3.org/1999/xlink" ext-link-type="uri" xlink:href="http://www.microbesonline.org/fasttree" xlink:type="simple">http://www.microbesonline.org/fasttree</ext-link>.</p>
+</sec>},
+    number = {3},
+    doi = {10.1371/journal.pone.0009490}
+}        
+@article{Eddy2011,
+    author = {Eddy, Sean R.},
+    journal = {PLoS Comput Biol},
+    publisher = {Public Library of Science},
+    title = {Accelerated Profile HMM Searches},
+    year = {2011},
+    month = {10},
+    volume = {7},
+    url = {http://dx.doi.org/10.1371%2Fjournal.pcbi.1002195},
+    pages = {e1002195},
+    abstract = {
+        <title>Author Summary</title>
+        <p>Searching sequence databases is one of the most important applications in computational molecular biology. The main workhorse in the field is the BLAST suite of programs. Since the introduction of BLAST in the 1990's, important theoretical advances in homology search methodology have been made using probabilistic inference methods and hidden Markov models (HMMs). However, previous software implementations of these newer probabilistic methods were slower than BLAST by about 100-fold. This hindered their utility, because computation speed is so critical with the rapidly increasing size of modern sequence databases. Here I describe the acceleration methods I implemented in a new, freely available profile HMM software package, HMMER3. HMMER3 makes profile HMM searches about as fast as BLAST, while retaining the power of using probabilistic inference technology.</p>
+      },
+    number = {10},
+    doi = {10.1371/journal.pcbi.1002195}
+}        
+
+@Article{Miller2011,
+AUTHOR = {Miller, Christopher and Baker, Brett and Thomas, Brian and Singer, Steven and Banfield, Jillian},
+TITLE = {EMIRGE: reconstruction of full-length ribosomal genes from microbial community short read sequencing data},
+JOURNAL = {Genome Biology},
+VOLUME = {12},
+YEAR = {2011},
+NUMBER = {5},
+PAGES = {R44},
+URL = {http://genomebiology.com/2011/12/5/R44},
+DOI = {10.1186/gb-2011-12-5-r44},
+PubMedID = {21595876},
+ISSN = {1465-6906},
+ABSTRACT = {Recovery of ribosomal small subunit genes by assembly of short read community DNA sequence data generally fails, making taxonomic characterization difficult. Here, we solve this problem with a novel iterative method, based on the expectation maximization algorithm, that reconstructs full-length small subunit gene sequences and provides estimates of relative taxon abundances. We apply the method to natural and simulated microbial communities, and correctly recover community structure from known and previously unreported rRNA gene sequences. An implementation of the method is freely available at https://github.com/csmiller/EMIRGE webcite.},
+}
+
+@Article{Matsen2010,
+AUTHOR = {Matsen, Frederick and Kodner, Robin and Armbrust, E Virginia},
+TITLE = {pplacer: linear time maximum-likelihood and Bayesian phylogenetic placement of sequences onto a fixed reference tree},
+JOURNAL = {BMC Bioinformatics},
+VOLUME = {11},
+YEAR = {2010},
+NUMBER = {1},
+PAGES = {538},
+URL = {http://www.biomedcentral.com/1471-2105/11/538},
+DOI = {10.1186/1471-2105-11-538},
+PubMedID = {21034504},
+ISSN = {1471-2105},
+ABSTRACT = {BACKGROUND:Likelihood-based phylogenetic inference is generally considered to be the most reliable classification method for unknown sequences. However, traditional likelihood-based phylogenetic methods cannot be applied to large volumes of short reads from next-generation sequencing due to computational complexity issues and lack of phylogenetic signal. "Phylogenetic placement," where a reference tree is fixed and the unknown query sequences are placed onto the tree via a reference alignment, is a way to bring the inferential power offered by likelihood-based approaches to large data sets.RESULTS:This paper introduces pplacer, a software package for phylogenetic placement and subsequent visualization. The algorithm can place twenty thousand short reads on a reference tree of one thousand taxa per hour per processor, has essentially linear time and memory complexity in the number of reference taxa, and is easy to run in parallel. Pplacer features calculation of the posterior probability of a placement on an edge, which is a statistically rigorous way of quantifying uncertainty on an edge-by-edge basis. It also can inform the user of the positional uncertainty for query sequences by calculating expected distance between placement locations, which is crucial in the estimation of uncertainty with a well-sampled reference tree. The software provides visualizations using branch thickness and color to represent number of placements and their uncertainty. A simulation study using reads generated from 631 COG alignments shows a high level of accuracy for phylogenetic placement over a wide range of alignment diversity, and the power of edge uncertainty estimates to measure placement confidence.CONCLUSIONS:Pplacer enables efficient phylogenetic placement and subsequent visualization, making likelihood-based phylogenetics methodology practical for large collections of reads; it is freely available as source code, binaries, and a web service.},
+}
+
+@Article{Ondov2011,
+AUTHOR = {Ondov, Brian and Bergman, Nicholas and Phillippy, Adam},
+TITLE = {Interactive metagenomic visualization in a Web browser},
+JOURNAL = {BMC Bioinformatics},
+VOLUME = {12},
+YEAR = {2011},
+NUMBER = {1},
+PAGES = {385},
+URL = {http://www.biomedcentral.com/1471-2105/12/385},
+DOI = {10.1186/1471-2105-12-385},
+PubMedID = {21961884},
+ISSN = {1471-2105},
+ABSTRACT = {BACKGROUND:A critical output of metagenomic studies is the estimation of abundances of taxonomical or functional groups. The inherent uncertainty in assignments to these groups makes it important to consider both their hierarchical contexts and their prediction confidence. The current tools for visualizing metagenomic data, however, omit or distort quantitative hierarchical relationships and lack the facility for displaying secondary variables.RESULTS:Here we present Krona, a new visualization tool that allows intuitive exploration of relative abundances and confidences within the complex hierarchies of metagenomic classifications. Krona combines a variant of radial, space-filling displays with parametric coloring and interactive polar-coordinate zooming. The HTML5 and JavaScript implementation enables fully interactive charts that can be explored with any modern Web browser, without the need for installed software or plug-ins. This Web-based architecture also allows each chart to be an independent document, making them easy to share via e-mail or post to a standard Web server. To illustrate Krona's utility, we describe its application to various metagenomic data sets and its compatibility with popular metagenomic analysis tools.CONCLUSIONS:Krona is both a powerful metagenomic visualization tool and a demonstration of the potential of HTML5 for highly accessible bioinformatic visualizations. Its rich and interactive displays facilitate more informed interpretations of metagenomic analyses, while its implementation as a browser-based application makes it extremely portable and easily adopted into existing analysis packages. Both the Krona rendering code and conversion tools are freely available under a BSD open-source license, and available from: http://krona.sourceforge.net webcite.},
+}
+
+@article{Loytynoja2012,
+author = {L\"{o}ytynoja, Ari and Vilella, Albert J. and Goldman, Nick}, 
+title = {Accurate extension of multiple sequence alignments using a phylogeny-aware graph algorithm}, 
+volume = {28}, 
+number = {13}, 
+pages = {1684-1691}, 
+year = {2012}, 
+doi = {10.1093/bioinformatics/bts198}, 
+abstract ={Motivation: Accurate alignment of large numbers of sequences is demanding and the computational burden is further increased by downstream analyses depending on these alignments. With the abundance of sequence data, an integrative approach of adding new sequences to existing alignments without their full re-computation and maintaining the relative matching of existing sequences is an attractive option. Another current challenge is the extension of reference alignments with fragmented sequences, as those coming from next-generation metagenomics, that contain relatively little information. Widely used methods for alignment extension are based on profile representation of reference sequences. These do not incorporate and use phylogenetic information and are affected by the composition of the reference alignment and the phylogenetic positions of query sequences.Results: We have developed a method for phylogeny-aware alignment of partial-order sequence graphs and apply it here to the extension of alignments with new data. Our new method, called PAGAN, infers ancestral sequences for the reference alignment and adds new sequences in their phylogenetic context, either to predefined positions or by finding the best placement for sequences of unknown origin. Unlike profile-based alternatives, PAGAN considers the phylogenetic relatedness of the sequences and is not affected by inclusion of more diverged sequences in the reference set. Our analyses show that PAGAN outperforms alternative methods for alignment extension and provides superior accuracy for both DNA and protein data, the improvement being especially large for fragmented sequences. Moreover, PAGAN-generated alignments of noisy next-generation sequencing (NGS) sequences are accurate enough for the use of RNA-seq data in evolutionary analyses.Availability: PAGAN is written in C++, licensed under the GPL and its source code is available at http://code.google.com/p/pagan-msa.Contact: ari.loytynoja@helsinki.fiSupplementary information: Supplementary data are available at Bioinformatics online.}, 
+URL = {http://bioinformatics.oxfordjournals.org/content/28/13/1684.abstract}, 
+eprint = {http://bioinformatics.oxfordjournals.org/content/28/13/1684.full.pdf+html}, 
+journal = {Bioinformatics} 
+}
+
+@article{Faith1992,
+title = "Conservation evaluation and phylogenetic diversity",
+journal = "Biological Conservation",
+volume = "61",
+number = "1",
+pages = "1 - 10",
+year = "1992",
+note = "",
+issn = "0006-3207",
+doi = "10.1016/0006-3207(92)91201-3",
+url = "http://www.sciencedirect.com/science/article/pii/0006320792912013",
+author = "Daniel P. Faith"
+}
+
+@article{Kembel2011,
+    author = {Kembel, Steven W. AND Eisen, Jonathan A. AND Pollard, Katherine S. AND Green, Jessica L.},
+    journal = {PLoS ONE},
+    publisher = {Public Library of Science},
+    title = {The Phylogenetic Diversity of Metagenomes},
+    year = {2011},
+    month = {08},
+    volume = {6},
+    url = {http://dx.doi.org/10.1371%2Fjournal.pone.0023214},
+    pages = {e23214},
+    abstract = {
+        <p>Phylogenetic diversity—patterns of phylogenetic relatedness among organisms in ecological communities—provides important insights into the mechanisms underlying community assembly. Studies that measure phylogenetic diversity in microbial communities have primarily been limited to a single marker gene approach, using the small subunit of the rRNA gene (SSU-rRNA) to quantify phylogenetic relationships among microbial taxa. In this study, we present an approach for inferring phylogenetic relationships among microorganisms based on the random metagenomic sequencing of DNA fragments. To overcome challenges caused by the fragmentary nature of metagenomic data, we leveraged fully sequenced bacterial genomes as a scaffold to enable inference of phylogenetic relationships among metagenomic sequences from multiple phylogenetic marker gene families. The resulting metagenomic phylogeny can be used to quantify the phylogenetic diversity of microbial communities based on metagenomic data sets. We applied this method to understand patterns of microbial phylogenetic diversity and community assembly along an oceanic depth gradient, and compared our findings to previous studies of this gradient using SSU-rRNA gene and metagenomic analyses. Bacterial phylogenetic diversity was highest at intermediate depths beneath the ocean surface, whereas taxonomic diversity (diversity measured by binning sequences into taxonomically similar groups) showed no relationship with depth. Phylogenetic diversity estimates based on the SSU-rRNA gene and the multi-gene metagenomic phylogeny were broadly concordant, suggesting that our approach will be applicable to other metagenomic data sets for which corresponding SSU-rRNA gene sequences are unavailable. Our approach opens up the possibility of using metagenomic data to study microbial diversity in a phylogenetic context.</p>
+      },
+    number = {8},
+    doi = {10.1371/journal.pone.0023214}
+}        
+
+
+
+@article{DongyingWu2012,
+title={Systematic identification of phylogenetic markers at different taxonomic levels for bacteria and archaea},
+author={Dongying Wu and Guillaume Jospin and Jonathan A Eisen},
+journal={In preparation},
+year=2012
+}
+@article{Matsen2012,
+title={EDGE PRINCIPAL COMPONENTS AND SQUASH
+CLUSTERING: USING THE SPECIAL STRUCTURE OF
+PHYLOGENETIC PLACEMENT DATA FOR SAMPLE
+COMPARISON},
+author={Frederick A. Matsen AND Steven N. Evans},
+journal={Submitted},
+year=2012
+}
 @article{Ghosh2011,
 title={ProViDE: A software tool for accurate estimation of viral diversity in metagenomic samples.},
 author={Ghosh, T.S. and Mohammed, M.H. and Komanduri, D. and Mande, S.S.},
@@ -208,3 +371,169 @@ ISSN = {1471-2164},
 ABSTRACT = {BACKGROUND:Shotgun sequencing of environmental DNA is an essential technique for characterizing uncultivated microbes in situ. However, the taxonomic and functional assignment of the obtained sequence fragments remains a pressing problem.RESULTS:Existing algorithms are largely optimized for speed and coverage; in contrast, we present here a software framework that focuses on a restricted set of informative gene families, using Maximum Likelihood to assign these with the best possible accuracy. This framework ('MLTreeMap'; http://mltreemap.org/ webcite) uses raw nucleotide sequences as input, and includes hand-curated, extensible reference information.CONCLUSIONS:We discuss how we validated our pipeline using complete genomes as well as simulated and actual environmental sequences.},
 }
 
+@article{Caporaso2010,
+  title={QIIME allows analysis of high-throughput community sequencing data},
+  author={Caporaso, J.G. and Kuczynski, J. and Stombaugh, J. and Bittinger, K. and Bushman, F.D. and Costello, E.K. and Fierer, N. and Pena, A.G. and Goodrich, J.K. and Gordon, J.I. and others},
+  journal={Nature methods},
+  volume={7},
+  number={5},
+  pages={335--336},
+  year={2010},
+  publisher={Nature Publishing Group}
+}
+
+@article{Stepanauskas2012,
+  title={Single cell genomics: an individual look at microbes},
+  author={Stepanauskas, R.},
+  journal={Current Opinion in Microbiology},
+  year={2012},
+  publisher={Elsevier}
+}
+
+@inproceedings{Liu2010,
+  title={MetaPhyler: Taxonomic profiling for metagenomic sequences},
+  author={Liu, B. and Gibbons, T. and Ghodsi, M. and Pop, M.},
+  booktitle={Bioinformatics and Biomedicine (BIBM), 2010 IEEE International Conference on},
+  pages={95--100},
+  year={2010},
+  organization={IEEE}
+}
+
+@article{Wu2012,
+  title={Phylogenomic analysis of bacterial and archaeal sequences with AMPHORA2},
+  author={Wu, M. and Scott, A.J.},
+  journal={Bioinformatics},
+  volume={28},
+  number={7},
+  pages={1033--1034},
+  year={2012},
+  publisher={Oxford Univ Press}
+}
+
+@article{Segata2012,
+  title={Metagenomic microbial community profiling using unique clade-specific marker genes},
+  author={Segata, N. and Waldron, L. and Ballarini, A. and Narasimhan, V. and Jousson, O. and Huttenhower, C.},
+  journal={Nature Methods},
+  volume={9},
+  number={8},
+  pages={811--814},
+  year={2012},
+  publisher={Nature Publishing Group}
+}
+
+@article{Sharpton2011,
+  title={PhylOTU: a high-throughput procedure quantifies microbial community diversity and resolves novel taxa from metagenomic data},
+  author={Sharpton, T.J. and Riesenfeld, S.J. and Kembel, S.W. and Ladau, J. and O'Dwyer, J.P. and Green, J.L. and Eisen, J.A. and Pollard, K.S.},
+  journal={PLoS computational biology},
+  volume={7},
+  number={1},
+  pages={e1001061},
+  year={2011},
+  publisher={Public Library of Science}
+}
+
+@article{Karlin1997,
+  title={Compositional biases of bacterial genomes and evolutionary implications.},
+  author={Karlin, S. and Mrazek, J. and Campbell, A.M.},
+  journal={Journal of Bacteriology},
+  volume={179},
+  number={12},
+  pages={3899--3913},
+  year={1997},
+  publisher={Am Soc Microbiol}
+}
+
+@article{Campbell1999,
+  title={Genome signature comparisons among prokaryote, plasmid, and mitochondrial DNA},
+  author={Campbell, A. and Mr{\'a}zek, J. and Karlin, S.},
+  journal={Proceedings of the National Academy of Sciences},
+  volume={96},
+  number={16},
+  pages={9184--9189},
+  year={1999},
+  publisher={National Acad Sciences}
+}
+
+@article{Mchardy2006,
+  title={Accurate phylogenetic classification of variable-length DNA fragments},
+  author={McHardy, A.C. and Mart{\'\i}n, H.G. and Tsirigos, A. and Hugenholtz, P. and Rigoutsos, I.},
+  journal={Nature methods},
+  volume={4},
+  number={1},
+  pages={63--72},
+  year={2006},
+  publisher={Nature Publishing Group}
+}
+
+@article{Dick2009,
+  title={Community-wide analysis of microbial genome sequence signatures},
+  author={Dick, G.J. and Andersson, A.F. and Baker, B.J. and Simmons, S.L. and Thomas, B.C. and Yelton, A.P. and Banfield, J.F. and others},
+  journal={Genome Biol},
+  volume={10},
+  number={8},
+  pages={R85},
+  year={2009}
+}
+
+@article{Wang2007,
+  title={Naive Bayesian classifier for rapid assignment of rRNA sequences into the new bacterial taxonomy},
+  author={Wang, Q. and Garrity, G.M. and Tiedje, J.M. and Cole, J.R.},
+  journal={Applied and environmental microbiology},
+  volume={73},
+  number={16},
+  pages={5261--5267},
+  year={2007},
+  publisher={Am Soc Microbiol}
+}
+
+@article{Lozupone2005,
+  title={UniFrac: a new phylogenetic method for comparing microbial communities},
+  author={Lozupone, C. and Knight, R.},
+  journal={Applied and environmental microbiology},
+  volume={71},
+  number={12},
+  pages={8228--8235},
+  year={2005},
+  publisher={Am Soc Microbiol}
+}
+
+@article{Bik2012,
+  title={Sequencing our way towards understanding global eukaryotic biodiversity},
+  author={Bik, H.M. and Porazinska, D.L. and Creer, S. and Caporaso, J.G. and Knight, R. and Thomas, W.K.},
+  journal={Trends in ecology \& evolution},
+  year={2012},
+  publisher={Elsevier}
+}
+
+@article{Brady2009,
+  title={Phymm and PhymmBL: metagenomic phylogenetic classification with interpolated Markov models},
+  author={Brady, A. and Salzberg, S.L.},
+  journal={Nature methods},
+  volume={6},
+  number={9},
+  pages={673--676},
+  year={2009},
+  publisher={Nature Publishing Group}
+}
+
+@article{Brady2011,
+  title={PhymmBL expanded: confidence scores, custom databases, parallelization and more},
+  author={Brady, A. and Salzberg, S.},
+  journal={Nature methods},
+  volume={8},
+  number={5},
+  pages={367--367},
+  year={2011},
+  publisher={Nature Publishing Group}
+}
+
+@article{Nawrocki2009,
+  title={Infernal 1.0: inference of RNA alignments},
+  author={Nawrocki, E.P. and Kolbe, D.L. and Eddy, S.R.},
+  journal={Bioinformatics},
+  volume={25},
+  number={10},
+  pages={1335--1337},
+  year={2009},
+  publisher={Oxford Univ Press}
+}

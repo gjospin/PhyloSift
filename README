@@ -3,7 +3,7 @@ PhyloSift
 PhyloSift is a suite of software tools to conduct phylogenetic
 analysis of genomes and metagenomes.
 
-Using a reference database of protein sequences, PhyloSift can scan
+Using a reference database of protein and RNA sequences, PhyloSift can scan
 new sequences against that database for homologs and identify the
 phylogenetic relationship of the new sequence to the database
 sequences. During this procedure, high quality alignments of codon and
@@ -17,9 +17,10 @@ Our google group is a place to ask questions, request functionalities,
 get help if you're stuck, and generally interact with our development 
 team at UC Davis.
 
-If you run into a bug during your analysis, please post this as
-an "Issue" in GitHub. These tasks get priority, and we'll fix any 
-broken pipes as soon a possible!
+Please report software errors and bugs as issues in our github tracker:
+https://github.com/gjospin/PhyloSift/issues
+All known bugs are documented in the issue tracker and marked with their
+resolution status.
 
 == Quick Start for the Impatient ==
 
@@ -36,23 +37,11 @@ Or using compressed paired FastQ data from an Illumina instrument:
 
 Results will be stored in a new directory called "results".
 
-See `results/krona.html` for a visual summary of the sequence data.
+See `results/sequences.fasta.html` for a visual summary of the sequence data.
+Run `javaws results/sequences.fasta.jnlp` to browse a phylogeny with branches thickened by 
+relative abundance in the sample.
 
-
-== NEW VERSION ==
-
-PhyloSift has several new features :
-
-* The marker gene database has been expanded to encompass Bacteria,
-  Archaea, Eukarya, and virii.
-* Support for processing of next-gen sequence data including Illumina,
-  454, and others
-* Integration with metAMOS for pre-assembling next-generation datasets
-* Codon based alignment of marker genes
-
-...more to come!
-
-== Installation ==
+== Detailed installation instructions ==
 
 The easy way :
 
@@ -62,7 +51,7 @@ Download the tarball archive from
 
 Navigate to the directory where you downloaded the software and run :
 
-   tar -xvf phylosift_latest.tar.bz2
+   `tar -xvf phylosift_latest.tar.bz2`
 
 PhyloSift is ready for use. Refer to the Usage section.
 
@@ -74,12 +63,12 @@ Download and install Git for your system.
 
 For debian/ubuntu systems, run the following command
 
-   sudo apt-get install git
+   `sudo apt-get install git`
 
 To check out the PhyloSift development repository, run the following
 command :
 
-   git clone git://github.com/gjospin/PhyloSift.git
+   `git clone git://github.com/gjospin/PhyloSift.git`
 
 It may also be necessary to install several support packages,
 including BioPerl, Bio::Phylo, and others. BioPerl offers bioperl-live from github,
@@ -88,9 +77,9 @@ we suggest installing other dependencies using cpan.
 == Dependency software ==
 
 PhyloSift depends on a number of external software modules, including BioPerl, Bio::Phylo, LWP::Simple, and others. 
-We make every attempt to package these up with phylosift whenever possible but every operating system is unique and there may be system-specific requirements that are not met. If you see messages from the perl interpreter suggesting that a module is missing, we suggest using the cpan system to install the missing dependency.
+We have attempted to package these dependencies with phylosift but every operating system is unique and there may be system-specific requirements that are not met. If you see messages from the perl interpreter suggesting that a module is missing, we suggest using the cpan system to install the missing dependency.
 
-To run build_marker mode, the installation of taxit and its dependent python modules is required. 
+To run build_marker mode, the installation of taxit and its dependent python modules (e.g. SQLAlchemy) is required. 
 taxit is available from: https://github.com/fhcrc/taxtastic
 
 == Updating PhyloSift ==
@@ -108,41 +97,35 @@ following command :
 PhyloSift currently accepts input data in the following file formats:
 
 * FASTA
-* paired FASTA (specify paired data by using the -paired  flag)
-* interleaved paired FASTA (specify paired data by using the -paired  flag)
+* paired FASTA (specify paired data by using the --paired  flag)
+* interleaved paired FASTA (specify paired data by using the --paired  flag)
 * FASTQ (same as FASTA but with quality scores; this file type is the standard output from Illumina platforms)
 * interleaved FASTQ (same as FASTA but with quality scores)
 * .gz (any of the above file types compressed using gzip)
-* .bz (any of the above file types compressed using bzip)
+* .bz2 (any of the above file types compressed using bzip2)
 
 PhyloSift can be executed by running the following command:
 
 $ phylosift <Mode> <options> <sequence_file>
-
-   sequence_file needs to be in an accepted format
 
 $ phylosift <Mode> <options> --paired <sequence_file_1> <sequence_file_2>
 
    sequence_file_1 and _2 must contain paired sequences
 
 
-Creating a PhyloSift Marker (Does not allow for taxonomic summaries,
-only searching, aligning and placement steps) :
+Creating a PhyloSift marker :
 
-$ phylosift build_marker <alignment_file> <PD pruning threshold>
+Example 1: `phylosift build_marker -f --alignment=test.aln --reps_pd=0.01`
 
-Example 1:  $ phylosift build_marker test.aln 0.01
+Example 2: `phylosift build_marker -f  --alignment=test.aln --taxonmap=test.taxonmap`
 
-Example 2:  $ phylosift build_marker -f test.aln 0.01
+The new marker will be added directly to the phylosift marker database.
 
-WARNING : This step does not automatically add the new marker to the
-search indices. You will need to rerun the indexing step.
+NOTE : This step does not automatically add the new marker to the
+search databases. You will need to run `phylosift index` after building a marker.
 
-The marker directory will be added directly to the directory in which
-PhyloSift looks for markers when running.
-
-If a marker with the same name exists, the marker building process
-will be halted unless the -f option is used.
+If a marker with the same name already exists, the marker build process
+will be halted unless the -f or --force option is used.
 
 The marker name will be the same as the alignment given minus the
 trailing suffix. If the user wants to build a marker from the file
@@ -154,148 +137,66 @@ trailing suffix. If the user wants to build a marker from the file
 This step is run automatically when markers are downloaded but if you
 add new markers, you will need to run this step manually.
 
-   $ phylosift index
+`phylosift index`
 
 
 == Modes ==
 
-Mode : Only execute a specific step in the pipeline
 
-  all          : execute all the following steps in that order
-  search       : only execute the database searches + write candidate 
-                 files
-  align        : hmmsearch + hmmalign + trims + coverage filters
-  placer       : run pplacer on the results from the align step
-  summary      : run the taxonomy assignment steps
-  index        : indexes the various databases needed for Rapsearch, 
-                 Bowtie and Blast
-  build_marker : creates a reference package from a multiple alignment
-                 file
-  sim          : Generates simulated reads using Grinder from a set of genomes, top PD contribution and randomly picked
-                 from the concatenated tree for the marker DB
-                 Need to have the genomes downloaded to a directory. This feature should be reserved for in house usage.
-                 Generates paired ends reads in fastq format, 454 reads in fasta format and paired end reads in fasta format.
-                 Generates 2 files containing the taxon IDs for the genomes used in the simulations
-                 
-== Options ==
+      commands: list the application's commands
+          help: display a command's help screen
 
-Options Available at this time : 
-
-   -h, --help           Prints the usage section of the README
-
-   -f                   Overrides a previous run of the input data
-                        by Phylosift, if applicable
-
-   --custom=<file>      Reads a custom marker list from a file 
-                        otherwise use all the markers from the 
-                        markers directory; marker names shouldn't
-                        contain '_'
-
-   --threaded=<Number>  Runs Blast and Hmmer using the number of
-                        processors sepcified Runs 1 Pplacer per
-                        processor specified (DEFAULT : 1)
-
-   --extended           Uses the extended set of markers
-
-   --clean              Cleans the temporary files created by 
-                        Phylosift (NOT YET IMPLEMENTED)
-
-   --paired             Looks for 2 input files (paired end 
-                        sequencing) in FastQ format.  Reversing 
-                        the sequences for the second file listed 
-                        and appending to the corresponding pair 
-                        from the first file listed.
-
-   --continue           Enables the pipeline to continue to 
-                        subsequent steps when not using the 'all' 
-                        mode
-
-   --reverse		If the submitted sequences were Nucleotides, 
-                        the program prints out an alignment for all 
-                        the markers in DNA space in addition to the 
-                        one in Protein space.
-
-   --isolate            Use this mode if you are running data from 
-                        an Isolate genome
-
-   --simple             Generates a simple taxonomic summary of the 
-                        data only; no Krona output
-
-   --besthit            When there are multiple hits to the same read, 
-                        this option will keep only the best hit for that
-                        read
-
-   --updated            Use the set of updated markers with newly
-                        sequenced genomes instead of the stock 
-                        markers
-
-   --marker_url=<url>   Phylosift will use markers available from the 
-                        url provided
-
-   --coverage=<file>    Provides a contig/scaffold coverage file to Phylosift
-
-   --config=<file>      Provides a custom configuration file to Phylosift
-                       
-   --output=<directory> Specifies an output directory instead of using
-                        PS's default
-
-   --debug              Prints debugging messages
-
+         align: align homologous sequences identified by 'search'
+           all: run all steps for phylogenetic analysis of genomic or metagenomic sequence data
+     benchmark: measure taxonomic prediction accuracy on a simulated dataset
+  build_marker: add a new marker the reference database based on a sequence alignment
+      dbupdate: update the phylosift database with new genomic data
+         index: index a phylosift database after changes have been made
+          name: Replaces phylosift's own sequence IDs with the original IDs found in the input file header
+         place: place aligned reads onto a reference phylogeny
+        search: search input sequence for homology to reference gene database
+      simulate: simulate sequencing from a metagenomic sample
+     summarize: translate a collection of phylogenetic placements into a taxonomic summary
+  test_lineage: conduct a statistical test (a Bayes factor) for the presence of a particular lineage in a sample
+                    
 == Requirements ==
 
-A 64bit operating system is required as the binaries packaged with the
-PhyloSift scripts were compiled using such OS. PhyloSift will NOT work
+PhyloSift requires a 64-bit operating system. PhyloSift will NOT work
 on a 32bit operating system. PhyloSift depends on a great many other
 open source software packages. The precompiled version linked above
 bundles most of the dependencies into a single downloadable package.
 
-Default Markers used by PhyloSift
-=========================================
-PMPROK00003  PMPROK00025  PMPROK00048  PMPROK00064  PMPROK00081  PMPROK00106
-PMPROK00014  PMPROK00028  PMPROK00050  PMPROK00067  PMPROK00086  PMPROK00123
-PMPROK00015  PMPROK00029  PMPROK00051  PMPROK00068  PMPROK00087  PMPROK00126
-PMPROK00019  PMPROK00031  PMPROK00052  PMPROK00069  PMPROK00092
-PMPROK00020  PMPROK00034  PMPROK00053  PMPROK00071  PMPROK00093
-PMPROK00022  PMPROK00041  PMPROK00054  PMPROK00074  PMPROK00094
-PMPROK00024  PMPROK00047  PMPROK00060  PMPROK00075  PMPROK00097
-
-This data has not yet been published.
-
 == Results ==
 
-All results are generated within the PhyloSift directory in the the
-Amph_temp/<filename>/ directory.
+Results are saved to the path specified with the --output option.
+If no path is given, the default location for results is `PS_temp/<filename>/`.
 
-    blastDir : All files related to the search step.  
+*  blastDir : All files related to the search step.  
 
-	    *.candidate      Fasta format of the candidate sequences in
+     *  *.candidate.aa.*      Fasta format of the candidate sequences in
                         Protein space for each marker 
 
-       *.candidate.ffn  Fasta format of the candidate sequences in DNA
+     *  *.candidate.ffn.*  Fasta format of the candidate sequences in DNA
                         space for each marker (option activated)
 
-    alignDir : All files related to the alignment and masking steps.
+*  alignDir : All files related to the alignment and masking steps.
 
-    	 *.aln_hmmer3.fasta  hmmer3 generated alignment for the 
+     *  *.newCandidate.*   Fasta file of the candidate sequences 
+                           copied from the blastDir
+     *  *.fasta            hmmer3 generated alignment for the 
                            candidate sequences in fasta format
-	    *.aln_hmmer3.trim   Trimmed version of the previous file
-	    *.hmmsearch.out 	   Hmmersearch output of the candidate 
-                           sequences Vs the markers HMM profile
-       *.hmmsearch.tblout  Tabular version of the hmmsearch.out 
-                           file
-       *.newCandidate	   Fasta file of the candidate sequences 
-                           after the hmmsearch filter
-       *.seed.stock 	      stockholm format of the reference 
-                           sequences alignment
-       *.stock.hmm	      HMM profile
+     *  *.codon.*.fasta    reverse-translated alignment of DNA
+     *  *.unmasked 	       The unmasked sequence of homologs that aligned
+                           successfully and passed all filter thresholds 
 
-    treeDir : All files related to the tree placements of the
-              candidate sequences by Pplacer.
+*  treeDir : Files containing placements of sequences onto reference
+              phylogenetic trees
 
-       *.jplace            Placement file for the newCandidate sequences
+     *  *.jplace            Phylogenetic placements of the aligned sequences
+     *  *.codon.*.jplace    Phylogenetic placements for codon alignments
 
-    taxasummary.txt        Probability mass over taxa present in the sample,
-                           tab-delimited text
+*  taxasummary.txt        Probability mass over taxa present in the sample,
+                          tab-delimited text
 
 		Column 1 -- NCBI Taxon ID
 		Column 2 -- Taxonomic rank (genus, species, phylum, etc)
@@ -303,24 +204,6 @@ Amph_temp/<filename>/ directory.
 		Column 4 -- Read/sequence probability sum placed at this taxon
                   The values in this column can be normalized to sum to 1,
                   the result will be a rank-abundance distribution
-
-    taxaconfidence.txt     Quantiles over the probability distribution for
-                           number of reads at a taxonomic level under a
-                           multinomial model of read sampling from taxa 
-                           during the sequencing process.
-		
-      Column 1 -- NCBI Taxon ID
-      Column 2 -- Taxonomic rank (genus, species, phylum, etc)
-      Column 3 -- Name
-      Column 4 -- Minimum number of reads
-      Column 5 -- Number of reads at 10th percentile
-      Column 6 -- Number of reads at 25th percentile
-      Column 7 -- Median number of reads
-      Column 8 -- Number of reads at 75th percentile
-      Column 9 -- Number of reads at 90th percentile
-      Column 10 -- Maximum number of reads
-
-
 
 == SUPPORT AND DOCUMENTATION ==
 
@@ -350,13 +233,13 @@ These components are (c) their respective developers and are redistributed with 
 
 Please see the following web sites for licensing details and source code for these other components:
 * pplacer -- http://matsen.fhcrc.org/pplacer/
-* rapsearch2 -- http://omics.informatics.indiana.edu/mg/RAPSearch2/
 * HMMER 3 -- http://hmmer.janelia.org/
 * LAST -- http://last.cbrc.jp
 * pda -- http://www.cibiv.at/software/pda/
-* bowtie2 -- http://bowtie-bio.sourceforge.net/bowtie2/
 * FastTree -- http://www.microbesonline.org/fasttree/
 * infernal -- http://infernal.janelia.org/
+
+The above list is not exhaustive.
 
 == CONTACT INFORMATION ==
 

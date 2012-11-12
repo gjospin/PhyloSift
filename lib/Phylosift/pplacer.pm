@@ -7,9 +7,11 @@ use Bio::AlignIO;
 use Phylosift::Phylosift;
 use Phylosift::Utilities qw(:all);
 use Phylosift::Summarize;
+use Phylosift::Settings;
 use Bio::Phylo::IO qw(parse unparse);
 use Bio::AlignIO;
 use File::Basename;
+use Phylosift::HTMLReport;
 use JSON;
 use Carp;
 
@@ -22,7 +24,9 @@ Phylosift::pplacer - place aligned reads onto a phylogenetic tree with pplacer
 Version 0.01
 
 =cut
+
 our $VERSION = '0.01';
+set_default_values();
 
 =head1 SYNOPSIS
 
@@ -48,296 +52,383 @@ sub pplacer {
 	my $self    = $args{self} || miss("self");
 	my $markRef = $args{marker_reference} || miss("marker_reference");
 	my $chunk   = $args{chunk};
-	
 	directoryPrepAndClean( self => $self );
+	my $start_place_time = start_timer(name => "start_place_$chunk", silent => 1);
+	my $completed_chunk = Phylosift::Utilities::has_chunk_completed( self => $self, chunk => $chunk, step => "Place" );
+	unless ($completed_chunk){
 	# if we have a coverage map then weight the placements
 	my $covref;
-	if ( defined( $self->{"coverage"} ) ) {
-		$covref = Phylosift::Summarize::read_coverage( file => $self->{"coverage"} );
+	if ( defined($Phylosift::Settings::coverage) && $Phylosift::Settings::coverage ne "" ) {
+		$covref = Phylosift::Summarize::read_coverage( file => $Phylosift::Settings::coverage );
 	}
-	unshift(@{$markRef},'concat'); #adds the concatenation to the list of markers
-	foreach my $marker ( @{$markRef} ) {
+	unshift( @{$markRef}, 'concat' );    #adds the concatenation to the list of markers
+	my $long_rna_switch = -1;
+	my $short_rna_jplace;
+	for ( my $mI = 0; $mI < @{$markRef}; $mI++ ) {
+		my $marker = @$markRef[$mI];
+
 		# the PMPROK markers are contained in the concat above
-		next if($marker =~ /PMPROK/ && $self->{"updated"});
-		my $read_alignment_file = $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta( marker => Phylosift::Utilities::get_marker_basename(marker=>$marker), chunk => $chunk );
-		next unless -e $read_alignment_file && -s $read_alignment_file > 0;
-		my $options = $marker eq "concat" ? "--groups 15" : "";
-		$options .= " --mmap-file abracadabra " if ($marker =~ /18s/);  # FIXME: this should be based on the number of seqs in the tree.
-		$options .= " --mmap-file abracadabra " if ($marker =~ /16s/ || $marker eq "concat");
-		my $place_file = place_reads(self=>$self, marker=>$marker, dna=>0, chunk => $chunk, reads=>$read_alignment_file, options=>$options);
-		unlink("abracadabra") if $options =~ /abracadabra/;	# remove the mmap file created by pplacer
+		next if ( $marker =~ /PMPROK/  && $Phylosift::Settings::updated );
+		next if ( $marker =~ /DNGNGWU/ && $Phylosift::Settings::updated );
+
+		# RNA markers have short and long types
+		my $protein = Phylosift::Utilities::is_protein_marker( marker => $marker );
+		$long_rna_switch = ( $long_rna_switch + 1 ) % 2 unless $protein;
+		my $mbname = Phylosift::Utilities::get_marker_basename( marker => $marker );
+		my $short_rna = $protein ? 0 : !$long_rna_switch;
+		my $long_rna  = $protein ? 0 : $long_rna_switch;
+		$mI-- if ($short_rna);    # need to hit RNA markers twice: short then long
+		my $read_alignment_file =
+		  $self->{"alignDir"}."/".Phylosift::Utilities::get_aligner_output_fasta( marker => $mbname, chunk => $chunk, long => $long_rna, short => $short_rna );
+		my $place_file = "";
+
+		if ( -e $read_alignment_file && -s $read_alignment_file > 0 ) {
+			$place_file = place_reads( self => $self, marker => $marker, dna => 0, chunk => $chunk, reads => $read_alignment_file, short_rna => $short_rna );
+		}
+		$short_rna_jplace = $place_file if ($short_rna);
+
+		# merge output from short and long RNA
+		if ( $long_rna == 1 ) {
+			my $dest_jplace = Phylosift::Utilities::get_aligner_output_fasta( marker => $mbname, chunk => $chunk );
+			$dest_jplace = $self->{"treeDir"}."/".basename( $dest_jplace, ".fasta" );
+			$dest_jplace .= ".jplace";
+			my $mver;
+			$mver = $short_rna_jplace if ( -e $short_rna_jplace  && !-e $place_file );
+			$mver = $place_file       if ( !-e $short_rna_jplace && -e $place_file );
+			`mv $mver $dest_jplace` if defined $mver;
+			if ( -e $short_rna_jplace && -e $place_file ) {
+
+				# both short and long RNA seqs, need to merge.
+				my $merge_cl = "$Phylosift::Settings::guppy merge -o $dest_jplace $place_file $short_rna_jplace";
+				`$merge_cl`;
+				unlink($place_file);
+				unlink($short_rna_jplace);
+			}
+		}
 	}
+	}
+	my $end_place_time = start_timer(name=>"end_place_$chunk", silent => 1);
+	my $RUNINFO = ps_open( ">>".Phylosift::Utilities::get_run_info_file( self => $self ) );
+	print $RUNINFO "Chunk $chunk Place  completed\t$start_place_time\t$end_place_time\t".end_timer(name => "start_place_$chunk", silent => 1)."\n" unless $completed_chunk;
+	close($RUNINFO);
 	if ( defined($chunk) && $self->{"mode"} eq "all" ) {
-		Phylosift::Summarize::summarize( self => $self, marker_reference => $markRef , chunk=>$chunk  );
+		Phylosift::Utilities::end_timer( name => "runPplacer" );
+		Phylosift::Utilities::start_timer( name => "runSummarize" );
+		Phylosift::Summarize::summarize( self => $self, marker_reference => $markRef, chunk => $chunk );
 	}
 }
 
-sub merge_chunk {
+=head2 set_default_values
+
+set_default_values for all the parameters in this module
+
+=cut
+
+sub set_default_values {
 	my %args = @_;
-	my $chunk = $args{chunk};
+	my $self = $args{self};
+	Phylosift::Settings::set_default( parameter => \$Phylosift::Settings::pplacer_groups,       value => 15 );
+	Phylosift::Settings::set_default( parameter => \$Phylosift::Settings::pplacer_verbosity,    value => "0" );
+	Phylosift::Settings::set_default( parameter => \$Phylosift::Settings::max_submarker_dist,   value => 0.25 );
+	Phylosift::Settings::set_default( parameter => \$Phylosift::Settings::pendant_branch_limit, value => 0.6 );
+}
+
+sub merge_chunk {
+	my %args       = @_;
+	my $chunk      = $args{chunk};
 	my $place_file = $args{place_file};
+
 	# make sure there's actually work to be done
 	return unless defined($chunk) && defined($place_file);
 	my $unchunked_place = $place_file;
 	$unchunked_place =~ s/\.\d+\.jplace/.jplace/g;
-	if(-e $unchunked_place){
+	if ( -e $unchunked_place ) {
+
 		# merge
-		my $merge_cl = "$Phylosift::Utilities::guppy merge -o $unchunked_place $place_file $unchunked_place";
+		my $merge_cl = "$Phylosift::Settings::guppy merge -o $unchunked_place $place_file $unchunked_place";
 		debug("Merging jplaces with $merge_cl\n");
 		system($merge_cl);
-	}else{
+	} else {
+
 		# move
 		`mv $place_file $unchunked_place`;
 	}
 }
 
-my %subgroup_dist;
-sub get_submarker_distance {
+my %tip_dist;
+
+sub get_tip_distance {
 	my %args = @_;
 	my $name = $args{name};
 	my $edge = $args{edge};
-	return $subgroup_dist{$edge} if defined($edge);
-	$edge = $1 if $name=~ /\{(\d+)\}/g;
-	return $subgroup_dist{$edge};
+	return $tip_dist{$edge} if defined($edge);
+	$edge = $1 if $name =~ /\{(\d+)\}/g;
+	return $tip_dist{$edge};
 }
 
-sub set_submarker_distance {
-	my %args  = @_;
-	my $name  = $args{name} || miss("name");
-	my $dist  = $args{dist};
-	my $group = $args{group};
-	my $edge  = $name;
-	$edge = $1 if $name=~ /\{(\d+)\}/g;
-	$subgroup_dist{$edge} = [$dist, $group];
+sub set_tip_distance {
+	my %args = @_;
+	my $name = $args{name} || miss("name");
+	my $dist = $args{dist};
+	my $edge = $name;
+	$edge = $1 if $name =~ /\{(\d+)\}/g;
+	$tip_dist{$edge} = $dist;
 }
 
-my %submarker_map;
-sub load_submarkers {
-	my %args  = @_;
-	return if %submarker_map;
-	return unless -e "$Phylosift::Utilities::marker_dir/submarkers.txt";
-	my $SUBS = ps_open("$Phylosift::Utilities::marker_dir/submarkers.txt");
-	while(my $line = <$SUBS>){
-		chomp $line;
-		my @data = split(/\t/,$line);
-		$submarker_map{$data[0]}=$data[3];
-	}
-}
-
-sub get_submarker {
-	my %args  = @_;
-	my $name  = $args{name} || miss("name");
-	$name =~ s/\{\d+\}//g;
-	return $submarker_map{$name};
-}
-
-sub find_submarker_reads {
+sub find_codon_reads {
 	my %args       = @_;
 	my $place_file = $args{place_file} || miss("place_file");
 
-	debug "submarker read jplace\n";
+	debug "codon read jplace\n";
+
 	# read the jplace
-	my $JPLACEFILE = ps_open( $place_file );
-	my @treedata = <$JPLACEFILE>;	
+	my $JPLACEFILE = ps_open($place_file);
+	my @treedata   = <$JPLACEFILE>;
 	close $JPLACEFILE;
-	my $json_data = decode_json( join("", @treedata) );
-	
+	my $json_data = decode_json( join( "", @treedata ) );
+
 	# parse the tree
 	my $tree_string = $json_data->{tree};
 	$tree_string =~ s/^\s+\"//g;
 	$tree_string =~ s/\"\,$//g;
+
 	# move the edge numbers into the node label position
 	$tree_string =~ s/:(.+?)\{(\d+?)\}/\{$2\}:$1/g;
 	my $tree = Bio::Phylo::IO->parse(
 									  '-string' => $tree_string,
 									  '-format' => 'newick',
 	)->first;
-	
-	# load the submarkers for this marker
-	load_submarkers();
-	
-	# identify the nearest submarker for each node
-	# this is done by depth first search. 
-	# at each post-order step the shortest distance to a subgroup member is updated
+
+	# identify the distance to the tip for each node
+	# this is done by depth first search.
 	my $name_dist_map;
 	$tree->visit_depth_first(
 		-post => sub {
 			my $node = shift;
 			my $name = $node->get_name;
-			# is this one in a subgroup? 
-			# if so set our subgroup distance to 0
-			my $subgroup = get_submarker(name=>$name);
-			if(defined($subgroup)){
-				set_submarker_distance(name=>$name, dist=>0, group=>$subgroup);
-			}else{
+			if ( @{ $node->get_children } == 0 ) {
+				set_tip_distance( name => $name, dist => 0 );
+			} else {
 				my $min_dist = 999999;
-				foreach my $child( @{ $node->get_children } ){
-					my $subinfo = get_submarker_distance(name=>$child->get_name);
-					$subinfo->[0] += $child->get_branch_length;
-					if( $subinfo->[0] < $min_dist ){
-						$min_dist = $subinfo->[0];
-						$subgroup = $subinfo->[1];
-					}
+				foreach my $child ( @{ $node->get_children } ) {
+					my $subinfo = get_tip_distance( name => $child->get_name );
+					$subinfo += $child->get_branch_length;
+					$min_dist = $subinfo if ( $subinfo < $min_dist );
 				}
-				set_submarker_distance(name=>$name, dist=>$min_dist, group=>$subgroup);
+				set_tip_distance( name => $name, dist => $min_dist );
 			}
 		}
 	);
-	
-	# submarker criteria:
-	# send a read to a submarker if at least X % of its placement probability mass is within distance Y of submarker members
-	# 
-	my $max_submarker_dist = 0.15;	# rough guesstimate -- could use tuning
-	my $min_submarker_prob = 0.35;	# rough guesstimate
-	
-	# for each placed read, find its probability mass near submarkers and assign to a submarker
-	# if appropriate
-	my %submarker_reads;
-	for(my $i=0; $i< @{$json_data->{placements}}; $i++){
+
+	# for each placed read, find out whether it's close enough to tree tips to do a codon placement
+	my %codon_reads;
+	for ( my $i = 0; $i < @{ $json_data->{placements} }; $i++ ) {
 		my $read = $json_data->{placements}->[$i];
 		my %sub_prob;
-		for( my $j=0; $j < @{$read->{p}}; $j++){
-			my $edge = $read->{p}->[$j]->[0];
-			my $distal = $read->{p}->[$j]->[3];
+		my $avg_dist = 0;
+		for ( my $j = 0; $j < @{ $read->{p} }; $j++ ) {
+			my $edge    = $read->{p}->[$j]->[0];
+			my $distal  = $read->{p}->[$j]->[3];
 			my $pendant = $read->{p}->[$j]->[4];
-			my $sd = get_submarker_distance( edge=>$edge );
-			if($sd->[0] + $pendant < $max_submarker_dist){
-				$sub_prob{$sd->[1]} = 0 unless defined($sub_prob{$sd->[1]});
-				$sub_prob{$sd->[1]} += $sd->[0] + $pendant;
-			}
+			my $lwr     = $read->{p}->[$j]->[1];
+
+			my $td = get_tip_distance( edge => $edge );
+			$avg_dist += ( $td + $pendant + $distal ) * $lwr;
 		}
-		my $submarker;
-		foreach my $g(keys(%sub_prob)){
-			$submarker = $g if ($sub_prob{$g} > $min_submarker_prob);
-		}
-		next unless defined($submarker);
+
+		# codon criteria:
+		# send a read to a codon alignment if it is within distance Y of the tips of the tree
+		#
+		next unless $avg_dist < $Phylosift::Settings::max_submarker_dist;
+
 		# remove this one from the .jplace
-		splice @{$json_data->{placements}}, $i--, 1;
+		#		splice @{$json_data->{placements}}, $i--, 1;
 
-		# add it to the list of reads belonging to submarkers
-		for(my $k=0; $k < @{$read->{nm}}; $k++){
+		# add it to the list of reads belonging to codon alignments
+		for ( my $k = 0; $k < @{ $read->{nm} }; $k++ ) {
 			my $qname = $read->{nm}->[$k]->[0];
-			$submarker_reads{$qname} = $submarker;
+			$codon_reads{$qname} = 1;
 		}
-	}	
+	}
 
-	# write a new jplace without the submarker reads	
-	$JPLACEFILE = ps_open( ">".$place_file );
-	print $JPLACEFILE encode_json( $json_data );
-	close $JPLACEFILE;
-	
-	return \%submarker_reads;
+	# write a new jplace without the codon reads
+	#	$JPLACEFILE = ps_open( ">".$place_file );
+	#	print $JPLACEFILE encode_json( $json_data );
+	#	close $JPLACEFILE;
+
+	return \%codon_reads;
 }
 
-sub make_submarker_placements{
+sub make_codon_placements {
 	my %args       = @_;
-	my $self = $args{self} || miss("self");
-	my $marker = $args{marker} || miss("marker");
+	my $self       = $args{self} || miss("self");
+	my $marker     = $args{marker} || miss("marker");
 	my $place_file = $args{place_file} || miss("place_file");
-	my $chunk = $args{chunk};
+	my $chunk      = $args{chunk};
 
-	# determine which reads go to which submarker
-	my $subreads = find_submarker_reads(place_file=>$place_file);
-	
+	debug "Looking for codon placeable reads\n";
+
+	# determine which reads go to codon alignment
+	my $subreads = find_codon_reads( place_file => $place_file );
+	debug "Found ".scalar( keys( %{$subreads} ) )." codon placeable reads\n";
+
 	# convert to groups
 	my %groups;
-	foreach my $read (keys %$subreads){
-		push( @{$groups{$subreads->{$read}}}, $read );
+	foreach my $read ( keys %$subreads ) {
+		push( @{ $groups{ $subreads->{$read} } }, $read );
 	}
-	
+
 	# filter the codon alignment into subalignments
-	my $codon_file = $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta( marker => $marker, dna=>1, chunk => $chunk );
-	debug "Trying to read from $codon_file\n";
-	my $alnio = Bio::AlignIO->new(-file => $codon_file );
+	my $codon_file = $self->{"alignDir"}."/".Phylosift::Utilities::get_aligner_output_fasta( marker => $marker, dna => 1, chunk => $chunk );
+	my $alnio = Bio::AlignIO->new( -file => $codon_file );
 	my $codon_aln = $alnio->next_aln;
-	foreach my $group( keys(%groups)){
-		my $sub_file = $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta( marker => $marker, sub_marker=>$group, dna=>1, chunk => $chunk );
+	foreach my $group ( keys(%groups) ) {
+		my $sub_file = $self->{"alignDir"}."/".Phylosift::Utilities::get_aligner_output_fasta( marker => $marker, dna => 1, chunk => $chunk, sub_marker => 1 );
 		my $ALNOUT = ps_open(">$sub_file");
-		debug scalar(@{$groups{$group}})." reads in group $group\n";
-		debug "reads are ".join(" ",@{$groups{$group}})."\n";
-		foreach my $id( @{$groups{$group}}){
+		debug scalar( @{ $groups{$group} } )." reads in group $group added to $sub_file\n";
+		foreach my $id ( @{ $groups{$group} } ) {
 			foreach my $seq ( $codon_aln->each_seq_with_id($id) ) {
 				print $ALNOUT ">$id\n".$seq->seq."\n";
 			}
 		}
 		close $ALNOUT;
 	}
-	
-	# now place reads on each of these subalignments
-	foreach my $group( keys(%groups)){
-		my $group_aln = $self->{"alignDir"} . "/" . Phylosift::Utilities::get_aligner_output_fasta( marker => $marker, sub_marker=>$group, dna=>1, chunk => $chunk );
-		place_reads(self=>$self, reads=>$group_aln, marker=>$marker, dna=>1, sub_marker=>$group, chunk => $chunk);
-	}
+
+	# now place reads on each of the subalignments
+	my $group_aln = $self->{"alignDir"}."/".Phylosift::Utilities::get_aligner_output_fasta( marker => $marker, dna => 1, chunk => $chunk, sub_marker => 1 );
+	place_reads( self => $self, reads => $group_aln, marker => $marker, dna => 1, chunk => $chunk );
 }
 
-sub place_reads{
-	my %args = @_;
-	my $self = $args{self} || miss("self");
-	my $dna = $args{dna};
-	my $marker = $args{marker} || miss("marker");
-	my $reads = $args{reads} || miss("reads");
-	my $covref = $args{coverage};
-	my $submarker = $args{sub_marker};
-	my $chunk = $args{chunk};
-	my $options = $args{options} || "";
-	my $marker_package = Phylosift::Utilities::get_marker_package( self => $self, marker => $marker, dna => $dna, sub_marker=>$submarker );
-	unless(-d $marker_package ){
+sub place_reads {
+	my %args           = @_;
+	my $self           = $args{self} || miss("self");
+	my $dna            = $args{dna};
+	my $marker         = $args{marker} || miss("marker");
+	my $reads          = $args{reads} || miss("reads");
+	my $covref         = $args{coverage};
+	my $chunk          = $args{chunk};
+	my $short_rna      = $args{short_rna} || 0;
+	my $marker_package = Phylosift::Utilities::get_marker_package( self => $self, marker => $marker, dna => $dna );
+
+	unless ( -d $marker_package ) {
+
 		# try not updated
-		if($self->{"updated"}){
-			$self->{"updated"}=0;
-			$marker_package = Phylosift::Utilities::get_marker_package( self => $self, marker => $marker, dna => $dna, sub_marker=>$submarker );
-			$self->{"updated"}=1;
+		if ($Phylosift::Settings::updated) {
+			$Phylosift::Settings::updated = 0;
+			$marker_package               = Phylosift::Utilities::get_marker_package( self => $self, marker => $marker, dna => $dna );
+			$Phylosift::Settings::updated = 1;
 		}
-		unless(-d $marker_package ){
+		unless ( -d $marker_package ) {
 			croak("Marker: $marker\nPackage: $marker_package\nPackage does not exist\nPlacement without a marker package is no longer supported");
 		}
 	}
-	my $pp = "cd $self->{\"treeDir\"};$Phylosift::Utilities::pplacer $options --verbosity 0 -j ".$self->{"threads"}." -c $marker_package \"$reads\"";
+
+	my $options = $marker eq "concat" ? "--groups $Phylosift::Settings::pplacer_groups" : "";
+	$options .= " --mmap-file abracadabra "
+	  if ( ( $marker =~ /18s/ || $marker =~ /16s/ || $marker eq "concat" ) && Phylosift::Utilities::get_available_memory() < 8000000 );
+	$options .= " -p " if ($Phylosift::Settings::bayes);                                         # calc posterior probabilities. this is slow.
+
+	$marker_package .= ".short" if $short_rna;
+	my $jplace = $self->{"treeDir"}."/".basename( $reads, ".fasta" ).".jplace";
+	my $pp =
+	   "$Phylosift::Settings::pplacer $options -o $jplace --verbosity $Phylosift::Settings::pplacer_verbosity -j "
+	  .$Phylosift::Settings::threads
+	  ." -c $marker_package \"$reads\"";
 	debug "Running $pp\n";
 	system($pp);
-	
-	my $jplace = basename($reads, ".fasta").".jplace";
+	unlink("$self->{\"treeDir\"}/abracadabra") if $options =~ /abracadabra/;                     # remove the mmap file created by pplacer
 
-	`mv "$jplace" "$self->{"treeDir"}"` if ( -e $jplace );
-	return unless -e $self->{"treeDir"} . "/$jplace";
+	debug "no output in $jplace\n" unless -e $jplace;
+	return                         unless -e $jplace;
 
-	# if we're on the concat marker, create a single jplace with all reads for use with multisample metrics 
-	if($marker eq "concat"){
-		my $sample_jplace = $self->{"fileDir"}."/".$self->{"fileName"}.".jplace";
-		my $sample_jplace_naming = $self->{"fileDir"}."/".$self->{"fileName"}.".naming.jplace";
-		my $markermapfile = Phylosift::Utilities::get_marker_taxon_map(self=>$self, marker=>$marker, dna=>$dna, sub_marker=>$submarker);
-		return unless -e $markermapfile;	# can't summarize if there ain't no mappin'!
-		my $taxonmap = Phylosift::Summarize::read_taxonmap(file=>$markermapfile);
-		name_taxa_in_jplace( self => $self, input => $self->{"treeDir"} . "/$jplace", output => $sample_jplace_naming, taxonmap=>$taxonmap );
-		`$Phylosift::Utilities::guppy merge -o $sample_jplace $sample_jplace_naming $sample_jplace` if -f $sample_jplace;
+	# remove placements on very long branches, they are unreliable due to LBA artifacts.
+	filter_placements( place_file => $jplace );
+
+	# if we're on the concat marker, create a single jplace with all reads for use with multisample metrics
+	if ( $marker eq "concat" && !$dna ) {
+		my $sample_jplace        = $Phylosift::Settings::file_dir."/".$self->{"fileName"}.".jplace";
+		my $sample_jplace_naming = $Phylosift::Settings::file_dir."/".$self->{"fileName"}.".naming.jplace";
+		my $markermapfile        = Phylosift::Utilities::get_marker_taxon_map( self => $self, marker => $marker, dna => $dna );
+		debug "Using markermap $markermapfile\n";
+		return unless -e $markermapfile;    # can't summarize if there ain't no mappin'!
+		debug "Reading taxonmap\n";
+		my $taxonmap = Phylosift::Summarize::read_taxonmap( file => $markermapfile );
+		name_taxa_in_jplace( self => $self, input => $jplace, output => $sample_jplace_naming, taxonmap => $taxonmap, marker => $marker );
+		debug "merging $Phylosift::Settings::guppy merge -o $sample_jplace $sample_jplace_naming $sample_jplace\n";
+		`$Phylosift::Settings::guppy merge -o $sample_jplace $sample_jplace_naming $sample_jplace` if -f $sample_jplace;
 		`cp $sample_jplace_naming $sample_jplace` unless -f $sample_jplace;
+		my $sample_fat_xml = $Phylosift::Settings::file_dir."/".$self->{"fileName"}.".xml";
+		`$Phylosift::Settings::guppy fat -o $sample_fat_xml $sample_jplace` if -f $sample_jplace;
+		my $html_report = $Phylosift::Settings::file_dir."/".$self->{"fileName"}.".html";
+		$self->{HTML} = Phylosift::HTMLReport::begin_report( self => $self, file => $html_report );
+		Phylosift::HTMLReport::add_jnlp( self => $self, marker => "concat", OUTPUT => $self->{HTML}, xml => $sample_fat_xml );
 		`rm $sample_jplace_naming`;
 	}
 
-	if(!$dna && $self->{"updated"} && Phylosift::Utilities::is_protein_marker(marker=>$marker)){
-	    debug "Placing on sub markers $marker\n";
-		load_submarkers();
-		if(keys(%submarker_map)>0){
-			make_submarker_placements(self=>$self, marker=>$marker, chunk=>$chunk, place_file=>$self->{"treeDir"} . "/$jplace");
-		}
+	if ( $self->{"dna"} && !$dna && $Phylosift::Settings::updated && Phylosift::Utilities::is_protein_marker( marker => $marker ) ) {
+		debug "Placing on codon markers: $marker\n";
+		make_codon_placements( self => $self, marker => $marker, chunk => $chunk, place_file => $jplace );
 	}
-	
-	unless($self->{"simple"}){
+
+	unless ($Phylosift::Settings::simple) {
+
 		# skip this if a simple summary if desired since it's slow.
 		debug "Naming taxa in marker $marker\n";
 
 		# read the tree edge to taxon map for this marker
-		my $markermapfile = Phylosift::Utilities::get_marker_taxon_map(self=>$self, marker=>$marker, dna=>$dna, sub_marker=>$submarker);
-		return unless -e $markermapfile;	# can't summarize if there ain't no mappin'!
-		my $taxonmap = Phylosift::Summarize::read_taxonmap(file=>$markermapfile);
+		my $markermapfile = Phylosift::Utilities::get_marker_taxon_map( self => $self, marker => $marker, dna => $dna );
+		return $jplace unless -e $markermapfile;    # can't summarize if there ain't no mappin'!
+		my $taxonmap = Phylosift::Summarize::read_taxonmap( file => $markermapfile );
 
 		# rename nodes
-		name_taxa_in_jplace( self => $self, input => $self->{"treeDir"} . "/$jplace", output => $self->{"treeDir"} . "/$jplace", taxonmap=>$taxonmap );
+		name_taxa_in_jplace( self => $self, input => $jplace, output => $jplace, taxonmap => $taxonmap, marker => $marker );
 	}
-	return $self->{"treeDir"} . "/$jplace" unless defined($covref);
+	return $jplace unless defined($covref);
 	debug "Weighting sequences in $marker\n";
-	weight_placements( self => $self, coverage => $covref, place_file => $self->{"treeDir"} . "/$jplace" );
-	return $self->{"treeDir"} . "/$jplace";
+	weight_placements( self => $self, coverage => $covref, place_file => $jplace );
+	return $jplace;
+}
+
+=head2 filter_placements
+
+placements with very long pendant branches tend to be erroneous due to long branch attraction issues
+eliminate these from the placement set
+
+=cut
+
+sub filter_placements {
+	my %args       = @_;
+	my $place_file = $args{place_file} || miss("place_file");
+	my $JPLACEFILE = ps_open($place_file);
+	my @treedata   = <$JPLACEFILE>;
+	close $JPLACEFILE;
+
+	my $filtered = 0;
+	my $json_data = decode_json( join( "", @treedata ) );
+	for ( my $i = 0; $i < @{ $json_data->{placements} }; $i++ ) {
+		my $place = $json_data->{placements}->[$i];
+
+		# for each placement edge in the placement record
+		# calculate the avg pendant branch length
+		my $w_avg = 0;
+		my $lwr   = 0;
+		for ( my $j = 0; $j < @{ $place->{p} }; $j++ ) {
+			$w_avg += $place->{p}->[$j]->[2] * $place->{p}->[$j]->[4];
+			$lwr   += $place->{p}->[$j]->[2];
+		}
+		$w_avg /= $lwr;
+		if ( $w_avg >= $Phylosift::Settings::pendant_branch_limit ) {
+
+			# branch too long. delete this one from the placement set
+			$filtered++;
+		}
+	}
+	if ( $filtered > 0 ) {
+		my $OUTPLACE = ps_open( ">".$place_file );
+		print $OUTPLACE encode_json($json_data);
+		close $OUTPLACE;
+	}
+	debug "Removed $filtered sequences on long pendant edges\n";
 }
 
 =head2 weight_placements
@@ -350,27 +441,27 @@ sub weight_placements {
 	my $place_file = $args{place_file} || miss("place_file");
 
 	# read the jplace
-	my $JPLACEFILE = ps_open( $place_file );
-	my @treedata = <$JPLACEFILE>;	
+	my $JPLACEFILE = ps_open($place_file);
+	my @treedata   = <$JPLACEFILE>;
 	close $JPLACEFILE;
-	my $json_data = decode_json( join("", @treedata) );
+	my $json_data = decode_json( join( "", @treedata ) );
 
 	# re-weight each placement
-	for(my $i=0; $i< @{$json_data->{placements}}; $i++){
+	for ( my $i = 0; $i < @{ $json_data->{placements} }; $i++ ) {
 		my $placement = $json_data->{placements}->[$i];
-		for(my $j=0; $j < @{$placement->{nm}}; $j++){
+		for ( my $j = 0; $j < @{ $placement->{nm} }; $j++ ) {
 			my $qname = $placement->{nm}->[$j]->[0];
-			if(defined($coverage->{$qname})){
+			if ( defined( $coverage->{$qname} ) ) {
 				$json_data->{placements}->[$i]->{nm}->[$j]->[1] = $coverage->{$qname};
-			}else{
+			} else {
 				warn "Unable to find coverage for $qname\n";
 			}
 		}
 	}
-	
+
 	# write the weighted jplace
 	my $OUTPLACE = ps_open( ">".$place_file );
-	print $OUTPLACE encode_json( $json_data );
+	print $OUTPLACE encode_json($json_data);
 	close $OUTPLACE;
 }
 
@@ -381,10 +472,10 @@ sub weight_placements {
 sub directoryPrepAndClean {
 	my %args = @_;
 	my $self = $args{self} || miss("self");
-	
+
 	#create a directory for the Reads file being processed.
-	`mkdir "$self->{"fileDir"}"` unless ( -e $self->{"fileDir"} );
-	`mkdir "$self->{"treeDir"}"` unless ( -e $self->{"treeDir"} );
+	`mkdir "$Phylosift::Settings::file_dir"` unless ( -e $Phylosift::Settings::file_dir );
+	`mkdir "$self->{"treeDir"}"`             unless ( -e $self->{"treeDir"} );
 }
 
 =head1 SUBROUTINES/METHODS
@@ -394,11 +485,14 @@ sub directoryPrepAndClean {
 =cut
 
 my %namemap;
+
 sub read_name_map {
-	my %args   = @_;
+	my %args = @_;
+	my $marker = $args{marker} || miss("marker");
 	return \%namemap if %namemap;
-	my $id_file = Phylosift::Utilities::get_gene_id_file();
-	my $NAMETABLE = ps_open( $id_file );
+	my $id_file = Phylosift::Utilities::get_gene_id_file( marker => $marker );
+	return unless -e $id_file;
+	my $NAMETABLE = ps_open($id_file);
 	while ( my $line = <$NAMETABLE> ) {
 		chomp $line;
 		my @dat = split( /\t/, $line );
@@ -408,25 +502,27 @@ sub read_name_map {
 }
 
 sub name_taxa_in_jplace {
-	my %args   = @_;
-	my $self   = $args{self} || miss("self");
-	my $input  = $args{input} || miss("input");
-	my $output = $args{output} || miss("output");
+	my %args     = @_;
+	my $self     = $args{self} || miss("self");
+	my $input    = $args{input} || miss("input");
+	my $output   = $args{output} || miss("output");
+	my $marker   = $args{marker} || miss("marker");
 	my $taxonmap = $args{taxonmap} || miss("taxonmap");
 
 	# read in the taxon name map
-	my $namemap = read_name_map();
+	my $namemap = read_name_map( marker => $marker );
+	return unless defined($namemap);
 	Phylosift::Summarize::read_ncbi_taxon_name_map();
 
 	# parse the tree file to get leaf node names
 	# replace leaf node names with taxon labels
-	my $JPLACEFILE = ps_open( $input );
-	my @treedata = <$JPLACEFILE>;	
+	my $JPLACEFILE = ps_open($input);
+	my @treedata   = <$JPLACEFILE>;
 	close $JPLACEFILE;
 
-	my $json_data = decode_json( join("", @treedata) );
+	my $json_data   = decode_json( join( "", @treedata ) );
 	my $tree_string = $json_data->{tree};
-	
+
 	# get rid of the leaf numbers and some other mumbo jumbo
 	$tree_string =~ s/^\s+\"//g;
 	$tree_string =~ s/:(.+?)(\{\d+?\})/$2:$1/g;
@@ -439,27 +535,35 @@ sub name_taxa_in_jplace {
 	foreach my $node ( @{ $tree->get_entities } ) {
 
 		my $name = $node->get_name;
-		$name =~ s/\{\d+?\}//g;
-		if(defined($namemap->{$name})){
-			my @data = Phylosift::Summarize::get_taxon_info( taxon => $namemap->{$name} );
+		$name =~ s/(\{\d+?\})//g;
+		my $branch_id = $1;
+		if ( defined( $namemap->{$name} ) ) {
+			my $taxon_id  = $namemap->{$name};
+			my @data      = Phylosift::Summarize::get_taxon_info( taxon => $taxon_id );
 			my $ncbi_name = Phylosift::Summarize::tree_name( name => $data[0] );
-			$node->set_name($ncbi_name);
+			$node->set_name( $ncbi_name."[$taxon_id]".$branch_id );
 			next;
 		}
+
 		# this might be an internal node. try to get a taxon group ID and name from the taxon map
 		$name = $node->get_name;
-		my $edge_id = $1 if $name =~ /\{(\d+?)\}/; 						
-		next unless defined($taxonmap->{$edge_id});
-		my $node_name="";
-		foreach my $tid(@{$taxonmap->{$edge_id}}){
+		my $edge_id = $1 if $name =~ /\{(\d+?)\}/;
+		next unless defined( $taxonmap->{$edge_id} );
+		my $node_name = "";
+		foreach my $tid ( @{ $taxonmap->{$edge_id} } ) {
+
+			#debug "TID: $tid\t";
 			my @data = Phylosift::Summarize::get_taxon_info( taxon => $tid );
+
+			#debug "$data[0]\n";
+			next unless defined $data[0];
 			my $ncbi_name = Phylosift::Summarize::tree_name( name => $data[0] );
-			$node_name .= "_$ncbi_name"."_";
+			$node_name .= "_$ncbi_name"."_" if defined $ncbi_name;
 		}
-		$node->set_name($node_name);
+		$node->set_name( $node_name.$branch_id );
 	}
 	$json_data->{tree} = unparse( '-phylo' => $tree, '-format' => 'newick', '-nodelabels' => 1 );
-	$JPLACEFILE = ps_open( ">$output" );
+	$JPLACEFILE = ps_open(">$output");
 	print $JPLACEFILE encode_json($json_data);
 	close $JPLACEFILE;
 }
@@ -523,4 +627,5 @@ See http://dev.perl.org/licenses/ for more information.
 
 
 =cut
+
 1;    # End of Phylosift::pplacer.pm

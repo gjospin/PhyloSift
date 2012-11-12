@@ -9,25 +9,126 @@
 # User-specific config files can be copied to $HOME/.phylosiftrc, e.g. /home/koadman/.phylosiftrc
 # User-specific configs override values in the system-wide config.
 #
-
 #
 # paths to directories containing various required programs
 # leave these blank to use whatever is found in $PATH
-#
 # $hmmer3_path="";
 # $blast_path="";
 # $pplacer_path="";
 # $ps_path="";
+
+
+# Direct paths to executables
 #
+# $pplacer       = "";
+# $guppy         = "";
+# $rppr          = "";
+# $taxit         = "";
+# $hmmalign      = "";
+# $hmmbuild      = "";
+# $raxml         = "";
+# $readconciler  = "";
+# $cmalign       = "";
+# $pda           = "";
+# $fasttree      = "";
+# $lastdb        = "";
+# $lastal        = "";
+# $segment_tree  = "";
+
 # paths to required datasets
 # leave these blank to use whatever is in $prefix/share/phylosift
 #
 # $marker_path="";
 # $ncbi_path="";
+# $marker_dir="";
+# $markers_extended_dir="";
+# $ncbi_dir = "";
+$marker_base_url = "http://edhar.genomecenter.ucdavis.edu/~koadman/phylosift_markers";
+$ncbi_url = "http://edhar.genomecenter.ucdavis.edu/~koadman/ncbi.tgz";
+
 
 # default settings for Phylosift behavior
 #
-$ps_threads="";
+# Command line
+#
+#$force    = 1;       #overrides a previous run otherwise stop
+#$file_dir = ""; #Directory for output
+#$paired   = 1;    # used for paired fastQ input split in 2 different files OR interleaved
+#$custom = ""; #need a file containing the marker names to use without extensions ** marker names shouldn't contain '_'
+#$continue = 0; #when a mode different than all is used, continue the rest of Phylosift after the section specified by the mode is finished
+#$threads = 1;    #allows PS to use the number of threads specified
+#$simple  = 0; # generate only a simple text taxonomic summary, no krona, no taxon names in jplace
+#$isolate  = 0;    #use when processing one or more isolate genomes
+#$besthit  = 0;    #should we keep only the best hit when there are multiple?
+#$coverage = 0;    #provides a contig/scaffold coverage file
+#$updated  = 1;    #Indicates if Phylosift uses the updated versions of the Markers.
+#$marker_url    = undef;    # an alternate address to retrieve markers from
+#$extended      = 0;        #Should the full extended set of markers be used?
+#$remove_dup    = 1;        #removes duplicate taxons when using build_marker
+#$keep_search   = 0; #prevents the files from the bastDir from being deleted after each chunk has completed
+#$start_chunk          = 1;       #sets the chunk to start with
+#$chunks               = undef;   #sets the number of chunks to be run
+#$my_debug   = 0;          #print debugging messages?
+#$disable_update_check=1; # can be used to disable the marker update check and download at startup
 
-# can be used to disable the marker update check and download at startup
-# $marker_update_check=0;
+#
+#FastSearch default parameters
+#
+#$CHUNK_MAX_SEQS = 20000;
+#$CHUNK_MAX_SIZE = 10000000;
+#$quality_threshold = 20;
+
+#lastal parameters
+#$lastal_evalue = "-e75";
+
+#lastal rna parameters
+#$lastal_rna_evalue = "-e300";
+
+#hit parsing parameters
+#$max_hit_overlap = 10;
+#$best_hits_bit_score_range = 30; # all hits with a bit score within this amount of the best will be used
+$align_fraction = 0.5; # at least this amount of min[length(query),length(marker)] must align to be considered a hit
+$align_fraction_isolate = 0.8; # use this align_fraction when in isolate mode on long sequences
+
+#
+# MarkerAlign default parameters
+#
+#$min_aligned_residues=50;
+#$rna_split_size = 500; #sequences longer than this value will undergo the long sequence pipeline
+#$gap_character = "-";
+
+#hmmalign
+
+#cmalign
+#$cm_align_long_tau = "1e-6";
+#$cm_align_long_mxsize = "2500";
+#$cm_align_long_ali = "";
+#$cm_align_short_tau = "1e-20";
+#$cm_align_short_mxsize = "2500";
+#$cm_align_short_ali = "-l";
+
+#
+# pplacer.pm
+#
+#$pplacer_groups = 15;
+#$pplacer_verbosity = 0;
+#$max_submarker_dist = 0.15;
+#$min_submarker_prob = 0.35;
+
+#
+# Summarize
+#
+#$krona_threshold = 0.01;
+
+
+#
+# UpdateDB
+#
+#$MAX_SGE_JOBS = 5000;
+#$WORKDIR_normal = "/state/partition1/koadman/phylosift/";
+#$WORKDIR_fatnode = "/data/scratch/koadman/phylosift/";
+#$repository = "";
+#$destination = "";
+#$taxon_knockouts = "";
+#$local_storage = "";
+#$base_markers = "";
