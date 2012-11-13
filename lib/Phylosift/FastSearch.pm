@@ -442,14 +442,17 @@ sub demux_sequences {
 			#add the reads to file lookup
 
 			#			if ( $lines1[0] =~ m/^@(\S+)(\/\d)/ && $paired ) {
+			
 			chomp( $lines1[0] );
-
+			$lines1[0] =~ s/^@//;
 			print $IDFILE "$lines1[0]\t$seq_count/1\n" unless $completed_chunk;
 			$md5_object->add( $lines1[0] )             unless $completed_chunk;
-
+			
 			#			} elsif ( $lines1[0] =~ m/^@(.+)/ ) {
+			
 			if ( defined( $lines2[0] ) ) {
 				chomp( $lines2[0] );
+				$lines2[0] =~ s/^@//;
 				print $IDFILE "$lines2[0]\t$seq_count/2\n" unless $completed_chunk;
 				$md5_object->add( $lines2[0] )             unless $completed_chunk;
 			}
