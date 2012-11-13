@@ -425,12 +425,12 @@ sub merge_sequence_taxa {
 			my $marker_name  = $line[6];
 			if ( $taxon_id eq "Unknown" ) {
 				$unclassifiable{$read_id} = $prob;
-				for ( my $i = 5; $i < @line; $i++ ) {
+				for ( my $i = 6; $i < @line; $i++ ) {
 					$unclassifiable_markers{$read_id}{ $line[$i] } = 1;
 				}
 			} else {
 				$placements{$read_id}{$taxon_id} = $prob;
-				for ( my $i = 5; $i < @line; $i++ ) {
+				for ( my $i = 6; $i < @line; $i++ ) {
 					$placement_markers{$read_id}{ $line[$i] } = 1;
 				}
 			}
