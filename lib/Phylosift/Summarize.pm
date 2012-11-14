@@ -345,7 +345,7 @@ sub write_sequence_taxa_summary {
 				foreach my $mate ( keys %coords ) {
 					print $SEQUENCETAXA "$name_ref/$mate\t$coords{$mate}\tUnknown\tUnknown\tUnclassifiable\t"
 					  .( $unclassifiable->{$qname} / $placecount )."\t"
-					  .$unclassifiable->{$qname}."\t"
+					  ##.$unclassifiable->{$qname}."\t"
 					  .join( "\t", keys( %{ $sequence_markers->{$qname} } ) )."\n";
 				}
 				%coords      = ();
