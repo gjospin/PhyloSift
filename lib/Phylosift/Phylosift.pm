@@ -166,9 +166,8 @@ sub run {
 	debug "Using updated markers\n" if $Phylosift::Settings::updated;
 	my @markers = Phylosift::Utilities::gather_markers( self => $self, marker_file => $custom );
 	if ($Phylosift::Settings::extended) {
-		@markers = Phylosift::Utilities::gather_markers( self => $self, path => $Phylosift::Utilities::markers_extended_dir );
+		@markers = Phylosift::Utilities::gather_markers( self => $self, path => $Phylosift::Settings::markers_extended_dir );
 	}
-
 	my $RUNINFO = ps_open( ">>".Phylosift::Utilities::get_run_info_file( self => $self ) );
 	Phylosift::Summarize::print_run_info( self => $self, OUTPUT => $RUNINFO );
 	close($RUNINFO);

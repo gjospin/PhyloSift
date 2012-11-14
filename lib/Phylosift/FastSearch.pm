@@ -796,7 +796,6 @@ sub get_hits_contigs {
 		my @marker = split( /\_\_/, $subject );    # this is soooo ugly
 		my $markerName = $marker[0];
 		next unless ( exists $markers{$markerName} );
-
 		# running on long reads or an assembly
 		# allow each region of a sequence to have a top hit
 		# do not allow overlap
