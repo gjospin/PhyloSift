@@ -8,8 +8,9 @@ my $phylosift = $ARGV[0];
 my $report_path = $ARGV[1];
 my $marker_url = $ARGV[2];
 
-use lib "$ARGV[0]/lib";
-use FindBin qw($Bin); use lib "$Bin/lib";
+use FindBin qw($Bin);
+BEGIN { push(@INC, "$Bin/../lib") }
+BEGIN { push(@INC, "$ARGV[0]/lib") }
 use Phylosift::Phylosift;
 use Carp;
 use Phylosift::Utilities qw(debug);
