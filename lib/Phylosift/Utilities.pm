@@ -1988,7 +1988,7 @@ sub get_sequence_input_type {
 			#$sequence =~ s/[-\.]//g;    #removing gaps from the sequences
 			$line =~ s/[-\.]//g;
 			$counter  += length($line) - 1;
-			$dnacount += $line =~ tr/[ACGTNacgtn]//;
+			$dnacount += $line =~ tr/[ACGTUNacgtun]//;
 			$allcount += length($line) - 1;
 		}
 		$line_count++;
