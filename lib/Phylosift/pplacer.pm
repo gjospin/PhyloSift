@@ -365,7 +365,7 @@ sub place_reads {
 		`rm $sample_jplace_naming`;
 	}
 
-	if ( $self->{"dna"} && !$dna && $Phylosift::Settings::updated && Phylosift::Utilities::is_protein_marker( marker => $marker ) ) {
+	if ( $self->{"dna"} && !$dna && $Phylosift::Settings::updated && Phylosift::Utilities::is_protein_marker( marker => $marker ) && !$Phylosift::Settings::extended) {
 		debug "Placing on codon markers: $marker\n";
 		make_codon_placements( self => $self, marker => $marker, chunk => $chunk, place_file => $jplace );
 	}
