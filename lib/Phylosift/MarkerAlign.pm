@@ -69,8 +69,8 @@ sub MarkerAlign {
 		$markersRef = \@allmarkers;
 	}
 	Phylosift::Utilities::start_step( self => $self, chunk => $chunk, step => "Align");
-	my $completed_chunk = Phylosift::Utilities::has_chunk_completed( self => $self, chunk => $chunk, step => "Align" );
-	croak ("Previous step for chunk $chunk has did not complete. Aborting\n") unless Phylosift::Utilities::has_chunk_completed( self => $self, chunk => $chunk, step => "Search" );
+	my $completed_chunk = Phylosift::Utilities::has_step_completed( self => $self, chunk => $chunk, step => "Align" );
+	croak ("Previous step for chunk $chunk has did not complete. Aborting\n") unless Phylosift::Utilities::has_step_completed( self => $self, chunk => $chunk, step => "Search" );
 	unless ($completed_chunk){
 	directoryPrepAndClean( self => $self, marker_reference => $markersRef, chunk => $chunk );
 	my $index = -1;
@@ -78,7 +78,6 @@ sub MarkerAlign {
 	debug "after marker prep\n";
 	alignAndMask( self => $self, marker_reference => $markersRef, chunk => $chunk );
 	debug "AFTER ALIGN and MASK\n";
-	
 	# produce a concatenate alignment for the base marker package
 	unless ($Phylosift::Settings::extended) {
 		my @markeralignments = get_noncore_alignment_files( self => $self, chunk => $chunk );

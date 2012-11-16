@@ -153,7 +153,8 @@ sub summarize {
 	                                                                      #set_default_values(self=>$self);
 
 	Phylosift::Utilities::start_step( self => $self, chunk => $chunk, step => "Summarize");
-	my $completed_chunk = Phylosift::Utilities::has_chunk_completed( self => $self, chunk => $chunk, step => "Summarize" );
+	my $completed_chunk = Phylosift::Utilities::has_step_completed( self => $self, chunk => $chunk, step => "Summarize" );
+	croak ("Previous step for chunk $chunk has did not complete. Aborting\n") unless Phylosift::Utilities::has_step_completed( self => $self, chunk => $chunk, step => "Place" );
 	unless ($completed_chunk) {
 		read_ncbi_taxon_name_map();
 		read_ncbi_taxonomy_structure();

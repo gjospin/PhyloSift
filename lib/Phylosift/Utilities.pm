@@ -1459,14 +1459,14 @@ sub load_run_info {
 	return \%return_hash;
 }
 
-=head2 has_chunk_completed
+=head2 has_step_completed
 
 Checks to see if a chunk has completed the step specified
 returns 1 if it has and 0 if it hasn't
 Always return 0 if $Phylosift::Settings::force is set to 1
 =cut
 
-sub has_chunk_completed {
+sub has_step_completed {
 	my %args     = @_;
 	my $self     = $args{self} || miss("PS object");
 	my $step     = $args{step} || miss("Step to look for in run_info.txt\n");
