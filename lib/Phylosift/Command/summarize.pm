@@ -30,6 +30,7 @@ sub options {
 sub validate {
 	my ( $self, $opt, $args ) = @_;
 	Phylosift::Command::all::validate(@_);
+	Phylosift::Command::all::validate_subcommand(@_, mode => "summarize");
 }
 
 sub execute {
@@ -41,7 +42,6 @@ sub execute {
 	my $ps = new Phylosift::Phylosift();
 	$ps = $ps->initialize( mode => "summarize", file_1 => @$args[0], file_2 => @$args[1] );
 	$ps->{"ARGV"} = \@ARGV;
-	Phylosift::Settings::set_default( parameter => \$Phylosift::Settings::chunks,      value => 1 );
 	Phylosift::Settings::set_default( parameter => \$Phylosift::Settings::start_chunk, value => 1 );
 	$ps->run( force => $Phylosift::Settings::force, custom => $Phylosift::Settings::custom, cont => $Phylosift::Settings::continue );
 }
