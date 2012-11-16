@@ -119,8 +119,7 @@ sub run_search {
 
 		my $completed_chunk = Phylosift::Utilities::has_chunk_completed( self => $self, chunk => $chunkI, step => "Search" );
 		$completed_chunk = 1 if $start_chunk > $chunkI;
-		my $start_search_time = start_timer( name => "start_search_$chunkI" );
-
+		Phylosift::Utilities::start_step( self => $self, chunk => $chunkI, step => "Search");
 		# need to run this even if chunk is done so that we advance through the input file
 		# TODO: don't launch lastal on RNA unless really needed
 		my $finished = launch_searches(
@@ -134,9 +133,8 @@ sub run_search {
 										chunk_completion_status => $completed_chunk
 		);
 		compute_hits_summary( self => $self, chunk => $chunkI );
-		my $end_search_time = start_timer( name => "end_search_$chunkI", silent => 1 );
-		print $RUNINFO "Chunk $chunkI Search completed\t$start_search_time\t$end_search_time\t".end_timer( name => "start_search_$chunkI", silent => 1 )."\n"
-		  unless $completed_chunk;
+		Phylosift::Utilities::end_step( self => $self, chunk => $chunkI, step => "Search");
+		Phylosift::Utilities::write_step_completion_to_run_info( self => $self, chunk => $chunkI, step => "Search") unless $completed_chunk;
 		if ( !$completed_chunk && ( $self->{"mode"} eq "all" || $self->{"continue"} ) ) {
 
 			# fire up the next step!

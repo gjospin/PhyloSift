@@ -68,8 +68,9 @@ sub MarkerAlign {
 		my @allmarkers = gather_chunky_markers( self => $self, chunk => $chunk );
 		$markersRef = \@allmarkers;
 	}
-	my $start_align_time = start_timer(name => "start_align_$chunk", silent => 1);
+	Phylosift::Utilities::start_step( self => $self, chunk => $chunk, step => "Align");
 	my $completed_chunk = Phylosift::Utilities::has_chunk_completed( self => $self, chunk => $chunk, step => "Align" );
+	croak ("Previous step for chunk $chunk has did not complete. Aborting\n") unless Phylosift::Utilities::has_chunk_completed( self => $self, chunk => $chunk, step => "Search" );
 	unless ($completed_chunk){
 	directoryPrepAndClean( self => $self, marker_reference => $markersRef, chunk => $chunk );
 	my $index = -1;
@@ -124,10 +125,8 @@ sub MarkerAlign {
 	}
 	compute_hits_summary( self => $self, chunk => $chunk );
 	}
-	my $end_align_time = start_timer(name=>"end_align_$chunk", silent => 1);
-	my $RUNINFO = ps_open( ">>".Phylosift::Utilities::get_run_info_file( self => $self ) );
-	print $RUNINFO "Chunk $chunk Align  completed\t$start_align_time\t$end_align_time\t".end_timer(name => "start_align_$chunk", silent => 1)."\n" unless $completed_chunk;
-	close($RUNINFO);
+	Phylosift::Utilities::end_step( self => $self, chunk => $chunk, step => "Align");
+	Phylosift::Utilities::write_step_completion_to_run_info( self => $self, chunk => $chunk, step => "Align") unless $completed_chunk;
 	# if we're chunking, feed the chunk to the next step
 	if ( defined($chunk) && $self->{"mode"} eq "all" ) {
 		Phylosift::Utilities::end_timer( name => "runAlign" );

@@ -76,14 +76,15 @@ sub initialize {
 	$self->{"treeDir"}  = $Phylosift::Settings::file_dir."/treeDir";
 	$self->{"dna"}      = 0;
 	%{ $self->{"read_names"} } = ();
-
+	$self->{"run_info"} = Phylosift::Utilities::load_run_info(self => $self);
 	# process defaults again now that command-line params have been parsed,
 	# just in case any defaults depend on command-line settings
 	Phylosift::FastSearch::set_default_values( post => 1 );
 	Phylosift::MarkerAlign::set_default_values( post => 1 );
 	Phylosift::pplacer::set_default_values( post => 1 );
 	Phylosift::Summarize::set_default_values( post => 1 );
-
+	
+		
 	return $self;
 }
 
@@ -196,7 +197,6 @@ sub run_later_stages {
 	my $self     = $args{self} || miss("self");
 	my $continue = $args{cont};
 	if ( $self->{"mode"} eq 'align' ) {
-		debug "RUNNING MARKER ALIGN\n";
 		$self = run_marker_align(@_);
 		$self->{"mode"} = 'placer' if $continue;
 	}
@@ -306,10 +306,7 @@ sub directory_prep {
 	my $self     = $args{self} || miss("self");
 	my $force    = $args{force};
 	my $continue = $args{cont};
-
-	#    print "FORCE DIRPREP   $force\t mode   ".$self->{"mode"}."\n";
-	#    exit;
-	#remove the directory from a previous run
+	##remove the directory from a previous run
 	if ( $force && $self->{"mode"} eq 'all' ) {
 		debug( "deleting an old run\n", 0 );
 		`rm -rf "$Phylosift::Settings::file_dir"`;
@@ -323,7 +320,7 @@ sub directory_prep {
 			debug "Found directory already existing, continuing a previous run\n";
 		}
 	}
-
+	
 	#create a directory for the Reads file being processed.
 	`mkdir -p "$Phylosift::Settings::file_dir"`
 	  unless ( -e $Phylosift::Settings::file_dir );

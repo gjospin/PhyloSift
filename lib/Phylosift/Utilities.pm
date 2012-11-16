@@ -1384,6 +1384,81 @@ sub concatenate_alignments {
 	close $FA_REOUT;
 }
 
+=head2 write_chunk_completion_to_run_info
+
+Writes the completed chunk information to the run_info_file
+
+=cut
+
+sub write_step_completion_to_run_info {
+	my %args = @_;
+	my $self = $args{self} || miss("PS Object");
+	my $chunk = $args{chunk} || miss("Chunk");
+	my $step = $args{step} || miss("Step");
+	my $RUNINFO = ps_open(">>".get_run_info_file(self => $self));
+	print $RUNINFO "Chunk $chunk $step completed\t".$self->{'run_info'}{$chunk}{$step}[0]."\t".$self->{'run_info'}{$chunk}{$step}[1]."\t".$self->{'run_info'}{$chunk}{$step}[2]."\n";
+	close($RUNINFO);
+}
+
+=head2 start_step
+
+Initializes the timer for a specific step for a specific chunk
+Also adds the value into the run_info data structure
+
+=cut
+sub start_step {
+	my %args = @_;
+	my $self = $args{self} || miss("PS Object");
+	my $step     = $args{step} || miss("Step to look for in run_info.txt\n");
+	my $chunk    = $args{chunk} || miss("Chunk");
+	my $start_search_time = start_timer( name => "start_$step"."_$chunk", silent=> 1);
+	push(@{$self->{'run_info'}{$chunk}{$step}}, $start_search_time);
+}
+
+=head2 end_step
+
+Ends the timer for a specific step for a specific chunk
+Also adds the values into the run_info data structure
+
+=cut
+sub end_step {
+	my %args = @_;
+	my $self = $args{self} || miss("PS Object");
+	my $step     = $args{step} || miss("Step to look for in run_info.txt\n");
+	my $chunk    = $args{chunk} || miss("Chunk");
+	my $end_search_time = start_timer( name => "end_$step"."_$chunk", silent => 1 );
+	push(@{$self->{'run_info'}{$chunk}{$step}}, $end_search_time , end_timer(name => "start_$step"."_$chunk", silent => 1));
+}
+
+=head2 load_run_info
+
+Reads the run_info.txt file from a run and loads it into a data structure
+
+=cut
+
+sub load_run_info {
+	my %args = @_;
+	my $self = $args{self};
+	my %return_hash = ();
+	return \%return_hash unless -e get_run_info_file(self => $self);
+	my $RUN_INFO_FH = ps_open(get_run_info_file(self => $self));
+	while(<$RUN_INFO_FH>){
+		chomp($_);
+		#debug $_."\n";
+		next unless $_ =~ m/^Chunk.*completed/;
+		my @line = split(/\t/,$_);
+		## data structure run_info{chunk}{}
+		$line[0] =~ m/Chunk\s+(\d+)\s+(\S+)\s+/;
+		my $chunk = $1;
+		my $mode = $2;
+		my $start = $line[1];
+		my $end = $line[2];
+		my $duration = $line[3];
+		push(@{$return_hash{$chunk}{$mode}}, $start,$end,$duration);
+	}
+	return \%return_hash;
+}
+
 =head2 has_chunk_completed
 
 Checks to see if a chunk has completed the step specified
@@ -1395,13 +1470,9 @@ sub has_chunk_completed {
 	my %args     = @_;
 	my $self     = $args{self} || miss("PS object");
 	my $step     = $args{step} || miss("Step to look for in run_info.txt\n");
-	my $chunk    = $args{chunk};
-	my $run_file = Phylosift::Utilities::get_run_info_file( self => $self );
-
-	#return 0 if $Phylosift::Settings::force; # don't need to grep if force is set.
-	my $grep = `grep "Chunk $chunk $step" $run_file`;
-	if ( defined $grep && length $grep ) {
-		cleanup_chunk( self => $self, step => $step, chunk => $chunk ) if $Phylosift::Settings::force;
+	my $chunk    = $args{chunk} || miss("Chunk");
+	if( defined ($self->{'run_info'}{$chunk}{$step}) && scalar(@{$self->{'run_info'}{$chunk}{$step}}) > 1){
+		cleanup_chunk( self => $self, step => $step, chunk => $chunk) if $Phylosift::Settings::force;
 		return 1 unless $Phylosift::Settings::force;
 	}
 	return 0;
@@ -1762,7 +1833,7 @@ sub index_marker_db {
 	my $path    = $args{path};
 	my @markers = @{ $args{markers} };
 	debug "Indexing ".scalar(@markers)." in $path\n";
-
+	print "Inside index_marker_db\n";
 	# use alignments to make an unaligned fasta database containing everything
 	# strip gaps from the alignments
 	my $rna_db        = get_rna_db( path => $path );
@@ -1861,7 +1932,6 @@ sub gather_markers {
 	my $force_gather = $args{force_gather} || 0;
 	my $path         = $args{path} || $Phylosift::Settings::marker_dir;
 	my @marks        = ();
-
 	# try to use a marker list file if it exists
 	if ( !defined($marker_file) && !$force_gather ) {
 		$marker_file = "$path/marker_list.txt" if -e "$path/marker_list.txt";

@@ -152,7 +152,7 @@ sub summarize {
 	my $markRef = $args{marker_reference} || miss("marker_reference");    # list of the markers we're using
 	                                                                      #set_default_values(self=>$self);
 
-	my $start_summarize_time = start_timer( name => "start_summarize_$chunk", silent => 1 );
+	Phylosift::Utilities::start_step( self => $self, chunk => $chunk, step => "Summarize");
 	my $completed_chunk = Phylosift::Utilities::has_chunk_completed( self => $self, chunk => $chunk, step => "Summarize" );
 	unless ($completed_chunk) {
 		read_ncbi_taxon_name_map();
@@ -255,12 +255,8 @@ sub summarize {
 		$self->{"read_names"} = ();    #clearing the hash from memory
 		merge_sequence_taxa( self => $self, chunk => $chunk );
 	}
-	my $end_summarize_time = start_timer( name => "end_summarize_$chunk", silent => 1 );
-	my $RUNINFO = ps_open( ">>".Phylosift::Utilities::get_run_info_file( self => $self ) );
-	print $RUNINFO "Chunk $chunk Summarize completed\t$start_summarize_time\t$end_summarize_time\t"
-	  .end_timer( name => "start_summarize_$chunk", silent => 1 )."\n"
-	  unless $completed_chunk;
-	close($RUNINFO);
+	Phylosift::Utilities::end_step( self => $self, chunk => $chunk, step => "Summarize");
+	Phylosift::Utilities::write_step_completion_to_run_info( self => $self, chunk => $chunk, step => "Summarize") unless $completed_chunk;
 }
 
 sub write_sequence_taxa_summary {

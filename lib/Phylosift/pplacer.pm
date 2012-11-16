@@ -53,7 +53,7 @@ sub pplacer {
 	my $markRef = $args{marker_reference} || miss("marker_reference");
 	my $chunk   = $args{chunk};
 	directoryPrepAndClean( self => $self );
-	my $start_place_time = start_timer( name => "start_place_$chunk", silent => 1 );
+	Phylosift::Utilities::start_step( self => $self, chunk => $chunk, step => "Place");
 	my $completed_chunk = Phylosift::Utilities::has_chunk_completed( self => $self, chunk => $chunk, step => "Place" );
 	unless ($completed_chunk) {
 
@@ -110,11 +110,8 @@ sub pplacer {
 			}
 		}
 	}
-	my $end_place_time = start_timer( name => "end_place_$chunk", silent => 1 );
-	my $RUNINFO = ps_open( ">>".Phylosift::Utilities::get_run_info_file( self => $self ) );
-	print $RUNINFO "Chunk $chunk Place  completed\t$start_place_time\t$end_place_time\t".end_timer( name => "start_place_$chunk", silent => 1 )."\n"
-	  unless $completed_chunk;
-	close($RUNINFO);
+	Phylosift::Utilities::end_step( self => $self, chunk => $chunk, step => "Place");
+	Phylosift::Utilities::write_step_completion_to_run_info( self => $self, chunk => $chunk, step => "Place") unless $completed_chunk;
 	if ( defined($chunk) && $self->{"mode"} eq "all" ) {
 		Phylosift::Utilities::end_timer( name => "runPplacer" );
 		Phylosift::Utilities::start_timer( name => "runSummarize" );
