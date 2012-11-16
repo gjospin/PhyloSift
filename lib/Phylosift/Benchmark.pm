@@ -460,6 +460,7 @@ sub compute_precision_recall_curve {
 	foreach my $score (@scores) {
 		foreach my $level ( %{ $sortedScores{$score}->[0] } ) {
 			$counts{$level} = 0 unless defined $counts{$level};
+                        $prec{$level} = 0 unless defined $prec{$level};
 			next unless defined $sortedScores{$score}->[0]->{$level};
 			$prec{$level} = $sortedScores{$score}->[0]->{$level} + $prec{$level} * $counts{$level};
 			$counts{$level}++;
@@ -491,13 +492,13 @@ sub plot_precision_recall_curve {
     my $PRCURVE = ps_open( ">>$curve_file" );
     print $PRCURVE "Superkingdom: $$precision{superkingdom}\t$$recall{superkingdom}\n";
     print $PRCURVE "Phylum: $$precision{phylum}\t$$recall{phylum}\n";
-    print $PRCURVE "Subphylum: $$precision{subphylum}\t$$recall{subphylum}\n";
+    print $PRCURVE "Subphylum: $$precision{subphylum}\t$$recall{subphylum}\n" unless (! defined $$precision{subphylum} || $$recall{species} );
     print $PRCURVE "Class: $$precision{class}\t$$recall{class}\n";
     print $PRCURVE "Order: $$precision{order}\t$$recall{order}\n";
     print $PRCURVE "Family: $$precision{family}\t$$recall{family}\n";
     print $PRCURVE "Genus: $$precision{genus}\t$$recall{genus}\n";
     print $PRCURVE "Species: $$precision{species}\t$$recall{species}\n";
-    print $PRCURVE "Subspecies: $$precision{subspecies}\t$$recall{subspecies}\n";
+    print $PRCURVE "Subspecies: $$precision{subspecies}\t$$recall{subspecies}\n" unless (! defined $$precision{subphylum} || $$recall{species});
     close $PRCURVE;  
 }
 
