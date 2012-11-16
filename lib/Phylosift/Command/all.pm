@@ -56,8 +56,8 @@ sub options {
 	%opts = ( %opts, Phylosift::Command::summarize::summarize_opts() );
 
 	# all-specific options:
-	$opts{keep_search} => [ "keep_search", "Keeps the blastDir files (Default: Delete the blastDir files after every chunk)" ],
-	  return values(%opts);
+	$opts{keep_search} = [ "keep_search", "Keeps the blastDir files (Default: Delete the blastDir files after every chunk)" ];
+    return values(%opts);
 }
 
 sub validate {
@@ -65,7 +65,7 @@ sub validate {
 
 	# we need at least one argument beyond the options; die with that message
 	# and the complete "usage" text describing switches, etc
-	$self->usage_error("phylosift all requires exactly one or two file name arguments to run") unless @$args == 1 || @$args == 2;
+	$self->usage_error("phylosift requires exactly one or two file name arguments to run in this mode") unless @$args == 1 || (@$args == 2 && $opt->{paired});
 }
 
 sub set_ifdef {

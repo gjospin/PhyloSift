@@ -68,13 +68,16 @@ sub MarkerAlign {
 		my @allmarkers = gather_chunky_markers( self => $self, chunk => $chunk );
 		$markersRef = \@allmarkers;
 	}
+	my $start_align_time = start_timer(name => "start_align_$chunk", silent => 1);
+	my $completed_chunk = Phylosift::Utilities::has_chunk_completed( self => $self, chunk => $chunk, step => "Align" );
+	unless ($completed_chunk){
 	directoryPrepAndClean( self => $self, marker_reference => $markersRef, chunk => $chunk );
 	my $index = -1;
 	markerPrep( self => $self, marker_reference => $markersRef, chunk => $chunk );
 	debug "after marker prep\n";
 	alignAndMask( self => $self, marker_reference => $markersRef, chunk => $chunk );
 	debug "AFTER ALIGN and MASK\n";
-
+	
 	# produce a concatenate alignment for the base marker package
 	unless ($Phylosift::Settings::extended) {
 		my @markeralignments = get_noncore_alignment_files( self => $self, chunk => $chunk );
@@ -120,7 +123,11 @@ sub MarkerAlign {
 		debug "AFTER concatenateALI\n";
 	}
 	compute_hits_summary( self => $self, chunk => $chunk );
-
+	}
+	my $end_align_time = start_timer(name=>"end_align_$chunk", silent => 1);
+	my $RUNINFO = ps_open( ">>".Phylosift::Utilities::get_run_info_file( self => $self ) );
+	print $RUNINFO "Chunk $chunk Align  completed\t$start_align_time\t$end_align_time\t".end_timer(name => "start_align_$chunk", silent => 1)."\n" unless $completed_chunk;
+	close($RUNINFO);
 	# if we're chunking, feed the chunk to the next step
 	if ( defined($chunk) && $self->{"mode"} eq "all" ) {
 		Phylosift::Utilities::end_timer( name => "runAlign" );
@@ -189,8 +196,7 @@ sub gather_chunky_markers {
 	my $self              = $args{self} || miss("PS object");
 	my $chunk             = $args{chunk} || miss("Chunk");
 	my $type              = $args{type};
-	my $seed              = $self->{"blastDir"}."/*.*.candidate.aa.".$chunk.".*";
-	my @candidate_markers = glob("$seed");
+	my @candidate_markers = Phylosift::Utilities::get_search_output_all_candidate(self=>$self,chunk=>$chunk);
 	my %unique_markers;
 	foreach my $line (@candidate_markers) {
 		$line =~ m/\/blastDir\/([^\/\.]+)\.\S+.candidate/;

@@ -8,8 +8,9 @@ my $phylosift = $ARGV[0];
 my $report_path = $ARGV[1];
 my $marker_url = $ARGV[2];
 
-use lib "$ARGV[0]/lib";
-use FindBin qw($Bin); use lib "$Bin/lib";
+use FindBin qw($Bin);
+BEGIN { push(@INC, "$Bin/../lib") }
+BEGIN { push(@INC, "$ARGV[0]/lib") }
 use Phylosift::Phylosift;
 use Carp;
 use Phylosift::Utilities qw(debug);
@@ -45,9 +46,8 @@ for(my $bI=0; $bI<@benchmark_data; $bI++){
 	my $seconds = Phylosift::Utilities::end_timer(name=>$seqname);
 
 	# now benchmark
-	$ps->{"readsFile"} = $seqname;
-	$ps->{"fileDir"} = cwd()."/PS_temp/$seqname/";;
-	Phylosift::Benchmark::run_benchmark(self=>$ps, output_path=>$report_path);
+	my $summary = cwd()."/PS_temp/$seqname/sequence_taxa.txt";
+	Phylosift::Benchmark::run_benchmark(reads_file=>$seqname, output_path=>$report_path, summary_file=>$summary, pr_curve=>$report_path."prcurve");
 	
 	$times{$seqname} = $seconds;
 }

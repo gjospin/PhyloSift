@@ -166,21 +166,17 @@ sub run {
 	debug "Using updated markers\n" if $Phylosift::Settings::updated;
 	my @markers = Phylosift::Utilities::gather_markers( self => $self, marker_file => $custom );
 	if ($Phylosift::Settings::extended) {
-		@markers = Phylosift::Utilities::gather_markers( self => $self, path => $Phylosift::Utilities::markers_extended_dir );
+		@markers = Phylosift::Utilities::gather_markers( self => $self, path => $Phylosift::Settings::markers_extended_dir );
 	}
-
-	debug "MODE :: ".$self->{"mode"}."\n";
+	my $RUNINFO = ps_open( ">>".Phylosift::Utilities::get_run_info_file( self => $self ) );
+	Phylosift::Summarize::print_run_info( self => $self, OUTPUT => $RUNINFO );
+	close($RUNINFO);
 
 	#changed > to >> so that we append to that file every time a run is restarted and we can keep track if there was a change in DB or in command
 	#Also it prevents the file from being clobbered every time a run is restarted.
 	if ( $self->{"mode"} eq 'search' || $self->{"mode"} eq 'all' ) {
-		my $RUNINFO = ps_open( ">>".Phylosift::Utilities::get_run_info_file( self => $self ) );
-		Phylosift::Summarize::print_run_info( self => $self, OUTPUT => $RUNINFO );
 		$self = run_search( self => $self, cont => $continue, marker => \@markers );
-
 		$self->{"mode"} = 'align' if $continue;
-
-		debug "MODE :: ".$self->{"mode"}."\n";
 	}
 	debug "MODE :: ".$self->{"mode"}."\n";
 
@@ -200,6 +196,7 @@ sub run_later_stages {
 	my $self     = $args{self} || miss("self");
 	my $continue = $args{cont};
 	if ( $self->{"mode"} eq 'align' ) {
+		debug "RUNNING MARKER ALIGN\n";
 		$self = run_marker_align(@_);
 		$self->{"mode"} = 'placer' if $continue;
 	}
@@ -402,7 +399,8 @@ sub run_marker_align {
 
 	#clearing the alignment directory if needed
 	my $alignDir = $self->{"alignDir"};
-	`rm "$alignDir"/*` if (<"$alignDir"/*>);
+
+	#`rm "$alignDir"/*` if (<"$alignDir"/*>) && $Phylosift::Settings::force;
 
 	#Align Markers
 	my $threadNum = 1;
@@ -426,8 +424,8 @@ sub run_search {
 	Phylosift::Utilities::start_timer( name => "runBlast" );
 
 	#clearing the blast directory
-	my $blastDir = $self->{"blastDir"};
-	`rm "$blastDir"/*` if (<"$blastDir"/*>);
+	#my $blastDir = $self->{"blastDir"};
+	#`rm "$blastDir"/*` if (<"$blastDir"/*>);
 
 	#run Searches
 	Phylosift::FastSearch::run_search( self => $self, marker_reference => $markerListRef );

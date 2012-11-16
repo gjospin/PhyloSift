@@ -34,6 +34,7 @@ if (@ARGV>0 && $ARGV[0] eq "buildbot") # if buildbot
     `rm PhyloSift/.project`;
     `rm -rf PhyloSift/t`;
     `rm -rf PhyloSift/tools`;
+    `rm -rf PhyloSift/web`;
     
     # add bioperl-live (not on buildbot)
     `git clone git://github.com/bioperl/bioperl-live.git`;
@@ -60,6 +61,9 @@ chdir("Locale-Maketext-1.19");
 `make`;
 `mv blib/lib/Locale/ $prefix/lib/`;
 chdir("..");
+
+# Digest::MD5
+add_package(url=>"http://search.cpan.org/CPAN/authors/id/G/GA/GAAS/Digest-MD5-2.52.tar.gz");
 
 # Locale::Maketext::Simple 
 add_package(url=>"http://search.cpan.org/CPAN/authors/id/J/JE/JESSE/Locale-Maketext-Simple-0.21.tar.gz", mv_cmd=>"mv blib/lib/Locale/Maketext/* $prefix/lib/Locale/Maketext/");

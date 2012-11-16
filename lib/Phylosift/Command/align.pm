@@ -34,8 +34,7 @@ sub options {
 
 sub validate {
 	my ( $self, $opt, $args ) = @_;
-
-	$self->usage_error("phylosift align requires exactly one or two file name arguments to run") unless @$args == 1 || @$args == 2;
+	Phylosift::Command::all::validate(@_);
 }
 
 sub execute {
@@ -43,10 +42,11 @@ sub execute {
 	Phylosift::Command::all::load_opt( opt => $opt );
 	$Phylosift::Settings::keep_search = 1;
 	Phylosift::Command::sanity_check();
-
 	my $ps = new Phylosift::Phylosift();
 	$ps = $ps->initialize( mode => "align", file_1 => @$args[0], file_2 => @$args[1] );
 	$ps->{"ARGV"} = \@ARGV;
+	Phylosift::Settings::set_default( parameter => \$Phylosift::Settings::chunks,      value => 1 );
+	Phylosift::Settings::set_default( parameter => \$Phylosift::Settings::start_chunk, value => 1 );
 	$ps->run( force => $Phylosift::Settings::force, custom => $Phylosift::Settings::custom, cont => $Phylosift::Settings::continue );
 }
 
