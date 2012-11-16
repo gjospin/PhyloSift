@@ -460,7 +460,8 @@ sub compute_precision_recall_curve {
 	foreach my $score (@scores) {
 		foreach my $level ( %{ $sortedScores{$score}->[0] } ) {
 			$counts{$level} = 0 unless defined $counts{$level};
-                        $prec{$level} = 0 unless defined $prec{$level};
+            $prec{$level} = 0 unless defined $prec{$level};
+            
 			next unless defined $sortedScores{$score}->[0]->{$level};
 			$prec{$level} = $sortedScores{$score}->[0]->{$level} + $prec{$level} * $counts{$level};
 			$counts{$level}++;
@@ -468,6 +469,7 @@ sub compute_precision_recall_curve {
 		}
 		foreach my $level ( %{ $sortedScores{$score}->[1] } ) {
 		    $rec{$level} = 0 unless defined $rec{$level};
+		    
 		    next unless defined $sortedScores{$score}->[1]->{$level};
 			$rec{$level} += $sortedScores{$score}->[1]->{$level};
 		}
