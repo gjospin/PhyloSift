@@ -76,7 +76,7 @@ sub initialize {
 	$self->{"treeDir"}  = $Phylosift::Settings::file_dir."/treeDir";
 	$self->{"dna"}      = 0;
 	%{ $self->{"read_names"} } = ();
-	$self->{"run_info"} = Phylosift::Utilities::load_run_info(self => $self);
+	$self->{"run_info"} = Phylosift::Utilities::load_run_info(self => $self) unless $self->{"mode"} eq 'all';
 	# process defaults again now that command-line params have been parsed,
 	# just in case any defaults depend on command-line settings
 	Phylosift::FastSearch::set_default_values( post => 1 );
@@ -309,6 +309,7 @@ sub directory_prep {
 	##remove the directory from a previous run
 	if ( $force && $self->{"mode"} eq 'all' ) {
 		debug( "deleting an old run\n", 0 );
+		debug "$Phylosift::Settings::file_dir\n";
 		`rm -rf "$Phylosift::Settings::file_dir"`;
 	} elsif ( -e $Phylosift::Settings::file_dir && $self->{"mode"} eq 'all' ) {
 		if ( !$continue ) {
