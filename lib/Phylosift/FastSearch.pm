@@ -117,7 +117,7 @@ sub run_search {
 
 		#reads the marker_summary.txt from blastDir
 
-		my $completed_chunk = Phylosift::Utilities::has_chunk_completed( self => $self, chunk => $chunkI, step => "Search" );
+		my $completed_chunk = Phylosift::Utilities::has_step_completed( self => $self, chunk => $chunkI, step => "Search" );
 		$completed_chunk = 1 if $start_chunk > $chunkI;
 		Phylosift::Utilities::start_step( self => $self, chunk => $chunkI, step => "Search");
 		# need to run this even if chunk is done so that we advance through the input file
@@ -242,7 +242,7 @@ sub launch_searches {
 	my $last_rna_pipe           = $dir."/last_rna.pipe";
 	debug "Making fifos\n";
 	my @last_pipe_array = ();
-	$chunk_completion_status = Phylosift::Utilities::has_chunk_completed( self => $self, chunk => $chunk, step => "Search" )
+	$chunk_completion_status = Phylosift::Utilities::has_step_completed( self => $self, chunk => $chunk, step => "Search" )
 	  unless defined $chunk_completion_status;
 
 	for ( my $i = 0; $i <= $Phylosift::Settings::threads - 1; $i++ ) {
@@ -401,7 +401,7 @@ sub demux_sequences {
 	my $lastal_index       = 0;
 	my $lastal_threads     = scalar(@LAST_PIPE_ARRAY);
 	my $completed_chunk    = $args{completed_chunk};
-	$completed_chunk = Phylosift::Utilities::has_chunk_completed( self => $self, chunk => $chunk, step => "Search" ) unless defined $completed_chunk;
+	$completed_chunk = Phylosift::Utilities::has_step_completed( self => $self, chunk => $chunk, step => "Search" ) unless defined $completed_chunk;
 
 	# the following two variables track how far we are through a chunk
 	my $seq_count    = 0;
