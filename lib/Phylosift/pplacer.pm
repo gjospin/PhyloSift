@@ -54,7 +54,7 @@ sub pplacer {
 	my $chunk   = $args{chunk};
 	directoryPrepAndClean( self => $self );
 	Phylosift::Utilities::start_step( self => $self, chunk => $chunk, step => "Place");
-	my $completed_chunk = Phylosift::Utilities::has_step_completed( self => $self, chunk => $chunk, step => "Place" );
+	my $completed_chunk = Phylosift::Utilities::has_step_completed( self => $self, chunk => $chunk, step => "Place" , force => $Phylosift::Settings::force);
 	croak ("Previous step for chunk $chunk has did not complete. Aborting\n") unless Phylosift::Utilities::has_step_completed( self => $self, chunk => $chunk, step => "Align" );
 	unless ($completed_chunk) {
 

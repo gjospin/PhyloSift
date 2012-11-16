@@ -117,7 +117,7 @@ sub run_search {
 
 		#reads the marker_summary.txt from blastDir
 
-		my $completed_chunk = Phylosift::Utilities::has_step_completed( self => $self, chunk => $chunkI, step => "Search" );
+		my $completed_chunk = Phylosift::Utilities::has_step_completed( self => $self, chunk => $chunkI, step => "Search", force => $Phylosift::Settings::force );
 		$completed_chunk = 1 if $start_chunk > $chunkI;
 		Phylosift::Utilities::start_step( self => $self, chunk => $chunkI, step => "Search");
 		# need to run this even if chunk is done so that we advance through the input file

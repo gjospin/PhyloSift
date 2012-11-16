@@ -1471,9 +1471,10 @@ sub has_step_completed {
 	my $self     = $args{self} || miss("PS object");
 	my $step     = $args{step} || miss("Step to look for in run_info.txt\n");
 	my $chunk    = $args{chunk} || miss("Chunk");
+	my $force  = $args{force};
 	if( defined ($self->{'run_info'}{$chunk}{$step}) && scalar(@{$self->{'run_info'}{$chunk}{$step}}) > 1){
-		cleanup_chunk( self => $self, step => $step, chunk => $chunk) if $Phylosift::Settings::force;
-		return 1 unless $Phylosift::Settings::force;
+		cleanup_chunk( self => $self, step => $step, chunk => $chunk) if $force;
+		return 1 unless $force;
 	}
 	return 0;
 }
