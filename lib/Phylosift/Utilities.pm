@@ -1621,6 +1621,34 @@ sub get_taxa_90pct_HPD {
 	return $Phylosift::Settings::file_dir."/taxa_90pct_HPD.txt";
 }
 
+=head2 concatenate_summary_files
+
+Concatenates a set of files not includin the header line for the first file only
+
+=cut
+
+sub concatenate_summary_files {
+	my %args = @_;
+	my $self = $args{self} || miss("PS Object");
+	my $output_file = $args{output_file} || miss("Output file");
+	my $files_array_ref = $args{files};
+	my $OUTPUT_FH = ps_open(">$output_file");
+	my @files = @{$files_array_ref};
+	my $header = "";
+	my $printed_header = 0;
+	foreach my $file (@files){
+		my $FH = ps_open($file);
+		$header = <$FH>;
+		print $OUTPUT_FH $header unless $printed_header;
+		$printed_header = 1;
+		while(<$FH>){ #print the rest of the file
+			print $OUTPUT_FH $_;
+		}
+		close($FH);
+	}
+	close($OUTPUT_FH);
+}
+
 sub start_timer {
 	my %args      = @_;
 	my $timername = $args{name};

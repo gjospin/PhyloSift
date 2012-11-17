@@ -480,10 +480,9 @@ sub merge_sequence_taxa {
 	}
 
 	# write a single combined taxa summary
-	my $cat_taxa_cmd = "cat ".join( ' ', @taxa_files );
-	`$cat_taxa_cmd >> $Phylosift::Settings::file_dir/sequence_taxa.txt`;
-	my $cat_taxa_summary_cmd = "cat ".join( ' ', Phylosift::Utilities::get_summarize_output_all_sequence_taxa_summary( self => $self ) );
-	`$cat_taxa_summary_cmd >> $Phylosift::Settings::file_dir/sequence_taxa_summary.txt`;
+	my @taxa_summary_files = Phylosift::Utilities::get_summarize_output_all_sequence_taxa_summary( self => $self );
+	Phylosift::Utilities::concatenate_summary_files(self => $self, files => \@taxa_files, output_file => "$Phylosift::Settings::file_dir/sequence_taxa.txt");
+	Phylosift::Utilities::concatenate_summary_files(self => $self, files => \@taxa_summary_files, output_file => "$Phylosift::Settings::file_dir/sequence_taxa_summary.txt");
 
 	my $MARKER_HITS = ps_open( ">".$Phylosift::Settings::file_dir."/marker_summary.txt" );
 	print $MARKER_HITS "#Marker_name\tNumber of hits\n";
