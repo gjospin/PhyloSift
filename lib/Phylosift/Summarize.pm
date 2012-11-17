@@ -765,7 +765,7 @@ sub rename_sequences {
 		my @line = split( /\t/, $_ );
 		$name_mapping{ $line[1] } = $line[0];
 
-		#		debug "$line[1]\t$line[0].\n";
+#		debug "$line[1]\t$line[0].\n";
 	}
 	close($FH_MAP);
 
@@ -783,20 +783,18 @@ sub rename_sequences {
 	push( @array_to_rename, glob( $self->{"alignDir"}."/*.$chunk.unmasked" ) );
 	push( @array_to_rename, glob( $self->{"alignDir"}."/*.updated.fasta" ) );
 	push( @array_to_rename, glob( $self->{"alignDir"}."/*.newCandidate.aa" ) );
-	push( @array_to_rename, glob( $self->{"alignDir"}."/*.unmasked" ) );
 	push( @array_to_rename, glob( $self->{"alignDir"}."/*.$chunk.fasta" ) );
-	push( @array_to_rename, glob( $self->{"alignDir"}."/*.codon.updated*.fasta" ) );
 	push( @array_to_rename, glob( $self->{"treeDir"}."/*.$chunk.jplace" ) );
 	push( @array_to_rename, glob( $Phylosift::Settings::file_dir."/*.jplace" ) );
 	push( @array_to_rename, glob( $Phylosift::Settings::file_dir."/sequence_taxa*.$chunk.txt" ) );
 	foreach my $file (@array_to_rename) {
+	    #debug "Processing $file\n";
 		my $FH  = ps_open($file);
 		my $TMP = ps_open(">$file.tmp");
 		if ( $file =~ m/\.jplace/ ) {
 			my @treedata  = <$FH>;
 			my $json_data = decode_json( join( "", @treedata ) );
-
-			# parse the tree
+			## parse the tree
 			for ( my $i = 0; $i < @{ $json_data->{placements} }; $i++ ) {
 				my $placement = $json_data->{placements}->[$i];
 				for ( my $j = 0; $j < @{ $placement->{nm} }; $j++ ) {
@@ -806,8 +804,7 @@ sub rename_sequences {
 					}
 				}
 			}
-
-			# write the renamed jplace
+			## write the renamed jplace
 			print $TMP encode_json($json_data);
 		} else {
 			while (<$FH>) {
