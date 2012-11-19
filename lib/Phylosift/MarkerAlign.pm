@@ -13,6 +13,8 @@ use Phylosift::Settings;
 use Phylosift::Utilities qw(:all);
 use File::Basename;
 
+use version; our $VERSION = version->declare("v1.0.0_01");
+
 =head1 NAME
 
 Phylosift::MarkerAlign - Subroutines to align reads to marker HMMs
@@ -23,7 +25,6 @@ Version 0.01
 
 =cut
 
-our $VERSION = '0.01';
 my @search_types = ( "", ".lastal" );
 my @search_types_rna = ( "", ".lastal.rna", ".rna" );
 set_default_values();

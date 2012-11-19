@@ -18,6 +18,8 @@ use IO::File;
 use File::Basename;
 use Carp;
 
+use version; our $VERSION = version->declare("v1.0.0_01");
+
 =head1 NAME
 
 Phylosift::HTMLReport - support for generating HTML reports summarizing results
@@ -27,8 +29,6 @@ Phylosift::HTMLReport - support for generating HTML reports summarizing results
 Version 0.01
 
 =cut
-
-our $VERSION = '0.01';
 
 =head1 SYNOPSIS
 

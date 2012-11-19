@@ -11,6 +11,8 @@ use IO::File;
 use JSON;
 use File::Basename;
 
+use version; our $VERSION = version->declare("v1.0.0_01");
+
 set_default_values();
 
 =head1 NAME
@@ -22,8 +24,6 @@ Phylosift::Summarize - Summarize placed reads using the NCBI taxonomy
 Version 0.01
 
 =cut
-
-our $VERSION = '0.01';
 
 =head1 SYNOPSIS
 

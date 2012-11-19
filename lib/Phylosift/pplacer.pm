@@ -15,6 +15,8 @@ use Phylosift::HTMLReport;
 use JSON;
 use Carp;
 
+use version; our $VERSION = version->declare("v1.0.0_01");
+
 =head1 NAME
 
 Phylosift::pplacer - place aligned reads onto a phylogenetic tree with pplacer
@@ -25,7 +27,6 @@ Version 0.01
 
 =cut
 
-our $VERSION = '0.01';
 set_default_values();
 
 =head1 SYNOPSIS

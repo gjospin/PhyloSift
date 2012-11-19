@@ -5,6 +5,8 @@ use Phylosift::Utilities qw(:all);
 use File::Basename;
 use JSON;
 
+use version; our $VERSION = version->declare("v1.0.0_01");
+
 =head1 NAME
 
 Phylosift::MarkerBuild - build a seed marker package from an existing multiple sequence alignment
@@ -14,8 +16,6 @@ Phylosift::MarkerBuild - build a seed marker package from an existing multiple s
 Version 0.01
 
 =cut
-
-our $VERSION = '0.01';
 
 =head1 SYNOPSIS
 

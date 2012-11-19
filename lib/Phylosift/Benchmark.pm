@@ -6,6 +6,8 @@ use Bio::Phylo;
 use Phylosift::Summarize;
 use Phylosift::Utilities;
 
+use version; our $VERSION = version->declare("v1.0.0_01");
+
 =head1 SUBROUTINES/METHODS
 
 =head2 benchmark_illumina

@@ -14,6 +14,8 @@ use File::Basename;
 use Digest::MD5 qw(md5_hex);
 use POSIX qw(ceil floor);
 
+use version; our $VERSION = version->declare("v1.0.0_01");
+
 =head1 NAME
 
 Phylosift::FastSearch - Subroutines to perform fast sequence identity searches between reads and marker genes.
@@ -24,8 +26,6 @@ Currently uses either BLAST or RAPsearch.
 Version 0.01
 
 =cut
-
-our $VERSION = '0.01';
 
 =head1 SYNOPSIS
 

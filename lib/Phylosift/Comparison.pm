@@ -6,6 +6,8 @@ use Phylosift::Phylosift;
 use Phylosift::Utilities;
 use Bio::Phylo::IO qw(parse unparse);
 
+use version; our $VERSION = version->declare("v1.0.0_01");
+
 =head1 NAME
 
 Phylosift::Comparison - compares phylogenetic structure across many samples
@@ -15,8 +17,6 @@ Phylosift::Comparison - compares phylogenetic structure across many samples
 Version 0.01
 
 =cut
-
-our $VERSION = '0.01';
 
 =head1 SYNOPSIS
 

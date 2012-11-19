@@ -6,6 +6,8 @@ use Phylosift::UpdateDB;
 use Carp;
 use Phylosift::Utilities qw(debug);
 
+use version; our $VERSION = version->declare("v1.0.0_01");
+
 sub description {
 	return "phylosift dbupdate - update the phylosift database with new genomic data";
 }

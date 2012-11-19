@@ -21,6 +21,8 @@ use Phylosift::Comparison;
 use Phylosift::MarkerBuild;
 use Phylosift::Simulations;
 
+use version; our $VERSION = version->declare("v1.0.0_01");
+
 =head2 new
 
     Returns : Phylosift project object
@@ -108,8 +110,6 @@ Phylosift::Phylosift - Implements core functionality for Phylosift
 Version 0.01
 
 =cut
-
-our $VERSION = '0.01';
 
 =head1 SYNOPSIS
 

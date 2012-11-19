@@ -5,6 +5,8 @@ use Cwd;
 use Bio::SeqIO;
 use Bio::AlignIO;
 
+use version; our $VERSION = version->declare("v1.0.0_01");
+
 =head1 NAME
 
 Phylosift::BeastInterface - functions to interface with the BEAST de novo metagenome phylogeny module
@@ -14,8 +16,6 @@ Phylosift::BeastInterface - functions to interface with the BEAST de novo metage
 Version 0.01
 
 =cut
-
-our $VERSION = '0.01';
 
 =head1 SYNOPSIS
 

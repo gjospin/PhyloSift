@@ -13,6 +13,8 @@ use LWP::Simple;
 use FindBin;
 use Scalar::Util qw(looks_like_number);
 
+use version; our $VERSION = version->declare("v1.0.0_01");
+
 =head1 NAME
 
 Phylosift::UpdateDB - Functionality to download new genomes and update the marker database
@@ -22,8 +24,6 @@ Phylosift::UpdateDB - Functionality to download new genomes and update the marke
 Version 0.01
 
 =cut
-
-our $VERSION = '0.01';
 
 =head1 SYNOPSIS
 

@@ -15,9 +15,8 @@ use POSIX ();
 use Carp;
 use Cwd;
 
-#if ( $^O =~ /arwin/ ) {
-#	use lib "$FindBin::Bin/../osx/darwin-thread-multi-2level/";
-#}
+use version; our $VERSION = version->declare("v1.0.0_01");
+
 use Exporter;
 use vars qw[ @EXPORT @EXPORT_OK %EXPORT_TAGS @ISA ];
 @ISA       = 'Exporter';
@@ -45,8 +44,6 @@ Phylosift::Utilities - Implements miscellaneous accessory functions for Phylosif
 Version 0.01
 
 =cut
-
-our $VERSION = '0.01';
 
 =head1 SYNOPSIS
 

@@ -3,6 +3,8 @@ use warnings;
 use strict;
 use Carp;
 
+use version; our $VERSION = version->declare("v1.0.0_01");
+
 =head1 Name
 
 Phylosift::Settings - Sets up the parameters from RC files, command line or default values.
