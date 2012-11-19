@@ -502,13 +502,13 @@ sub plot_precision_recall_curve {
     my $PRCURVE = ps_open(">>$curve_file");
     print $PRCURVE "Superkingdom: $$precision{superkingdom}\t$$recall{superkingdom}\n";
     print $PRCURVE "Phylum: $$precision{phylum}\t$$recall{phylum}\n";
-    print $PRCURVE "Subphylum: $$precision{subphylum}\t$$recall{subphylum}\n" unless ( !defined $$precision{subphylum} || $$recall{subphylum} );
+    print $PRCURVE "Subphylum: $$precision{subphylum}\t$$recall{subphylum}\n" unless ( ( !defined $$precision{subphylum}) || ( !defined $$recall{subphylum}) );
     print $PRCURVE "Class: $$precision{class}\t$$recall{class}\n";
     print $PRCURVE "Order: $$precision{order}\t$$recall{order}\n";
     print $PRCURVE "Family: $$precision{family}\t$$recall{family}\n";
     print $PRCURVE "Genus: $$precision{genus}\t$$recall{genus}\n";
     print $PRCURVE "Species: $$precision{species}\t$$recall{species}\n";
-    print $PRCURVE "Subspecies: $$precision{subspecies}\t$$recall{subspecies}\n" unless ( !defined $$precision{subspecies} || $$recall{subspecies} );
+    print $PRCURVE "Subspecies: $$precision{subspecies}\t$$recall{subspecies}\n" unless ( ( !defined $$precision{subspecies}) || ( !defined $$recall{subspecies}) );
     close $PRCURVE;
 }
 
