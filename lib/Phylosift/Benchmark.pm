@@ -430,8 +430,8 @@ sub get_ancestor_array {
 
 =head2 compute_precision_recall_curve
 Takes an array of top read scores, sorts them from lowest to highest and
-calls plot_precision_recall_curve to make a PR curve. Returns data structure 
-tbd.  Only run when option provided? Uses $topReadScore{$readID}->[0]
+calls plot_precision_recall_curve to make a PR curve. Relies on compute_top_place_precision
+to generate precision and recall values which are then sorted and interated through.
 =cut
 
 sub compute_precision_recall_curve {
@@ -447,6 +447,7 @@ sub compute_precision_recall_curve {
     my %rec             = ();
     my %counts          = ();
 
+    # compute precision and recall values
     foreach my $read ( keys(%topReadScore) ) {
         my $score = $topReadScore{$read}->[0];
         push( @readScores, $score );
@@ -459,16 +460,21 @@ sub compute_precision_recall_curve {
 
     foreach my $score (@scores) {
         foreach my $level ( %{ $sortedScores{$score}->[0] } ) {
+            # initialize variables
             $counts{$level} = 0 unless defined $counts{$level};
             $prec{$level}   = 0 unless defined $prec{$level};
-
+            
+            # Skip taxon levels without data
             next unless defined $sortedScores{$score}->[0]->{$level};
             $prec{$level} = $sortedScores{$score}->[0]->{$level} + $prec{$level} * $counts{$level};
             $counts{$level}++;
             $prec{$level} /= $counts{$level};
         }
         foreach my $level ( %{ $sortedScores{$score}->[1] } ) {
+            # initialize variables
             $rec{$level} = 0 unless defined $rec{$level};
+            
+            # Skip taxon levels without data
             next unless defined $sortedScores{$score}->[1]->{$level};
             $rec{$level} += $sortedScores{$score}->[1]->{$level};
         }
@@ -479,7 +485,10 @@ sub compute_precision_recall_curve {
 
 =head2 plot_precision_recall_curve
 Takes array of sorted scores and iterates through them to plot the curve. 
-Returns data structure tbd.  Called from within compute_precision_recall_curve
+Called from within compute_precision_recall_curve.  Prints data points to file
+with suffix pr_curve.txt.  File list precision and recall values for each read
+at each taxonomic level for which data exists.  
+level 
 =cut
 
 sub plot_precision_recall_curve {
@@ -493,13 +502,13 @@ sub plot_precision_recall_curve {
     my $PRCURVE = ps_open(">>$curve_file");
     print $PRCURVE "Superkingdom: $$precision{superkingdom}\t$$recall{superkingdom}\n";
     print $PRCURVE "Phylum: $$precision{phylum}\t$$recall{phylum}\n";
-    print $PRCURVE "Subphylum: $$precision{subphylum}\t$$recall{subphylum}\n" unless ( !defined $$precision{subphylum} || $$recall{species} );
+    print $PRCURVE "Subphylum: $$precision{subphylum}\t$$recall{subphylum}\n" unless ( !defined $$precision{subphylum} || $$recall{subphylum} );
     print $PRCURVE "Class: $$precision{class}\t$$recall{class}\n";
     print $PRCURVE "Order: $$precision{order}\t$$recall{order}\n";
     print $PRCURVE "Family: $$precision{family}\t$$recall{family}\n";
     print $PRCURVE "Genus: $$precision{genus}\t$$recall{genus}\n";
     print $PRCURVE "Species: $$precision{species}\t$$recall{species}\n";
-    print $PRCURVE "Subspecies: $$precision{subspecies}\t$$recall{subspecies}\n" unless ( !defined $$precision{subphylum} || $$recall{species} );
+    print $PRCURVE "Subspecies: $$precision{subspecies}\t$$recall{subspecies}\n" unless ( !defined $$precision{subspecies} || $$recall{subspecies} );
     close $PRCURVE;
 }
 
