@@ -461,26 +461,39 @@ Figure~\ref{fig:kronaplots} shows two such plots for samples from a 1 month old 
 
 
 \section*{Discussion}
-- Detection of bioterror agents is important
-
-- Here we introduce a means to statistically test for lineages of interest directly from an uncultured DNA sample
-  - Advantages to the approach taken by PhyloSift
-  - Disadvantages
-    - many
+We have presented a new approach for phylogenetic analysis of genomes and uncultured microbial communities.
+The software implementation of our method, called phylosift, also provides a platform for comparison of community structure among many samples.
+Phylogenetic analysis offers a number of conceptual advantages over taxonomic analysis for metagenomic data.
 
 
 
-- Advances in high throughput sample prep will make comparative metagenomics more tractable
+Phylogenetic analysis of metagenome sequence could offer several advantages in the area of microbial forensics.
+First, by studying an uncultured community, some potential pitfalls of culture bias and sample contamination can be avoided entirely.
+Second, the environmental shotgun sequencing approach can avoid problems related to PCR primer bias, though issues related to DNA extraction bias remain a problem~\cite{Morgan2010} and might be especially relevant for sporulating organisms such as \textit{Bacillus}. 
+Third, the phylogenetic approach can be applied to any gene of interest regardless of whether it is universally conserved or concordant with a taxonomic hierarchy.
+In many cases, phylogenies will offer a higher resolution representation of genetic ancestry than taxonomies.
 
+Here we have introduced a means to statistically test for lineages of interest directly from an uncultured DNA sample.
+The test calculates a Bayes factor for the two competing hypotheses: zero sequences derive from the target lineage, versus one or more sequences in the sample derive from the target lineage.
+In this work we demonstrated application of the Bayes factor test using on phylogenies inferred from 40 elite protein families.
+However, this method can be applied to any protein-coding or noncoding gene family of interest.
+Certain gene families
+We emphasize that the Bayes factor is not a test of homology -- homology tests exist as e-value and related score statistics in aligners such as BLAST, LAST, and HMMER.
+Given sequences homologous to a gene family, the Bayes factor is a test of which lineage they diverged.
+
+Although we do not provide examples, it is possible to test the hypothesis that two microbial communities have equal composition using the phylogenetic Kantorovich-Rubenstein distance~\citep{Evans2010}.
+In a bioforensics context this approach could be applied to test whether two uncultured communities of interest ``match'' each other.
+The implementation of the method employs an efficient approximation to calculate $p$-values for the null hypothesis of equal community composition and has been described elsewhere~\cite{Evans2010}.
+This test can be applied directly to any individual gene family processed by phylosift or to the concatenated alignment of elite families at either the amino acid or DNA sequence level.
+One limitation of this test is that it does not currently provide a means to account for variability in apparent community structure introduced by normal sample handling procedures.
+Future work might develop tests that employ many technical replicates of samples to account for such variation in the hypothesis test.
+
+Advances in high throughput sample prep will make comparative metagenomics more tractable.
 The analysis of human fecal microbial communities we describe was possible with a median of only 50 Mbp sequence data per sample.
 Current Illumina HiSeq 2000 instruments generate up to 40 Gbp per lane, suggesting that up to 800 samples could be processed in a single Illumina lane and yield similar findings.
 Based on current Illumina sequencing service provider costs this suggests large-scale gut metagenome surveys could be conducted for as little as to \$2.50 to \$5 per sample in sequencing costs.
 Library preparation reagents would dominate the overall cost of such studies, as current kits from Illumina require about \$40 per sample.
 
-- 
-  - Advantages to the approach taken by PhyloSift
-  - Disadvantages
-    - many
 
 
 \subsection*{Limitations and scope}
