@@ -47,6 +47,10 @@ sub all_opts {
 		chunks      => [ "chunks=i",      "Only run a set number of chunks" ],
 		chunk_size  => [ "chunk_size=i",  "Run so many sequences per chunk" ],
 		start_chunk => [ "start_chunk=i", "Start processing on a particular chunk" ],
+		elite       => [ "elite",         "Adds the DNGNGWU markers to the list of markers to use" ],
+		viral       => [ "viral",         "Adds the viral markers to the list of markers to use" ],
+		mtDNA       => [ "mtDNA",         "Adds the mtDNA markers to the list of markers to use" ],
+		eukaryotes  => [ "eukaryotes",    "Adds the eukaryotes markers to the list of markers to use" ],
 	);
 }
 
@@ -59,22 +63,22 @@ sub options {
 
 	# all-specific options:
 	$opts{keep_search} = [ "keep_search", "Keeps the blastDir files (Default: Delete the blastDir files after every chunk)" ];
-    return values(%opts);
+	return values(%opts);
 }
 
 sub validate {
 	my ( $self, $opt, $args ) = @_;
-	
+
 	# we need at least one argument beyond the options; die with that message
 	# and the complete "usage" text describing switches, etc
-	$self->usage_error("phylosift requires exactly one or two file name arguments to run in this mode") unless @$args == 1 || (@$args == 2 && $opt->{paired});
+	$self->usage_error("phylosift requires exactly one or two file name arguments to run in this mode") unless @$args == 1 || ( @$args == 2 && $opt->{paired} );
 }
 
 sub validate_subcommand {
-	my ( $self, $opt , $args ) = @_;
+	my ( $self, $opt, $args ) = @_;
 	my $mode->{mode} = pop(@_);
-	if ($mode->{mode} eq 'align' || $mode->{mode} eq 'place' || $mode->{mode} eq 'summarize' || $mode->{mode} eq 'search' ){
-		if($opt->{continue} && defined($opt->{chunks}) && $opt->{chunks} != 1){
+	if ( $mode->{mode} eq 'align' || $mode->{mode} eq 'place' || $mode->{mode} eq 'summarize' || $mode->{mode} eq 'search' ) {
+		if ( $opt->{continue} && defined( $opt->{chunks} ) && $opt->{chunks} != 1 ) {
 			$self->usage_error("If using --continue when running $mode->{mode} the number of --chunks to run cannot be different than 1\n");
 		}
 	}
@@ -111,7 +115,12 @@ sub load_opt {
 	set_ifdef( \$Phylosift::Settings::my_debug,             $opt->{debug} );
 	set_ifdef( \$Phylosift::Settings::CHUNK_MAX_SEQS,       $opt->{chunk_size} );
 	set_ifdef( \$Phylosift::Settings::bayes,                $opt->{bayes} );
-
+	set_ifdef( \$Phylosift::Settings::elite,                $opt->{elite} );
+	set_ifdef( \$Phylosift::Settings::viral,                $opt->{viral} );
+	set_ifdef( \$Phylosift::Settings::mtDNA,                $opt->{mtDNA} );
+	set_ifdef( \$Phylosift::Settings::eukaryotes,           $opt->{eukaryotes} );
+	set_ifdef( \$Phylosift::Settings::core,                 1, )
+	  if !( $Phylosift::Settings::elite || $Phylosift::Settings::viral || $Phylosift::Settings::mtDNA || $Phylosift::Settings::eukaryotes );
 	$Phylosift::Utilities::debuglevel = $Phylosift::Settings::my_debug || 0;
 }
 

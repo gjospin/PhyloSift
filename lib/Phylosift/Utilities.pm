@@ -1388,12 +1388,15 @@ Writes the completed chunk information to the run_info_file
 =cut
 
 sub write_step_completion_to_run_info {
-	my %args = @_;
-	my $self = $args{self} || miss("PS Object");
-	my $chunk = $args{chunk} || miss("Chunk");
-	my $step = $args{step} || miss("Step");
-	my $RUNINFO = ps_open(">>".get_run_info_file(self => $self));
-	print $RUNINFO "Chunk $chunk $step completed\t".$self->{'run_info'}{$chunk}{$step}[0]."\t".$self->{'run_info'}{$chunk}{$step}[1]."\t".$self->{'run_info'}{$chunk}{$step}[2]."\n";
+	my %args    = @_;
+	my $self    = $args{self} || miss("PS Object");
+	my $chunk   = $args{chunk} || miss("Chunk");
+	my $step    = $args{step} || miss("Step");
+	my $RUNINFO = ps_open( ">>".get_run_info_file( self => $self ) );
+	print $RUNINFO "Chunk $chunk $step completed\t"
+	  .$self->{'run_info'}{$chunk}{$step}[0]."\t"
+	  .$self->{'run_info'}{$chunk}{$step}[1]."\t"
+	  .$self->{'run_info'}{$chunk}{$step}[2]."\n";
 	close($RUNINFO);
 }
 
@@ -1403,13 +1406,14 @@ Initializes the timer for a specific step for a specific chunk
 Also adds the value into the run_info data structure
 
 =cut
+
 sub start_step {
-	my %args = @_;
-	my $self = $args{self} || miss("PS Object");
-	my $step     = $args{step} || miss("Step to look for in run_info.txt\n");
-	my $chunk    = $args{chunk} || miss("Chunk");
-	my $start_search_time = start_timer( name => "start_$step"."_$chunk", silent=> 1);
-	push(@{$self->{'run_info'}{$chunk}{$step}}, $start_search_time);
+	my %args              = @_;
+	my $self              = $args{self} || miss("PS Object");
+	my $step              = $args{step} || miss("Step to look for in run_info.txt\n");
+	my $chunk             = $args{chunk} || miss("Chunk");
+	my $start_search_time = start_timer( name => "start_$step"."_$chunk", silent => 1 );
+	push( @{ $self->{'run_info'}{$chunk}{$step} }, $start_search_time );
 }
 
 =head2 end_step
@@ -1418,13 +1422,14 @@ Ends the timer for a specific step for a specific chunk
 Also adds the values into the run_info data structure
 
 =cut
+
 sub end_step {
-	my %args = @_;
-	my $self = $args{self} || miss("PS Object");
-	my $step     = $args{step} || miss("Step to look for in run_info.txt\n");
-	my $chunk    = $args{chunk} || miss("Chunk");
+	my %args            = @_;
+	my $self            = $args{self} || miss("PS Object");
+	my $step            = $args{step} || miss("Step to look for in run_info.txt\n");
+	my $chunk           = $args{chunk} || miss("Chunk");
 	my $end_search_time = start_timer( name => "end_$step"."_$chunk", silent => 1 );
-	push(@{$self->{'run_info'}{$chunk}{$step}}, $end_search_time , end_timer(name => "start_$step"."_$chunk", silent => 1));
+	push( @{ $self->{'run_info'}{$chunk}{$step} }, $end_search_time, end_timer( name => "start_$step"."_$chunk", silent => 1 ) );
 }
 
 =head2 load_run_info
@@ -1434,24 +1439,25 @@ Reads the run_info.txt file from a run and loads it into a data structure
 =cut
 
 sub load_run_info {
-	my %args = @_;
-	my $self = $args{self};
+	my %args        = @_;
+	my $self        = $args{self};
 	my %return_hash = ();
-	return \%return_hash unless -e get_run_info_file(self => $self);
-	my $RUN_INFO_FH = ps_open(get_run_info_file(self => $self));
-	while(<$RUN_INFO_FH>){
+	return \%return_hash unless -e get_run_info_file( self => $self );
+	my $RUN_INFO_FH = ps_open( get_run_info_file( self => $self ) );
+	while (<$RUN_INFO_FH>) {
 		chomp($_);
+
 		#debug $_."\n";
 		next unless $_ =~ m/^Chunk.*completed/;
-		my @line = split(/\t/,$_);
+		my @line = split( /\t/, $_ );
 		## data structure run_info{chunk}{}
 		$line[0] =~ m/Chunk\s+(\d+)\s+(\S+)\s+/;
-		my $chunk = $1;
-		my $mode = $2;
-		my $start = $line[1];
-		my $end = $line[2];
+		my $chunk    = $1;
+		my $mode     = $2;
+		my $start    = $line[1];
+		my $end      = $line[2];
 		my $duration = $line[3];
-		push(@{$return_hash{$chunk}{$mode}}, $start,$end,$duration);
+		push( @{ $return_hash{$chunk}{$mode} }, $start, $end, $duration );
 	}
 	return \%return_hash;
 }
@@ -1464,13 +1470,13 @@ Always return 0 if $Phylosift::Settings::force is set to 1
 =cut
 
 sub has_step_completed {
-	my %args     = @_;
-	my $self     = $args{self} || miss("PS object");
-	my $step     = $args{step} || miss("Step to look for in run_info.txt\n");
-	my $chunk    = $args{chunk} || miss("Chunk");
-	my $force  = $args{force};
-	if( defined ($self->{'run_info'}{$chunk}{$step}) && scalar(@{$self->{'run_info'}{$chunk}{$step}}) > 1){
-		cleanup_chunk( self => $self, step => $step, chunk => $chunk) if $force;
+	my %args  = @_;
+	my $self  = $args{self} || miss("PS object");
+	my $step  = $args{step} || miss("Step to look for in run_info.txt\n");
+	my $chunk = $args{chunk} || miss("Chunk");
+	my $force = $args{force};
+	if ( defined( $self->{'run_info'}{$chunk}{$step} ) && scalar( @{ $self->{'run_info'}{$chunk}{$step} } ) > 1 ) {
+		cleanup_chunk( self => $self, step => $step, chunk => $chunk ) if $force;
 		return 1 unless $force;
 	}
 	return 0;
@@ -1625,20 +1631,20 @@ Concatenates a set of files not includin the header line for the first file only
 =cut
 
 sub concatenate_summary_files {
-	my %args = @_;
-	my $self = $args{self} || miss("PS Object");
-	my $output_file = $args{output_file} || miss("Output file");
+	my %args            = @_;
+	my $self            = $args{self} || miss("PS Object");
+	my $output_file     = $args{output_file} || miss("Output file");
 	my $files_array_ref = $args{files};
-	my $OUTPUT_FH = ps_open(">$output_file");
-	my @files = @{$files_array_ref};
-	my $header = "";
-	my $printed_header = 0;
-	foreach my $file (@files){
+	my $OUTPUT_FH       = ps_open(">$output_file");
+	my @files           = @{$files_array_ref};
+	my $header          = "";
+	my $printed_header  = 0;
+	foreach my $file (@files) {
 		my $FH = ps_open($file);
 		$header = <$FH>;
 		print $OUTPUT_FH $header unless $printed_header;
 		$printed_header = 1;
-		while(<$FH>){ #print the rest of the file
+		while (<$FH>) {    #print the rest of the file
 			print $OUTPUT_FH $_;
 		}
 		close($FH);
@@ -1860,6 +1866,7 @@ sub index_marker_db {
 	my @markers = @{ $args{markers} };
 	debug "Indexing ".scalar(@markers)." in $path\n";
 	print "Inside index_marker_db\n";
+
 	# use alignments to make an unaligned fasta database containing everything
 	# strip gaps from the alignments
 	my $rna_db        = get_rna_db( path => $path );
@@ -1958,16 +1965,50 @@ sub gather_markers {
 	my $force_gather = $args{force_gather} || 0;
 	my $path         = $args{path} || $Phylosift::Settings::marker_dir;
 	my @marks        = ();
-	# try to use a marker list file if it exists
-	if ( !defined($marker_file) && !$force_gather ) {
-		$marker_file = "$path/marker_list.txt" if -e "$path/marker_list.txt";
+	##gather markers according to flags if they are set.
+	if ( !$force_gather && !defined($marker_file) ) {
+		push( @marks, gather_list_markers( marker_file => get_marker_file( path => $path, markers => "elite" ) ) )      if $Phylosift::Settings::elite;
+		push( @marks, gather_list_markers( marker_file => get_marker_file( path => $path, markers => "viral" ) ) )      if $Phylosift::Settings::viral;
+		push( @marks, gather_list_markers( marker_file => get_marker_file( path => $path, markers => "eukaryotes" ) ) ) if $Phylosift::Settings::eukaryotes;
+		push( @marks, gather_list_markers( marker_file => get_marker_file( path => $path, markers => "mtDNA" ) ) )      if $Phylosift::Settings::mtDNA;
+		@marks = gather_list_markers( marker_file => get_marker_file( path => $path, markers => "marker" ) ) if $Phylosift::Settings::core;
+	} elsif( !$force_gather && defined($marker_file) && $marker_file ne "" ){
+		@marks = gather_list_markers( marker_file => $marker_file );
+	}else {
+		@marks = gather_all_markers( path => $path, allow_missing_hmm => $missing_hmm );
 	}
+	# always sort these, since the concats need to be used in the same order every time
+	return sort @marks;
+}
 
-	#create a file with a list of markers called markers_list.txt
+=head2 get_marker_file
+
+returns the filename and the path to the marker file specified
+
+=cut
+
+sub get_marker_file {
+	my %args    = @_;
+	my $path    = $args{path} || $phylosift::Settings::marker_dir;
+	my $markers = $args{markers} || "marker";
+	warn "$path/".$markers."_list.txt was not found\n" unless -e "$path/".$markers."_list.txt";
+	return "$path/".$markers."_list.txt";
+}
+
+=head2 gather_list_markers
+
+Gathers markers specified in a list specified as an argument
+return an array of marker names
+
+=cut
+
+sub gather_list_markers {
+	my %args        = @_;
+	my $marker_file = $args{marker_file} || miss("Marker file");
+	my @marks       = ();
 	if ( defined($marker_file) && -f $marker_file && $marker_file ne "" ) {
 		debug "Using a marker list file $marker_file\n";
-
-		#gather a custom list of makers, list convention is 1 marker per line
+		##gather a custom list of makers, list convention is 1 marker per line
 		my $MARKERS_IN = ps_open($marker_file);
 		while (<$MARKERS_IN>) {
 			chomp($_);
@@ -1975,45 +2016,55 @@ sub gather_markers {
 			$marker_lookup{ get_marker_basename( marker => $_ ) } = $_;
 		}
 		close($MARKERS_IN);
-		return @marks;
-	} else {
+	}
+	return @marks;
+}
 
-		# gather all markers
-		# this is for the original marker set
-		my @files = <$path/*.faa>;
-		foreach my $file (@files) {
-			$file =~ m/\/(\w+).faa/;
-			$marker_lookup{ get_marker_basename( marker => $1 ) } = $1;
-			push( @marks, $1 );
-		}
+=head2 gather_all_markers
 
-		# now gather directory packaged markers (new style)
-		# use maxdepth 2 for two-directory-level markers in the extended marker set
-		my $MLIST = ps_open("find $path -maxdepth 2 -mindepth 1 -type d |");
-		while ( my $line = <$MLIST> ) {
-			chomp $line;
-			debug "$line\n";
-			next if $line =~ /PMPROK/;
-			next if $line =~ /concat/;
-			next if $line =~ /representatives/;
-			next if $line =~ /.updated$/;                # just include the base version name
-			next if $line =~ /codon.updated.sub\d+$/;    # just include the base version name
-			$line = substr( $line, length($path) + 1 );
+Gathers all markers from the marker directory passed in as an argument
+returns an array of marker names
 
-			# all markers need to have an hmm or a cm else they are not usable
-			my $baseline = $line;
-			$baseline =~ s/.+\///g;
-			if ( !$missing_hmm ) {
-				next unless ( -e "$path/$line/$line.cm" || -e "$path/$line/$baseline.hmm" );
-			}
-			$marker_lookup{$baseline} = $line;
-			push( @marks, $line );
-		}
-		debug( "Found ".scalar(@marks)." markers\n" );
+=cut
+
+sub gather_all_markers {
+	my %args        = @_;
+	my $path        = $args{path} || $Phylosift::Settings::marker_dir;
+	my $missing_hmm = $args{allow_missing_hmm} || 0;
+
+	# gather all markers
+	# this is for the original marker set
+	my @files = <$path/*.faa>;
+	my @marks = ();
+	foreach my $file (@files) {
+		$file =~ m/\/(\w+).faa/;
+		$marker_lookup{ get_marker_basename( marker => $1 ) } = $1;
+		push( @marks, $1 );
 	}
 
-	# always sort these, since the concats need to be used in the same order every time
-	return sort @marks;
+	# now gather directory packaged markers (new style)
+	# use maxdepth 2 for two-directory-level markers in the extended marker set
+	my $MLIST = ps_open("find $path -maxdepth 2 -mindepth 1 -type d |");
+	while ( my $line = <$MLIST> ) {
+		chomp $line;
+		next if $line =~ /PMPROK/;
+		next if $line =~ /concat/;
+		next if $line =~ /representatives/;
+		next if $line =~ /.updated$/;                # just include the base version name
+		next if $line =~ /codon.updated.sub\d+$/;    # just include the base version name
+		$line = substr( $line, length($path) + 1 );
+
+		# all markers need to have an hmm or a cm else they are not usable
+		my $baseline = $line;
+		$baseline =~ s/.+\///g;
+		if ( !$missing_hmm ) {
+			next unless ( -e "$path/$line/$line.cm" || -e "$path/$line/$baseline.hmm" );
+		}
+		$marker_lookup{$baseline} = $line;
+		push( @marks, $line );
+	}
+	debug( "Found ".scalar(@marks)." markers\n" );
+	return @marks;
 }
 
 =head2 get_available_memory
