@@ -1114,9 +1114,15 @@ given by markerName
 
 sub get_read_placement_file {
 	my %args      = @_;
+	my $self = $args{self};
 	my $marker    = $args{marker};
 	my $chunk     = $args{chunk};
 	my $decorated = get_decorated_marker_name( %args, base => 1 );
+	unless(defined($marker)){
+		my @files_list = ();
+		push( @files_list, glob( $self->{'treeDir'}."/*.$chunk.jplace" ) );
+		return @files_list;
+	}
 	return "$decorated.$chunk.jplace";
 }
 
@@ -1503,7 +1509,7 @@ sub cleanup_chunk {
 		push( @files_list, get_aligner_output_all_newCandidate( self => $self, chunk => $chunk ) );
 		push( @files_list, get_aligner_output_all_fasta( self => $self, chunk => $chunk ) );
 	} elsif ( $step eq 'Place' ) {
-		push( @files_list, get_place_output_all_jplace( self => $self, chunk => $chunk ) );
+		push( @files_list, get_read_placement_file( self => $self, chunk => $chunk ) );
 	} elsif ( $step eq 'Summarize' ) {
 		push( @files_list, get_taxa_90pct_HPD( self => $self ) );
 		push( @files_list, get_taxasummary( self => $self ) );
@@ -1576,7 +1582,7 @@ sub get_place_output_all_jplace {
 	my $self       = $args{self} || miss("PS object");
 	my $chunk      = $args{chunk} || miss("Chunk");
 	my @files_list = ();
-	push( @files_list, glob( $self->{'blastDir'}."/*.$chunk.jplace" ) );
+	push( @files_list, glob( $self->{'treeDir'}."/*.$chunk.jplace" ) );
 	return @files_list;
 }
 
