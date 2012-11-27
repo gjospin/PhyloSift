@@ -51,6 +51,7 @@ sub all_opts {
 		viral       => [ "viral",         "Adds the viral markers to the list of markers to use" ],
 		mtDNA       => [ "mtDNA",         "Adds the mtDNA markers to the list of markers to use" ],
 		eukaryotes  => [ "eukaryotes",    "Adds the eukaryotes markers to the list of markers to use" ],
+		rRNA        => [ "rRNA",          "Adds the rRNA markers to the list of markers to use" ],
 	);
 }
 
@@ -119,8 +120,9 @@ sub load_opt {
 	set_ifdef( \$Phylosift::Settings::viral,                $opt->{viral} );
 	set_ifdef( \$Phylosift::Settings::mtDNA,                $opt->{mtDNA} );
 	set_ifdef( \$Phylosift::Settings::eukaryotes,           $opt->{eukaryotes} );
+	set_ifdef( \$Phylosift::Settings::rRNA,                 $opt->{rRNA} );
 	set_ifdef( \$Phylosift::Settings::core,                 1, )
-	  if !( $Phylosift::Settings::elite || $Phylosift::Settings::viral || $Phylosift::Settings::mtDNA || $Phylosift::Settings::eukaryotes );
+	  if !( $Phylosift::Settings::elite || $Phylosift::Settings::viral || $Phylosift::Settings::mtDNA || $Phylosift::Settings::eukaryotes || $Phylosift::Settings::rRNA );
 	$Phylosift::Utilities::debuglevel = $Phylosift::Settings::my_debug || 0;
 }
 

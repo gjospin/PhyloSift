@@ -1971,6 +1971,7 @@ sub gather_markers {
 		push( @marks, gather_list_markers( marker_file => get_marker_file( path => $path, markers => "viral" ) ) )      if $Phylosift::Settings::viral;
 		push( @marks, gather_list_markers( marker_file => get_marker_file( path => $path, markers => "eukaryotes" ) ) ) if $Phylosift::Settings::eukaryotes;
 		push( @marks, gather_list_markers( marker_file => get_marker_file( path => $path, markers => "mtDNA" ) ) )      if $Phylosift::Settings::mtDNA;
+		push( @marks, gather_list_markers( marker_file => get_marker_file( path => $path, markers => "rRNA" ) ) )       if $Phylosift::Settings::rRNA;
 		@marks = gather_list_markers( marker_file => get_marker_file( path => $path, markers => "marker" ) ) if $Phylosift::Settings::core;
 	} elsif( !$force_gather && defined($marker_file) && $marker_file ne "" ){
 		@marks = gather_list_markers( marker_file => $marker_file );
