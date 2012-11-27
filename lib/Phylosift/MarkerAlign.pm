@@ -196,7 +196,8 @@ sub gather_chunky_markers {
 	my $self              = $args{self} || miss("PS object");
 	my $chunk             = $args{chunk} || miss("Chunk");
 	my $type              = $args{type};
-	my @candidate_markers = Phylosift::Utilities::get_search_output_all_candidate(self=>$self,chunk=>$chunk);
+	my @candidate_markers = Phylosift::Utilities::get_candidate_file(self=>$self,chunk=>$chunk);
+	debug "MARKERS :: @candidate_markers\n";
 	my %unique_markers;
 	foreach my $line (@candidate_markers) {
 		$line =~ m/\/blastDir\/([^\/\.]+)\.\S+.candidate/;

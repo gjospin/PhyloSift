@@ -1104,7 +1104,8 @@ sub get_aligner_output_fasta {
 	my $chunk     = $args{chunk};
 	my $chunky    = defined($chunk) ? ".$chunk" : "";
 	my $decorated = get_decorated_marker_name( %args, base => 1 );
-	return "$decorated$chunky.fasta";
+	return "$decorated$chunky.fasta" if defined $marker;
+	return glob("*$chunky.fasta");
 }
 
 =head2 get_read_placement_file
@@ -1118,12 +1119,8 @@ sub get_read_placement_file {
 	my $marker    = $args{marker};
 	my $chunk     = $args{chunk};
 	my $decorated = get_decorated_marker_name( %args, base => 1 );
-	unless(defined($marker)){
-		my @files_list = ();
-		push( @files_list, glob( $self->{'treeDir'}."/*.$chunk.jplace" ) );
-		return @files_list;
-	}
-	return "$decorated.$chunk.jplace";
+	return "$decorated.$chunk.jplace" if defined $marker;
+	return glob( $self->{'treeDir'}."/*.$chunk.jplace" );
 }
 
 =head2 get_trimfinal_marker_file
@@ -1503,99 +1500,48 @@ sub cleanup_chunk {
 	my @files_list = ();
 	my $file;
 	if ( $step eq 'Search' ) {
-		push( @files_list, get_search_output_all_candidate( self => $self, chunk => $chunk ) );
+		push( @files_list, get_candidate_file( self => $self, chunk => $chunk, dna => 1 ) );
+		push( @files_list, get_candidate_file( self => $self, chunk => $chunk ) );
 	} elsif ( $step eq 'Align' ) {
-		push( @files_list, get_aligner_output_all_unmasked( self => $self, chunk => $chunk ) );
-		push( @files_list, get_aligner_output_all_newCandidate( self => $self, chunk => $chunk ) );
-		push( @files_list, get_aligner_output_all_fasta( self => $self, chunk => $chunk ) );
+		push( @files_list, get_unmasked_file( self => $self, chunk => $chunk ) );
+		push( @files_list, get_candidate_file( self => $self, chunk => $chunk , new => 1) );
+		push( @files_list, get_aligner_output_fasta( self => $self, chunk => $chunk ) );
 	} elsif ( $step eq 'Place' ) {
 		push( @files_list, get_read_placement_file( self => $self, chunk => $chunk ) );
 	} elsif ( $step eq 'Summarize' ) {
 		push( @files_list, get_taxa_90pct_HPD( self => $self ) );
 		push( @files_list, get_taxasummary( self => $self ) );
-		push( @files_list, get_summarize_output_all_sequence_taxa( self => $self ) );
-		push( @files_list, get_summarize_output_all_sequence_taxa_summary( self => $self ) );
+		push( @files_list, get_sequence_taxa_file( self => $self, chunk => $chunk ) );
+		push( @files_list, get_sequence_taxa_summary_file( self => $self, chunk => $chunk ) );
 	}
 	return if @files_list == 0;    # no need to do anything else if the list is empty
 	my $cmd = "rm ".join( ' ', @files_list );
 	`$cmd`;
 }
 
-=head2 get_search_output_all_candidate
-return an array of all candidate files in the blastDir for a specific chunk
-=cut
-
-sub get_search_output_all_candidate {
-	my %args       = @_;
-	my $self       = $args{self} || miss("PS object");
-	my $chunk      = $args{chunk} || miss("Chunk");
-	my @files_list = ();
-	push( @files_list, glob( $self->{'blastDir'}."/*.candidate.*.$chunk.*" ) );
-	return @files_list;
-}
-
-=head2 get_aligner_output_all_fasta
-return an array of all fasta files in the alignDir for a specific chunk
-=cut
-
-sub get_aligner_output_all_fasta {
-	my %args       = @_;
-	my $self       = $args{self} || miss("PS object");
-	my $chunk      = $args{chunk} || miss("Chunk");
-	my @files_list = ();
-	push( @files_list, glob( $self->{'alignDir'}."/*.$chunk.fasta" ) );
-	return @files_list;
-}
-
-=head2 get_aligner_output_all_newCandidate
-return an array of all newCandidate files in the alignDir
-=cut
-
-sub get_aligner_output_all_newCandidate {
-	my %args       = @_;
-	my $self       = $args{self} || miss("PS object");
-	my $chunk      = $args{chunk} || miss("Chunk");
-	my @files_list = ();
-	push( @files_list, glob( $self->{'alignDir'}."/*.newCandidate.aa.$chunk" ) );
-	return @files_list;
-}
-
-=head2 get_aligner_output_all_unmasked
+=head2 get_unmasked_file
 return an array of all unmasked files in the alignDir
 =cut
 
-sub get_aligner_output_all_unmasked {
+sub get_unmasked_file {
 	my %args       = @_;
 	my $self       = $args{self} || miss("PS object");
 	my $chunk      = $args{chunk} || miss("Chunk");
-	my @files_list = ();
-	push( @files_list, glob( $self->{'alignDir'}."/*.$chunk.unmasked" ) );
-	return @files_list;
+	my $marker = $args{marker};
+	return $self->{'alignDir'}."/$marker.$chunk.unmasked" if defined $marker;
+	return glob( $self->{'alignDir'}."/*.$chunk.unmasked" );
 }
 
-=head2 get_place_output_all_jplace
-return an array of all jplace files in the treeDir for a specific chunk
-=cut
-
-sub get_place_output_all_jplace {
-	my %args       = @_;
-	my $self       = $args{self} || miss("PS object");
-	my $chunk      = $args{chunk} || miss("Chunk");
-	my @files_list = ();
-	push( @files_list, glob( $self->{'treeDir'}."/*.$chunk.jplace" ) );
-	return @files_list;
-}
-
-=head2 get_summarize_output_all_sequence_taxa
+=head2 get_sequence_taxa_file
 return an array of all sequence_taxa files in the workingDir for a specific chunk
 =cut
 
 sub get_summarize_output_all_sequence_taxa {
 	my %args       = @_;
 	my $self       = $args{self} || miss("PS object");
-	my @files_list = ();
-	push( @files_list, glob( $Phylosift::Settings::file_dir."/sequence_taxa.*.txt" ) );
-	return @files_list;
+	my $chunk      = $args{chunk};
+	return $Phylosift::Settings::file_dir."/sequence_taxa.$chunk.txt" if defined $chunk;
+	return glob( $Phylosift::Settings::file_dir."/sequence_taxa.*.txt" );
 }
 
 =head2 get_summarize_output_all_sequence_taxa_summary
@@ -1605,9 +1551,9 @@ return an array of all sequence_taxa_summary files in the workingDir for a speci
 sub get_summarize_output_all_sequence_taxa_summary {
 	my %args       = @_;
 	my $self       = $args{self} || miss("PS object");
-	my @files_list = ();
-	push( @files_list, glob( $Phylosift::Settings::file_dir."/sequence_taxa_summary.*.txt" ) );
-	return @files_list;
+	my $chunk      = $args{chunk};
+	return $Phylosift::Settings::file_dir."/sequence_taxa_summary.*.txt" if defined $chunk;
+	return glob( $Phylosift::Settings::file_dir."/sequence_taxa_summary.*.txt" );
 }
 
 =head2 get_taxasummary
@@ -1841,7 +1787,7 @@ sub get_lastal_db {
 sub get_candidate_file {
 	my %args   = @_;
 	my $self   = $args{self};
-	my $marker = $args{marker} || miss("Marker name");
+	my $marker = $args{marker};
 	my $type   = $args{type};
 	my $dna    = $args{dna};
 	my $new    = $args{new};
@@ -1854,8 +1800,11 @@ sub get_candidate_file {
 	$dir = $self->{"alignDir"} if defined( $args{new} ) && $new;
 	my $chunky = "";
 	$chunky = ".$chunk" if defined($chunk);
-	$marker =~ s/.+\///g;    # strip off any prepended directories
-	return "$dir/$marker$type$candidate$ffn$chunky";
+	$marker =~ s/.+\///g if defined $marker;    # strip off any prepended directories
+	return "$dir/$marker$type$candidate$ffn$chunky" if defined $marker && defined $type;
+	return glob("$dir/$marker*$candidate$ffn$chunky.*")if defined $marker && !defined $type; #gathering all candidate files regardless of type
+	return glob("$dir/*$type$candidate$ffn$chunky.*")if !defined $marker && defined $type;#gathering all candidate files regardless of marker
+	return glob("$dir/*$candidate$ffn$chunky.*");#gathering all candidate files regardless of type AND marker
 }
 
 =head2 index_marker_db
