@@ -89,13 +89,14 @@ sub execute {
 	}
 
 	# get the mrca of nodes in question
-	my $mrca = $tree->get_mrca( \@nodes );
+	my @mrca_nodes = @nodes;
+	my $mrca = $tree->get_mrca( \@mrca_nodes );
 	debug "nodes[0] name is ".$nodes[0]->get_name."\n";
 	debug "mrca name is ".$mrca->get_name."\n";
 
 	# if nontrivial mrca then
 	# accumulate a list of all subtree nodes of interest
-	if ( @nodes > 1 ) {
+	if ( scalar(@nodes) > 1 ) {
 		$mrca->visit_depth_first(
 			-post => sub {
 				my $node = shift;
@@ -128,7 +129,7 @@ sub execute {
 	print "\nNull hypothesis: taxa in this group have zero abundance in the sample\n";
 	my $bf = "Infinite -- at least one sequence has 100% probability of deriving from the test lineage(s)";
 	$bf = $bf_numer == 1 ? "Zero -- target is beyond limit of detection" : $bf;
-	$bf = ($bf != 0 && $bf != 1) ? ( ( 1 - $bf_numer ) / ($bf_numer) ) : $bf;
+	$bf = ($bf_numer != 0 && $bf_numer != 1) ? ( ( 1 - $bf_numer ) / ($bf_numer) ) : $bf;
 	print "\nBayes factor: $bf\n\n";
 	print "Strength of null hypothesis rejection:\n";
 	print "< 1\t Null hypothesis supported\n";
