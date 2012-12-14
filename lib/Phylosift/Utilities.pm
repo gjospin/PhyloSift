@@ -1104,8 +1104,8 @@ sub get_aligner_output_fasta {
 	my $chunk     = $args{chunk};
 	my $chunky    = defined($chunk) ? ".$chunk" : "";
 	my $decorated = get_decorated_marker_name( %args, base => 1 );
-	return "$decorated$chunky.fasta" if defined $marker;
-	return glob("*$chunky.fasta");
+	return glob( "$decorated$chunky.fasta" ) if defined $marker;
+	return glob( "*$chunky.fasta" );
 }
 
 =head2 get_read_placement_file
