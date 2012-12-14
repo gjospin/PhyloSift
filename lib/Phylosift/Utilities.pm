@@ -1118,8 +1118,9 @@ sub get_read_placement_file {
 	my $self = $args{self};
 	my $marker    = $args{marker};
 	my $chunk     = $args{chunk};
-	my $decorated = get_decorated_marker_name( %args, base => 1 );
-	return "$decorated.$chunk.jplace" if defined $marker;
+	my $decorated = get_decorated_marker_name( %args, base => 1 ) if defined $marker;
+#	return "$decorated.$chunk.jplace" if defined $marker;
+	return glob( $self->{'treeDir'}."/$marker.$chunk.jplace" ) if defined $marker;
 	return glob( $self->{'treeDir'}."/*.$chunk.jplace" );
 }
 
@@ -1528,7 +1529,7 @@ sub get_unmasked_file {
 	my $self       = $args{self} || miss("PS object");
 	my $chunk      = $args{chunk} || miss("Chunk");
 	my $marker = $args{marker};
-	return $self->{'alignDir'}."/$marker.$chunk.unmasked" if defined $marker;
+	return glob( $self->{'alignDir'}."/$marker.$chunk.unmasked" ) if defined $marker;
 	return glob( $self->{'alignDir'}."/*.$chunk.unmasked" );
 }
 
@@ -1540,7 +1541,7 @@ sub get_summarize_output_all_sequence_taxa {
 	my %args       = @_;
 	my $self       = $args{self} || miss("PS object");
 	my $chunk      = $args{chunk};
-	return $Phylosift::Settings::file_dir."/sequence_taxa.$chunk.txt" if defined $chunk;
+	return glob( $Phylosift::Settings::file_dir."/sequence_taxa.$chunk.txt" ) if defined $chunk;
 	return glob( $Phylosift::Settings::file_dir."/sequence_taxa.*.txt" );
 }
 
@@ -1552,7 +1553,7 @@ sub get_summarize_output_all_sequence_taxa_summary {
 	my %args       = @_;
 	my $self       = $args{self} || miss("PS object");
 	my $chunk      = $args{chunk};
-	return $Phylosift::Settings::file_dir."/sequence_taxa_summary.*.txt" if defined $chunk;
+	return glob( $Phylosift::Settings::file_dir."/sequence_taxa_summary.*.txt" ) if defined $chunk;
 	return glob( $Phylosift::Settings::file_dir."/sequence_taxa_summary.*.txt" );
 }
 
@@ -1801,10 +1802,10 @@ sub get_candidate_file {
 	my $chunky = "";
 	$chunky = ".$chunk" if defined($chunk);
 	$marker =~ s/.+\///g if defined $marker;    # strip off any prepended directories
-	return "$dir/$marker$type$candidate$ffn$chunky" if defined $marker && defined $type;
-	return glob("$dir/$marker*$candidate$ffn$chunky.*")if defined $marker && !defined $type; #gathering all candidate files regardless of type
-	return glob("$dir/*$type$candidate$ffn$chunky.*")if !defined $marker && defined $type;#gathering all candidate files regardless of marker
-	return glob("$dir/*$candidate$ffn$chunky.*");#gathering all candidate files regardless of type AND marker
+	return glob( "$dir/$marker$type$candidate$ffn$chunky" ) if defined $marker && defined $type;
+	return glob( "$dir/$marker*$candidate$ffn$chunky.*" )if defined $marker && !defined $type; #gathering all candidate files regardless of type
+	return glob( "$dir/*$type$candidate$ffn$chunky.*" )if !defined $marker && defined $type;#gathering all candidate files regardless of marker
+	return glob( "$dir/*$candidate$ffn$chunky.*" );#gathering all candidate files regardless of type AND marker
 }
 
 =head2 index_marker_db
