@@ -46,6 +46,16 @@ while(<INBC>){
     chomp($_);
     my @line = split(/\t/,$_);
     $barcode{$line[1]}=$line[0];
+    # insert all single-error barcodes
+    for(my $i=0; $i<length($line[1]); $i++){
+    	my @chars = ("A","C","G","T","N");
+    	my $s = $line[1];
+    	foreach my $ck(@chars){
+			substr( $s, $_, 1 ) =~ s/[ACGT]/$ck/ for $i;
+	    	print STDERR "Barcode collision! $s => $line[1] was already defined as $barcode{$s}!!\n" if defined $barcode{$s} && $s ne $line[1];
+		    $barcode{$s}=$line[0];
+    	}
+    }
 }
 close(INBC);
 
