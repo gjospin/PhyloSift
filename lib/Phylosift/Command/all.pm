@@ -72,10 +72,10 @@ sub validate {
 
 sub validate_subcommand {
 	my ( $self, $opt , $args ) = @_;
-	my $mode->{mode} = pop(@_);
-	if ($mode->{mode} eq 'align' || $mode->{mode} eq 'place' || $mode->{mode} eq 'summarize' || $mode->{mode} eq 'search' ){
+	my $mode = pop(@_);
+	if ($mode eq 'align' || $mode eq 'place' || $mode eq 'summarize' || $mode eq 'search' ){
 		if($opt->{continue} && defined($opt->{chunks}) && $opt->{chunks} != 1){
-			$self->usage_error("If using --continue when running $mode->{mode} the number of --chunks to run cannot be different than 1\n");
+			$self->usage_error("If using --continue when running $mode the number of --chunks to run cannot be different than 1\n");
 		}
 	}
 }
