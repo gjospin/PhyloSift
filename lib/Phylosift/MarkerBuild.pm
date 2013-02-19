@@ -530,20 +530,30 @@ sub mask_and_clean_alignment {
 	my $output_file = $args{output_file} || miss("output_file");
 	my %id_map;    # will store a map of unique IDs to sequence names
 	debug "Using $aln_file\n";
-	my $in          = Phylosift::Utilities::open_SeqIO_object( file => $aln_file );
+	#my $in          = Phylosift::Utilities::open_SeqIO_object( file => $aln_file );
+	my $in = ps_open("$aln_file"); #can't use Bio::SeqIO because the full headers are not being kept as IDs
 	my %s           = ();                                                             #hash remembering the IDs already printed
 	my $FILEOUT     = ps_open(">$output_file");
 	my $seq_counter = 0;
-
-	while ( my $seq_object = $in->next_seq() ) {
-		my $seq       = $seq_object->seq;
-		my $id        = $seq_object->id;
-		my $unique_id = sprintf( "%09d", $seq_counter++ );
-		$id_map{$id} = $unique_id;
-		$id  =~ s/\(\)//g;                                                            #removes ( and ) from the header lines
-		$seq =~ s/[a-z]//g;                                                           # lowercase chars didnt align to model
-		$seq =~ s/\.//g;                                                              # shouldnt be any dots
-		print $FILEOUT ">".$unique_id."\n".$seq."\n";
+	my $current_id;
+	my $current_seq = "";
+	while ( $in ) {
+#	while ( my $seq_object = $in->next_seq() ) {
+		chomp($_);
+		if($_=~ m/^>(.*)$/){
+			if(defined $current_id){
+				my $unique_id = sprintf( "%09d", $seq_counter++ );
+				$id_map{$current_id} = $unique_id;
+				#$id  =~ s/\(\)//g;                                                            #removes ( and ) from the header lines
+				$seq =~ s/[a-z]//g;                                                           # lowercase chars didnt align to model
+				$seq =~ s/\.//g;                                                              # shouldnt be any dots
+				print $FILEOUT ">".$unique_id."\n".$current_seq."\n";
+				$current_seq = ""; #reset the sequence to empty.
+			}
+			$current_id=$1;
+		}else{
+			$current_seq .= $_;
+		}
 	}
 
 	#    close(FILEIN);
