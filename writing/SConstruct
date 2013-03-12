@@ -24,6 +24,6 @@ Default([phylosift])
 Depends(Flatten([phylosift]),
         Flatten([pdfs, 'phylosift.bib']))
 
-cont_build = env.Command('.continuous', ['phylosift.bib', 'phylosift.tex', 'alphaplainnat.bst'],
+cont_build = env.Command('.continuous', ['phylosift.bib', 'phylosift.tex'],
     'while :; do inotifywait -e modify $SOURCES; scons -Q; done')
 Alias('continuous', cont_build)
