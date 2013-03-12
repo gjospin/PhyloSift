@@ -1,0 +1,29 @@
+from SCons.Script import VariantDir, Environment, \
+        Builder, Depends, Flatten
+import os
+import glob
+
+VariantDir('_build', src_dir='.')
+
+env = Environment(ENV=os.environ)
+inkscape = Builder(action = 'inkscape --without-gui --export-pdf=$TARGET $SOURCE')
+env['BUILDERS']['Inkscape'] = inkscape
+env['BUILDERS']['Latexdiff'] = Builder(action = 'latexdiff $SOURCES > $TARGET')
+
+svgs = []
+
+#pdfs = [env.Inkscape(target="_build/" + os.path.basename(svg).replace('.svg','.pdf'), source=svg) for svg in svgs]
+pdfs = ["_build/" + fname for fname in glob.glob("figures/*")]
+
+phylosift, = env.PDF(target='_build/phylosift.pdf',source='phylosift.tex')
+Default([phylosift])
+
+#env.Latexdiff(target='diff.tex',source=['stored_phylosift.tex','phylosift.tex'])
+#diff = env.PDF(target='diff.pdf',source='diff.tex')
+
+Depends(Flatten([phylosift]),
+        Flatten([pdfs, 'phylosift.bib']))
+
+cont_build = env.Command('.continuous', ['phylosift.bib', 'phylosift.tex'],
+    'while :; do inotifywait -e modify $SOURCES; scons -Q; done')
+Alias('continuous', cont_build)
