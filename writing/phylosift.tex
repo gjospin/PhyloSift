@@ -384,12 +384,12 @@ In addition to hypothesis testing for lineages, PhyloSift also provides a platfo
 To understand how community structure analysis with PhyloSift compares to similar analysis based on 16s rRNA amplicon sequencing we study a recently published human microbiome dataset where samples were sequenced both by a 16s amplicon and a shotgun metagenome approach~\cite{Yatsunenko2012}.
 In that study, fecal material was collected from infants and adults at diverse geographical locations and subjected to sequencing.
 Over 600 samples were sequenced using the 16S amplicon protocol.
-Of those 107 were also subjected to metagenomic shotgun sequencing using 454 pyrosequencing chemistry.
-Here we apply PhyloSift to the 107 metagenomic samples and conduct a community structure comparison among the samples, and replicate the Yatsunenko \textit{et al.} QIIME analyses on this subset of data.
+Of those 106 were also subjected to metagenomic shotgun sequencing using 454 pyrosequencing chemistry.
+Here we apply PhyloSift to the 106 metagenomic samples and conduct a community structure comparison among the samples, and replicate the Yatsunenko \textit{et al.} QIIME analyses on this subset of data.
 
 All QIIME analyses were carried out using release 1.5.0 of the QIIME software toolkit, using the workflow and parameters reported by Yatsunenko \textit{et al}. The Greengenes reference database (collapsed at 97\% identity) was used to carry out a closed-reference OTU picking protocol at 97\% sequence identity with uclust. All reads which matched database sequences at this level were retained for downstream processing, while non-matching sequences were excluded from further analyses. Parameters for the pick\_otus.py script were as follows: --max\_accepts 1 --max\_rejects 8 --stepwords 8 --word\_length 8. Taxonomic assignments for OTUs were given by the Greengenes database. Rarefaction and PCoA analyses were carried out using the alpha\_diversity.py and beta\_diversity\_through\_plots.py workflows. A full list of these QIIME commands and output files have been publicly deposited in Figshare (DOI: XXXXX) .
 
-PhyloSift processed each of the 107 samples, requiring an average of 35 minutes CPU time per sample.
+PhyloSift processed each of the 106 samples, requiring an average of 35 minutes CPU time per sample.
 The majority of CPU time is spent in phylogenetic placement of reads.
 These samples have 154,485 non-human sequence reads on average, for an average of 52 Mbp of sequence data per sample.
 
@@ -397,11 +397,11 @@ We then conducted Edge Principal Components Analysis (PCA) using the reads place
 Edge PCA identifies the combination of phylogenetic lineages that explain the greatest extent of variation in the microbial communities in each sample.
 The resulting PCA plot is shown in Figure~\ref{fig:agepca}, with each sample colored according to the age of the human host at the time of sampling.
 The PCA reveals a strong association between age and microbial community structure.
-This relationship was also identified by Yastunenko \textit{et al} using 16s rRNA analysis on a set of $>$600 samples which included the 107 studied here.
+This relationship was also identified by Yastunenko \textit{et al} using 16s rRNA analysis on a set of $>$600 samples which included the 106 studied here.
 
 The nature of edge PCA lends itself to an intuitive inspection of the phylogenetic lineages explaining the difference in community structures.
 PhyloSift, by using pplacer's guppy program and the Archaeopteryx tree viewer, can produce a visualization of the lineages most strongly associated with each principal component.
-Figure~\ref{fig:pcaphylo} shows this visualization for the edge PCA analysis of 107 fecal metagenome communities.
+Figure~\ref{fig:pcaphylo} shows this visualization for the edge PCA analysis of 106 fecal metagenome communities.
 In that figure, lineages are thickened proportionally to their contribution to the principal component, and are colored according to whether they increase (red) or decrease (turqoise) in abundance along the principal component axis.
 As we can see from Figure~\ref{fig:pcaphylo} left, the first principal component is defined by an increase in Ruminococcacae, Clostridiales, and Bacteroides, with a decrease in Bifidobacteria.
 The association with age suggests that as communities develop in aging children, the Bifidobacteria become less abundant and members of those other lineages grow in abundance.
@@ -413,9 +413,9 @@ One possible explanation for this observation may be an association with breast-
 However, inspection of publicly available metadata did not reveal any clear assocation of PC2 with breastfeeding status or other recorded metadata.
 Another possibile explanation is mode of birth, vaginal or caesarian, however we have no information on mode of delivery for newborns in this dataset.
 We note that members of the Lactobacillales are abundant in the human vaginal tract, suggesting that newborns high on the 2nd principal component axis may be vaginally delivered if the two groups of newborns do indeed reflect differences in mode of delivery.
-Interestingly, the dimensions of community structure variation identified in the current set of 107 samples differ from those identified by Yatsunenko \textit{et al} in the larger set of 600 samples for which amplicon data are available.
-Geography and age were associated with most variation in their analysis of $>$600 samples, and the 107 metagenome samples are primarily from infants and do not equally represent that variation.
-It seems that age-related variation in the microbiome dominates the 107 metagenome samples.
+Interestingly, the dimensions of community structure variation identified in the current set of 106 samples differ from those identified by Yatsunenko \textit{et al} in the larger set of 600 samples for which amplicon data are available.
+Geography and age were associated with most variation in their analysis of $>$600 samples, and the 106 metagenome samples are primarily from infants and do not equally represent that variation.
+It seems that age-related variation in the microbiome dominates the 106 metagenome samples.
 
 We also investigated the diversity of microbes in the fecal samples.
 Classic measures of species diversity such as alpha and beta diversity have been applied to microbial communities by collapsing sequences to operational taxonomic units (OTUs).
@@ -528,7 +528,7 @@ This work was performed under contract \#HSHQDC-11-C-00091 from the US Departmen
 \begin{center}
 \includegraphics[width=6in]{figures/allofem.pdf}
 \end{center}
-\caption{\textbf{Comparison of QIIME PCA and edge PCA analysis of human fecal samples.} Samples from 107 individuals were analyzed by PCA to evaluate trends in community composition with respect to host age. 16S rDNA amplicon data and metagenomic data from the same samples was processed using QIIME and PhyloSift. QIIME analyzed the amplicon data (top left) and 16S rDNA reads extracted from the metagenomic data (top right) using a reference-based OTU picking strategy. PhyloSift analyzed the same metagenomic 16S rDNA reads (bottom left) and reads matching the 40 elite gene families (bottom right). Each PCA approach gives qualitatively similar results.}
+\caption{\textbf{Comparison of QIIME PCA and edge PCA analysis of human fecal samples.} Samples from 106 individuals were analyzed by PCA to evaluate trends in community composition with respect to host age. 16S rDNA amplicon data and metagenomic data from the same samples was processed using QIIME and PhyloSift. QIIME analyzed the amplicon data (top left) and 16S rDNA reads extracted from the metagenomic data (top right) using a reference-based OTU picking strategy. PhyloSift analyzed the same metagenomic 16S rDNA reads (bottom left) and reads matching the 40 elite gene families (bottom right). Each PCA approach gives qualitatively similar results.}
 \label{fig:agepca}
 \end{figure}
 
@@ -536,7 +536,7 @@ This work was performed under contract \#HSHQDC-11-C-00091 from the US Departmen
 \begin{center}
 \includegraphics[width=6in]{figures/both_prettylike_b2b.png}
 \end{center}
-\caption{\textbf{Lineages contributing variation in human fecal sample community structure.} 107 metagenomic samples were processed using PhyloSift and their community composition compared using Edge PCA~\cite{Matsen2012}. Lineages that decrease in abundance along the principal component axis are shown in turquoise color, those increasing in abundance are shown in red. Edge width is proportional to the change in abundance. Remaining lineages in the phylogeny of bacteria, archaea, eukarya, and some viruses are shown in light gray. PC1 shown at left, PC2 at right.}
+\caption{\textbf{Lineages contributing variation in human fecal sample community structure.} 106 metagenomic samples were processed using PhyloSift and their community composition compared using Edge PCA~\cite{Matsen2012}. Lineages that decrease in abundance along the principal component axis are shown in turquoise color, those increasing in abundance are shown in red. Edge width is proportional to the change in abundance. Remaining lineages in the phylogeny of bacteria, archaea, eukarya, and some viruses are shown in light gray. PC1 shown at left, PC2 at right.}
 \label{fig:pcaphylo}
 \end{figure}
 
@@ -544,7 +544,7 @@ This work was performed under contract \#HSHQDC-11-C-00091 from the US Departmen
 \begin{center}
 \includegraphics[width=4in]{figures/phylo_diversity.pdf}
 \end{center}
-\caption{\textbf{Relationship betwen fecal community phylogenetic diversity and host age.} 107 metagenomic samples were processed using PhyloSift and their phylogenetic diversity analyzed using two metrics. Unweighted phylogenetic diversity simply measures the total branch length of the reference tree covered by placed reads from a sample. Balance-weighted phylogenetic diversity adjusts these values by the abundance of each lineage in the sample. In both cases, a log-linear relationship between host age and fecal community phylogenetic diversity can be observed.}
+\caption{\textbf{Relationship betwen fecal community phylogenetic diversity and host age.} 106 metagenomic samples were processed using PhyloSift and their phylogenetic diversity analyzed using two metrics. Unweighted phylogenetic diversity simply measures the total branch length of the reference tree covered by placed reads from a sample. Balance-weighted phylogenetic diversity adjusts these values by the abundance of each lineage in the sample. In both cases, a log-linear relationship between host age and fecal community phylogenetic diversity can be observed.}
 \label{fig:agediversity}
 \end{figure}
 
