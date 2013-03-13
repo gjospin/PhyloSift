@@ -14,7 +14,7 @@ color_legend <- function(x, y, xlen, ylen, main, tiks){
 }
 
 
-phypro<-read.table("all.trans",sep=",")
+phypro<-read.table("new_pca/pca.trans",sep=",")
 meta <- read.table("human_micro_meta.csv",sep="\t",head=T)
 
 ages <- trunc(1 + 12*meta$Age.of.host..years.[match(phypro$V1,as.integer(meta$MG.RAST.ID))])
@@ -26,13 +26,13 @@ legvec <- legvec / scaler
 legvec <- exp(legvec)
 
 pdf("age_pca_protein_phylosift.pdf",width=5,height=5)
-plot(phypro$V2,phypro$V3,pch=16,col=colors[logagesphy+1],xlab="PC1 (59.9%)",ylab="PC2 (15.2%)", main="phylosift on marker proteins")
+plot(phypro$V2,phypro$V3,pch=16,col=colors[logagesphy+1],xlab="PC1 (62.6%)",ylab="PC2 (14.6%)", main="phylosift on marker proteins")
 text(phypro$V2,phypro$V3,phypro$V1,cex=0.5)
 color_legend( -6.5, 3.5, 3.5, 1.5, "age in months:", trunc(legvec)-1)
 dev.off()
 
 
-phy16<-read.table("16pca.trans",sep=",")
+phy16<-read.table("new_pca/pca16.trans",sep=",")
 ages <- trunc(1 + 12*meta$Age.of.host..years.[match(phy16$V1,as.integer(meta$MG.RAST.ID))])
 logagesphy16 <- log(ages)
 logagesphy16 <- logagesphy16 * scaler
@@ -95,6 +95,6 @@ pdf("allofem.pdf")
 par(mfrow=c(2,2))
 plot(-amp16s$X1[1:ll],amp16s$X2[1:ll],pch=16,col=colors[logages+1],xlab="PC1 (50.8%)",ylab="PC2 (9.72%)", main="QIIME on 16S rRNA amplicons")
 plot(-meta16s$X1[1:ll],-meta16s$X2[1:ll],pch=16,col=colors[logagesqiimeta+1],xlab="PC1 (38.9%)",ylab="PC2 (17.9%)", main="QIIME on metagenomic 16S rRNA")
-plot(-phy16$V2,phy16$V3,pch=16,col=colors[logagesphy16+1],xlab="PC1 (62.2%)",ylab="PC2 (13.7%)", main="phylosift on metagenomic 16S rRNA")
-plot(phypro$V2,phypro$V3,pch=16,col=colors[logagesphy+1],xlab="PC1 (59.9%)",ylab="PC2 (15.2%)", main="phylosift on metagenomic proteins")
+plot(-phy16$V2,phy16$V3,pch=16,col=colors[logagesphy16+1],xlab="PC1 (63.4%)",ylab="PC2 (12.8%)", main="phylosift on metagenomic 16S rRNA")
+plot(-phypro$V2,phypro$V3,pch=16,col=colors[logagesphy+1],xlab="PC1 (62.7%)",ylab="PC2 (14.5%)", main="phylosift on metagenomic proteins")
 
