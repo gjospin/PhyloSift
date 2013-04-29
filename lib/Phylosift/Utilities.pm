@@ -996,7 +996,7 @@ sub get_marker_taxon_map {
 	my $decorated   = get_decorated_marker_name(%args);
 	my $deco        = "$marker_path/$decorated/$decorated.taxonmap";
 	return $deco if -e $deco;
-	return "$marker_path/$decorated/$bname.taxonmap";
+	return "$marker_path/$bname/$bname.taxonmap";
 }
 
 sub get_decorated_marker_name {
