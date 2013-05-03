@@ -1037,6 +1037,7 @@ sub get_gene_id_file {
 	my $decorated   = get_decorated_marker_name(%args);
 	my $deco        = "$marker_path/$decorated/$decorated.gene_map";
 	return $deco                                                 if -e $deco;
+	return "$marker_path/$bname/$bname.gene_map" if -e "$marker_path/$bname/$bname.gene_map";
 	return "$Phylosift::Settings::marker_dir/gene_ids.codon.txt" if $dna;
 	return "$Phylosift::Settings::marker_dir/gene_ids.aa.txt";
 }
@@ -1116,8 +1117,10 @@ given by markerName
 
 sub get_read_placement_file {
 	my %args      = @_;
+	my $self = $args{self};
 	my $marker    = $args{marker};
 	my $chunk     = $args{chunk};
+	my $bname       = get_marker_basename( marker => $marker );
 	my $decorated = get_decorated_marker_name( %args, base => 1 );
 	return "$decorated.$chunk.jplace";
 }

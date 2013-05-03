@@ -710,20 +710,31 @@ sub translate_frame {
 	my $seq               = $args{seq} || miss("seq");
 	my $frame             = $args{frame} || miss("frame");
 	my $marker            = $args{marker} || miss("marker");
+	my $bitscore = $args{bitscore} || miss("bitScore");
 	my $reverse_translate = $args{reverse_translate}
 	  || miss("reverse_translate");
 	my $return_seq = "";
+	my @push_array=();
 	my $new_seq = Bio::LocatableSeq->new( -seq => $seq, -id => 'temp', -verbose => 0 );
 	$new_seq = $new_seq->revcom() if ( $frame < 0 );
-
 	if ($reverse_translate) {
-
-		#$id = Phylosift::Summarize::tree_name( name => $id );
+#		#$id = Phylosift::Summarize::tree_name( name => $id );
+#	    if($Phylosift::Settings::besthit){
+#		@push_array = [">".$id."\n".$new_seq->seq."\n", $bitscore];
+#		if( exists $markerNuc{$marker} && !defined($markerNuc{$marker})){
+#		    push(@{$markerNuc{$marker}} ,@push_array);
+#		}elsif(  exists $markerNuc{$marker}&& defined($markerNuc{$marker}) && $bitscore > $markerNuc{$marker}[1]){
+#		    $markerNuc{$marker}=();
+#		    push(@{$markerNuc{$marker}} ,(">".$id."\n".$new_seq->seq."\n", $bitscore));
+#		    push(@{$markerNuc{$marker}},@push_array);
+#		}
+#	    }else{
 		if ( exists $markerNuc{$marker} ) {
-			$markerNuc{$marker} .= ">".$id."\n".$new_seq->seq."\n";
+		    $markerNuc{$marker} .= ">".$id."\n".$new_seq->seq."\n";
 		} else {
-			$markerNuc{$marker} = ">".$id."\n".$new_seq->seq."\n";
+		    $markerNuc{$marker} = ">".$id."\n".$new_seq->seq."\n";
 		}
+#	    }
 	}
 	$return_seq = $new_seq->translate();
 	return $return_seq->seq();
@@ -981,7 +992,8 @@ sub write_candidates {
 											seq               => $dna_seq,
 											frame             => $strand,
 											marker            => $markerHit,
-											reverse_translate => $self->{"dna"}
+											reverse_translate => $self->{"dna"},
+				    bitscore => $cur_hit->[1],
 				);
 
 				# bioperl uses * for stop codons but we want to give X to hmmer later
@@ -992,8 +1004,21 @@ sub write_candidates {
 				$new_seq =~ tr/ACGTacgt/TGCAtgca/;
 				$new_seq = reverse($new_seq);
 			}
-			$markerHits{$markerHit} = "" unless defined( $markerHits{$markerHit} );
-			$markerHits{$markerHit} .= ">".$new_id."\n".$new_seq."\n";
+			#$markerHits{$markerHit} = "" unless defined( $markerHits{$markerHit} );
+			if($Phylosift::Settings::besthit){
+				#push(@{$markerHits{$markerHit}} ,(undef, 0)) if $Phylosift::Settings::besthit;
+				#debug "$markerHit \t CURRENT : $cur_hit->[1]\t$markerHits{$markerHit}[1]\t";
+				if(!defined($markerHits{$markerHit})){
+				    push(@{$markerHits{$markerHit}} ,(">".$new_id."\n".$new_seq."\n", $cur_hit->[1]));
+				}elsif(defined($markerHits{$markerHit}) && $cur_hit->[1] > $markerHits{$markerHit}[1]){
+				    $markerHits{$markerHit}=();
+				    push(@{$markerHits{$markerHit}} ,(">".$new_id."\n".$new_seq."\n", $cur_hit->[1]));
+				}
+#				push(@{$markerHits{$markerHit}} ,(">".$new_id."\n".$new_seq."\n", $cur_hit->[1])) if !defined($markerHits{$markerHit}) || $cur_hit->[1] > $markerHits{$markerHit}[1];
+				#debug "$markerHit\tCURRENT : $markerHits{$markerHit}[1]\n";
+			}else{
+				$markerHits{$markerHit} .= ">".$new_id."\n".$new_seq."\n";
+			}
 		}
 
 		# ensure memory gets freed
@@ -1003,7 +1028,7 @@ sub write_candidates {
 		$contig_hits{$id} = undef;
 	}
 	debug "$type Got ".scalar( keys %markerHits )." markers with hits\n";
-
+	debug "$type Got ".scalar( keys %markerNuc )." nucleotide markers with hits\n";
 	#write the read+ref_seqs for each markers in the list
 	foreach my $marker ( keys %markerHits ) {
 
@@ -1015,7 +1040,8 @@ sub write_candidates {
 																	   chunk  => $chunk
 		);
 		my $FILE_OUT = ps_open( ">$candidate_file".".".$process_id );
-		print $FILE_OUT $markerHits{$marker};
+		print $FILE_OUT $markerHits{$marker}unless $Phylosift::Settings::besthit;
+		print $FILE_OUT $markerHits{$marker}[0] if $Phylosift::Settings::besthit;
 		close($FILE_OUT);
 		if ( $self->{"dna"} && $type !~ /\.rna/ ) {
 			$candidate_file = Phylosift::Utilities::get_candidate_file(
@@ -1026,10 +1052,20 @@ sub write_candidates {
 																		chunk  => $chunk
 			);
 			my $FILE_OUT = ps_open( ">$candidate_file".".".$process_id );
-			print $FILE_OUT $markerNuc{$marker} if defined( $markerNuc{$marker} );
+#			debug "Working on $marker to print nucleotides\n";
+#			debug "testing :" .scalar(keys(%markerNuc))."\n";
+			if(defined $markerNuc{$marker}){
+#			    debug "Inside\n";
+#			    if($Phylosift::Settings::besthit){
+#				debug "Printing $marker with besthit nucleotides\n";
+#				print $FILE_OUT $markerNuc{$marker}[0];
+#			    }else{
+				print $FILE_OUT $markerNuc{$marker};
+#			    }
+			}
 			close($FILE_OUT);
 		}
-
+		
 		# force memory free
 		$markerHits{$marker} = undef;
 		$markerNuc{$marker}  = undef;
