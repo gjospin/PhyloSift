@@ -996,6 +996,7 @@ sub get_marker_taxon_map {
 	my $decorated   = get_decorated_marker_name(%args);
 	my $deco        = "$marker_path/$decorated/$decorated.taxonmap";
 	return $deco if -e $deco;
+	return "$marker_path/$marker/$bname.taxonmap" if $Phylosift::Settings::extended ;
 	return "$marker_path/$bname/$bname.taxonmap";
 }
 
@@ -1037,6 +1038,7 @@ sub get_gene_id_file {
 	my $decorated   = get_decorated_marker_name(%args);
 	my $deco        = "$marker_path/$decorated/$decorated.gene_map";
 	return $deco                                                 if -e $deco;
+	return "$marker_path/$marker/$bname.gene_map" if $Phylosift::Settings::extended && -e "$marker_path/$marker/$bname.gene_map";
 	return "$marker_path/$bname/$bname.gene_map" if -e "$marker_path/$bname/$bname.gene_map";
 	return "$Phylosift::Settings::marker_dir/gene_ids.codon.txt" if $dna;
 	return "$Phylosift::Settings::marker_dir/gene_ids.aa.txt";
