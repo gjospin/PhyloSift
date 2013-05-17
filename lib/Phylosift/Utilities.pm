@@ -996,7 +996,7 @@ sub get_marker_taxon_map {
 	my $decorated   = get_decorated_marker_name(%args);
 	my $deco        = "$marker_path/$decorated/$decorated.taxonmap";
 	return $deco if -e $deco;
-	return "$marker_path/$marker/$decorated.taxonmap" if $Phylosift::Settings::extended && -e "$marker_path/$marker/$decorated.taxonmap";
+	return "$marker_path/$marker.updated/$bname.updated.taxonmap" if $Phylosift::Settings::extended && -e "$marker_path/$marker.updated/$bname.updated.taxonmap";
 	return "$marker_path/$marker/$bname.taxonmap" if $Phylosift::Settings::extended ;
 	return "$marker_path/$bname/$bname.taxonmap";
 }
