@@ -106,14 +106,14 @@ sub build_marker {
 	$clean_aln = "$target_dir/$core.clean";
 	my %id_map = mask_and_clean_alignment( alignment_file => $aln_file, output_file => $clean_aln );
 	debug( "ID_map is ".scalar( keys(%id_map) )." long\n" );
-
 	my ( $fasttree_file, $tree_log_file ) = generate_fasttree( alignment_file => $clean_aln, target_directory => $target_dir )
 	  unless -e "$target_dir/$core.tree";
 	pd_prune_fasta( tre => $fasttree_file, distance => $tree_pd, fasta => $clean_aln, pruned_fasta => "$target_dir/$core.pruned.fasta" );
 
 	( $fasttree_file, $tree_log_file ) = generate_fasttree( alignment_file => "$target_dir/$core.pruned.fasta", target_directory => $target_dir );
 	`mv $target_dir/$core.pruned.fasta $clean_aln`;
-
+	debug "CLEAN_ALN : $clean_aln";
+	#mask_and_clean_alignment( alignment_file => "$target_dir/$core.pruned.fasta", output_file => $clean_aln );
 	my $rep_file;
 	if ( $seq_count > 10 || $seq_count < 0 ) {
 		debug "Looking for representatives\n";
@@ -531,22 +531,22 @@ sub mask_and_clean_alignment {
 	my %id_map;    # will store a map of unique IDs to sequence names
 	debug "Using $aln_file\n";
 	#my $in          = Phylosift::Utilities::open_SeqIO_object( file => $aln_file );
-	my $in = ps_open("$aln_file"); #can't use Bio::SeqIO because the full headers are not being kept as IDs
+	my $IN = ps_open("$aln_file"); #can't use Bio::SeqIO because the full headers are not being kept as IDs
 	my %s           = ();                                                             #hash remembering the IDs already printed
 	my $FILEOUT     = ps_open(">$output_file");
 	my $seq_counter = 0;
 	my $current_id;
 	my $current_seq = "";
-	while ( $in ) {
+	while ( <$IN> ) {
 #	while ( my $seq_object = $in->next_seq() ) {
 		chomp($_);
 		if($_=~ m/^>(.*)$/){
 			if(defined $current_id){
 				my $unique_id = sprintf( "%09d", $seq_counter++ );
 				$id_map{$current_id} = $unique_id;
-				#$id  =~ s/\(\)//g;                                                            #removes ( and ) from the header lines
-				$seq =~ s/[a-z]//g;                                                           # lowercase chars didnt align to model
-				$seq =~ s/\.//g;                                                              # shouldnt be any dots
+				#$id  =~ s/\(\)//g;                                                       #removes ( and ) from the header lines
+				$current_seq =~ s/[a-z]//g;                                           # lowercase chars didnt align to model
+				$current_seq =~ s/\.//g;                                              # shouldnt be any dots
 				print $FILEOUT ">".$unique_id."\n".$current_seq."\n";
 				$current_seq = ""; #reset the sequence to empty.
 			}
