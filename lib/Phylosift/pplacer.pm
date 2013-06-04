@@ -64,7 +64,7 @@ sub pplacer {
 		if ( defined($Phylosift::Settings::coverage) && $Phylosift::Settings::coverage ne "" ) {
 			$covref = Phylosift::Summarize::read_coverage( file => $Phylosift::Settings::coverage );
 		}
-		unshift( @{$markRef}, 'concat' );    #adds the concatenation to the list of markers
+		unshift( @{$markRef}, 'concat' ) if -d "$Phylosift::Settings::marker_dir/concat.updated";    #adds the concatenation to the list of markers
 		my $long_rna_switch = -1;
 		my $short_rna_jplace;
 		for ( my $mI = 0; $mI < @{$markRef}; $mI++ ) {
@@ -545,6 +545,7 @@ sub name_taxa_in_jplace {
 		my $branch_id = $1;
 		if ( defined( $namemap->{$name} ) ) {
 			my $taxon_id  = $namemap->{$name};
+			next if $taxon_id eq "" || $taxon_id ==0;
 			my @data      = Phylosift::Summarize::get_taxon_info( taxon => $taxon_id );
 			my $ncbi_name = Phylosift::Summarize::tree_name( name => $data[0] );
 			$node->set_name( $ncbi_name."[$taxon_id]".$branch_id );
