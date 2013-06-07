@@ -576,7 +576,7 @@ sub demux_sequences {
 	#printing the MD5 checksum to the run_info file.
 	unless ($completed_chunk) {
 		open( RUNINFO, ">>".Phylosift::Utilities::get_run_info_file( self => $self ) );
-		print RUNINFO "Chunk 1 sequences processed ".$md5_object->hexdigest."\n";
+		print RUNINFO "Chunk $chunk sequences processed ".$md5_object->hexdigest."\n";
 		close(RUNINFO);
 	}
 
