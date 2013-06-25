@@ -64,7 +64,7 @@ sub pplacer {
 		if ( defined($Phylosift::Settings::coverage) && $Phylosift::Settings::coverage ne "" ) {
 			$covref = Phylosift::Summarize::read_coverage( file => $Phylosift::Settings::coverage );
 		}
-		unshift( @{$markRef}, 'concat' );    #adds the concatenation to the list of markers
+		unshift( @{$markRef}, 'concat' ) if -d "$Phylosift::Settings::marker_dir/concat.updated";    #adds the concatenation to the list of markers
 		my $long_rna_switch = -1;
 		my $short_rna_jplace;
 		for ( my $mI = 0; $mI < @{$markRef}; $mI++ ) {
@@ -312,7 +312,7 @@ sub place_reads {
 	my $chunk          = $args{chunk};
 	my $short_rna      = $args{short_rna} || 0;
 	my $marker_package = Phylosift::Utilities::get_marker_package( self => $self, marker => $marker, dna => $dna );
-
+	debug "Place reads package $marker_package\n";
 	unless ( -d $marker_package ) {
 
 		# try not updated
@@ -325,7 +325,7 @@ sub place_reads {
 			croak("Marker: $marker\nPackage: $marker_package\nPackage does not exist\nPlacement without a marker package is no longer supported");
 		}
 	}
-
+	debug "Place reads CHECK package $marker_package\n";
 	my $options = $marker eq "concat" ? "--groups $Phylosift::Settings::pplacer_groups" : "";
 	$options .= " --mmap-file abracadabra "
 	  if ( ( $marker =~ /18s/ || $marker =~ /16s/ || $marker eq "concat" ) && Phylosift::Utilities::get_available_memory() < 8000000 );
@@ -337,8 +337,8 @@ sub place_reads {
 	   "$Phylosift::Settings::pplacer $options -o $jplace --verbosity $Phylosift::Settings::pplacer_verbosity -j "
 	  .$Phylosift::Settings::threads
 	  ." -c $marker_package \"$reads\"";
-	debug "Running $pp\n";
-	system($pp);
+	debug "Running $pp\n" if -e "$marker_package";;
+	system($pp) if -e "$marker_package";
 	unlink("$self->{\"treeDir\"}/abracadabra") if $options =~ /abracadabra/;    # remove the mmap file created by pplacer
 
 	debug "no output in $jplace\n" unless -e $jplace;
@@ -373,21 +373,19 @@ sub place_reads {
 		 && $Phylosift::Settings::updated
 		 && Phylosift::Utilities::is_protein_marker( marker => $marker ))
 	{
-		debug "Placing on codon markers: $marker\n";
-		make_codon_placements( self => $self, marker => $marker, chunk => $chunk, place_file => $jplace )
-		  if -e Phylosift::Utilities::get_marker_package( self => $self, marker => $marker, dna => $dna );
+		#debug "Placing on codon markers: $marker\n";
+		#make_codon_placements( self => $self, marker => $marker, chunk => $chunk, place_file => $jplace )
+		#  if -e Phylosift::Utilities::get_marker_package( self => $self, marker => $marker, dna => $dna );
 	}
 
 	unless ($Phylosift::Settings::simple) {
-
-		# skip this if a simple summary if desired since it's slow.
+		## skip this if a simple summary if desired since it's slow.
 		debug "Naming taxa in marker $marker\n";
 
 		# read the tree edge to taxon map for this marker
 		my $markermapfile = Phylosift::Utilities::get_marker_taxon_map( self => $self, marker => $marker, dna => $dna );
 		return $jplace unless -e $markermapfile;        # can't summarize if there ain't no mappin'!
 		my $taxonmap = Phylosift::Summarize::read_taxonmap( file => $markermapfile );
-
 		# rename nodes
 		name_taxa_in_jplace( self => $self, input => $jplace, output => $jplace, taxonmap => $taxonmap, marker => $marker );
 	}
@@ -516,12 +514,12 @@ sub name_taxa_in_jplace {
 	my $output   = $args{output} || miss("output");
 	my $marker   = $args{marker} || miss("marker");
 	my $taxonmap = $args{taxonmap} || miss("taxonmap");
-
+	debug "Naming taxa\n";
 	# read in the taxon name map
 	my $namemap = read_name_map( marker => $marker );
 	return unless defined($namemap);
 	Phylosift::Summarize::read_ncbi_taxon_name_map();
-
+	debug "Done reading namemap\n";
 	# parse the tree file to get leaf node names
 	# replace leaf node names with taxon labels
 	my $JPLACEFILE = ps_open($input);
@@ -530,7 +528,7 @@ sub name_taxa_in_jplace {
 
 	my $json_data   = decode_json( join( "", @treedata ) );
 	my $tree_string = $json_data->{tree};
-
+	
 	# get rid of the leaf numbers and some other mumbo jumbo
 	$tree_string =~ s/^\s+\"//g;
 	$tree_string =~ s/:(.+?)(\{\d+?\})/$2:$1/g;
@@ -547,6 +545,7 @@ sub name_taxa_in_jplace {
 		my $branch_id = $1;
 		if ( defined( $namemap->{$name} ) ) {
 			my $taxon_id  = $namemap->{$name};
+			next if $taxon_id eq "" || $taxon_id ==0;
 			my @data      = Phylosift::Summarize::get_taxon_info( taxon => $taxon_id );
 			my $ncbi_name = Phylosift::Summarize::tree_name( name => $data[0] );
 			$node->set_name( $ncbi_name."[$taxon_id]".$branch_id );

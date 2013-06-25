@@ -156,8 +156,8 @@ sub summarize {
 	my $completed_chunk = Phylosift::Utilities::has_step_completed( self => $self, chunk => $chunk, step => "Summarize" , force => $Phylosift::Settings::force);
 	croak ("Previous step for chunk $chunk has did not complete. Aborting\n") unless Phylosift::Utilities::has_step_completed( self => $self, chunk => $chunk, step => "Place" );
 	unless ($completed_chunk) {
-		read_ncbi_taxon_name_map();
-		read_ncbi_taxonomy_structure();
+		#read_ncbi_taxon_name_map();
+		#read_ncbi_taxonomy_structure();
 		my $markerdir = $Phylosift::Settings::marker_dir;
 
 		# try to read a contig coverage file if it exists
@@ -166,7 +166,7 @@ sub summarize {
 			my $covref = read_coverage( file => $Phylosift::Settings::coverage );
 			%coverage = %$covref;
 		}
-
+		debug "\n\n\n******STARTING SUMMARY \n\n\n";
 		# read all of the .place files for markers
 		# map them onto the ncbi taxonomy
 		# this is a hash structured as {sequenceID}{taxonID}=probabilitySum
@@ -174,18 +174,18 @@ sub summarize {
 		my %unclassifiable;      # {sequenceID}=mass
 		my %sequence_markers;    # {sequenceID}=[markers hit]
 		my %weights;             #{sequenceID}{taxonID} = weight
-		unshift( @{$markRef}, "concat" ) if $Phylosift::Settings::updated;
+		#unshift( @{$markRef}, "concat" ) if $Phylosift::Settings::updated;
 		foreach my $marker ( @{$markRef} ) {
+			
 			my %seen_queries;    # tracks whether a query has been seen already
 			for ( my $dna = 1; $dna >= 0; $dna-- ) {
-
 				my $sub = $dna ? 1 : undef;
-				my $place_file =
-				  $self->{"treeDir"}."/".Phylosift::Utilities::get_read_placement_file( marker => $marker, dna => $dna, sub_marker => $sub, chunk => $chunk );
+				my $place_file = $self->{"treeDir"}."/".
+				  Phylosift::Utilities::get_read_placement_file( self => $self, marker => $marker, dna => $dna, sub_marker => $sub, chunk => $chunk );
 				next unless -e $place_file;    # don't bother with this one if there's no read placements
 				my $PP_COVFILE = ps_open( ">".Phylosift::Utilities::get_read_placement_file( marker => $marker, chunk => $chunk ).".cov" )
 				  if ( defined $Phylosift::Settings::coverage );
-
+				
 				# first read the taxonomy mapping
 				my $markermapfile = Phylosift::Utilities::get_marker_taxon_map( self => $self, marker => $marker, dna => $dna );
 				debug "Marker $marker missing taxon map $markermapfile\n" unless -e $markermapfile;
@@ -201,7 +201,6 @@ sub summarize {
 				# for each placement record
 				for ( my $i = 0; $i < @{ $json_data->{placements} }; $i++ ) {
 					my $place = $json_data->{placements}->[$i];
-
 					# for each query in the placement record
 					for ( my $k = 0; $k < @{ $place->{nm} }; $k++ ) {
 						my $qname   = $place->{nm}->[$k]->[0];

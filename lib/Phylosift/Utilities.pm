@@ -996,7 +996,9 @@ sub get_marker_taxon_map {
 	my $decorated   = get_decorated_marker_name(%args);
 	my $deco        = "$marker_path/$decorated/$decorated.taxonmap";
 	return $deco if -e $deco;
-	return "$marker_path/$decorated/$bname.taxonmap";
+	return "$marker_path/$marker.updated/$bname.updated.taxonmap" if $Phylosift::Settings::extended && -e "$marker_path/$marker.updated/$bname.updated.taxonmap";
+	return "$marker_path/$marker/$bname.taxonmap" if $Phylosift::Settings::extended ;
+	return "$marker_path/$bname/$bname.taxonmap";
 }
 
 sub get_decorated_marker_name {
@@ -1012,8 +1014,10 @@ sub get_decorated_marker_name {
 	$name .= ".long"  if $long;
 	$name .= ".short" if $short;
 	$name .= ".codon" if $dna;
+	##$name .= ".updated"
+	##  if ( $updated || $Phylosift::Settings::updated ) && !$Phylosift::Settings::extended && $name !~ /^1[68]s/;
 	$name .= ".updated"
-	  if ( $updated || $Phylosift::Settings::updated ) && !$Phylosift::Settings::extended && $name !~ /^1[68]s/;
+	  if ( $updated || $Phylosift::Settings::updated ) && $name !~ /^1[68]s/;
 
 	# rna markers don't get pruned
 	$name .= ".sub".$sub_marker if defined($sub_marker);
@@ -1035,6 +1039,8 @@ sub get_gene_id_file {
 	my $decorated   = get_decorated_marker_name(%args);
 	my $deco        = "$marker_path/$decorated/$decorated.gene_map";
 	return $deco                                                 if -e $deco;
+	return "$marker_path/$marker/$bname.gene_map" if $Phylosift::Settings::extended && -e "$marker_path/$marker/$bname.gene_map";
+	return "$marker_path/$bname/$bname.gene_map" if -e "$marker_path/$bname/$bname.gene_map";
 	return "$Phylosift::Settings::marker_dir/gene_ids.codon.txt" if $dna;
 	return "$Phylosift::Settings::marker_dir/gene_ids.aa.txt";
 }
@@ -1114,8 +1120,10 @@ given by markerName
 
 sub get_read_placement_file {
 	my %args      = @_;
+	my $self = $args{self};
 	my $marker    = $args{marker};
 	my $chunk     = $args{chunk};
+	my $bname       = get_marker_basename( marker => $marker );
 	my $decorated = get_decorated_marker_name( %args, base => 1 );
 	return "$decorated.$chunk.jplace";
 }
@@ -2182,7 +2190,7 @@ sub print_citations {
 	print "PhyloSift -- Phylogenetic analysis of genomes and metagenomes\n";
 	print "(c) 2011, 2012 Aaron Darling and Guillaume Jospin\n";
 	print "\nCITATION:\n";
-	print "		PhyloSift. A. Darling, H. Bik, G. Jospin, J. A. Eisen. Manuscript in preparation\n";
+	print "		PhyloSift. A. E. Darling, G. Jospin, E. Lowe, F. A. Matsen, H. M. Bik, J. A. Eisen. Manuscript in preparation\n";
 	print "\n\nPhyloSift incorporates several other software packages, please consider also citing the following papers:\n";
 	print qq{
 
