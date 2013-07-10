@@ -1509,8 +1509,8 @@ sub cleanup_chunk {
 	} elsif ( $step eq 'Summarize' ) {
 		push( @files_list, get_taxa_90pct_HPD( self => $self ) );
 		push( @files_list, get_taxasummary( self => $self ) );
-		push( @files_list, get_summarize_output_all_sequence_taxa( self => $self ) );
-		push( @files_list, get_summarize_output_all_sequence_taxa_summary( self => $self ) );
+		push( @files_list, get_summarize_output_sequence_taxa( self => $self, chunk=>$chunk ) );
+		push( @files_list, get_summarize_output_sequence_taxa_summary( self => $self, chunk=>$chunk ) );
 	}
 	return if @files_list == 0;    # no need to do anything else if the list is empty
 	my $cmd = "rm ".join( ' ', @files_list );
@@ -1582,27 +1582,33 @@ sub get_place_output_all_jplace {
 	return @files_list;
 }
 
-=head2 get_summarize_output_all_sequence_taxa
+=head2 get_summarize_output_sequence_taxa
 return an array of all sequence_taxa files in the workingDir for a specific chunk
+if chunk isn't defined, return all sequence_taxa files
 =cut
 
-sub get_summarize_output_all_sequence_taxa {
+sub get_summarize_output_sequence_taxa {
 	my %args       = @_;
 	my $self       = $args{self} || miss("PS object");
+	my $chunk = $args{chunk};
+	$chunk ='*' unless(defined $chunk);
 	my @files_list = ();
-	push( @files_list, glob( $Phylosift::Settings::file_dir."/sequence_taxa.*.txt" ) );
+	push( @files_list, glob( $Phylosift::Settings::file_dir."/sequence_taxa.$chunk.txt" ) );
 	return @files_list;
 }
 
-=head2 get_summarize_output_all_sequence_taxa_summary
+=head2 get_summarize_output_sequence_taxa_summary
 return an array of all sequence_taxa_summary files in the workingDir for a specific chunk
+if chunk isn't defined, return all sequence_taxa_summary files
 =cut
 
-sub get_summarize_output_all_sequence_taxa_summary {
+sub get_summarize_output_sequence_taxa_summary {
 	my %args       = @_;
 	my $self       = $args{self} || miss("PS object");
+	my $chunk = $args{chunk};
+	$chunk ='*' unless(defined $chunk);
 	my @files_list = ();
-	push( @files_list, glob( $Phylosift::Settings::file_dir."/sequence_taxa_summary.*.txt" ) );
+	push( @files_list, glob( $Phylosift::Settings::file_dir."/sequence_taxa_summary.$chunk.txt" ) );
 	return @files_list;
 }
 

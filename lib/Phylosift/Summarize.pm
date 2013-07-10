@@ -394,7 +394,7 @@ sub merge_sequence_taxa {
 	my %args              = @_;
 	my $self              = $args{self} || miss("PS Object");
 	my $chunk             = $args{chunk} || miss("chunk");
-	my @taxa_files        = Phylosift::Utilities::get_summarize_output_all_sequence_taxa( self => $self );
+	my @taxa_files        = Phylosift::Utilities::get_summarize_output_sequence_taxa( self => $self );
 	my %placements        = ();
 	my %placement_markers = ();
 	my %all_summary;
@@ -479,7 +479,7 @@ sub merge_sequence_taxa {
 	}
 
 	# write a single combined taxa summary
-	my @taxa_summary_files = Phylosift::Utilities::get_summarize_output_all_sequence_taxa_summary( self => $self );
+	my @taxa_summary_files = Phylosift::Utilities::get_summarize_output_sequence_taxa_summary( self => $self );
 	Phylosift::Utilities::concatenate_summary_files(self => $self, files => \@taxa_files, output_file => "$Phylosift::Settings::file_dir/sequence_taxa.txt");
 	Phylosift::Utilities::concatenate_summary_files(self => $self, files => \@taxa_summary_files, output_file => "$Phylosift::Settings::file_dir/sequence_taxa_summary.txt");
 
