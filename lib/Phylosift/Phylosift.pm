@@ -8,6 +8,8 @@ use Bio::SeqIO;
 use Getopt::Long;
 use Cwd;
 use File::Basename;
+use File::NFSLock qw(uncache);
+use Fcntl qw(LOCK_EX LOCK_NB);
 use Carp;
 use Phylosift::Utilities qw(:all);
 use Phylosift::MarkerAlign;
@@ -157,12 +159,17 @@ sub run {
 	Phylosift::Utilities::print_citations();
 	start_timer( name => "START" );
 
-	#read_phylosift_config( self => $self );
+	read_phylosift_config( self => $self );
 	run_program_check( self => $self );
 	Phylosift::Utilities::data_checks( self => $self );
+	#open(my $SHARED_LOCK, $Phylosift::Settings::marker_dir);
+	#flock($SHARED_LOCK,1);  #get shared lock for $marker_dir so nothing overrides the data while PS is running.
+	my $lock_shared_markers = File::NFSLock->new($Phylosift::Settings::marker_dir,LOCK_NB);
+	my $lock_shared_ncbi = File::NFSLock->new($Phylosift::Settings::ncbi_dir,LOCK_NB);
+	#open(my $SHARED_LOCK_NCBI, $Phylosift::Settings::ncbi_dir);
+	#flock($SHARED_LOCK_NCBI,1);  #get shared lock for $marker_dir so nothing overrides the data while PS is running.
 	file_check( self => $self );
 	directory_prep( self => $self, force => $force, cont => $continue );
-
 	# Forcing usage of updated markers
 	debug "Using updated markers\n" if $Phylosift::Settings::updated;
 	my @markers = Phylosift::Utilities::gather_markers( self => $self, marker_file => $custom );
@@ -188,7 +195,10 @@ sub run {
 	} else {
 		run_later_stages( self => $self, cont => $continue, marker => \@markers );
 	}
-
+	#close($SHARED_LOCK); #release shared lock.
+	#close($SHARED_LOCK_NCBI);
+	$lock_shared_markers->unlock();
+	$lock_shared_ncbi->unlock();
 	Phylosift::Utilities::end_timer( name => "START" );
 }
 
@@ -218,7 +228,7 @@ sub run_later_stages {
 sub read_phylosift_config {
 	my %args          = @_;
 	my $custom_config = $Phylosift::Settings::configuration;
-
+	debug "Reading config file : $custom_config\n" if $custom_config;
 	# first get the install prefix of this script
 	my $scriptpath = dirname($0);
 

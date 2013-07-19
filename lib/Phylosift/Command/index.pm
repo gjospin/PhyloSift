@@ -3,6 +3,7 @@ use Phylosift::Command::all;
 use Phylosift -command;
 use Phylosift::Settings;
 use Phylosift::Phylosift;
+use Fcntl qw(LOCK_EX LOCK_NB);
 use Carp;
 use Phylosift::Utilities qw(debug);
 
@@ -36,10 +37,19 @@ sub execute {
 
 	my $ps = new Phylosift::Phylosift();
 	Phylosift::Utilities::program_checks();
-	Phylosift::Utilities::data_checks( self => $ps );
-
+	my $indexed_markers = Phylosift::Utilities::data_checks( self => $ps );
 	@markers = Phylosift::Utilities::gather_markers( self => $self, path => $Phylosift::Settings::marker_dir, force_gather => 1, allow_missing_hmm => 1 );
-	Phylosift::Utilities::index_marker_db( self => $self, markers => \@markers, path => $Phylosift::Settings::marker_dir );
+	my $lock_ex;
+	unless ($indexed_markers) {
+		debug "Requesting ";
+		$lock_ex = File::NFSLock->new($Phylosift::Settings::marker_dir,LOCK_EX);
+		#open( my $EXCL_LOCK, $Phylosift::Settings::marker_dir );
+		#flock( $EXCL_LOCK, 2 );
+		debug "Indexed_markers : $indexed_markers\n";
+		Phylosift::Utilities::index_marker_db( self => $self, markers => \@markers, path => $Phylosift::Settings::marker_dir );
+		#close($EXCL_LOCK);
+		$lock_ex->unlock();
+	}
 	if ( -d $Phylosift::Settings::markers_extended_dir && $Phylosift::Settings::extended ) {
 		my @extended_markers = Phylosift::Utilities::gather_markers(
 																	 self              => $self,
@@ -47,12 +57,18 @@ sub execute {
 																	 force_gather      => 1,
 																	 allow_missing_hmm => 1
 		);
-
-		Phylosift::Utilities::index_marker_db(
-											   self    => $self,
-											   markers => \@extended_markers,
-											   path    => $Phylosift::Settings::markers_extended_dir
-		);
+		unless ($indexed_markers) {
+			$lock_ex = File::NFSLock->new($Phylosift::Settings::markers_extended_dir,LOCK_EX);
+			#open( my $EXCL_LOCK, $Phylosift::Settings::markers_extended_dir );
+			#flock( $EXCL_LOCK, 2 );
+			$indexed_markers = Phylosift::Utilities::index_marker_db(
+																	  self    => $self,
+																	  markers => \@extended_markers,
+																	  path    => $Phylosift::Settings::markers_extended_dir
+			);
+			$lock_ex->unlock();
+			#close($EXCL_LOCK);
+		}
 	}
 }
 

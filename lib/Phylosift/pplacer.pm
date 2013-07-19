@@ -312,7 +312,7 @@ sub place_reads {
 	my $chunk          = $args{chunk};
 	my $short_rna      = $args{short_rna} || 0;
 	my $marker_package = Phylosift::Utilities::get_marker_package( self => $self, marker => $marker, dna => $dna );
-	debug "Place reads package $marker_package\n";
+	#debug "Place reads package $marker_package\n";
 	unless ( -d $marker_package ) {
 
 		# try not updated
@@ -325,7 +325,7 @@ sub place_reads {
 			croak("Marker: $marker\nPackage: $marker_package\nPackage does not exist\nPlacement without a marker package is no longer supported");
 		}
 	}
-	debug "Place reads CHECK package $marker_package\n";
+	#debug "Place reads CHECK package $marker_package\n";
 	my $options = $marker eq "concat" ? "--groups $Phylosift::Settings::pplacer_groups" : "";
 	$options .= " --mmap-file abracadabra "
 	  if ( ( $marker =~ /18s/ || $marker =~ /16s/ || $marker eq "concat" ) && Phylosift::Utilities::get_available_memory() < 8000000 );
@@ -384,6 +384,7 @@ sub place_reads {
 
 		# read the tree edge to taxon map for this marker
 		my $markermapfile = Phylosift::Utilities::get_marker_taxon_map( self => $self, marker => $marker, dna => $dna );
+		debug "Trying to use $markermapfile \n";
 		return $jplace unless -e $markermapfile;        # can't summarize if there ain't no mappin'!
 		my $taxonmap = Phylosift::Summarize::read_taxonmap( file => $markermapfile );
 		# rename nodes
@@ -497,6 +498,7 @@ sub read_name_map {
 	my $marker = $args{marker} || miss("marker");
 	return \%namemap if %namemap;
 	my $id_file = Phylosift::Utilities::get_gene_id_file( marker => $marker );
+	debug "Trying to use id_file $id_file in read_name_map\n";
 	return unless -e $id_file;
 	my $NAMETABLE = ps_open($id_file);
 	while ( my $line = <$NAMETABLE> ) {
@@ -514,10 +516,10 @@ sub name_taxa_in_jplace {
 	my $output   = $args{output} || miss("output");
 	my $marker   = $args{marker} || miss("marker");
 	my $taxonmap = $args{taxonmap} || miss("taxonmap");
-	debug "Naming taxa\n";
+	debug "Naming taxa in name_taxa_in_jplace for $marker\n";
 	# read in the taxon name map
 	my $namemap = read_name_map( marker => $marker );
-	return unless defined($namemap);
+	#return unless defined($namemap);
 	Phylosift::Summarize::read_ncbi_taxon_name_map();
 	debug "Done reading namemap\n";
 	# parse the tree file to get leaf node names
