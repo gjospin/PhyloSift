@@ -10,6 +10,11 @@ par(mar=c(5.1,4.1,4.1,4.1))
 plot(logage,fpd$awpd,pch=3,ylim=c(0.25,3.5),ylab="Balance-weighted phylogenetic diversity",xlab="Age in months (log scale)",axes=F)
 points(logage,fpd$pd/50,col=2)
 abline(line(logage,fpd$pd/50),col=2)
+
+cor.test(logage[logage<log(7)],fpd$awpd[logage<log(7)],method="spearman")
+cor.test(logage[logage>log(7)],fpd$awpd[logage>log(7)],method="spearman")
+cor.test(logage,fpd$pd)
+
 #abline(line(logage,fpd$awpd))
 pdaxis=c(0,0.5,1,1.5,2,2.5,3)
 axis(side=2,at=pdaxis,labels=pdaxis)
