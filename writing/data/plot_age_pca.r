@@ -14,7 +14,7 @@ color_legend <- function(x, y, xlen, ylen, main, tiks){
 }
 
 
-phypro<-read.table("new_pca/pca.trans",sep=",")
+phypro<-read.table("try3.trans",sep=",")
 meta <- read.table("human_micro_meta.csv",sep="\t",head=T)
 
 ages <- trunc(1 + 12*meta$Age.of.host..years.[match(phypro$V1,as.integer(meta$MG.RAST.ID))])
@@ -32,7 +32,7 @@ color_legend( -6.5, 3.5, 3.5, 1.5, "age in months:", trunc(legvec)-1)
 dev.off()
 
 
-phy16<-read.table("new_pca/pca16.trans",sep=",")
+phy16<-read.table("try3_16s.trans",sep=",")
 ages <- trunc(1 + 12*meta$Age.of.host..years.[match(phy16$V1,as.integer(meta$MG.RAST.ID))])
 logagesphy16 <- log(ages)
 logagesphy16 <- logagesphy16 * scaler
@@ -90,6 +90,27 @@ plot(-amp16s$X1[1:ll],amp16s$X2[1:ll],pch=16,col=colors[logages+1],xlab="PC1 ",y
 color_legend( -0.85, 0.375, 0.5, 0.15, "age in months:", trunc(legvec)-1)
 dev.off()
 
+amp16s$pc.vector.number
+rastids
+meta$Metagenome
+
+library("shapes")
+amp16_mat <- cbind(-amp16s$X1[1:ll],amp16s$X2[1:ll])
+meta16_mat <- cbind(-meta16s$X1[1:ll],-meta16s$X2[1:ll])
+phy16_mat <- cbind(-phy16$V2,phy16$V3)
+phypro_mat <- cbind(-phypro$V2,phypro$V3)
+dim(amp16_mat)
+dim(phy16_mat)
+"QIIME amplicon vs. QIIME meta"
+sin(riemdist(amp16_mat,meta16_mat)) 
+"QIIME amplicon vs. Phylosift meta 16"
+#sin(riemdist(amp16_mat,phy16_mat)) 
+"QIIME amplicon vs. Phylosift prot"
+sin(riemdist(amp16_mat,phypro_mat)) 
+"QIIME meta vs. Phylosift prot"
+sin(riemdist(meta16_mat,phypro_mat)) 
+"Phylosift meta 16s vs. Phylosift prot"
+sin(riemdist(phy16_mat,phypro_mat)) 
 
 pdf("allofem.pdf")
 par(mfrow=c(2,2))
