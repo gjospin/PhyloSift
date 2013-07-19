@@ -382,7 +382,7 @@ sub download_data {
 		File::Fetch->import();
 	};
 	if ($@) {
-		croak(    "Unable to load perl module File::Fetch. Can not download marker database.\nPlease use cpan to install File::Fetch or download and install the markers manually.\n"
+		croak(    "Unable to load perl module File::Fetch. Can not download marker database.\nPlease use cpan to install File::Fetch or download and install the markers manually to $destination.\nAfter downloading markers manually, please unpack them and run `phylosift index` to index them.\n"
 		);
 	} else {
 
@@ -2258,7 +2258,7 @@ sub print_citations {
 	print "PhyloSift -- Phylogenetic analysis of genomes and metagenomes\n";
 	print "(c) 2011, 2012 Aaron Darling and Guillaume Jospin\n";
 	print "\nCITATION:\n";
-	print "		PhyloSift. A. E. Darling, G. Jospin, E. Lowe, F. A. Matsen, H. M. Bik, J. A. Eisen. Manuscript in preparation\n";
+	print "		PhyloSift. A. E. Darling, G. Jospin, E. Lowe, F. A. Matsen, H. M. Bik, J. A. Eisen. Submitted to PeerJ\n";
 	print "\n\nPhyloSift incorporates several other software packages, please consider also citing the following papers:\n";
 	print qq{
 
