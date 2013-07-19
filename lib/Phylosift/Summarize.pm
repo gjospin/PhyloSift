@@ -267,7 +267,7 @@ sub write_sequence_taxa_summary {
 	my $sequence_markers = $args{sequence_markers} || miss("sequence_markers");
 	my $chunk            = $args{chunk};
 	my $chunky           = defined($chunk) ? ".$chunk" : "";
-	debug "Writting sequences\n";
+	debug "Writing sequences\n";
 	my $SEQUENCETAXA = ps_open(">$Phylosift::Settings::file_dir/sequence_taxa$chunky.txt");
 	print $SEQUENCETAXA "##Sequence_ID\tHit_Coordinates\tNCBI_Taxon_ID\tTaxon_Rank\tTaxon_Name\tProbability_Mass\tMarkers_Hit\n";
 	my $SEQUENCESUMMARY = ps_open(">$Phylosift::Settings::file_dir/sequence_taxa_summary$chunky.txt");
