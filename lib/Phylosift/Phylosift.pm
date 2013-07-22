@@ -124,20 +124,10 @@ Perhaps a little code snippet.
     my $foo = Phylosift::Phylosift->new();
     ...
 
-=head1 EXPORT
-
-A list of functions that can be exported.  You can delete this section
-if you don't export anything, such as for a purely object-oriented module.
-
 =head1 SUBROUTINES/METHODS
 
 =head2 run
     
-    Args : $force - if used at hte same time as the all mode it removes the temp directory if it already exists
-           $custom - reads in marker names from a custom list. if "" then use all markers in the marker directory
-           $continue - if the mode != all and continue = 1 then finish the pipeline otherwise only execute the step specified
-           $isolateMode - allows sequences to hit multiple markers (used when running isolate genomes)
-
     Runs the PhyloSift pipeline according to the functions passed as arguments
 
 =cut
@@ -328,7 +318,7 @@ sub directory_prep {
 				   .$Phylosift::Settings::file_dir
 				   .", or force overwrite with the -f command-line option\n" );
 		} else {
-			debug "Found directory already existing, continuing a previous run\n";
+			debug "Found existing directory, continuing a previous run\n";
 		}
 	}
 	
