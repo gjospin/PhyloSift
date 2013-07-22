@@ -88,13 +88,10 @@ sub write_jnlp {
 	my $xml      = $args{xml} || miss("xml");
 	my $jnlp     = $args{jnlp};
 	my $JOUT     = ps_open(">$jnlp");
-	my $forester = abs_path($0);
-	$forester = dirname($forester)."/forester.jar";
-	my $jnlp_base = dirname($jnlp);
-	my $jnlp_name = basename($jnlp);
+	my $xml = basename($xml);
 	print $JOUT <<EOF;
 <?xml version="1.0" encoding="UTF-8"?>
-<jnlp spec="1.5+" codebase="$jnlp_base" href="$jnlp_name">
+<jnlp spec="1.5+">
     <information>
         <title>Archaeopteryx tree viewer</title>
         <vendor>Christian Zmasek, repackaged by Aaron Darling</vendor>
@@ -105,7 +102,7 @@ sub write_jnlp {
     </security>
     <resources>
         <j2se version="1.5+" href="http://java.sun.com/products/autodl/j2se" java-vm-args="-Xmx300m"/>
-        <jar href="$forester" main="true" />
+        <jar href="http://edhar.genomecenter.ucdavis.edu/~koadman/phylosift/forester/forester.jar" main="true" />
     </resources>
     <application-desc main-class="org.forester.archaeopteryx.Archaeopteryx">
 		<argument>$xml</argument>
