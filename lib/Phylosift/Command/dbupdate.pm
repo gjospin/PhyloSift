@@ -151,7 +151,7 @@ sub execute {
 										  taxon_knockouts => $Phylosift::Settings::taxon_knockouts
 	);
 
-	Phylosift::UpdateDB::join_trees( marker_dir => $marker_dir );
+	#Phylosift::UpdateDB::join_trees( marker_dir => $marker_dir );
 	#	Phylosift::UpdateDB::package_markers( marker_directory => $marker_dir, base_marker_directory => $Phylosift::Settings::base_markers);
 
 }
