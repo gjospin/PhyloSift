@@ -479,12 +479,10 @@ sub marker_update_check {
 		$get_new_markers = 1 unless -x $marker_path;
 	}
 	`mkdir -p $marker_path` unless -x $marker_path;
-	#open( my $EXCL_LOCK, $marker_path ) unless $skip_lock;
 	my $lock_excl_markers; 
 	if ($get_new_markers) {
 		warn "Attempting to get exclusive rights to the marker DB. Possibly waiting for another PhyloSift to release the file lock\n" unless $skip_lock;
 		$lock_excl_markers = File::NFSLock->new($marker_path,LOCK_EX) unless $skip_lock;
-		#flock( $EXCL_LOCK, 2 ) unless $skip_lock;
 		$get_new_markers = marker_update_check(
 												self      => $self,
 												dir       => $marker_path,
@@ -503,8 +501,7 @@ sub marker_update_check {
 	if ( $get_new_markers || $self->{"removed_markers"} ) {
 		my @markers = gather_markers( self => $self, path => $marker_path, force_gather => 1 );
 		$indexed_markers = index_marker_db( self => $self, markers => \@markers, path => $marker_path );
-	}
-	#close($EXCL_LOCK) unless $skip_lock; 
+	} 
 	return $indexed_markers;
 }
 
@@ -612,14 +609,11 @@ sub ncbi_update_check {
 		} elsif ( $modified_time > $ncbi_time ) {
 			warn "Found newer version of NCBI taxonomy data!\n" if $skip_lock;
 			warn "Downloading from $url\n"                      if $skip_lock;
-			#open( my $EXCL_LOCK, $ncbi_path ) unless $skip_lock;
-			#flock( $EXCL_LOCK, 2 ) unless $skip_lock;
 			my $lock_ex;
 			$lock_ex = File::NFSLock->new($ncbi_path,LOCK_EX) unless $skip_lock;
 			ncbi_update_check( self => $self, dir => $ncbi_dir, url => $url, skip_lock => 1 ) unless ($skip_lock);
 			download_data( url => $url, destination => $ncbi_dir )if $skip_lock;
 			$lock_ex->unlock() unless $skip_lock;
-			#close($EXCL_LOCK) unless $skip_lock;
 		}
 	} else {
 		if ( !defined($modified_time) ) {
@@ -628,14 +622,11 @@ sub ncbi_update_check {
 		}
 		warn "Unable to find NCBI taxonomy data!\n" if $skip_lock;
 		warn "Downloading from $url\n"              if $skip_lock;
-		#open( my $EXCL_LOCK, $ncbi_path ) unless ($skip_lock);
-		#flock( $EXCL_LOCK, 2 ) unless ($skip_lock);
 		my $lock_ex;
 		$lock_ex = File::NFSLock->new($ncbi_path,LOCK_EX) unless $skip_lock;
 		ncbi_update_check( self => $self, dir => $ncbi_dir, url => $url, skip_lock => 1 ) unless ($skip_lock);
 		download_data( url => $url, destination => $ncbi_dir )if $skip_lock;
 		return if $skip_lock;
-		#close($EXCL_LOCK) unless $skip_lock;
 		$lock_ex->unlock() unless $skip_lock;
 	}
 }
