@@ -3,7 +3,7 @@ use Phylosift::Command::all;
 use Phylosift -command;
 use Phylosift::Settings;
 use Phylosift::Phylosift;
-use Fcntl qw(LOCK_EX LOCK_NB);
+use Fcntl qw(LOCK_EX);
 use Carp;
 use Phylosift::Utilities qw(debug);
 
@@ -43,11 +43,8 @@ sub execute {
 	unless ($indexed_markers) {
 		debug "Requesting ";
 		$lock_ex = File::NFSLock->new($Phylosift::Settings::marker_dir,LOCK_EX);
-		#open( my $EXCL_LOCK, $Phylosift::Settings::marker_dir );
-		#flock( $EXCL_LOCK, 2 );
 		debug "Indexed_markers : $indexed_markers\n";
 		Phylosift::Utilities::index_marker_db( self => $self, markers => \@markers, path => $Phylosift::Settings::marker_dir );
-		#close($EXCL_LOCK);
 		$lock_ex->unlock();
 	}
 	if ( -d $Phylosift::Settings::markers_extended_dir && $Phylosift::Settings::extended ) {
@@ -59,15 +56,12 @@ sub execute {
 		);
 		unless ($indexed_markers) {
 			$lock_ex = File::NFSLock->new($Phylosift::Settings::markers_extended_dir,LOCK_EX);
-			#open( my $EXCL_LOCK, $Phylosift::Settings::markers_extended_dir );
-			#flock( $EXCL_LOCK, 2 );
 			$indexed_markers = Phylosift::Utilities::index_marker_db(
 																	  self    => $self,
 																	  markers => \@extended_markers,
 																	  path    => $Phylosift::Settings::markers_extended_dir
 			);
 			$lock_ex->unlock();
-			#close($EXCL_LOCK);
 		}
 	}
 }

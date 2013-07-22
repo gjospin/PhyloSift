@@ -5,7 +5,7 @@ use FindBin qw($Bin);
 BEGIN { unshift( @INC, "$FindBin::Bin/../legacy/" ) if $] < 5.01; }
 use File::Basename;
 use File::NFSLock qw(uncache);
-use Fcntl qw(LOCK_EX LOCK_NB);
+use Fcntl qw(LOCK_EX);
 use Bio::SeqIO;
 use Bio::AlignIO;
 use Bio::SimpleAlign;
