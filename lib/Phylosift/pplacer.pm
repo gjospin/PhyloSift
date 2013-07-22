@@ -322,7 +322,8 @@ sub place_reads {
 			$Phylosift::Settings::updated = 1;
 		}
 		unless ( -d $marker_package ) {
-			croak("Marker: $marker\nPackage: $marker_package\nPackage does not exist\nPlacement without a marker package is no longer supported");
+			warn("Marker: $marker\nPackage: $marker_package\nPackage does not exist\nPlacement without a marker package is no longer supported.\n Skipping $marker.\n");
+			return;
 		}
 	}
 	#debug "Place reads CHECK package $marker_package\n";
