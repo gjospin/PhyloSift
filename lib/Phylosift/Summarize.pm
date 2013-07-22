@@ -542,6 +542,7 @@ sub merge_sequence_taxa {
 			close($FH);
 		}
 		%ncbi_summary = ();
+		if($Phylosift::Settings::extended) {
 		%ncbi_summary = %all_summary;
 		my $html_all_report = $Phylosift::Settings::file_dir."/".$self->{"fileName"}."_allmarkers.html";
 		if ( scalar( keys(%ncbi_summary) ) > 0 ) {
@@ -553,6 +554,7 @@ sub merge_sequence_taxa {
 			my $FH = ps_open(">$html_all_report");
 			print $FH "No results Found\n";
 			close($FH);
+		}
 		}
 	}
 	Phylosift::Utilities::end_timer( name => "runKrona" );
