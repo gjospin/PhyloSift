@@ -88,7 +88,7 @@ sub write_jnlp {
 	my $xml      = $args{xml} || miss("xml");
 	my $jnlp     = $args{jnlp};
 	my $JOUT     = ps_open(">$jnlp");
-	my $xml = basename($xml);
+	$xml = basename($xml);
 	print $JOUT <<EOF;
 <?xml version="1.0" encoding="UTF-8"?>
 <jnlp spec="1.5+">
