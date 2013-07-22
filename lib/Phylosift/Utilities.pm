@@ -376,6 +376,7 @@ sub download_data {
 	my %args        = @_;
 	my $url         = $args{url};
 	my $destination = $args{destination};
+
 	#`mkdir -p "$destination"`;
 	eval {
 		require File::Fetch;
@@ -479,10 +480,10 @@ sub marker_update_check {
 		$get_new_markers = 1 unless -x $marker_path;
 	}
 	`mkdir -p $marker_path` unless -x $marker_path;
-	my $lock_excl_markers; 
+	my $lock_excl_markers;
 	if ($get_new_markers) {
 		warn "Attempting to get exclusive rights to the marker DB. Possibly waiting for another PhyloSift to release the file lock\n" unless $skip_lock;
-		$lock_excl_markers = File::NFSLock->new($marker_path,LOCK_EX) unless $skip_lock;
+		$lock_excl_markers = File::NFSLock->new( $marker_path, LOCK_EX ) unless $skip_lock;
 		$get_new_markers = marker_update_check(
 												self      => $self,
 												dir       => $marker_path,
@@ -497,11 +498,11 @@ sub marker_update_check {
 		print $VOUT "$url\n";
 		print $VOUT "$modified_time\n";
 	}
-	my $indexed_markers =0;
+	my $indexed_markers = 0;
 	if ( $get_new_markers || $self->{"removed_markers"} ) {
 		my @markers = gather_markers( self => $self, path => $marker_path, force_gather => 1 );
 		$indexed_markers = index_marker_db( self => $self, markers => \@markers, path => $marker_path );
-	} 
+	}
 	return $indexed_markers;
 }
 
@@ -527,7 +528,8 @@ sub data_checks {
 	}
 	my $marker_update_url           = "$mbase/markers.tgz";
 	my $markers_extended_update_url = "$mbase/markers_extended.tgz";
-	my $indexed_markers=0;
+	my $indexed_markers             = 0;
+
 	#
 	# first check for the standard marker directory
 	Phylosift::Settings::set_default(
@@ -547,10 +549,10 @@ sub data_checks {
 		`$cmd`;
 		$self->{"removed_markers"} = 1;
 	}
-	$indexed_markers=marker_update_check(
-						 self => $self,
-						 dir  => $Phylosift::Settings::marker_dir,
-						 url  => $marker_update_url
+	$indexed_markers = marker_update_check(
+											self => $self,
+											dir  => $Phylosift::Settings::marker_dir,
+											url  => $marker_update_url
 	);
 
 	#
@@ -562,22 +564,21 @@ sub data_checks {
 															  data_path => $Phylosift::Settings::extended_marker_path
 									  )
 	);
-	
+
 	if ($Phylosift::Settings::extended) {
-		$indexed_markers=marker_update_check(
-							 self => $self,
-							 dir  => $Phylosift::Settings::markers_extended_dir,
-							 url  => $markers_extended_update_url
+		$indexed_markers = marker_update_check(
+												self => $self,
+												dir  => $Phylosift::Settings::markers_extended_dir,
+												url  => $markers_extended_update_url
 		);
 	}
+
 	#
 	# now check for the NCBI taxonomy data
-	Phylosift::Settings::set_default(
-									  parameter => \$Phylosift::Settings::ncbi_dir,
-									  value     => get_data_path(data_name => "ncbi",data_path => $Phylosift::Settings::ncbi_path)
-	);
+	Phylosift::Settings::set_default(    parameter => \$Phylosift::Settings::ncbi_dir,
+									  value     => get_data_path( data_name => "ncbi", data_path => $Phylosift::Settings::ncbi_path ) );
 	debug "Skipping check for NCBI updates on server\n" if $Phylosift::Settings::disable_update_check;
-	return  $indexed_markers                            if $Phylosift::Settings::disable_update_check;
+	return $indexed_markers                             if $Phylosift::Settings::disable_update_check;
 	ncbi_update_check(
 					   self => $self,
 					   dir  => $Phylosift::Settings::ncbi_dir,
@@ -594,14 +595,15 @@ Download it if needed.
 =cut
 
 sub ncbi_update_check {
-	my %args      = @_;
-	my $self      = $args{self};
-	my $url       = $args{url};
+	my %args     = @_;
+	my $self     = $args{self};
+	my $url      = $args{url};
 	my $ncbi_dir = $args{dir};
-	$ncbi_dir =~ m/^(\S+)\/[^\/]+$/; #Need to work from the parent directory from ncbi_dir
+	$ncbi_dir =~ m/^(\S+)\/[^\/]+$/;    #Need to work from the parent directory from ncbi_dir
 	my $ncbi_path = $1;
 	my $skip_lock = $args{skip_lock};
 	my ( $content_type, $document_length, $modified_time, $expires, $server ) = head("$url");
+
 	if ( -x $ncbi_dir ) {
 		my $ncbi_time = ( stat($ncbi_dir) )[9];
 		if ( !defined($modified_time) ) {
@@ -610,9 +612,9 @@ sub ncbi_update_check {
 			warn "Found newer version of NCBI taxonomy data!\n" if $skip_lock;
 			warn "Downloading from $url\n"                      if $skip_lock;
 			my $lock_ex;
-			$lock_ex = File::NFSLock->new($ncbi_path,LOCK_EX) unless $skip_lock;
+			$lock_ex = File::NFSLock->new( $ncbi_path, LOCK_EX ) unless $skip_lock;
 			ncbi_update_check( self => $self, dir => $ncbi_dir, url => $url, skip_lock => 1 ) unless ($skip_lock);
-			download_data( url => $url, destination => $ncbi_dir )if $skip_lock;
+			download_data( url => $url, destination => $ncbi_dir ) if $skip_lock;
 			$lock_ex->unlock() unless $skip_lock;
 		}
 	} else {
@@ -623,11 +625,36 @@ sub ncbi_update_check {
 		warn "Unable to find NCBI taxonomy data!\n" if $skip_lock;
 		warn "Downloading from $url\n"              if $skip_lock;
 		my $lock_ex;
-		$lock_ex = File::NFSLock->new($ncbi_path,LOCK_EX) unless $skip_lock;
+		$lock_ex = File::NFSLock->new( $ncbi_path, LOCK_EX ) unless $skip_lock;
 		ncbi_update_check( self => $self, dir => $ncbi_dir, url => $url, skip_lock => 1 ) unless ($skip_lock);
-		download_data( url => $url, destination => $ncbi_dir )if $skip_lock;
+		download_data( url => $url, destination => $ncbi_dir ) if $skip_lock;
 		return if $skip_lock;
 		$lock_ex->unlock() unless $skip_lock;
+	}
+}
+
+=head2 previous_run_handler
+
+Exits and Prints out the error statement when a previous run was detected and -f was not specified
+OR
+Removes the appropriate directory when -f was specified
+
+=cut
+
+sub previous_run_handler {
+	my %args  = @_;
+	my $self  = $args{self} || miss("PS Ojbect in Utilities::previous_run_handler");
+	my $force = $args{force};
+	my $dir = $args{dir} || miss("dir in Utilities::previous_run_handler");
+	if ($force) {
+		debug( "deleting an old run\n", 0 );
+		debug "$dir\n";
+		`rm -rf "$dir"`;
+	} else {
+		croak(  "A previous run was found using the same output name. Aborting the current run.\n"
+			   ."Either delete that run from "
+			   .$dir
+			   .", or force overwrite with the -f command-line option\n" );
 	}
 }
 
