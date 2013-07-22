@@ -76,6 +76,9 @@ add_package(url=>"http://search.cpan.org/CPAN/authors/id/G/GA/GAAS/libwww-perl-6
 add_package(url=>"http://search.cpan.org/CPAN/authors/id/G/GA/GAAS/HTTP-Message-6.03.tar.gz");
 add_package(url=>"http://search.cpan.org/CPAN/authors/id/G/GA/GAAS/HTTP-Date-6.02.tar.gz", mv_cmd=>"mv blib/lib/HTTP/* $prefix/lib/HTTP");
 
+#add NSFLock.pm
+add_package(url=>"http://search.cpan.org/CPAN/authors/id/B/BB/BBB/File-NFSLock-1.21.tar.gz");
+
 # add Version.pm
 `mkdir $prefix/legacy`;
 add_package(url=>"http://search.cpan.org/CPAN/authors/id/J/JP/JPEACOCK/version-0.95.tar.gz", make_opts=>"--perl_only", mv_cmd=>"mv blib/lib/version* $prefix/legacy/");
