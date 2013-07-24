@@ -528,6 +528,10 @@ sub merge_sequence_taxa {
 
 		# skip this if only a simple summary is desired (it's slow)
 		debug "Generating krona\n";
+		if($Phylosift::Settings::extended) {
+			%ncbi_summary = ();
+			%ncbi_summary = %all_summary;
+		}
 		my $html_report = $Phylosift::Settings::file_dir."/".$self->{"fileName"}.".html";
 
 		#$self->{HTML} = ps_open(">$html_report") unless defined $self->{HTML};
@@ -540,21 +544,6 @@ sub merge_sequence_taxa {
 			my $FH = ps_open(">$html_report");
 			print $FH "No results Found\n";
 			close($FH);
-		}
-		%ncbi_summary = ();
-		if($Phylosift::Settings::extended) {
-		%ncbi_summary = %all_summary;
-		my $html_all_report = $Phylosift::Settings::file_dir."/".$self->{"fileName"}."_allmarkers.html";
-		if ( scalar( keys(%ncbi_summary) ) > 0 ) {
-			if ( !defined $self->{HTMLall} ) {
-				$self->{HTMLall} = Phylosift::HTMLReport::begin_report( self => $self, file => $html_all_report );
-			}
-			Phylosift::HTMLReport::add_krona( self => $self, OUTPUT => $self->{HTMLall}, summary => \%ncbi_summary );
-		} else {
-			my $FH = ps_open(">$html_all_report");
-			print $FH "No results Found\n";
-			close($FH);
-		}
 		}
 	}
 	Phylosift::Utilities::end_timer( name => "runKrona" );
