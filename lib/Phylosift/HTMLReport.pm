@@ -62,7 +62,7 @@ sub begin_report {
  <body>
   <img id="hiddenImage" src="img/hidden.png" style="display:none"/>
   <noscript>Javascript must be enabled to view this page.</noscript>
-  <div style="display:none"></div><div>	
+  <div style=\"position:absolute;bottom:0;\">\n
 
 EOF
 	return $OUTPUT;
@@ -74,13 +74,15 @@ sub add_jnlp {
 	my $marker = $args{marker} || miss("marker");
 	my $OUTPUT = $args{OUTPUT} || miss("OUTPUT");
 	my $xml    = $args{xml} || miss("xml");
-	$marker .= '.' unless $marker eq "concat";
+	my $skip_jnlp_writeout = $args{html_only};
+	$marker .= '.';
+	$marker = '' if $marker eq "concat";
 	my $jnlp   = $Phylosift::Settings::file_dir."/".$self->{"fileName"}.".$marker"."jnlp";
 	
 	print $OUTPUT <<EOF;
-<a href="file://$jnlp">View phylogenetic placements</a>
+<a href="file://$jnlp">View phylogenetic placements for marker $marker</a><br>\n
 EOF
-	write_jnlp( self => $self, marker => $marker, jnlp => $jnlp, xml => $xml );
+	write_jnlp( self => $self, marker => $marker, jnlp => $jnlp, xml => $xml ) unless $skip_jnlp_writeout;
 }
 
 sub write_jnlp {
@@ -126,7 +128,7 @@ sub add_krona {
 	my $KRONA_THRESHOLD = $Phylosift::Settings::krona_threshold;
 	%ncbi_summary = ();
 	%ncbi_summary = %$summary;
-
+	print $OUTPUT "</div><div style=\"display:none\">\n<br>";
 	$xml = new XML::Writer( OUTPUT => $OUTPUT );
 	$xml->startTag( "krona", "collapse" => "false", "key" => "true" );
 	$xml->startTag( "attributes", "magnitude" => "abundance" );
@@ -194,14 +196,14 @@ sub add_krona {
 
 	$xml->endTag("krona");
 	$xml->end();
-
+	print $OUTPUT "\n</div><br>";
 }
 
 sub add_run_info() {
 	my %args   = @_;
 	my $self   = $args{self} || miss("self");
 	my $OUTPUT = $args{OUTPUT};
-	print $OUTPUT "\n</div><div style=\"position:absolute;bottom:0;\">\n";
+	print $OUTPUT "<div style=\"position:absolute;bottom:0;\">\n";
 	Phylosift::Summarize::print_run_info( self => $self, OUTPUT => $OUTPUT, newline => "<br/>\n" );
 	print $OUTPUT "</div></body></html>\n";
 }

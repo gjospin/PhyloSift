@@ -545,6 +545,7 @@ sub merge_sequence_taxa {
 			print $FH "No results Found\n";
 			close($FH);
 		}
+		#Phylosift::HTMLReport::add_run_info( self => $self, OUTPUT => $self->{HTML}) if exists $self->{HTML};
 	}
 	Phylosift::Utilities::end_timer( name => "runKrona" );
 
