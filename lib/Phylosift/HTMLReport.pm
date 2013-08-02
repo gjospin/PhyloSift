@@ -74,7 +74,9 @@ sub add_jnlp {
 	my $marker = $args{marker} || miss("marker");
 	my $OUTPUT = $args{OUTPUT} || miss("OUTPUT");
 	my $xml    = $args{xml} || miss("xml");
-	my $jnlp   = $Phylosift::Settings::file_dir."/".$self->{"fileName"}.".jnlp";
+	$marker .= '.' unless $marker eq "concat";
+	my $jnlp   = $Phylosift::Settings::file_dir."/".$self->{"fileName"}.".$marker"."jnlp";
+	
 	print $OUTPUT <<EOF;
 <a href="file://$jnlp">View phylogenetic placements</a>
 EOF
