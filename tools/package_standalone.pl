@@ -7,7 +7,7 @@ use warnings;
 use File::Basename;
 
 my $prefix = "../PhyloSift";
-
+#my $prefix = "PhyloSift";
 if (@ARGV>0 && $ARGV[0] eq "buildbot") # if buildbot
 {
 	$prefix = ".."; # set path prefix
@@ -21,7 +21,7 @@ if (@ARGV>0 && $ARGV[0] eq "buildbot") # if buildbot
 	my $branch = $ARGV[0] || "master"; # set branch to checkout
     $prefix = "../PhyloSift"; # set path prefix
     
-    #`rm -rf bioperl-live`;
+    `rm -rf bioperl-live`;
     `git clone git://github.com/gjospin/PhyloSift.git`;
     `cd PhyloSift ; git checkout $branch`;
     `rm -rf PhyloSift/.git`;
@@ -42,13 +42,14 @@ if (@ARGV>0 && $ARGV[0] eq "buildbot") # if buildbot
 }
 
 # add Rutger Vos' Bio::Phylo
-add_package(url=>"http://search.cpan.org/CPAN/authors/id/R/RV/RVOSA/Bio-Phylo-0.45.tar.gz", mv_cmd=>"mv lib/Bio/* $prefix/lib/Bio/");
+#add_package(url=>"http://search.cpan.org/CPAN/authors/id/R/RV/RVOSA/Bio-Phylo-0.45.tar.gz", mv_cmd=>"mv lib/Bio/* $prefix/lib/Bio/");
+add_package(url=>"http://search.cpan.org/CPAN/authors/id/R/RV/RVOSA/Bio-Phylo-0.56.tar.gz", mv_cmd=>"mv lib/Bio/* $prefix/lib/Bio/");
 
 # add JSON package
-add_package(url=>"http://search.cpan.org/CPAN/authors/id/M/MA/MAKAMAKA/JSON-2.53.tar.gz");
+add_package(url=>"http://search.cpan.org/CPAN/authors/id/M/MA/MAKAMAKA/JSON-2.53.tar.gz", mv_cmd=>"mv blib/lib/JSON $prefix/lib");
 
 # Encode::Locale
-add_package(url=>"http://search.cpan.org/CPAN/authors/id/G/GA/GAAS/Encode-Locale-0.04.tar.gz");
+add_package(url=>"http://search.cpan.org/CPAN/authors/id/G/GA/GAAS/Encode-Locale-1.03.tar.gz", mv_cmd=>"mv blib/lib/auto/Encode $prefix/lib");
 
 # add Locale::Maketext
 `curl -LO http://search.cpan.org/CPAN/authors/id/T/TO/TODDR/Locale-Maketext-1.19.tar.gz`;
@@ -63,45 +64,48 @@ chdir("Locale-Maketext-1.19");
 chdir("..");
 
 # Digest::MD5
-add_package(url=>"http://search.cpan.org/CPAN/authors/id/G/GA/GAAS/Digest-MD5-2.52.tar.gz");
+add_package(url=>"http://search.cpan.org/CPAN/authors/id/G/GA/GAAS/Digest-MD5-2.52.tar.gz", mv_cmd=> "mv blib/lib/auto/Digest $prefix/lib");
 
 # Locale::Maketext::Simple 
 add_package(url=>"http://search.cpan.org/CPAN/authors/id/J/JE/JESSE/Locale-Maketext-Simple-0.21.tar.gz", mv_cmd=>"mv blib/lib/Locale/Maketext/* $prefix/lib/Locale/Maketext/");
 
 # XML::Writer
-add_package(url=>"http://search.cpan.org/CPAN/authors/id/J/JO/JOSEPHW/XML-Writer-0.615.tar.gz");
+add_package(url=>"http://search.cpan.org/CPAN/authors/id/J/JO/JOSEPHW/XML-Writer-0.615.tar.gz", mv_cmd=>"mv blib/lib/auto/XML $prefix/lib/");
 
 # libwww-perl (for LWP::Simple)
-add_package(url=>"http://search.cpan.org/CPAN/authors/id/G/GA/GAAS/libwww-perl-6.04.tar.gz");
-add_package(url=>"http://search.cpan.org/CPAN/authors/id/G/GA/GAAS/HTTP-Message-6.03.tar.gz");
+add_package(url=>"http://search.cpan.org/CPAN/authors/id/G/GA/GAAS/libwww-perl-6.04.tar.gz", mv_cmd=>"mv blib/lib/auto/LWP $prefix/lib/");
+add_package(url=>"http://search.cpan.org/CPAN/authors/id/C/CJ/CJM/IO-HTML-1.00.tar.gz", mv_cmd=>"mv blib/lib/IO $prefix/lib");
+add_package(url=>"http://search.cpan.org/CPAN/authors/id/G/GA/GAAS/HTTP-Message-6.06.tar.gz", mv_cmd=>"mv blib/lib/auto/HTTP $prefix/lib");
 add_package(url=>"http://search.cpan.org/CPAN/authors/id/G/GA/GAAS/HTTP-Date-6.02.tar.gz", mv_cmd=>"mv blib/lib/HTTP/* $prefix/lib/HTTP");
-
 #add NSFLock.pm
-add_package(url=>"http://search.cpan.org/CPAN/authors/id/B/BB/BBB/File-NFSLock-1.21.tar.gz");
+add_package(url=>"http://search.cpan.org/CPAN/authors/id/B/BB/BBB/File-NFSLock-1.21.tar.gz", mv_cmd=>"mv blib/lib/auto/File $prefix/lib");
 
 # add Version.pm
-`mkdir $prefix/legacy`;
-add_package(url=>"http://search.cpan.org/CPAN/authors/id/J/JP/JPEACOCK/version-0.95.tar.gz", make_opts=>"--perl_only", mv_cmd=>"mv blib/lib/version* $prefix/legacy/");
+#`mkdir -p $prefix/legacy`; #prefix is not right here as we are in the top level directory
+`mkdir -p PhyloSift/legacy`;
+add_package(url=>"http://search.cpan.org/CPAN/authors/id/J/JP/JPEACOCK/version-0.95.tar.gz", make_opts=>"--perl_only", mv_cmd=>"mv blib/lib/auto/version* $prefix/legacy/");
 
 # support for App::Cmd
-add_package(url=>"http://search.cpan.org/CPAN/authors/id/A/AD/ADAMK/List-MoreUtils-0.33.tar.gz");
-add_package(url=>"http://search.cpan.org/CPAN/authors/id/D/DO/DOY/Package-Stash-0.33.tar.gz");
-add_package(url=>"http://search.cpan.org/CPAN/authors/id/R/RJ/RJBS/Getopt-Long-Descriptive-0.092.tar.gz");
-add_package(url=>"http://search.cpan.org/CPAN/authors/id/R/RJ/RJBS/String-RewritePrefix-0.006.tar.gz");
-add_package(url=>"http://search.cpan.org/CPAN/authors/id/R/RJ/RJBS/App-Cmd-0.318.tar.gz");
+add_package(url=>"http://search.cpan.org/CPAN/authors/id/A/AD/ADAMK/List-MoreUtils-0.33.tar.gz", mv_cmd=>"mv blib/lib/auto/List $prefix/lib");
+add_package(url=>"http://search.cpan.org/CPAN/authors/id/D/DO/DOY/Package-Stash-0.35.tar.gz", mv_cmd=>"mv blib/lib/Package $prefix/lib");
+add_package(url=>"http://search.cpan.org/CPAN/authors/id/D/DO/DOY/Package-Stash-XS-0.28.tar.gz", mv_cmd=>"mv blib/lib/Package/Stash/* $prefix/lib/Package/Stash");
+add_package(url=>"http://search.cpan.org/CPAN/authors/id/R/RJ/RJBS/Getopt-Long-Descriptive-0.092.tar.gz", mv_cmd=>"mv blib/lib/Getopt $prefix/lib");
+add_package(url=>"http://search.cpan.org/CPAN/authors/id/R/RJ/RJBS/String-RewritePrefix-0.006.tar.gz", mv_cmd=>"mv blib/lib/String $prefix/lib");
+add_package(url=>"http://search.cpan.org/CPAN/authors/id/R/RJ/RJBS/App-Cmd-0.318.tar.gz", mv_cmd=>"mv blib/lib/App $prefix/lib");
+add_package(url=>"http://search.cpan.org/CPAN/authors/id/D/DR/DROLSKY/Class-Load-0.20.tar.gz" , mv_cmd=>"mv blib/lib/Class/ $prefix/lib");
+add_package(url=>"http://search.cpan.org/CPAN/authors/id/R/RJ/RJBS/Data-OptList-0.108.tar.gz", mv_cmd=>"mv blib/lib/Data $prefix/lib");
+add_package(url=>"http://search.cpan.org/CPAN/authors/id/D/DR/DROLSKY/Class-Load-XS-0.01.tar.gz", mv_cmd=>"mv blib/lib/Class/Load/XS.pm $prefix/lib/Class/Load", build_pl=>1);
 
-add_package(url=>"http://search.cpan.org/CPAN/authors/id/D/DR/DROLSKY/Class-Load-0.20.tar.gz");
-add_package(url=>"http://search.cpan.org/CPAN/authors/id/R/RJ/RJBS/Data-OptList-0.107.tar.gz");
-add_package(url=>"http://search.cpan.org/CPAN/authors/id/A/AD/ADAMK/Params-Util-1.07.tar.gz");
-add_package(url=>"http://search.cpan.org/CPAN/authors/id/R/RJ/RJBS/Sub-Install-0.926.tar.gz");
+add_package(url=>"http://search.cpan.org/CPAN/authors/id/R/RJ/RJBS/Sub-Install-0.926.tar.gz", mv_cmd=>"mv blib/lib/Sub $prefix/lib");
 
-add_package(url=>"http://search.cpan.org/CPAN/authors/id/D/DR/DROLSKY/Module-Implementation-0.06.tar.gz");
-add_package(url=>"http://search.cpan.org/CPAN/authors/id/Z/ZE/ZEFRAM/Module-Runtime-0.013.tar.gz", mv_cmd=>"mv blib/lib/Module/* $prefix/lib/Module/");
-add_package(url=>"http://search.cpan.org/CPAN/authors/id/D/DO/DOY/Try-Tiny-0.11.tar.gz");
-add_package(url=>"http://search.cpan.org/CPAN/authors/id/D/DR/DROLSKY/Class-Load-XS-0.04.tar.gz", mv_cmd=>"mv lib/Class/Load/* $prefix/lib/Class/Load/");
+add_package(url=>"http://search.cpan.org/CPAN/authors/id/D/DR/DROLSKY/Module-Implementation-0.06.tar.gz", mv_cmd=>"mv blib/lib/Module $prefix/lib");
+add_package(url=>"http://search.cpan.org/CPAN/authors/id/Z/ZE/ZEFRAM/Module-Runtime-0.013.tar.gz", mv_cmd=>"mv blib/lib/Module/* $prefix/lib/Module/", mv_cmd=>"mv blib/lib/Module/* $prefix/lib/Module");
+add_package(url=>"http://search.cpan.org/CPAN/authors/id/D/DO/DOY/Try-Tiny-0.16.tar.gz", mv_cmd=>"mv blib/lib/Try $prefix/lib");
 add_package(url=>"http://search.cpan.org/CPAN/authors/id/S/SI/SIMONW/Module-Pluggable-4.3.tar.gz", mv_cmd=>"mv blib/lib/Module/* $prefix/lib/Module/; mv blib/lib/Devel $prefix/lib/");
-add_package(url=>"http://search.cpan.org/CPAN/authors/id/D/DR/DROLSKY/Package-DeprecationManager-0.13.tar.gz", mv_cmd=>"mv blib/lib/Package/* $prefix/lib/Package/");
-add_package(url=>"http://search.cpan.org/CPAN/authors/id/R/RJ/RJBS/Sub-Exporter-0.984.tar.gz", mv_cmd=>"mv blib/lib/Sub/* $prefix/lib/Sub/");
+add_package(url=>"http://search.cpan.org/CPAN/authors/id/D/DR/DROLSKY/Package-DeprecationManager-0.13.tar.gz", mv_cmd=>"mv blib/lib/auto/Package/* $prefix/lib/Package");
+add_package(url=>"http://search.cpan.org/CPAN/authors/id/R/RJ/RJBS/Sub-Exporter-0.984.tar.gz", mv_cmd=>"mv blib/lib/Sub/* $prefix/lib/Sub");
+
+add_package(url=>"http://search.cpan.org/CPAN/authors/id/A/AD/ADAMK/Params-Util-1.07.tar.gz");
 
 # requires Build.pl
 # provides a pure perl impl
