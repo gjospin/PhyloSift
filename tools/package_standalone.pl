@@ -78,7 +78,7 @@ add_package(url=>"http://search.cpan.org/CPAN/authors/id/C/CJ/CJM/IO-HTML-1.00.t
 add_package(url=>"http://search.cpan.org/CPAN/authors/id/G/GA/GAAS/HTTP-Message-6.06.tar.gz", mv_cmd=>"mv blib/lib/auto/HTTP $prefix/lib");
 add_package(url=>"http://search.cpan.org/CPAN/authors/id/G/GA/GAAS/HTTP-Date-6.02.tar.gz", mv_cmd=>"mv blib/lib/HTTP/* $prefix/lib/HTTP");
 #add NSFLock.pm
-add_package(url=>"http://search.cpan.org/CPAN/authors/id/B/BB/BBB/File-NFSLock-1.21.tar.gz", mv_cmd=>"mv blib/lib/auto/File $prefix/lib");
+add_package(url=>"http://search.cpan.org/CPAN/authors/id/B/BB/BBB/File-NFSLock-1.21.tar.gz", mv_cmd=>"mv blib/lib/File $prefix/lib");
 
 # add Version.pm
 #`mkdir -p $prefix/legacy`; #prefix is not right here as we are in the top level directory
