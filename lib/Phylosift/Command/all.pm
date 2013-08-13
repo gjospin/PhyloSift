@@ -59,22 +59,23 @@ sub options {
 
 	# all-specific options:
 	$opts{keep_search} = [ "keep_search", "Keeps the blastDir files (Default: Delete the blastDir files after every chunk)" ];
-    return values(%opts);
+	return values(%opts);
 }
 
 sub validate {
 	my ( $self, $opt, $args ) = @_;
-	
+
 	# we need at least one argument beyond the options; die with that message
 	# and the complete "usage" text describing switches, etc
-	$self->usage_error("phylosift requires exactly one or two file name arguments to run in this mode") unless @$args == 1 || (@$args == 2 && $opt->{paired});
+	$self->usage_error("phylosift requires exactly one or two file name arguments to run in this mode") unless @$args == 1 || ( @$args == 2 && $opt->{paired} );
 }
 
 sub validate_subcommand {
-	my ( $self, $opt , $args ) = @_;
-	my $mode->{mode} = pop(@_);
-	if ($mode->{mode} eq 'align' || $mode->{mode} eq 'place' || $mode->{mode} eq 'summarize' || $mode->{mode} eq 'search' ){
-		if($opt->{continue} && defined($opt->{chunks}) && $opt->{chunks} != 1){
+	my ( $self, $opt, $args ) = @_;
+	my %mode = ();
+	$mode->{mode} = pop(@_);
+	if ( $mode->{mode} eq 'align' || $mode->{mode} eq 'place' || $mode->{mode} eq 'summarize' || $mode->{mode} eq 'search' ) {
+		if ( $opt->{continue} && defined( $opt->{chunks} ) && $opt->{chunks} != 1 ) {
 			$self->usage_error("If using --continue when running $mode->{mode} the number of --chunks to run cannot be different than 1\n");
 		}
 	}

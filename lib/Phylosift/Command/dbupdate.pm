@@ -110,9 +110,9 @@ sub execute {
 	debug "Updating NCBI tree and taxon map...";
 	$Phylosift::Utilities::ncbi_dir = "$repository/ncbi/";
 	Phylosift::UpdateDB::update_ncbi_taxonomy( repository => $Phylosift::Settings::destination );
-
+	debug "Starting download\n";
 	if ( !defined( $opt->{skip_download} ) ) {
-		Phylosift::UpdateDB::get_ebi_genomes( directory => $ebi_repository );
+	    Phylosift::UpdateDB::get_ebi_genomes( directory => $ebi_repository );
 		Phylosift::UpdateDB::get_ncbi_draft_genomes( directory => $ncbi_draft_repository );
 		Phylosift::UpdateDB::get_ncbi_finished_genomes( directory => $ncbi_finished_repository );
 		Phylosift::UpdateDB::get_ncbi_wgs_genomes( directory => $ncbi_wgs_repository );
