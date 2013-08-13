@@ -602,6 +602,14 @@ sub ncbi_update_check {
 	$ncbi_dir =~ m/^(\S+)\/[^\/]+$/;    #Need to work from the parent directory from ncbi_dir
 	my $ncbi_path = $1;
 	my $skip_lock = $args{skip_lock};
+	eval {
+		require LWP::Simple;
+		LWP::Simple->import();
+	};
+	my $result          = $@;
+	warn "Unable to load LWP::Simple, unable to check for updates to or download the NCBI taxonomy." unless $result;
+	return unless $result;
+
 	my ( $content_type, $document_length, $modified_time, $expires, $server ) = head("$url");
 
 	if ( -x $ncbi_dir ) {
