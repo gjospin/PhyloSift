@@ -85,7 +85,7 @@ sub add_jnlp {
 var loc = window.location.pathname;
 var dir = loc.substring(0, loc.lastIndexOf('/') + 1);
 document.write('View phylogenetic placements for marker concat: <a href="file://$jnlp">local</a>');
-document.write(' | <a href="file://http://edhar.genomecenter.ucdavis.edu/cgi-bin/forester.jnlp?url='+dir+'$xml_name">via server</a><br>');
+document.write(' | <a href="http://edhar.genomecenter.ucdavis.edu/cgi-bin/forester.jnlp?url='+dir+'$xml_name">via server</a><br>');
 </script>
 EOF
 	write_jnlp( self => $self, marker => $marker, jnlp => $jnlp, xml => $xml ) unless $skip_jnlp_writeout;
