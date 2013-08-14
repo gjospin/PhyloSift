@@ -2,6 +2,8 @@ package Phylosift::Command;
 use App::Cmd::Setup -command;
 use Phylosift;
 use POSIX;
+use FindBin qw($Bin);
+BEGIN { unshift( @INC, "$FindBin::Bin/../legacy/" ) if $] < 5.01; }
 
 use version; our $VERSION = version->declare("v1.0.0_01");
 
