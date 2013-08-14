@@ -86,7 +86,7 @@ add_package(url=>"http://search.cpan.org/CPAN/authors/id/R/RJ/RJBS/Data-OptList-
 # add Version.pm
 #`mkdir -p $prefix/legacy`; #prefix is not right here as we are in the top level directory
 `mkdir -p PhyloSift/legacy`;
-add_package(url=>"http://search.cpan.org/CPAN/authors/id/J/JP/JPEACOCK/version-0.95.tar.gz", make_opts=>"--perl_only", mv_cmd=>"mv blib/lib/auto/version* $prefix/legacy/");
+add_package(url=>"http://search.cpan.org/CPAN/authors/id/J/JP/JPEACOCK/version-0.9902.tar.gz", make_opts=>"--perl_only", mv_cmd=>"mv blib/lib/* $prefix/legacy/");
 
 # support for App::Cmd
 add_package(url=>"http://search.cpan.org/CPAN/authors/id/A/AD/ADAMK/List-MoreUtils-0.33.tar.gz");
