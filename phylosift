@@ -1,4 +1,3 @@
 #!/bin/bash
-SCRIPT=$(readlink -f "$0")
-SCRIPTPATH=`dirname "$SCRIPT"`
+SCRIPTPATH=$(cd "$(dirname "$0")"; pwd)
 $SCRIPTPATH/bin/phylosift "$@"
