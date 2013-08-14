@@ -1815,7 +1815,7 @@ sub open_SeqIO_object {
 		$format = $args{format};
 	}
 	if ( $args{file} =~ /\.gz$/ ) {
-		$io_object = Bio::SeqIO->new(       -file   => "zcat \"$args{file}\" |",
+		$io_object = Bio::SeqIO->new(       -file   => "gzip -cd \"$args{file}\" |",
 									  -format => $format );
 	} elsif ( $args{file} =~ /\.bz2$/ ) {
 		$io_object = Bio::SeqIO->new(       -file   => "bzcat \"$args{file}\" |",
@@ -1838,7 +1838,7 @@ sub open_sequence_file {
 	my $file = $args{file} || miss("file");
 	my $F1IN;
 	if ( $file =~ /\.gz$/ ) {
-		$F1IN = ps_open("zcat \"$file\" |");
+		$F1IN = ps_open("gzip -cd \"$file\" |");
 	} elsif ( $file =~ /\.bz2$/ ) {
 		$F1IN = ps_open("bzcat \"$file\" |");
 	} elsif ( $file eq "STDIN" ) {
