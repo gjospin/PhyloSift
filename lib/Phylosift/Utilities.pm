@@ -465,11 +465,11 @@ sub marker_update_check {
 		}
 	} else {
 		warn "Unable to check for updates because perl module LWP::Simple is not available. Please use cpan to install it.\n" if $skip_lock;
-		$get_new_markers = 1 unless -x $marker_path;
+		$get_new_markers = 1 unless -x "$marker_path/version.txt";
 	}
-	`mkdir -p $marker_path` unless -x $marker_path;
 	my $lock_excl_markers;
 	if ($get_new_markers) {
+		`mkdir -p $marker_path`;
 		warn "Attempting to get exclusive rights to the marker DB. Possibly waiting for another PhyloSift to release the file lock\n" unless $skip_lock;
 		$lock_excl_markers = File::NFSLock->new( $marker_path, LOCK_EX ) unless $skip_lock;
 		$get_new_markers = marker_update_check(
