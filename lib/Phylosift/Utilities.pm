@@ -377,18 +377,9 @@ sub download_data {
 	my $url         = $args{url};
 	my $destination = $args{destination};
 
-	#`mkdir -p "$destination"`;
-	eval {
-		require File::Fetch;
-		File::Fetch->import();
-		1;
-	} or do {
-		croak(    "Unable to load perl module File::Fetch. Can not download marker database.\nPlease use cpan to install File::Fetch or download and install the markers manually to $destination.\nAfter downloading markers manually, please unpack them and run `phylosift index` to index them.\n");
-	};
 	# FIXME this is insecure!
 	# but then again, so is just about every other line of code in this program...
-	my $ff = File::Fetch->new( uri => $url );
-	$ff->fetch( to => "$destination/.." );
+	`cd $destination/.. ; curl -LO $url`;
 	debug "URL : $url\n";
 	$url =~ /\/(\w+)\.tgz/;
 	my $archive = $1;
@@ -600,20 +591,22 @@ sub ncbi_update_check {
 	$ncbi_dir =~ m/^(\S+)\/[^\/]+$/;    #Need to work from the parent directory from ncbi_dir
 	my $ncbi_path = $1;
 	my $skip_lock = $args{skip_lock};
+	my $have_lwp  = 0;
+	my @lwp_result;
 	eval {
 		require LWP::Simple;
 		LWP::Simple->import();
+		$have_lwp = 1;
+		@lwp_result = LWP::Simple::head("$url");
 		1;
 	} or do {
-		warn "Unable to load LWP::Simple, unable to check for updates to or download the NCBI taxonomy.";
-		return;
+		warn "Unable to load LWP::Simple, unable to check for updates to or download the NCBI taxonomy." unless $skip_lock;
 	};
-
-	my ( $content_type, $document_length, $modified_time, $expires, $server ) = LWP::Simple::head("$url");
+	my ( $content_type, $document_length, $modified_time, $expires, $server ) = @lwp_result;
 
 	if ( -x $ncbi_dir ) {
 		my $ncbi_time = ( stat($ncbi_dir) )[9];
-		if ( !defined($modified_time) ) {
+		if ( !defined($modified_time) && $have_lwp ) {
 			warn "Warning: unable to connect to NCBI taxonomy update server, please check your internet connection\n" if $skip_lock;
 		} elsif ( $modified_time > $ncbi_time ) {
 			warn "Found newer version of NCBI taxonomy data!\n" if $skip_lock;
@@ -625,7 +618,7 @@ sub ncbi_update_check {
 			$lock_ex->unlock() unless $skip_lock;
 		}
 	} else {
-		if ( !defined($modified_time) ) {
+		if ( !defined($modified_time) && $have_lwp ) {
 			croak "NCBI taxonomy data not found and unable to connect to update server, please check your phylosift configuration and internet connection!\n"
 			  if $skip_lock;
 		}
