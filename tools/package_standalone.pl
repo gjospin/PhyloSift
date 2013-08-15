@@ -76,6 +76,7 @@ add_package(url=>"http://search.cpan.org/CPAN/authors/id/J/JO/JOSEPHW/XML-Writer
 # libwww-perl (for LWP::Simple)
 add_package(url=>"http://search.cpan.org/CPAN/authors/id/G/GA/GAAS/libwww-perl-6.04.tar.gz");
 add_package(url=>"http://search.cpan.org/CPAN/authors/id/C/CJ/CJM/IO-HTML-1.00.tar.gz");
+add_package(url=>"http://search.cpan.org/CPAN/authors/id/G/GA/GAAS/URI-1.60.tar.gz");
 add_package(url=>"http://search.cpan.org/CPAN/authors/id/G/GA/GAAS/HTTP-Message-6.06.tar.gz");
 add_package(url=>"http://search.cpan.org/CPAN/authors/id/G/GA/GAAS/HTTP-Date-6.02.tar.gz", mv_cmd=>"mv blib/lib/HTTP/* $prefix/lib/HTTP");
 #add NSFLock.pm
