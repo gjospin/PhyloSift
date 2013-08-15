@@ -465,7 +465,7 @@ sub marker_update_check {
 		}
 	} else {
 		warn "Unable to check for updates because perl module LWP::Simple is not available. Please use cpan to install it.\n" if $skip_lock;
-		$get_new_markers = 1 unless -x "$marker_path/version.txt";
+		$get_new_markers = 1 unless -e "$marker_path/version.txt";
 	}
 	my $lock_excl_markers;
 	if ($get_new_markers) {
@@ -598,14 +598,13 @@ sub ncbi_update_check {
 		$have_lwp = 1;
 		@lwp_result = LWP::Simple::head("$url");
 	} or do {
-		warn "Unable to load LWP::Simple, unable to check for updates to or download the NCBI taxonomy." unless $skip_lock;
 	};
 	my ( $content_type, $document_length, $modified_time, $expires, $server ) = @lwp_result;
 
 	if ( -x $ncbi_dir ) {
 		my $ncbi_time = ( stat($ncbi_dir) )[9];
-		if ( !defined($modified_time) && $have_lwp ) {
-			warn "Warning: unable to connect to NCBI taxonomy update server, please check your internet connection\n" if $skip_lock;
+		if ( !defined($modified_time)) {
+			warn "Warning: unable to connect to NCBI taxonomy update server, please check your internet connection\n" if $skip_lock && $have_lwp;
 		} elsif ( $modified_time > $ncbi_time ) {
 			warn "Found newer version of NCBI taxonomy data!\n" if $skip_lock;
 			warn "Downloading from $url\n"                      if $skip_lock;
