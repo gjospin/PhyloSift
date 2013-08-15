@@ -64,34 +64,29 @@ chdir("Locale-Maketext-1.19");
 `mv blib/lib/Locale/ $prefix/lib/`;
 chdir("..");
 
-# Digest::MD5
-add_package(url=>"http://search.cpan.org/CPAN/authors/id/G/GA/GAAS/Digest-MD5-2.52.tar.gz");
-
 # Locale::Maketext::Simple 
 add_package(url=>"http://search.cpan.org/CPAN/authors/id/J/JE/JESSE/Locale-Maketext-Simple-0.21.tar.gz", mv_cmd=>"mv blib/lib/Locale/Maketext/* $prefix/lib/Locale/Maketext/");
 
 # XML::Writer
 add_package(url=>"http://search.cpan.org/CPAN/authors/id/J/JO/JOSEPHW/XML-Writer-0.615.tar.gz");
 
-# libwww-perl (for LWP::Simple)
-add_package(url=>"http://search.cpan.org/CPAN/authors/id/G/GA/GAAS/libwww-perl-6.04.tar.gz");
-add_package(url=>"http://search.cpan.org/CPAN/authors/id/C/CJ/CJM/IO-HTML-1.00.tar.gz");
-add_package(url=>"http://search.cpan.org/CPAN/authors/id/G/GA/GAAS/URI-1.60.tar.gz");
-add_package(url=>"http://search.cpan.org/CPAN/authors/id/G/GA/GAAS/HTTP-Message-6.06.tar.gz");
-add_package(url=>"http://search.cpan.org/CPAN/authors/id/G/GA/GAAS/HTTP-Date-6.02.tar.gz", mv_cmd=>"mv blib/lib/HTTP/* $prefix/lib/HTTP");
-#add NSFLock.pm
+# File::NSFLock
 add_package(url=>"http://search.cpan.org/CPAN/authors/id/B/BB/BBB/File-NFSLock-1.21.tar.gz");
-
-add_package(url=>"http://search.cpan.org/CPAN/authors/id/R/RJ/RJBS/Data-OptList-0.108.tar.gz");
 
 # add Version.pm
 #`mkdir -p $prefix/legacy`; #prefix is not right here as we are in the top level directory
 `mkdir -p PhyloSift/legacy`;
 add_package(url=>"http://search.cpan.org/CPAN/authors/id/J/JP/JPEACOCK/version-0.9902.tar.gz", make_opts=>"--perl_only", mv_cmd=>"mv blib/lib/* $prefix/legacy/");
 
+# Digest::MD5
+`mkdir -p PhyloSift/legacy/md5lib`;
+add_package(url=>"http://search.cpan.org/CPAN/authors/id/G/GA/GAAS/Digest-MD5-2.52.tar.gz", mv_cmd=>"mv blib/lib/* $prefix/legacy/md5lib/");
+
+
 # support for App::Cmd
 add_package(url=>"http://search.cpan.org/CPAN/authors/id/A/AD/ADAMK/List-MoreUtils-0.33.tar.gz");
 add_package(url=>"http://search.cpan.org/CPAN/authors/id/D/DO/DOY/Package-Stash-0.35.tar.gz");
+add_package(url=>"http://search.cpan.org/CPAN/authors/id/R/RJ/RJBS/Data-OptList-0.108.tar.gz");
 add_package(url=>"http://search.cpan.org/CPAN/authors/id/R/RJ/RJBS/Getopt-Long-Descriptive-0.092.tar.gz");
 add_package(url=>"http://search.cpan.org/CPAN/authors/id/R/RJ/RJBS/String-RewritePrefix-0.006.tar.gz");
 add_package(url=>"http://search.cpan.org/CPAN/authors/id/R/RJ/RJBS/App-Cmd-0.318.tar.gz");

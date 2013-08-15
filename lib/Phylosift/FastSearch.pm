@@ -11,10 +11,19 @@ use Phylosift::Utilities qw(:all);
 use Phylosift::MarkerAlign;
 use Phylosift::Settings;
 use File::Basename;
-use Digest::MD5 qw(md5_hex);
 use POSIX qw(ceil floor);
 
 use version; our $VERSION = version->declare("v1.0.0_01");
+
+# try to load the system's MD5 lib, but if that fails, load our own
+eval {
+	require Digest::MD5;
+	Digest::MD5->import();
+} or do {
+	unshift( @INC, "$FindBin::Bin/../legacy/md5lib" );
+	use Digest::MD5;
+};
+
 
 =head1 NAME
 

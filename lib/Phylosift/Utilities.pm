@@ -419,7 +419,6 @@ sub marker_update_check {
 	eval {
 		require LWP::Simple;
 		LWP::Simple->import();
-		1;
 	};
 	my $result          = $@;
 	my $get_new_markers = 0;
@@ -598,7 +597,6 @@ sub ncbi_update_check {
 		LWP::Simple->import();
 		$have_lwp = 1;
 		@lwp_result = LWP::Simple::head("$url");
-		1;
 	} or do {
 		warn "Unable to load LWP::Simple, unable to check for updates to or download the NCBI taxonomy." unless $skip_lock;
 	};
