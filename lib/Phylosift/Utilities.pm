@@ -609,7 +609,7 @@ sub ncbi_update_check {
 		return;
 	};
 
-	my ( $content_type, $document_length, $modified_time, $expires, $server ) = head("$url");
+	my ( $content_type, $document_length, $modified_time, $expires, $server ) = LWP::Simple::head("$url");
 
 	if ( -x $ncbi_dir ) {
 		my $ncbi_time = ( stat($ncbi_dir) )[9];
