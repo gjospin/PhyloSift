@@ -381,26 +381,23 @@ sub download_data {
 	eval {
 		require File::Fetch;
 		File::Fetch->import();
+		1;
+	} or do {
+		croak(    "Unable to load perl module File::Fetch. Can not download marker database.\nPlease use cpan to install File::Fetch or download and install the markers manually to $destination.\nAfter downloading markers manually, please unpack them and run `phylosift index` to index them.\n");
 	};
-	if ($@) {
-		croak(    "Unable to load perl module File::Fetch. Can not download marker database.\nPlease use cpan to install File::Fetch or download and install the markers manually to $destination.\nAfter downloading markers manually, please unpack them and run `phylosift index` to index them.\n"
-		);
-	} else {
-
-		# FIXME this is insecure!
-		# but then again, so is just about every other line of code in this program...
-		my $ff = File::Fetch->new( uri => $url );
-		$ff->fetch( to => "$destination/.." );
-		debug "URL : $url\n";
-		$url =~ /\/(\w+)\.tgz/;
-		my $archive = $1;
-		debug "ARCHIVE : $archive\n";
-		if ( -e "$destination/.. " ) {
-			`rm -rf "$destination/.."`;
-		}
-		`cd "$destination/../" ; tar xzf $archive.tgz ; touch $archive`;
-		`rm "$destination/../$archive.tgz"`;
+	# FIXME this is insecure!
+	# but then again, so is just about every other line of code in this program...
+	my $ff = File::Fetch->new( uri => $url );
+	$ff->fetch( to => "$destination/.." );
+	debug "URL : $url\n";
+	$url =~ /\/(\w+)\.tgz/;
+	my $archive = $1;
+	debug "ARCHIVE : $archive\n";
+	if ( -e "$destination/.. " ) {
+		`rm -rf "$destination/.."`;
 	}
+	`cd "$destination/../" ; tar xzf $archive.tgz ; touch $archive`;
+	`rm "$destination/../$archive.tgz"`;
 }
 
 Phylosift::Settings::set_default( parameter => \$Phylosift::Settings::marker_base_url,
@@ -431,6 +428,7 @@ sub marker_update_check {
 	eval {
 		require LWP::Simple;
 		LWP::Simple->import();
+		1;
 	};
 	my $result          = $@;
 	my $get_new_markers = 0;
@@ -605,10 +603,11 @@ sub ncbi_update_check {
 	eval {
 		require LWP::Simple;
 		LWP::Simple->import();
+		1;
+	} or do {
+		warn "Unable to load LWP::Simple, unable to check for updates to or download the NCBI taxonomy.";
+		return;
 	};
-	my $result          = $@;
-	warn "Unable to load LWP::Simple, unable to check for updates to or download the NCBI taxonomy." unless $result;
-	return unless $result;
 
 	my ( $content_type, $document_length, $modified_time, $expires, $server ) = head("$url");
 
