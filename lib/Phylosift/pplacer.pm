@@ -571,9 +571,11 @@ sub name_taxa_in_jplace {
 		my $branch_id = $1;
 		if ( defined( $namemap->{$name} ) ) {
 			my $taxon_id = $namemap->{$name};
-			next if $taxon_id eq "" || $taxon_id == 0;
+			next if $taxon_id eq "" || $taxon_id eq "0";
 			my @data      = Phylosift::Summarize::get_taxon_info( taxon => $taxon_id );
 			my $ncbi_name = Phylosift::Summarize::tree_name( name       => $data[0] );
+			## if the name was not found, initialize it to empty
+			$ncbi_name = "" unless defined $ncbi_name;
 			$node->set_name( $ncbi_name."[$taxon_id]".$branch_id );
 			next;
 		}
