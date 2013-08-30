@@ -9,6 +9,7 @@ use Phylosift::Settings;
 use Phylosift::Utilities;
 use Phylosift::MarkerBuild;
 use Bio::Phylo::IO qw(parse unparse);
+use LWP::Simple;
 use FindBin;
 use Scalar::Util qw(looks_like_number);
 
@@ -62,7 +63,6 @@ sub get_ebi_from_list {
 	my $line    = <$DETAILS>;
 	my %taxa_details;    # {$taxon_id}{$accession} = [$date, $version, $size]
 	while ( $line = <$DETAILS> ) {
-
 		# each line in the list file records a genome and some metadata
 		chomp $line;
 		my ( $acc, $version, $date, $taxid, $description ) = split( /\t/, $line );
@@ -70,12 +70,6 @@ sub get_ebi_from_list {
 		next if $description =~ /hloroplas/;     # skip chloroplast
 		$taxa_details{$taxid}{$acc} = { dater => $date, version => $version };
 	}
-    eval {
-        require LWP::Simple;
-        LWP::Simple->import();
-    };
-    my $result          = $@;
-    die "Unable to load LWP::Simple" unless $result;
 	foreach my $taxid ( keys(%taxa_details) ) {
 
 		# add up the accession sizes
@@ -228,7 +222,7 @@ sub get_ncbi_wgs_genomes {
 	while ( my $line = <$FINDER> ) {
 		next if $line =~ /\.mstr\.gbff\.gz/;
 		chomp $line;
-		`gunzip -f $line`;
+		`gunzip $line`;
 		$line =~ s/\.gz//g;
 		my $orgname = $1 if $line =~ /wgs\.(....)\./;
 		my $taxid = get_taxid_from_gbk( file => $line );
@@ -336,7 +330,7 @@ sub qsub_updates {
 	my $extended        = $args{extended} || 0;
 	my $params          = "";
 
-	$params = " --updated_markers=0 --extended " if $extended;
+	#$params = " --updated_markers=0 --extended " if $extended;
 
 	$params = " --isolate --besthit " if !$extended;
 
@@ -421,9 +415,16 @@ sub concat_marker_files {
 	$catline .= " ";
 	my $fasta = get_fasta_filename( marker => $marker, updated => 1 );
 	`cat $catline $cat_ch "$local_directory/$fasta" 2> /dev/null`;
-	$catline =~ s/updated\.fasta /codon\.updated\.fasta /g;
+
+	#print STDERR "\n\n\n\n\nnormal CATLINE\t $catline\n";
+	$catline =~ s/updated\.(\d+)\.fasta /codon\.updated\.$1\.fasta /g;
+
+	#print STDERR "\n\n\n\n\n\n\ncodon catline\t $catline\n";
+	#exit;
 	if ( Phylosift::Utilities::is_protein_marker( marker => $marker ) ) {
 		my $codon_fasta = get_fasta_filename( marker => $marker, updated => 1, dna => 1 );
+
+		#print "CODON cat line\n $catline\n";
 		`cat $catline $cat_ch "$local_directory/$codon_fasta" 2> /dev/null`;
 	}
 	unless ( $marker eq "concat" ) {
@@ -605,7 +606,7 @@ sub update_ncbi_taxonomy {
 	unlink("$repository/ncbi/gencode.dmp");
 	unlink("$repository/ncbi/readme.txt");
 	system("cd $repository/; tar czf ncbi.tar.gz ncbi");
-	`cd $repository/markers ; rm taxdmp.zip ; taxit new_database`;
+	`cd $repository/markers ; rm taxdmp.zip ; taxit new_database `;
 }
 
 sub make_marker_taxon_map {
