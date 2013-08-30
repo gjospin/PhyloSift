@@ -228,7 +228,7 @@ sub get_ncbi_wgs_genomes {
 	while ( my $line = <$FINDER> ) {
 		next if $line =~ /\.mstr\.gbff\.gz/;
 		chomp $line;
-		`gunzip $line`;
+		`gunzip -f $line`;
 		$line =~ s/\.gz//g;
 		my $orgname = $1 if $line =~ /wgs\.(....)\./;
 		my $taxid = get_taxid_from_gbk( file => $line );
