@@ -70,6 +70,12 @@ sub get_ebi_from_list {
 		next if $description =~ /hloroplas/;     # skip chloroplast
 		$taxa_details{$taxid}{$acc} = { dater => $date, version => $version };
 	}
+	eval {
+        require LWP::Simple;
+        LWP::Simple->import();
+    };
+    my $result          = $@;
+    die "Unable to load LWP::Simple" unless $result;
 	foreach my $taxid ( keys(%taxa_details) ) {
 
 		# add up the accession sizes
