@@ -308,20 +308,15 @@ sub directory_prep {
 	if( -e $Phylosift::Settings::file_dir && $self->{"mode"} eq 'all'){
 		Phylosift::Utilities::previous_run_handler(self=>$self,dir=>$Phylosift::Settings::file_dir, force=>$force) unless $continue;
 		debug "Found existing directory, continuing a previous run\n" if $continue;
-	} elsif ( -e $self->{"blastDir"} && $self->{"mode"} eq 'search' ) {
-		Phylosift::Utilities::previous_run_handler(self=>$self,dir=>$self->{"blastDir"}, force=>$force);
-	} elsif ( -e $self->{"alignDir"} && $self->{"mode"} eq 'align' ) {
-		Phylosift::Utilities::previous_run_handler(self=>$self,dir=>$self->{"alignDir"}, force=>$force);
-	} elsif ( -e $self->{"treeDir"} && $self->{"mode"} eq 'place' ) {
-		Phylosift::Utilities::previous_run_handler(self=>$self,dir=>$self->{"treeDir"}, force=>$force);
-	}
+	} 
 
 	#create a directory for the Reads file being processed.
 	`mkdir -p "$Phylosift::Settings::file_dir"`
 	  unless ( -e $Phylosift::Settings::file_dir );
-	`mkdir -p "$self->{"blastDir"}"` unless ( -e $self->{"blastDir"} );
-	`mkdir -p "$self->{"alignDir"}"` unless ( -e $self->{"alignDir"} );
-	`mkdir -p "$self->{"treeDir"}"`  unless ( -e $self->{"treeDir"} );
+	  debug "MODE : ".$self->{"mode"}."\n";
+	`mkdir -p "$self->{"blastDir"}"` if ( !-e $self->{"blastDir"}  && $self->{"mode"} =~ /search|all/ );
+	`mkdir -p "$self->{"alignDir"}"` if ( !-e $self->{"alignDir"} && $self->{"mode"} =~ /align|all/ );
+	`mkdir -p "$self->{"treeDir"}"`  if ( !-e $self->{"treeDir"} && $self->{"mode"} =~ /place|all/ );
 	return $self;
 }
 
