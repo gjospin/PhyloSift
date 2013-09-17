@@ -526,7 +526,6 @@ sub alignAndMask {
 		unless ( defined($type) ) {
 			my $reads_file = Phylosift::Utilities::open_sequence_file( file => $self->{"readsFile"} );
 			$type = Phylosift::Utilities::get_sequence_input_type($reads_file) unless defined $type;
-			debug "TYPE2 $type->{seqtype}\t$type->{format}". $self->{"readsFile"}."\n";
 		}
 		if ( $type->{seqtype} ne "protein" && Phylosift::Utilities::is_protein_marker( marker => $marker ) ) {
 
