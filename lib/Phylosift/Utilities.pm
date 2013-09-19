@@ -387,7 +387,7 @@ sub download_data {
 	if ( -e "$destination/.. " ) {
 		`rm -rf "$destination/.."`;
 	}
-	`cd "$destination/../" ; tar xzf $archive.tgz ; touch $archive`;
+	`mkdir -p "$destination"; cd "$destination/../" ; tar xzf $archive.tgz ; touch $archive`;
 	`rm "$destination/../$archive.tgz"`;
 }
 
