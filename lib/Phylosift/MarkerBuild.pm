@@ -159,7 +159,7 @@ sub build_marker {
 
 		#make a dummy jplace file
 		my $tmpread_file = create_temp_read_fasta( file => "$target_dir/$core", aln_file => $clean_aln ) unless -e "$target_dir/$core.tmpread.fasta";
-		`cd "$target_dir";pplacer -c temp_ref -p "$tmpread_file"` unless -e $tmp_jplace;
+		`cd "$target_dir";$Phylosift::Settings::pplacer -c temp_ref -p "$tmpread_file"` unless -e $tmp_jplace;
 		tree_mangler( in => $tmp_jplace, out => $mangled );
 
 		#create a file with a list of IDs
