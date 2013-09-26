@@ -5,7 +5,7 @@ use POSIX;
 use FindBin qw($Bin);
 BEGIN { unshift( @INC, "$FindBin::Bin/../legacy/" ) if $] < 5.01; }
 
-use version; our $VERSION = version->declare("v1.0.0_01");
+our $VERSION = "v1.0.0_02";
 
 sub description {
 	return "Analyze sequence data";

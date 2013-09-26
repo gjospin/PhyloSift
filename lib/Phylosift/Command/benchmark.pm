@@ -7,7 +7,7 @@ use File::Basename;
 use Carp;
 use Phylosift::Utilities qw(debug);
 
-use version; our $VERSION = version->declare("v1.0.0_01");
+our $VERSION = "v1.0.0_02";
 
 sub description {
 	return "phylosift benchmark - measure taxonomic prediction accuracy on a simulated dataset";

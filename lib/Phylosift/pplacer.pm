@@ -15,7 +15,7 @@ use Phylosift::HTMLReport;
 use JSON;
 use Carp;
 
-use version; our $VERSION = version->declare("v1.0.0_01");
+our $VERSION = "v1.0.0_02";
 
 =head1 NAME
 

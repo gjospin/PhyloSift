@@ -13,7 +13,7 @@ use Phylosift::Settings;
 use File::Basename;
 use POSIX qw(ceil floor);
 
-use version; our $VERSION = version->declare("v1.0.0_01");
+our $VERSION = "v1.0.0_02";
 
 # try to load the system's MD5 lib, but if that fails, load our own
 eval {

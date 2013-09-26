@@ -3,7 +3,7 @@ use warnings;
 use strict;
 use Carp;
 
-use version; our $VERSION = version->declare("v1.0.0_01");
+our $VERSION = "v1.0.0_02";
 
 =head1 Name
 

@@ -11,7 +11,7 @@ use IO::File;
 use JSON;
 use File::Basename;
 
-use version; our $VERSION = version->declare("v1.0.0_01");
+our $VERSION = "v1.0.0_02";
 
 set_default_values();
 

@@ -6,7 +6,7 @@ use Bio::Phylo;
 use Phylosift::Summarize;
 use Phylosift::Utilities;
 
-use version; our $VERSION = version->declare("v1.0.0_01");
+our $VERSION = "v1.0.0_02";
 
 =head1 SUBROUTINES/METHODS
 
