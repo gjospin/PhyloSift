@@ -379,7 +379,7 @@ sub download_data {
 
 	# FIXME this is insecure!
 	# but then again, so is just about every other line of code in this program...
-	`cd $destination/.. ; curl -LO $url`;
+	`mkdir -p "$destination"; cd $destination/.. ; curl -LO $url`;
 	debug "URL : $url\n";
 	$url =~ /\/(\w+)\.tgz/;
 	my $archive = $1;
@@ -387,7 +387,7 @@ sub download_data {
 	if ( -e "$destination/.. " ) {
 		`rm -rf "$destination/.."`;
 	}
-	`mkdir -p "$destination"; cd "$destination/../" ; tar xzf $archive.tgz ; touch $archive`;
+	`cd "$destination/../" ; tar xzf $archive.tgz ; touch $archive`;
 	`rm "$destination/../$archive.tgz"`;
 }
 
