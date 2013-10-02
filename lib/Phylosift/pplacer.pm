@@ -72,8 +72,9 @@ sub pplacer {
 		my $long_rna_switch = -1;
 		my $short_rna_jplace;
 		for ( my $mI = 0; $mI < @{$markRef}; $mI++ ) {
+			
 			my $marker = @$markRef[$mI];
-
+			
 			# the PMPROK markers are contained in the concat above
 			next if ( $marker =~ /PMPROK/  && $Phylosift::Settings::updated );
 			next if ( $marker =~ /DNGNGWU/ && $Phylosift::Settings::updated );
@@ -313,8 +314,8 @@ sub make_codon_placements {
 	}
 
 	# now place reads on each of the subalignments
-	my $group_aln = $self->{"alignDir"}."/".Phylosift::Utilities::get_aligner_output_fasta( marker => $marker, dna => 1, chunk => $chunk, sub_marker => 1 );
-	place_reads( self => $self, reads => $group_aln, marker => $marker, dna => 1, chunk => $chunk );
+	#my $group_aln = $self->{"alignDir"}."/".Phylosift::Utilities::get_aligner_output_fasta( marker => $marker, dna => 1, chunk => $chunk, sub_marker => 1 );
+	#place_reads( self => $self, reads => $group_aln, marker => $marker, dna => 1, chunk => $chunk );
 }
 
 sub place_reads {
@@ -393,9 +394,9 @@ sub place_reads {
 		 && Phylosift::Utilities::is_protein_marker( marker => $marker ) )
 	{
 
-		#debug "Placing on codon markers: $marker\n";
-		#make_codon_placements( self => $self, marker => $marker, chunk => $chunk, place_file => $jplace )
-		#  if -e Phylosift::Utilities::get_marker_package( self => $self, marker => $marker, dna => $dna );
+		debug "Placing on codon markers: $marker\n";
+		make_codon_placements( self => $self, marker => $marker, chunk => $chunk, place_file => $jplace )
+		  if -e Phylosift::Utilities::get_marker_package( self => $self, marker => $marker, dna => $dna );
 	}
 
 	unless ($Phylosift::Settings::simple) {
@@ -538,7 +539,6 @@ sub name_taxa_in_jplace {
 	my $marker   = $args{marker} || miss("marker");
 	my $taxonmap = $args{taxonmap} || miss("taxonmap");
 	debug "Naming taxa in name_taxa_in_jplace for $marker\n";
-
 	# read in the taxon name map
 	my $namemap = read_name_map( marker => $marker );
 

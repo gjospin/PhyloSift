@@ -146,7 +146,6 @@ sub add_krona {
 	$xml->characters( $self->{"readsFile"} );
 	$xml->endTag("dataset");
 	$xml->endTag("datasets");
-
 	debug "parse ncbi\n";
 
 	# FIXME: work with other taxonomy trees

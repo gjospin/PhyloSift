@@ -113,6 +113,7 @@ sub build_marker {
 	( $fasttree_file, $tree_log_file ) = generate_fasttree( alignment_file => "$target_dir/$core.pruned.fasta", target_directory => $target_dir );
 	`mv $target_dir/$core.pruned.fasta $clean_aln`;
 	debug "CLEAN_ALN : $clean_aln";
+
 	#mask_and_clean_alignment( alignment_file => "$target_dir/$core.pruned.fasta", output_file => $clean_aln );
 	my $rep_file;
 	if ( $seq_count > 10 || $seq_count < 0 ) {
@@ -181,7 +182,6 @@ sub build_marker {
 
 		`rm -rf "$tmpread_file" "$mangled" "$tmp_jplace" "$ncbi_sub_tree"  "$target_dir/temp_ref"`;
 	}
-
 	#use taxit to create a new reference package required for running PhyloSift
 	#needed are : 1 alignment file, 1 representatives fasta file, 1 hmm profile, 1 tree file, 1 log tree file.
 	my $taxdb_opts = "";    # add taxit-friendly taxon labels if available
@@ -202,6 +202,52 @@ sub build_marker {
 	`mv -f "$target_dir/$core"/* "$target_dir"`;
 	`rm -rf "$target_dir/$core"`;
 	`rm -rf "$Phylosift::Settings::file_dir"`;
+}
+
+sub leaf_only_readconciler {
+	my %args         = @_;
+	my $mapping_file = $args{mapping} || miss("Missing mapping file\n");
+	my $jplace       = $args{jplace} || miss("jplace file \n");
+	my $output       = $args{output} || miss("output file\n");
+	my $id_map_ref   = $args{id_map_ref} || miss("id map hash\n");
+	my $JPLACEINPUT  = ps_open($jplace);
+	my @treedata     = <$JPLACEINPUT>;
+	close $JPLACEINPUT;
+	my %unique_id_map         = %{$id_map_ref};
+	my $json_data             = decode_json( join( "", @treedata ) );
+	my $tree_string           = $json_data->{tree};
+	my %unique_to_original_id = ();
+
+	foreach my $key ( keys %unique_id_map ) {
+
+		#print $key."\t".$unique_id_map{$key}."\n";
+		$unique_to_original_id{ $unique_id_map{$key} } = $key;
+	}
+	print "Using MAPPING file : $mapping_file\n";
+	$tree_string =~ s/^\s+\"//g;
+	$tree_string =~ s/:(.+?)(\{\d+?\})/$2:$1/g;
+	$tree_string =~ s/\"\,$//g;
+
+	my $OUTPUT = ps_open(">$output");
+
+	my %map     = ();
+	my $MAPPING = ps_open($mapping_file);
+	while (<$MAPPING>) {
+		chomp($_);
+		$_ =~ m/^(\S+)\s+(\d+)$/;
+		$map{$1} = $2;
+	}
+
+	my $tree = Bio::Phylo::IO->parse( '-string' => $tree_string, '-format' => 'newick' )->first;
+	foreach my $node ( @{ $tree->get_entities } ) {
+		my $name = $node->get_name;
+		next unless $name =~ m/^(\d+)\{(\d+)\}$/;
+		if ( exists $map{ $unique_to_original_id{$1} } ) {
+			print $OUTPUT "$2\t$map{$unique_to_original_id{$1}}\n";
+		}
+	}
+	close($MAPPING);
+	close($OUTPUT);
 }
 
 sub create_taxon_table {
@@ -530,28 +576,31 @@ sub mask_and_clean_alignment {
 	my $output_file = $args{output_file} || miss("output_file");
 	my %id_map;    # will store a map of unique IDs to sequence names
 	debug "Using $aln_file\n";
+
 	#my $in          = Phylosift::Utilities::open_SeqIO_object( file => $aln_file );
-	my $IN = ps_open("$aln_file"); #can't use Bio::SeqIO because the full headers are not being kept as IDs
-	my %s           = ();                                                             #hash remembering the IDs already printed
+	my $IN          = ps_open("$aln_file");       #can't use Bio::SeqIO because the full headers are not being kept as IDs
+	my %s           = ();                         #hash remembering the IDs already printed
 	my $FILEOUT     = ps_open(">$output_file");
 	my $seq_counter = 0;
 	my $current_id;
 	my $current_seq = "";
-	while ( <$IN> ) {
-#	while ( my $seq_object = $in->next_seq() ) {
+	while (<$IN>) {
+
+		#	while ( my $seq_object = $in->next_seq() ) {
 		chomp($_);
-		if($_=~ m/^>(.*)$/){
-			if(defined $current_id){
+		if ( $_ =~ m/^>(.*)$/ ) {
+			if ( defined $current_id ) {
 				my $unique_id = sprintf( "%09d", $seq_counter++ );
 				$id_map{$current_id} = $unique_id;
+
 				#$id  =~ s/\(\)//g;                                                       #removes ( and ) from the header lines
-				$current_seq =~ s/[a-z]//g;                                           # lowercase chars didnt align to model
-				$current_seq =~ s/\.//g;                                              # shouldnt be any dots
+				$current_seq =~ s/[a-z]//g;    # lowercase chars didnt align to model
+				$current_seq =~ s/\.//g;       # shouldnt be any dots
 				print $FILEOUT ">".$unique_id."\n".$current_seq."\n";
-				$current_seq = ""; #reset the sequence to empty.
+				$current_seq = "";             #reset the sequence to empty.
 			}
-			$current_id=$1;
-		}else{
+			$current_id = $1;
+		} else {
 			$current_seq .= $_;
 		}
 	}

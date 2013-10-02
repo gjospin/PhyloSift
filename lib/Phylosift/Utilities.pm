@@ -2165,13 +2165,11 @@ sub get_sequence_input_type {
 			$sequence = 0;
 			$type{format} = "fastq" if $type{format} eq "unknown";
 		} elsif ( $type{format} eq "fastq" && !$sequence ) {
-
 			# check whether qualities are phred33 or phred64
 			for my $q ( split( //, $line ) ) {
 				$minq = ord($q) if ord($q) < $minq;
 			}
 		} elsif ($sequence) {
-
 			#$sequence =~ s/[-\.]//g;    #removing gaps from the sequences
 			$line =~ s/[-\.]//g;
 			$counter  += length($line) - 1;
@@ -2187,7 +2185,6 @@ sub get_sequence_input_type {
 	$type{seqtype} = "protein" if ( $dnacount < $allcount * 0.75 );
 	$type{seqtype} = "dna"
 	  if ( $type{format} eq "fastq" );    # nobody using protein fastq (yet)
-	debug "TYPE : ".$type{seqtype}."\n";
 	$type{qtype} = "phred64" if $minq < 255;
 	$type{qtype} = "phred33" if $minq < 64;
 	$type{paired} = 0;                    # TODO: detect interleaved read pairing

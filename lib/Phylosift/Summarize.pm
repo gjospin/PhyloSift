@@ -77,7 +77,7 @@ my %parent;
 
 sub read_ncbi_taxonomy_structure {
 	return \%parent if %parent;
-	debug "Reading NCBI taxonomy\n";
+	debug "Reading NCBI taxonomy at $Phylosift::Settings::ncbi_dir\n";
 	my $ncbidir      = $Phylosift::Settings::ncbi_dir;
 	my $TAXSTRUCTURE = ps_open("$ncbidir/nodes.dmp");
 	while ( my $line = <$TAXSTRUCTURE> ) {

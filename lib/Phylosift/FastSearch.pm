@@ -253,7 +253,6 @@ sub launch_searches {
 	my @last_pipe_array = ();
 	$chunk_completion_status = Phylosift::Utilities::has_step_completed( self => $self, chunk => $chunk, step => "Search" )
 	  unless defined $chunk_completion_status;
-
 	for ( my $i = 0; $i <= $Phylosift::Settings::threads - 1; $i++ ) {
 		push( @last_pipe_array, $dir."/last_$i.pipe" );
 		`mkfifo "$dir/last_$i.pipe"`;
@@ -345,7 +344,7 @@ sub launch_searches {
 									readtype                => $readtype,
 									chunk                   => $chunk,
 									self                    => $self,
-									chunk_completion_status => $chunk_completion_status
+									completed_chunk => $chunk_completion_status
 	);
 
 	# join with children when the searches are done
@@ -411,7 +410,6 @@ sub demux_sequences {
 	my $lastal_threads     = scalar(@LAST_PIPE_ARRAY);
 	my $completed_chunk    = $args{completed_chunk};
 	$completed_chunk = Phylosift::Utilities::has_step_completed( self => $self, chunk => $chunk, step => "Search" ) unless defined $completed_chunk;
-
 	# the following two variables track how far we are through a chunk
 	my $seq_count    = 0;
 	my $seq_size     = 0;
