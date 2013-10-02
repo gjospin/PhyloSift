@@ -18,7 +18,7 @@ use IO::File;
 use File::Basename;
 use Carp;
 
-use version; our $VERSION = version->declare("v1.0.0_01");
+our $VERSION = "v1.0.0_02";
 
 =head1 NAME
 
@@ -100,7 +100,7 @@ sub write_jnlp {
 	$xml = basename($xml);
 	print $JOUT <<EOF;
 <?xml version="1.0" encoding="UTF-8"?>
-<jnlp spec="1.5+">
+<jnlp spec="1.5+" codebase="http://edhar.genomecenter.ucdavis.edu/~koadman/phylosift/forester/">
     <information>
         <title>Archaeopteryx tree viewer</title>
         <vendor>Christian Zmasek, repackaged by Aaron Darling</vendor>

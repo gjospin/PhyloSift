@@ -23,7 +23,7 @@ use Phylosift::Comparison;
 use Phylosift::MarkerBuild;
 use Phylosift::Simulations;
 
-use version; our $VERSION = version->declare("v1.0.0_01");
+our $VERSION = "v1.0.0_02";
 
 =head2 new
 

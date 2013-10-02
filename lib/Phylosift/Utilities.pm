@@ -17,7 +17,7 @@ use POSIX ();
 use Carp;
 use Cwd;
 
-use version; our $VERSION = version->declare("v1.0.0_01");
+our $VERSION = "v1.0.0_02";
 
 use Exporter;
 use vars qw[ @EXPORT @EXPORT_OK %EXPORT_TAGS @ISA ];
@@ -158,10 +158,10 @@ sub program_checks {
 		return 1;
 	} else {
 		`$Phylosift::Settings::pplacer --version` =~ m/v1.1.alpha(\d+)/;
-		if ( $1 < 10 ) {
+		if ( defined($1) && $1 < 14 ) {
 
 			# pplacer was found but the version doesn't match the one tested with Phylosift
-			carp("Warning : a different version of pplacer was found. PhyloSift was tested with pplacer v1.1.alpha10\n");
+			carp("Warning : a different version of pplacer was found. PhyloSift was tested with pplacer v1.1.alpha14\n");
 		}
 	}
 	Phylosift::Settings::set_default(
@@ -379,7 +379,7 @@ sub download_data {
 
 	# FIXME this is insecure!
 	# but then again, so is just about every other line of code in this program...
-	`cd $destination/.. ; curl -LO $url`;
+	`mkdir -p "$destination"; cd $destination/.. ; curl -LO $url`;
 	debug "URL : $url\n";
 	$url =~ /\/(\w+)\.tgz/;
 	my $archive = $1;

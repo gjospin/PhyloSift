@@ -9,11 +9,10 @@ use Phylosift::Settings;
 use Phylosift::Utilities;
 use Phylosift::MarkerBuild;
 use Bio::Phylo::IO qw(parse unparse);
-use LWP::Simple;
 use FindBin;
 use Scalar::Util qw(looks_like_number);
 
-use version; our $VERSION = version->declare("v1.0.0_01");
+our $VERSION = "v1.0.0_02";
 
 =head1 NAME
 

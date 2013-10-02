@@ -6,7 +6,7 @@ use JSON;
 use Carp;
 use Phylosift::Utilities qw(debug ps_open);
 
-use version; our $VERSION = version->declare("v1.0.0_01");
+our $VERSION = "v1.0.0_02";
 
 sub description {
 	return "phylosift test_lineage - conduct a statistical test (a Bayes factor) for the presence of a particular lineage in a sample";
@@ -116,7 +116,7 @@ sub execute {
 		# for each placement edge in the placement record
 		my $mass = 0;
 		for ( my $j = 0; $j < @{ $place->{p} }; $j++ ) {
-			my $edge = $place->{p}->[$j]->[0];
+			my $edge = $place->{p}->[$j]->[1];
 			die
 			  "Error, test_lineage requires posterior probabilities of branch placement, please use phylosift to reanalyze the data with the --bayes option.\n\n"
 			  if scalar( @{ $place->{p}->[$j] } ) < 6;

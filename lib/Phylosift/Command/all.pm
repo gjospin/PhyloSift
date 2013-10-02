@@ -7,7 +7,7 @@ use Cwd 'abs_path';
 use Phylosift::Utilities qw(debug);
 use Phylosift::Command::search;
 
-use version; our $VERSION = version->declare("v1.0.0_01");
+our $VERSION = "v1.0.0_02";
 
 sub description {
 	return qq{phylosift all - run all steps for phylogenetic analysis of genomic or metagenomic sequence data

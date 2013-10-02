@@ -15,7 +15,7 @@ use Phylosift::HTMLReport;
 use JSON;
 use Carp;
 
-use version; our $VERSION = version->declare("v1.0.0_01");
+our $VERSION = "v1.0.0_02";
 
 =head1 NAME
 
@@ -246,10 +246,10 @@ sub find_codon_reads {
 		my %sub_prob;
 		my $avg_dist = 0;
 		for ( my $j = 0; $j < @{ $read->{p} }; $j++ ) {
-			my $edge    = $read->{p}->[$j]->[0];
-			my $distal  = $read->{p}->[$j]->[3];
+			my $edge    = $read->{p}->[$j]->[1];
+			my $distal  = $read->{p}->[$j]->[0];
 			my $pendant = $read->{p}->[$j]->[4];
-			my $lwr     = $read->{p}->[$j]->[1];
+			my $lwr     = $read->{p}->[$j]->[2];
 
 			my $td = get_tip_distance( edge => $edge );
 			$avg_dist += ( $td + $pendant + $distal ) * $lwr;

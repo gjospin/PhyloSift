@@ -11,7 +11,7 @@ use IO::File;
 use JSON;
 use File::Basename;
 
-use version; our $VERSION = version->declare("v1.0.0_01");
+our $VERSION = "v1.0.0_02";
 
 set_default_values();
 
@@ -212,7 +212,7 @@ sub summarize {
 
 						# for each placement edge in the placement record
 						for ( my $j = 0; $j < @{ $place->{p} }; $j++ ) {
-							my $edge      = $place->{p}->[$j]->[0];
+							my $edge      = $place->{p}->[$j]->[1];
 							my $edge_mass = $place->{p}->[$j]->[2];
 							if ( !defined( $markerncbimap->{$edge} ) ) {
 
