@@ -116,7 +116,7 @@ sub execute {
 		# for each placement edge in the placement record
 		my $mass = 0;
 		for ( my $j = 0; $j < @{ $place->{p} }; $j++ ) {
-			my $edge = $place->{p}->[$j]->[0];
+			my $edge = $place->{p}->[$j]->[1];
 			die
 			  "Error, test_lineage requires posterior probabilities of branch placement, please use phylosift to reanalyze the data with the --bayes option.\n\n"
 			  if scalar( @{ $place->{p}->[$j] } ) < 6;
