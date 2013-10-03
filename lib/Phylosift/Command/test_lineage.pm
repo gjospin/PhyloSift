@@ -129,7 +129,7 @@ sub execute {
 	print "\nNull hypothesis: taxa in this group have zero abundance in the sample\n";
 	my $bf = "Infinite -- at least one sequence has 100% probability of deriving from the test lineage(s)";
 	$bf = $bf_numer == 1 ? "Zero -- target is beyond limit of detection" : $bf;
-	$bf = ($bf_numer != 0 && $bf_numer != 1) ? ( ( 1 - $bf_numer ) / ($bf_numer) ) : $bf;
+	$bf = ($bf_numer != 0 && $bf_numer != 1) ? ( ($bf_numer) / (1 - $bf_numer) ) : $bf;
 	print "\nBayes factor: $bf\n\n";
 	print "Strength of null hypothesis rejection:\n";
 	print "< 1\t Null hypothesis supported\n";
