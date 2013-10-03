@@ -290,6 +290,8 @@ sub make_codon_placements {
 	# determine which reads go to codon alignment
 	my $subreads = find_codon_reads( place_file => $place_file );
 	debug "Found ".scalar( keys( %{$subreads} ) )." codon placeable reads\n";
+	# check whether any reads can be placed on codon trees
+	return if(scalar( keys( %{$subreads} ) ) == 0);
 
 	# convert to groups
 	my %groups;
