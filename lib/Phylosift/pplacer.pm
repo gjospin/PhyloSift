@@ -314,8 +314,8 @@ sub make_codon_placements {
 	}
 
 	# now place reads on each of the subalignments
-	#my $group_aln = $self->{"alignDir"}."/".Phylosift::Utilities::get_aligner_output_fasta( marker => $marker, dna => 1, chunk => $chunk, sub_marker => 1 );
-	#place_reads( self => $self, reads => $group_aln, marker => $marker, dna => 1, chunk => $chunk );
+	my $group_aln = $self->{"alignDir"}."/".Phylosift::Utilities::get_aligner_output_fasta( marker => $marker, dna => 1, chunk => $chunk, sub_marker => 1 );
+	place_reads( self => $self, reads => $group_aln, marker => $marker, dna => 1, chunk => $chunk );
 }
 
 sub place_reads {
