@@ -5,7 +5,7 @@ use Phylosift::Utilities qw(:all);
 use File::Basename;
 use JSON;
 
-use version; our $VERSION = version->declare("v1.0.0_01");
+our $VERSION = "v1.0.0_02";
 
 =head1 NAME
 
@@ -32,7 +32,6 @@ if you don't export anything, such as for a purely object-oriented module.
 =head2 build_marker
 
 =cut
-
 sub build_marker {
 	my %args        = @_;
 	my $opt         = $args{opt};
@@ -44,16 +43,17 @@ sub build_marker {
 	my $mapping     = $args{mapping};                          #not a required argument
 	my $destination = $args{destination};
 	my ( $core, $path, $ext ) = fileparse( $aln_file, qr/\.[^.]*$/ );
-	my $marker_dir = Phylosift::Utilities::get_data_path(    data_name => "markers",
+	my $marker_dir = Phylosift::Utilities::get_data_path( data_name => "markers",
 														  data_path => $Phylosift::Settings::marker_path );
 
 	$destination = $marker_dir unless defined($destination);
-	$target_dir  = $destination."/$core";
+	$target_dir = $destination."/$core";
 
 	# check that taxit is available
 	my $taxit = Phylosift::Utilities::get_program_path( prog_name => "taxit" );
 	if ( $taxit eq "" ) {
-		croak(    "Error: you must install pplacer's taxtastic and its dependencies prior to building markers. See https://github.com/fhcrc/taxtastic for more information.\n"
+		croak(
+			"Error: you must install pplacer's taxtastic and its dependencies prior to building markers. See https://github.com/fhcrc/taxtastic for more information.\n"
 		);
 	}
 
@@ -65,7 +65,8 @@ sub build_marker {
 
 	#$target_dir = $Phylosift::Settings::file_dir;
 	if ( -e $target_dir && !$force ) {
-		croak(    "Marker already exists in $destination. Delete Marker and restart the marker build.\nUse -f to force an override of the previous marker.\nUsage:\n>phylosift build_marker -f aln_file cutoff\n"
+		croak(
+			"Marker already exists in $destination. Delete Marker and restart the marker build.\nUse -f to force an override of the previous marker.\nUsage:\n>phylosift build_marker -f aln_file cutoff\n"
 		);
 	} else {
 		`rm -rf "$target_dir"` if $force;
@@ -106,14 +107,15 @@ sub build_marker {
 	$clean_aln = "$target_dir/$core.clean";
 	my %id_map = mask_and_clean_alignment( alignment_file => $aln_file, output_file => $clean_aln );
 	debug( "ID_map is ".scalar( keys(%id_map) )." long\n" );
-
 	my ( $fasttree_file, $tree_log_file ) = generate_fasttree( alignment_file => $clean_aln, target_directory => $target_dir )
 	  unless -e "$target_dir/$core.tree";
 	pd_prune_fasta( tre => $fasttree_file, distance => $tree_pd, fasta => $clean_aln, pruned_fasta => "$target_dir/$core.pruned.fasta" );
 
 	( $fasttree_file, $tree_log_file ) = generate_fasttree( alignment_file => "$target_dir/$core.pruned.fasta", target_directory => $target_dir );
 	`mv $target_dir/$core.pruned.fasta $clean_aln`;
+	debug "CLEAN_ALN : $clean_aln";
 
+	#mask_and_clean_alignment( alignment_file => "$target_dir/$core.pruned.fasta", output_file => $clean_aln );
 	my $rep_file;
 	if ( $seq_count > 10 || $seq_count < 0 ) {
 		debug "Looking for representatives\n";
@@ -123,8 +125,7 @@ sub build_marker {
 												   tree             => $fasttree_file,
 												   target_directory => $target_dir,
 												   reps_pd          => $reps_pd
-		  )
-		  unless -e "$target_dir/$core.pda";
+		) unless -e "$target_dir/$core.pda";
 
 		# need to read the representatives picked by PDA and generate a representative fasta file
 		my $rep_fasta = get_fasta_from_pda_representatives(
@@ -133,8 +134,7 @@ sub build_marker {
 															fasta_reference => $fasta_file,
 															id_map          => \%id_map,
 															core            => $core,
-		  )
-		  if -e $fasta_file;
+		) if -e $fasta_file;
 	} else {
 
 		#use all the sequences for representatives
@@ -150,7 +150,8 @@ sub build_marker {
 		my $id_taxon_map  = $target_dir."/".$core.".gene_map";
 		my $ncbi_sub_tree = $target_dir."/".$core.".subtree";
 		debug("Using the mapping stuff\n");
-		debug(    "taxit create -a \"Guillaume Jospin\" -d \"simple package for reconciliation only\" -l temp -f $clean_aln -t $fasttree_file -s $tree_log_file -P $target_dir/temp_ref"
+		debug(
+			"taxit create -a \"Guillaume Jospin\" -d \"simple package for reconciliation only\" -l temp -f $clean_aln -t $fasttree_file -s $tree_log_file -P $target_dir/temp_ref"
 		);
 
 		#make dummy placement reference package
@@ -159,7 +160,7 @@ sub build_marker {
 
 		#make a dummy jplace file
 		my $tmpread_file = create_temp_read_fasta( file => "$target_dir/$core", aln_file => $clean_aln ) unless -e "$target_dir/$core.tmpread.fasta";
-		`cd "$target_dir";pplacer -c temp_ref -p "$tmpread_file"` unless -e $tmp_jplace;
+		`cd "$target_dir";$Phylosift::Settings::pplacer -c temp_ref -p "$tmpread_file"` unless -e $tmp_jplace;
 		tree_mangler( in => $tmp_jplace, out => $mangled );
 
 		#create a file with a list of IDs
@@ -186,7 +187,7 @@ sub build_marker {
 	#needed are : 1 alignment file, 1 representatives fasta file, 1 hmm profile, 1 tree file, 1 log tree file.
 	my $taxdb_opts = "";    # add taxit-friendly taxon labels if available
 	                        #$taxdb_opts = "-i $target_dir/seq_ids.csv -T $target_dir/taxa.csv" if -e "$target_dir/taxa.csv" && -s "$target_dir/taxa.csv" > 0;
-	my $taxit_cmd  =
+	my $taxit_cmd =
 	  "cd \"$target_dir\";taxit create -c -d \"Creating a reference package for PhyloSift for the $core marker\" -l \"$core\" -f \"$clean_aln\" -t \"$fasttree_file\" $taxdb_opts -s \"$tree_log_file\" -P \"$core\"";
 	debug "Running $taxit_cmd\n";
 	`$taxit_cmd`;
@@ -202,6 +203,52 @@ sub build_marker {
 	`mv -f "$target_dir/$core"/* "$target_dir"`;
 	`rm -rf "$target_dir/$core"`;
 	`rm -rf "$Phylosift::Settings::file_dir"`;
+}
+
+sub leaf_only_readconciler {
+	my %args         = @_;
+	my $mapping_file = $args{mapping} || miss("Missing mapping file\n");
+	my $jplace       = $args{jplace} || miss("jplace file \n");
+	my $output       = $args{output} || miss("output file\n");
+	my $id_map_ref   = $args{id_map_ref} || miss("id map hash\n");
+	my $JPLACEINPUT  = ps_open($jplace);
+	my @treedata     = <$JPLACEINPUT>;
+	close $JPLACEINPUT;
+	my %unique_id_map         = %{$id_map_ref};
+	my $json_data             = decode_json( join( "", @treedata ) );
+	my $tree_string           = $json_data->{tree};
+	my %unique_to_original_id = ();
+
+	foreach my $key ( keys %unique_id_map ) {
+
+		#print $key."\t".$unique_id_map{$key}."\n";
+		$unique_to_original_id{ $unique_id_map{$key} } = $key;
+	}
+	print "Using MAPPING file : $mapping_file\n";
+	$tree_string =~ s/^\s+\"//g;
+	$tree_string =~ s/:(.+?)(\{\d+?\})/$2:$1/g;
+	$tree_string =~ s/\"\,$//g;
+
+	my $OUTPUT = ps_open(">$output");
+
+	my %map     = ();
+	my $MAPPING = ps_open($mapping_file);
+	while (<$MAPPING>) {
+		chomp($_);
+		$_ =~ m/^(\S+)\s+(\d+)$/;
+		$map{$1} = $2;
+	}
+
+	my $tree = Bio::Phylo::IO->parse( '-string' => $tree_string, '-format' => 'newick' )->first;
+	foreach my $node ( @{ $tree->get_entities } ) {
+		my $name = $node->get_name;
+		next unless $name =~ m/^(\d+)\{(\d+)\}$/;
+		if ( exists $map{ $unique_to_original_id{$1} } ) {
+			print $OUTPUT "$2\t$map{$unique_to_original_id{$1}}\n";
+		}
+	}
+	close($MAPPING);
+	close($OUTPUT);
 }
 
 sub create_taxon_table {
@@ -530,20 +577,33 @@ sub mask_and_clean_alignment {
 	my $output_file = $args{output_file} || miss("output_file");
 	my %id_map;    # will store a map of unique IDs to sequence names
 	debug "Using $aln_file\n";
-	my $in          = Phylosift::Utilities::open_SeqIO_object( file => $aln_file );
-	my %s           = ();                                                             #hash remembering the IDs already printed
+
+	#my $in          = Phylosift::Utilities::open_SeqIO_object( file => $aln_file );
+	my $IN          = ps_open("$aln_file");       #can't use Bio::SeqIO because the full headers are not being kept as IDs
+	my %s           = ();                         #hash remembering the IDs already printed
 	my $FILEOUT     = ps_open(">$output_file");
 	my $seq_counter = 0;
+	my $current_id;
+	my $current_seq = "";
+	while (<$IN>) {
 
-	while ( my $seq_object = $in->next_seq() ) {
-		my $seq       = $seq_object->seq;
-		my $id        = $seq_object->id;
-		my $unique_id = sprintf( "%09d", $seq_counter++ );
-		$id_map{$id} = $unique_id;
-		$id  =~ s/\(\)//g;                                                            #removes ( and ) from the header lines
-		$seq =~ s/[a-z]//g;                                                           # lowercase chars didnt align to model
-		$seq =~ s/\.//g;                                                              # shouldnt be any dots
-		print $FILEOUT ">".$unique_id."\n".$seq."\n";
+		#	while ( my $seq_object = $in->next_seq() ) {
+		chomp($_);
+		if ( $_ =~ m/^>(.*)$/ ) {
+			if ( defined $current_id ) {
+				my $unique_id = sprintf( "%09d", $seq_counter++ );
+				$id_map{$current_id} = $unique_id;
+
+				#$id  =~ s/\(\)//g;                                                       #removes ( and ) from the header lines
+				$current_seq =~ s/[a-z]//g;    # lowercase chars didnt align to model
+				$current_seq =~ s/\.//g;       # shouldnt be any dots
+				print $FILEOUT ">".$unique_id."\n".$current_seq."\n";
+				$current_seq = "";             #reset the sequence to empty.
+			}
+			$current_id = $1;
+		} else {
+			$current_seq .= $_;
+		}
 	}
 
 	#    close(FILEIN);
@@ -641,9 +701,9 @@ sub get_fasta_from_pda_representatives {
 	my @lect = keys(%selected_taxa);
 
 	#reading the reference sequences and printing the selected representatives using BioPerl
-	my $reference_seqs = Phylosift::Utilities::open_SeqIO_object(    file   => $reference_fasta,
+	my $reference_seqs = Phylosift::Utilities::open_SeqIO_object( file   => $reference_fasta,
 																  format => "FASTA" );
-	my $representatives_fasta = Phylosift::Utilities::open_SeqIO_object(    file   => ">$target_dir/$core.rep",
+	my $representatives_fasta = Phylosift::Utilities::open_SeqIO_object( file   => ">$target_dir/$core.rep",
 																		 format => "FASTA" );
 	while ( my $ref_seq = $reference_seqs->next_seq ) {
 		if ( exists $selected_taxa{ $id_map{ $ref_seq->id } } ) {
@@ -751,10 +811,10 @@ sub martin_mask {
 	$self->{inputfile}  = $input_file;
 	$self->{cutoff}     = $cutoff;
 	$self->{gap_cutoff} = $opt_g;
-	$self = &read_matrix( self     => $self );
-	$self = &read_alignment( self  => $self );
+	$self = &read_matrix( self => $self );
+	$self = &read_alignment( self => $self );
 	$self = &calculate_score( self => $self );
-	$self = &mask( self            => $self );
+	$self = &mask( self => $self );
 	my $return_mask = &output( self => $self );
 	return $return_mask;
 }
@@ -942,8 +1002,13 @@ sub mask {
 			$local_score{$i} = $column_score{$i};
 		} else {
 			$local_score{$i} =
-			  ( $column_score{ $i - 3 } + 2 * $column_score{ $i - 2 } + 3 * $column_score{ $i - 1 } + 4 * $column_score{$i} + 3 * $column_score{ $i + 1 } + 2 *
-				$column_score{ $i + 2 } + 1 * $column_score{ $i + 3 } ) / 16;
+			  ( $column_score{ $i - 3 } +
+				2 * $column_score{ $i - 2 } +
+				3 * $column_score{ $i - 1 } +
+				4 * $column_score{$i} +
+				3 * $column_score{ $i + 1 } +
+				2 * $column_score{ $i + 2 } +
+				1 * $column_score{ $i + 3 } ) / 16;
 		}
 		if ( $column_score{$i} == 0 ) { $local_score{$i} = 0; }
 		elsif ( $local_score{$i} / $column_score{$i} > 3 ) {

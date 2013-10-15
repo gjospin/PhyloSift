@@ -6,7 +6,7 @@ use Phylosift::Phylosift;
 use Phylosift::Utilities;
 use Bio::Phylo::IO qw(parse unparse);
 
-use version; our $VERSION = version->declare("v1.0.0_01");
+our $VERSION = "v1.0.0_02";
 
 =head1 NAME
 
@@ -33,6 +33,7 @@ sub compare {
 	my %args             = @_;
 	my $self             = $args{self} || miss("self");
 	my $parent_directory = $args{parent_dir} || miss("parent_dir");
+
 	# what do we want to accomplish with this?
 	# simplest approach:
 	# 1. take many jplace files on concat alignments

@@ -10,8 +10,7 @@ use Bio::Phylo::Forest::Tree;
 use IO::File;
 use JSON;
 use File::Basename;
-
-use version; our $VERSION = version->declare("v1.0.0_01");
+our $VERSION = "v1.0.0_02";
 
 set_default_values();
 
@@ -77,7 +76,7 @@ my %parent;
 
 sub read_ncbi_taxonomy_structure {
 	return \%parent if %parent;
-	debug "Reading NCBI taxonomy\n";
+	debug "Reading NCBI taxonomy at $Phylosift::Settings::ncbi_dir\n";
 	my $ncbidir      = $Phylosift::Settings::ncbi_dir;
 	my $TAXSTRUCTURE = ps_open("$ncbidir/nodes.dmp");
 	while ( my $line = <$TAXSTRUCTURE> ) {
@@ -132,7 +131,7 @@ set_default_values for all the parameters in this module
 sub set_default_values {
 	my %args = @_;
 	my $self = $args{self};
-	Phylosift::Settings::set_default(    parameter => \$Phylosift::Settings::krona_threshold,
+	Phylosift::Settings::set_default( parameter => \$Phylosift::Settings::krona_threshold,
 									  value     => 0.01 );
 }
 
@@ -152,12 +151,14 @@ sub summarize {
 	my $markRef = $args{marker_reference} || miss("marker_reference");    # list of the markers we're using
 	                                                                      #set_default_values(self=>$self);
 
-	Phylosift::Utilities::start_step( self => $self, chunk => $chunk, step => "Summarize");
-	my $completed_chunk = Phylosift::Utilities::has_step_completed( self => $self, chunk => $chunk, step => "Summarize" , force => $Phylosift::Settings::force);
-	croak ("Previous step for chunk $chunk has did not complete. Aborting\n") unless Phylosift::Utilities::has_step_completed( self => $self, chunk => $chunk, step => "Place" );
+	Phylosift::Utilities::start_step( self => $self, chunk => $chunk, step => "Summarize" );
+	my $completed_chunk = Phylosift::Utilities::has_step_completed( self => $self, chunk => $chunk, step => "Summarize", force => $Phylosift::Settings::force );
+	croak("Previous step for chunk $chunk has did not complete. Aborting\n")
+	  unless Phylosift::Utilities::has_step_completed( self => $self, chunk => $chunk, step => "Place" );
 	unless ($completed_chunk) {
-		read_ncbi_taxon_name_map();
-		read_ncbi_taxonomy_structure();
+
+		#read_ncbi_taxon_name_map();
+		#read_ncbi_taxonomy_structure();
 		my $markerdir = $Phylosift::Settings::marker_dir;
 
 		# try to read a contig coverage file if it exists
@@ -166,6 +167,7 @@ sub summarize {
 			my $covref = read_coverage( file => $Phylosift::Settings::coverage );
 			%coverage = %$covref;
 		}
+		debug "\n\n\n******STARTING SUMMARY \n\n\n";
 
 		# read all of the .place files for markers
 		# map them onto the ncbi taxonomy
@@ -174,14 +176,15 @@ sub summarize {
 		my %unclassifiable;      # {sequenceID}=mass
 		my %sequence_markers;    # {sequenceID}=[markers hit]
 		my %weights;             #{sequenceID}{taxonID} = weight
-		unshift( @{$markRef}, "concat" ) if $Phylosift::Settings::updated;
+		                         #unshift( @{$markRef}, "concat" ) if $Phylosift::Settings::updated;
 		foreach my $marker ( @{$markRef} ) {
+
 			my %seen_queries;    # tracks whether a query has been seen already
 			for ( my $dna = 1; $dna >= 0; $dna-- ) {
-
 				my $sub = $dna ? 1 : undef;
 				my $place_file =
-				  $self->{"treeDir"}."/".Phylosift::Utilities::get_read_placement_file( marker => $marker, dna => $dna, sub_marker => $sub, chunk => $chunk );
+				  $self->{"treeDir"}."/"
+				  .Phylosift::Utilities::get_read_placement_file( self => $self, marker => $marker, dna => $dna, sub_marker => $sub, chunk => $chunk );
 				next unless -e $place_file;    # don't bother with this one if there's no read placements
 				my $PP_COVFILE = ps_open( ">".Phylosift::Utilities::get_read_placement_file( marker => $marker, chunk => $chunk ).".cov" )
 				  if ( defined $Phylosift::Settings::coverage );
@@ -189,7 +192,7 @@ sub summarize {
 				# first read the taxonomy mapping
 				my $markermapfile = Phylosift::Utilities::get_marker_taxon_map( self => $self, marker => $marker, dna => $dna );
 				debug "Marker $marker missing taxon map $markermapfile\n" unless -e $markermapfile;
-				next                                                      unless -e $markermapfile;    # can't summarize if there ain't no mappin'!
+				next unless -e $markermapfile;    # can't summarize if there ain't no mappin'!
 				my $markerncbimap = read_taxonmap( file => $markermapfile );
 
 				# then read & map the placement
@@ -213,7 +216,7 @@ sub summarize {
 
 						# for each placement edge in the placement record
 						for ( my $j = 0; $j < @{ $place->{p} }; $j++ ) {
-							my $edge      = $place->{p}->[$j]->[0];
+							my $edge      = $place->{p}->[$j]->[1];
 							my $edge_mass = $place->{p}->[$j]->[2];
 							if ( !defined( $markerncbimap->{$edge} ) ) {
 
@@ -256,8 +259,8 @@ sub summarize {
 		$self->{"read_names"} = ();    #clearing the hash from memory
 		merge_sequence_taxa( self => $self, chunk => $chunk );
 	}
-	Phylosift::Utilities::end_step( self => $self, chunk => $chunk, step => "Summarize");
-	Phylosift::Utilities::write_step_completion_to_run_info( self => $self, chunk => $chunk, step => "Summarize") unless $completed_chunk;
+	Phylosift::Utilities::end_step( self => $self, chunk => $chunk, step => "Summarize" );
+	Phylosift::Utilities::write_step_completion_to_run_info( self => $self, chunk => $chunk, step => "Summarize" ) unless $completed_chunk;
 }
 
 sub write_sequence_taxa_summary {
@@ -268,7 +271,7 @@ sub write_sequence_taxa_summary {
 	my $sequence_markers = $args{sequence_markers} || miss("sequence_markers");
 	my $chunk            = $args{chunk};
 	my $chunky           = defined($chunk) ? ".$chunk" : "";
-	debug "Writting sequences\n";
+	debug "Writing sequences\n";
 	my $SEQUENCETAXA = ps_open(">$Phylosift::Settings::file_dir/sequence_taxa$chunky.txt");
 	print $SEQUENCETAXA "##Sequence_ID\tHit_Coordinates\tNCBI_Taxon_ID\tTaxon_Rank\tTaxon_Name\tProbability_Mass\tMarkers_Hit\n";
 	my $SEQUENCESUMMARY = ps_open(">$Phylosift::Settings::file_dir/sequence_taxa_summary$chunky.txt");
@@ -340,8 +343,7 @@ sub write_sequence_taxa_summary {
 					}
 				}
 				foreach my $mate ( keys %coords ) {
-					print $SEQUENCETAXA "$name_ref/$mate\t$coords{$mate}\tUnknown\tUnknown\tUnclassifiable\t"
-					  .( $unclassifiable->{$qname} / $placecount )."\t"
+					print $SEQUENCETAXA "$name_ref/$mate\t$coords{$mate}\tUnknown\tUnknown\tUnclassifiable\t".( $unclassifiable->{$qname} / $placecount )."\t"
 					  ##.$unclassifiable->{$qname}."\t"
 					  .join( "\t", keys( %{ $sequence_markers->{$qname} } ) )."\n";
 				}
@@ -395,7 +397,7 @@ sub merge_sequence_taxa {
 	my %args              = @_;
 	my $self              = $args{self} || miss("PS Object");
 	my $chunk             = $args{chunk} || miss("chunk");
-	my @taxa_files        = Phylosift::Utilities::get_summarize_output_all_sequence_taxa( self => $self );
+	my @taxa_files        = Phylosift::Utilities::get_summarize_output_sequence_taxa( self => $self );
 	my %placements        = ();
 	my %placement_markers = ();
 	my %all_summary;
@@ -480,9 +482,13 @@ sub merge_sequence_taxa {
 	}
 
 	# write a single combined taxa summary
-	my @taxa_summary_files = Phylosift::Utilities::get_summarize_output_all_sequence_taxa_summary( self => $self );
-	Phylosift::Utilities::concatenate_summary_files(self => $self, files => \@taxa_files, output_file => "$Phylosift::Settings::file_dir/sequence_taxa.txt");
-	Phylosift::Utilities::concatenate_summary_files(self => $self, files => \@taxa_summary_files, output_file => "$Phylosift::Settings::file_dir/sequence_taxa_summary.txt");
+	my @taxa_summary_files = Phylosift::Utilities::get_summarize_output_sequence_taxa_summary( self => $self );
+	Phylosift::Utilities::concatenate_summary_files( self => $self, files => \@taxa_files, output_file => "$Phylosift::Settings::file_dir/sequence_taxa.txt" );
+	Phylosift::Utilities::concatenate_summary_files(
+													 self        => $self,
+													 files       => \@taxa_summary_files,
+													 output_file => "$Phylosift::Settings::file_dir/sequence_taxa_summary.txt"
+	);
 
 	my $MARKER_HITS = ps_open( ">".$Phylosift::Settings::file_dir."/marker_summary.txt" );
 	print $MARKER_HITS "#Marker_name\tNumber of hits\n";
@@ -529,6 +535,10 @@ sub merge_sequence_taxa {
 
 		# skip this if only a simple summary is desired (it's slow)
 		debug "Generating krona\n";
+		if ($Phylosift::Settings::extended) {
+			%ncbi_summary = ();
+			%ncbi_summary = %all_summary;
+		}
 		my $html_report = $Phylosift::Settings::file_dir."/".$self->{"fileName"}.".html";
 
 		#$self->{HTML} = ps_open(">$html_report") unless defined $self->{HTML};
@@ -542,19 +552,8 @@ sub merge_sequence_taxa {
 			print $FH "No results Found\n";
 			close($FH);
 		}
-		%ncbi_summary = ();
-		%ncbi_summary = %all_summary;
-		my $html_all_report = $Phylosift::Settings::file_dir."/".$self->{"fileName"}."_allmarkers.html";
-		if ( scalar( keys(%ncbi_summary) ) > 0 ) {
-			if ( !defined $self->{HTMLall} ) {
-				$self->{HTMLall} = Phylosift::HTMLReport::begin_report( self => $self, file => $html_all_report );
-			}
-			Phylosift::HTMLReport::add_krona( self => $self, OUTPUT => $self->{HTMLall}, summary => \%ncbi_summary );
-		} else {
-			my $FH = ps_open(">$html_all_report");
-			print $FH "No results Found\n";
-			close($FH);
-		}
+
+		#Phylosift::HTMLReport::add_run_info( self => $self, OUTPUT => $self->{HTML}) if exists $self->{HTML};
 	}
 	Phylosift::Utilities::end_timer( name => "runKrona" );
 
@@ -704,8 +703,8 @@ sub donying_find_name_in_taxa_db {
 	my $name = $args{name} || miss("name");
 	return "" unless defined($name);
 	$name =~ s/^\s+//;
-	my @t          = split( /\s+/, $name );
-	my $input_name = join( " ",    @t );
+	my @t = split( /\s+/, $name );
+	my $input_name = join( " ", @t );
 	my $q_name     = $input_name;
 	my $id         = "ERROR";
 	while ( @t >= 1 ) {
@@ -765,7 +764,7 @@ sub rename_sequences {
 		my @line = split( /\t/, $_ );
 		$name_mapping{ $line[1] } = $line[0];
 
-#		debug "$line[1]\t$line[0].\n";
+		#		debug "$line[1]\t$line[0].\n";
 	}
 	close($FH_MAP);
 
@@ -788,11 +787,12 @@ sub rename_sequences {
 	push( @array_to_rename, glob( $Phylosift::Settings::file_dir."/*.jplace" ) );
 	push( @array_to_rename, glob( $Phylosift::Settings::file_dir."/sequence_taxa*.$chunk.txt" ) );
 	foreach my $file (@array_to_rename) {
-	    #debug "Processing $file\n";
+
+		#debug "Processing $file\n";
 		my $FH  = ps_open($file);
 		my $TMP = ps_open(">$file.tmp");
 		if ( $file =~ m/\.jplace/ ) {
-			my @treedata  = <$FH>;
+			my @treedata = <$FH>;
 			my $json_data = decode_json( join( "", @treedata ) );
 			## parse the tree
 			for ( my $i = 0; $i < @{ $json_data->{placements} }; $i++ ) {

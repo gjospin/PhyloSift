@@ -6,8 +6,7 @@ use Phylosift::UpdateDB;
 use Carp;
 use Phylosift::Utilities qw(debug);
 
-use version; our $VERSION = version->declare("v1.0.0_01");
-
+our $VERSION = "v1.0.0_02";
 sub description {
 	return "phylosift dbupdate - update the phylosift database with new genomic data";
 }
@@ -62,7 +61,7 @@ sub check_required_opts {
 	  unless defined($Phylosift::Settings::local_storage) || $Phylosift::Settings::local_storage ne "";
 	$error_message .= "--base-markers needs to be specified and cannot be empty\n"
 	  unless defined($Phylosift::Settings::base_markers) || $Phylosift::Settings::base_markers ne "";
-	croak ($error_message) if $error_message ne "";
+	croak($error_message) if $error_message ne "";
 }
 
 sub load_opt {
@@ -84,6 +83,7 @@ sub execute {
 	set_ifdef( \$Phylosift::Settings::destination,     $opt->{destination} );
 	set_ifdef( \$Phylosift::Settings::taxon_knockouts, $opt->{knockouts} );
 	my $taxon_knockouts = $opt->{knockouts};
+
 	#my $local = "/state/partition1/koadman/phylosift_extended_dbupdate/";
 	set_ifdef( \$Phylosift::Settings::local_storage, $opt->{local_storage} );
 	set_ifdef( \$Phylosift::Settings::base_markers,  $opt->{base_markers} );
@@ -98,6 +98,7 @@ sub execute {
 	my $local_repository         = $Phylosift::Settings::repository."/local";
 	my $result_repository        = $Phylosift::Settings::destination."/processed";
 	my $marker_dir               = $Phylosift::Settings::destination."/markers";
+	my $manual_download          = $Phylosift::Settings::repository."/manual_download";
 	my $newObject                = new Phylosift::Phylosift();
 	my @new_genomes              = ();
 
@@ -110,7 +111,7 @@ sub execute {
 	debug "Updating NCBI tree and taxon map...";
 	$Phylosift::Utilities::ncbi_dir = "$repository/ncbi/";
 	Phylosift::UpdateDB::update_ncbi_taxonomy( repository => $Phylosift::Settings::destination );
-
+	debug "Starting download\n";
 	if ( !defined( $opt->{skip_download} ) ) {
 		Phylosift::UpdateDB::get_ebi_genomes( directory => $ebi_repository );
 		Phylosift::UpdateDB::get_ncbi_draft_genomes( directory => $ncbi_draft_repository );
@@ -143,6 +144,12 @@ sub execute {
 											   results_directory => $Phylosift::Settings::local_storage,
 											   files             => \@new_genomes
 		);
+		Phylosift::UpdateDB::find_new_genomes(
+											   genome_directory  => $manual_download,
+											   results_directory => $Phylosift::Settings::local_storage,
+											   files             => \@new_genomes
+		);
+
 		Phylosift::UpdateDB::qsub_updates( local_directory => $Phylosift::Settings::local_storage, files => \@new_genomes );
 	}
 	Phylosift::UpdateDB::collate_markers(

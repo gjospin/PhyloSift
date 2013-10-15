@@ -2,8 +2,7 @@
 use warnings;
 use strict;
 use FindBin qw($Bin);
-#use lib "$Bin/../lib";
-BEGIN { push(@INC, "$Bin/../lib") }
+BEGIN { unshift(@INC, "$Bin/../lib") }
 use Phylosift v1.0.0_01;
 Phylosift->run();
 

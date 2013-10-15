@@ -1,4 +1,4 @@
-#!/usr/bin/perl -w
+#!/usr/bin/env perl
 use strict;
 use warnings;
 ######################################
@@ -30,11 +30,12 @@ use warnings;
 #
 ######################################
 
+use IO::Zlib;
+
 
 my $usage = "Wrong number of arguments\nUsage:\ndemultiplex_dualBC.pl <illumina_directory> <barcode_list> <samples_mapping> <output_dir> <output_file_core_name>\n";
 die ("$usage") if @ARGV != 5;
-
-
+  
 #reading barcodes
 my %barcode = ();
 my %barcode_rev = ();
@@ -45,12 +46,21 @@ while(<INBC>){
     chomp($_);
     my @line = split(/\t/,$_);
     $barcode{$line[1]}=$line[0];
+    # insert all single-error barcodes
+    for(my $i=0; $i<length($line[1]); $i++){
+    	my @chars = ("A","C","G","T","N");
+    	my $s = $line[1];
+    	foreach my $ck(@chars){
+			substr( $s, $_, 1 ) =~ s/[ACGT]/$ck/ for $i;
+	    	print STDERR "Barcode collision! $s => $line[1] was already defined as $barcode{$s}!!\n" if defined $barcode{$s} && $s ne $line[1];
+		    $barcode{$s}=$line[0];
+    	}
+    }
 }
 close(INBC);
 
 #reading barcodes to names mapping
 my %output_filehandles_1 = ();
-my %output_filehandles_2 = ();
 my %mapping = ();
 print STDERR "Reading name mapping\n";
 open(INMAP,$ARGV[2]);
@@ -59,8 +69,8 @@ while(<INMAP>){
     my @line = split(/\t/,$_);
     $line[1] =~ s/\s/_/g;
     $mapping{$line[0]}=$line[1];
-    open($output_filehandles_1{$line[1]},">>$ARGV[3]/$ARGV[4]"."_$line[1]"."_1.fastq");
-    open($output_filehandles_2{$line[1]},">>$ARGV[3]/$ARGV[4]"."_$line[1]"."_2.fastq");
+	$output_filehandles_1{$line[1]} = new IO::Zlib;
+	$output_filehandles_1{$line[1]}->open("$ARGV[3]/$ARGV[4]"."_$line[1].fastq.gz", "wb9");
 }
 close(INBC);
 
@@ -112,23 +122,31 @@ foreach my $file(@files){
 	}
 	if(!exists $output_filehandles_1{$code}){
 	    print "new CODE : $code\n";
-	    open($output_filehandles_1{$code},">>$ARGV[3]/$ARGV[4]"."_$code"."_1.fastq");
-	    open($output_filehandles_2{$code},">>$ARGV[3]/$ARGV[4]"."_$code"."_2.fastq");	    
+		$output_filehandles_1{$code} = new IO::Zlib;
+		$output_filehandles_1{$code}->open("$ARGV[3]/$ARGV[4]"."_$code.fastq.gz", "wb9");
 	}
 	my $READ_HANDLE_1 = $output_filehandles_1{$code};
-	my $READ_HANDLE_2 = $output_filehandles_2{$code};
+	$read1[0] = clean_line(line=>$read1[0], num=>1);
+	$read2[0] = clean_line(line=>$read2[0], num=>2);
 	print $READ_HANDLE_1 @read1 if exists $output_filehandles_1{$code};
-	print $READ_HANDLE_2 @read2 if exists $output_filehandles_2{$code};
+	print $READ_HANDLE_1 @read2 if exists $output_filehandles_1{$code};
     }
 }
 
 #close files and flush IO buffers
 foreach my $handle (keys (%output_filehandles_1)){
-    close($output_filehandles_1{$handle});
-    close($output_filehandles_2{$handle});
+	$output_filehandles_1{$handle}->close();
 }
 
 
 foreach my $code (sort {$bc_count{$a} cmp $bc_count{$b} } keys %bc_count){
     print STDERR $code."\t".$bc_count{$code}."\n";
+}
+
+sub clean_line {
+	my %args = @_;
+	$args{line} =~ s/ /:/g;
+	chomp $args{line};
+	$args{line} .= "/".$args{num}."\n";
+	return $args{line};
 }

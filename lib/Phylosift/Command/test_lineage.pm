@@ -6,8 +6,7 @@ use JSON;
 use Carp;
 use Phylosift::Utilities qw(debug ps_open);
 
-use version; our $VERSION = version->declare("v1.0.0_01");
-
+our $VERSION = "v1.0.0_02";
 sub description {
 	return "phylosift test_lineage - conduct a statistical test (a Bayes factor) for the presence of a particular lineage in a sample";
 }
@@ -20,14 +19,14 @@ sub usage_desc { "test_lineage %o" }
 
 sub options {
 	return (
-		[ "codon", "Conduct the lineage test on a codon-based tree. Can give higher resolution in well sampled clades." ],
-		[ "sample=s", "Path to a directory containing a phylosift analysis of a sample", { required => 1 } ],
-		[
-		   "taxon=s@",
-		   "Taxon ID of lineage to test. If more than one taxon is specified, the test applies to all lineages under their most recent common ancestor",
-		   { required => 1 }
-		],
-		[ "marker=s", "Apply test to the specified marker gene family", { default => "concat" } ],
+			 [ "codon", "Conduct the lineage test on a codon-based tree. Can give higher resolution in well sampled clades." ],
+			 [ "sample=s", "Path to a directory containing a phylosift analysis of a sample", { required => 1 } ],
+			 [
+				"taxon=s@",
+				"Taxon ID of lineage to test. If more than one taxon is specified, the test applies to all lineages under their most recent common ancestor",
+				{ required => 1 }
+			 ],
+			 [ "marker=s", "Apply test to the specified marker gene family", { default => "concat" } ],
 	);
 }
 
@@ -89,13 +88,14 @@ sub execute {
 	}
 
 	# get the mrca of nodes in question
-	my $mrca = $tree->get_mrca( \@nodes );
+	my @mrca_nodes = @nodes;
+	my $mrca       = $tree->get_mrca( \@mrca_nodes );
 	debug "nodes[0] name is ".$nodes[0]->get_name."\n";
 	debug "mrca name is ".$mrca->get_name."\n";
 
 	# if nontrivial mrca then
 	# accumulate a list of all subtree nodes of interest
-	if ( @nodes > 1 ) {
+	if ( scalar(@nodes) > 1 ) {
 		$mrca->visit_depth_first(
 			-post => sub {
 				my $node = shift;
@@ -115,7 +115,7 @@ sub execute {
 		# for each placement edge in the placement record
 		my $mass = 0;
 		for ( my $j = 0; $j < @{ $place->{p} }; $j++ ) {
-			my $edge = $place->{p}->[$j]->[0];
+			my $edge = $place->{p}->[$j]->[1];
 			die
 			  "Error, test_lineage requires posterior probabilities of branch placement, please use phylosift to reanalyze the data with the --bayes option.\n\n"
 			  if scalar( @{ $place->{p}->[$j] } ) < 6;
@@ -128,7 +128,7 @@ sub execute {
 	print "\nNull hypothesis: taxa in this group have zero abundance in the sample\n";
 	my $bf = "Infinite -- at least one sequence has 100% probability of deriving from the test lineage(s)";
 	$bf = $bf_numer == 1 ? "Zero -- target is beyond limit of detection" : $bf;
-	$bf = ($bf != 0 && $bf != 1) ? ( ( 1 - $bf_numer ) / ($bf_numer) ) : $bf;
+	$bf = ( $bf_numer != 0 && $bf_numer != 1 ) ? ( ($bf_numer) / ( 1 - $bf_numer ) ) : $bf;
 	print "\nBayes factor: $bf\n\n";
 	print "Strength of null hypothesis rejection:\n";
 	print "< 1\t Null hypothesis supported\n";

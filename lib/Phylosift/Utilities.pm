@@ -4,6 +4,8 @@ use warnings;
 use FindBin qw($Bin);
 BEGIN { unshift( @INC, "$FindBin::Bin/../legacy/" ) if $] < 5.01; }
 use File::Basename;
+use File::NFSLock qw(uncache);
+use Fcntl qw(LOCK_EX);
 use Bio::SeqIO;
 use Bio::AlignIO;
 use Bio::SimpleAlign;
@@ -15,7 +17,7 @@ use POSIX ();
 use Carp;
 use Cwd;
 
-use version; our $VERSION = version->declare("v1.0.0_01");
+our $VERSION = "v1.0.0_02";
 
 use Exporter;
 use vars qw[ @EXPORT @EXPORT_OK %EXPORT_TAGS @ISA ];
@@ -156,10 +158,10 @@ sub program_checks {
 		return 1;
 	} else {
 		`$Phylosift::Settings::pplacer --version` =~ m/v1.1.alpha(\d+)/;
-		if ( $1 < 10 ) {
+		if ( defined($1) && $1 < 14 ) {
 
 			# pplacer was found but the version doesn't match the one tested with Phylosift
-			carp("Warning : a different version of pplacer was found. PhyloSift was tested with pplacer v1.1.alpha10\n");
+			carp("Warning : a different version of pplacer was found. PhyloSift was tested with pplacer v1.1.alpha14\n");
 		}
 	}
 	Phylosift::Settings::set_default(
@@ -374,31 +376,19 @@ sub download_data {
 	my %args        = @_;
 	my $url         = $args{url};
 	my $destination = $args{destination};
-	`mkdir -p "$destination"`;
 
-	eval {
-		require File::Fetch;
-		File::Fetch->import();
-	};
-	if ($@) {
-		croak(    "Unable to load perl module File::Fetch. Can not download marker database.\nPlease use cpan to install File::Fetch or download and install the markers manually.\n"
-		);
-	} else {
-
-		# FIXME this is insecure!
-		# but then again, so is just about every other line of code in this program...
-		my $ff = File::Fetch->new( uri => $url );
-		$ff->fetch( to => "$destination/.." );
-		debug "URL : $url\n";
-		$url =~ /\/(\w+)\.tgz/;
-		my $archive = $1;
-		debug "ARCHIVE : $archive\n";
-		if ( -e "$destination/.. " ) {
-			`rm -rf "$destination/.."`;
-		}
-		`cd "$destination/../" ; tar xzf $archive.tgz ; touch $archive`;
-		`rm "$destination/../$archive.tgz"`;
+	# FIXME this is insecure!
+	# but then again, so is just about every other line of code in this program...
+	`mkdir -p "$destination"; cd $destination/.. ; curl -LO $url`;
+	debug "URL : $url\n";
+	$url =~ /\/(\w+)\.tgz/;
+	my $archive = $1;
+	debug "ARCHIVE : $archive\n";
+	if ( -e "$destination/.. " ) {
+		`rm -rf "$destination/.."`;
 	}
+	`cd "$destination/../" ; tar xzf $archive.tgz ; touch $archive`;
+	`rm "$destination/../$archive.tgz"`;
 }
 
 Phylosift::Settings::set_default( parameter => \$Phylosift::Settings::marker_base_url,
@@ -417,7 +407,7 @@ sub marker_update_check {
 	my $self        = $args{self};
 	my $url         = $args{url};
 	my $marker_path = $args{dir};
-
+	my $skip_lock   = $args{skip_lock} || 0;
 	debug "Skipping check for marker updates on server\n"
 	  if $Phylosift::Settings::disable_update_check && !$self->{"removed_markers"};
 	return
@@ -440,54 +430,69 @@ sub marker_update_check {
 
 		my ( $content_type, $document_length, $modified, $expires, $server ) = head($url);
 		$modified_time = $modified;
-		debug "MARKER_PATH : ".$marker_path."\nURL : $url\n";
+		debug "MARKER_PATH : ".$marker_path."\nURL : $url\n" if $skip_lock;
 
 		if ( -x $marker_path ) {
 			my ( $m_url, $m_timestamp ) = get_marker_version( path => $marker_path );
 			if ( defined($m_url) ) {
 				$m_url =~ s/\/\//\//g;
 				$m_url =~ s/http:/http:\//g;
-				debug "TEST LOCAL :".localtime($m_timestamp)."\n";
+				debug "TEST LOCAL :".localtime($m_timestamp)."\n" if $skip_lock;
 				if ( !defined($modified_time) ) {
-					warn "Warning: unable to connect to marker update server, please check your internet connection\n";
+					warn "Warning: unable to connect to marker update server, please check your internet connection\n" if $skip_lock;
 				} elsif ( $modified_time > $m_timestamp ) {
-					debug "TEST REMOTE:".localtime($modified_time)."\n";
-					warn "Found newer version of the marker data\n";
-					$get_new_markers = 1;
+					debug "TEST REMOTE:".localtime($modified_time)."\n" if $skip_lock;
+					warn
+					  "A newer version of the marker data exists on the server. Move or remove the current marker DB at $marker_path to trigger a download.\n"
+					  if $skip_lock;
+					$get_new_markers = 0;
 				} elsif ( $url ne $m_url ) {
-					warn "The marker update URL differs from the local marker DB copy, updating";
-					warn "local url $m_url\n";
-					warn "update url $url\n";
+					warn "The marker update URL differs from the local marker DB copy, updating" if $skip_lock;
+					warn "local url $m_url\n"                                                    if $skip_lock;
+					warn "update url $url\n"                                                     if $skip_lock;
 					$get_new_markers = 1;
 				}
 			} else {
-				warn "Marker version unknown, downloading markers\n";
+				warn "Marker version unknown, downloading markers\n" if $skip_lock;
 				$get_new_markers = 1;
 			}
 		} else {
 			if ( !defined($modified_time) ) {
 				croak
-				  "Marker data not found and unable to connect to marker update server, please check your phylosift configuration and internet connection!\n";
+				  "Marker data not found and unable to connect to marker update server, please check your phylosift configuration and internet connection!\n"
+				  if $skip_lock;
 			}
-			warn "Unable to find marker data!\n";
+			warn "Unable to find marker data!\n" if $skip_lock;
 			$get_new_markers = 1;
 		}
 	} else {
-		warn "Unable to check for updates because perl module LWP::Simple is not available. Please use cpan to install it.\n";
-		$get_new_markers = 1 unless -x $marker_path;
+		warn "Unable to check for updates because perl module LWP::Simple is not available. Please use cpan to install it.\n" if $skip_lock;
+		$get_new_markers = 1 unless -e "$marker_path/version.txt";
 	}
-
+	my $lock_excl_markers;
 	if ($get_new_markers) {
-		warn "Downloading from $url\n";
-		download_data( url => $url, destination => $marker_path );
+		`mkdir -p $marker_path`;
+		warn "Attempting to get exclusive rights to the marker DB. Possibly waiting for another PhyloSift to release the file lock\n" unless $skip_lock;
+		$lock_excl_markers = File::NFSLock->new( $marker_path, LOCK_EX ) unless $skip_lock;
+		$get_new_markers = marker_update_check(
+												self      => $self,
+												dir       => $marker_path,
+												url       => $url,
+												skip_lock => 1
+		) unless $skip_lock;
+		warn "Downloading from $url\n" if $skip_lock;
+		download_data( url => $url, destination => $marker_path ) if $skip_lock;
+		return $get_new_markers if $skip_lock;
 		my $VOUT = ps_open(">$marker_path/version.txt");
 		print $VOUT "$url\n";
 		print $VOUT "$modified_time\n";
 	}
+	my $indexed_markers = 0;
 	if ( $get_new_markers || $self->{"removed_markers"} ) {
 		my @markers = gather_markers( self => $self, path => $marker_path, force_gather => 1 );
-		index_marker_db( self => $self, markers => \@markers, path => $marker_path );
+		$indexed_markers = index_marker_db( self => $self, markers => \@markers, path => $marker_path );
 	}
+	return $indexed_markers;
 }
 
 =head2 data_checks
@@ -512,6 +517,7 @@ sub data_checks {
 	}
 	my $marker_update_url           = "$mbase/markers.tgz";
 	my $markers_extended_update_url = "$mbase/markers_extended.tgz";
+	my $indexed_markers             = 0;
 
 	#
 	# first check for the standard marker directory
@@ -532,10 +538,10 @@ sub data_checks {
 		`$cmd`;
 		$self->{"removed_markers"} = 1;
 	}
-	marker_update_check(
-						 self => $self,
-						 dir  => $Phylosift::Settings::marker_dir,
-						 url  => $marker_update_url
+	$indexed_markers = marker_update_check(
+											self => $self,
+											dir  => $Phylosift::Settings::marker_dir,
+											url  => $marker_update_url
 	);
 
 	#
@@ -547,45 +553,107 @@ sub data_checks {
 															  data_path => $Phylosift::Settings::extended_marker_path
 									  )
 	);
+
 	if ($Phylosift::Settings::extended) {
-		marker_update_check(
-							 self => $self,
-							 dir  => $Phylosift::Settings::markers_extended_dir,
-							 url  => $markers_extended_update_url
+		$indexed_markers = marker_update_check(
+												self => $self,
+												dir  => $Phylosift::Settings::markers_extended_dir,
+												url  => $markers_extended_update_url
 		);
 	}
 
 	#
 	# now check for the NCBI taxonomy data
-	Phylosift::Settings::set_default(
-									  parameter => \$Phylosift::Settings::ncbi_dir,
-									  value     => get_data_path(
-															  data_name => "ncbi",
-															  data_path => $Phylosift::Settings::ncbi_path
-									  )
-	);
-	debug "DIR : $Phylosift::Settings::ncbi_dir\n";
+	Phylosift::Settings::set_default( parameter => \$Phylosift::Settings::ncbi_dir,
+									  value     => get_data_path( data_name => "ncbi", data_path => $Phylosift::Settings::ncbi_path ) );
 	debug "Skipping check for NCBI updates on server\n" if $Phylosift::Settings::disable_update_check;
-	return                                              if $Phylosift::Settings::disable_update_check;
-	my ( $content_type, $document_length, $modified_time, $expires, $server ) = head("$Phylosift::Settings::ncbi_url");
-	if ( -x $Phylosift::Settings::ncbi_dir ) {
-		my $ncbi_time = ( stat($Phylosift::Settings::ncbi_dir) )[9];
+	return $indexed_markers if $Phylosift::Settings::disable_update_check;
+	ncbi_update_check(
+					   self => $self,
+					   dir  => $Phylosift::Settings::ncbi_dir,
+					   url  => $Phylosift::Settings::ncbi_url
+	);
+	return $indexed_markers;
+}
+
+=head2 ncbi_update_check
+
+checks to see if a new version of the ncbi data is available on the server.
+Download it if needed.
+
+=cut
+
+sub ncbi_update_check {
+	my %args     = @_;
+	my $self     = $args{self};
+	my $url      = $args{url};
+	my $ncbi_dir = $args{dir};
+	$ncbi_dir =~ m/^(\S+)\/[^\/]+$/;    #Need to work from the parent directory from ncbi_dir
+	my $ncbi_path = $1;
+	my $skip_lock = $args{skip_lock};
+	my $have_lwp  = 0;
+	my @lwp_result;
+	eval {
+		require LWP::Simple;
+		LWP::Simple->import();
+		$have_lwp   = 1;
+		@lwp_result = LWP::Simple::head("$url");
+	  }
+	  or do {
+	  };
+	my ( $content_type, $document_length, $modified_time, $expires, $server ) = @lwp_result;
+
+	if ( -x $ncbi_dir ) {
+		my $ncbi_time = ( stat($ncbi_dir) )[9];
 		if ( !defined($modified_time) ) {
-			warn "Warning: unable to connect to NCBI taxonomy update server, please check your internet connection\n";
+			warn "Warning: unable to connect to NCBI taxonomy update server, please check your internet connection\n" if $skip_lock && $have_lwp;
 		} elsif ( $modified_time > $ncbi_time ) {
-			warn "Found newer version of NCBI taxonomy data!\n";
-			warn "Downloading from $Phylosift::Settings::ncbi_url\n";
-			download_data(          url         => $Phylosift::Settings::ncbi_url,
-						   destination => $Phylosift::Settings::ncbi_dir );
+			warn "Found newer version of NCBI taxonomy data!\n" if $skip_lock;
+			warn "Downloading from $url\n"                      if $skip_lock;
+			my $lock_ex;
+			$lock_ex = File::NFSLock->new( $ncbi_path, LOCK_EX ) unless $skip_lock;
+			ncbi_update_check( self => $self, dir => $ncbi_dir, url => $url, skip_lock => 1 ) unless ($skip_lock);
+			download_data( url => $url, destination => $ncbi_dir ) if $skip_lock;
+			$lock_ex->unlock() unless $skip_lock;
 		}
 	} else {
-		if ( !defined($modified_time) ) {
-			croak "NCBI taxonomy data not found and unable to connect to update server, please check your phylosift configuration and internet connection!\n";
+		if ( !defined($modified_time) && $have_lwp ) {
+			croak "NCBI taxonomy data not found and unable to connect to update server, please check your phylosift configuration and internet connection!\n"
+			  if $skip_lock;
 		}
-		warn "Unable to find NCBI taxonomy data!\n";
-		warn "Downloading from $Phylosift::Settings::ncbi_url\n";
-		download_data(       url         => $Phylosift::Settings::ncbi_url,
-					   destination => $Phylosift::Settings::ncbi_dir );
+		warn "Unable to find NCBI taxonomy data!\n" if $skip_lock;
+		warn "Downloading from $url\n"              if $skip_lock;
+		my $lock_ex;
+		$lock_ex = File::NFSLock->new( $ncbi_path, LOCK_EX ) unless $skip_lock;
+		ncbi_update_check( self => $self, dir => $ncbi_dir, url => $url, skip_lock => 1 ) unless ($skip_lock);
+		download_data( url => $url, destination => $ncbi_dir ) if $skip_lock;
+		return if $skip_lock;
+		$lock_ex->unlock() unless $skip_lock;
+	}
+}
+
+=head2 previous_run_handler
+
+Exits and Prints out the error statement when a previous run was detected and -f was not specified
+OR
+Removes the appropriate directory when -f was specified
+
+=cut
+
+sub previous_run_handler {
+	my %args  = @_;
+	my $self  = $args{self} || miss("PS Ojbect in Utilities::previous_run_handler");
+	my $force = $args{force};
+	my $dir   = $args{dir} || miss("dir in Utilities::previous_run_handler");
+	if ($force) {
+		debug( "deleting an old run\n", 0 );
+		debug "$dir\n";
+		`rm -rf "$dir"`;
+	} else {
+		croak(  "A previous run was found using the same output name. Aborting the current run.\n"
+			   ."Either delete that run from "
+			   .$dir
+			   .", or force overwrite with the -f command-line option\n" );
 	}
 }
 
@@ -816,7 +884,7 @@ Determines the filesystem path to a marker. Searches for the marker in the base 
 =cut
 
 sub get_marker_path {
-	my %args   = @_;
+	my %args = @_;
 	my $marker = $args{marker} || miss("marker");
 
 	# check for old-style marker first
@@ -996,7 +1064,10 @@ sub get_marker_taxon_map {
 	my $decorated   = get_decorated_marker_name(%args);
 	my $deco        = "$marker_path/$decorated/$decorated.taxonmap";
 	return $deco if -e $deco;
-	return "$marker_path/$decorated/$bname.taxonmap";
+	return "$marker_path/$marker.updated/$bname.updated.taxonmap"
+	  if $Phylosift::Settings::extended && -e "$marker_path/$marker.updated/$bname.updated.taxonmap";
+	return "$marker_path/$marker/$bname.taxonmap" if $Phylosift::Settings::extended;
+	return "$marker_path/$bname/$bname.taxonmap";
 }
 
 sub get_decorated_marker_name {
@@ -1012,8 +1083,10 @@ sub get_decorated_marker_name {
 	$name .= ".long"  if $long;
 	$name .= ".short" if $short;
 	$name .= ".codon" if $dna;
+	##$name .= ".updated"
+	##  if ( $updated || $Phylosift::Settings::updated ) && !$Phylosift::Settings::extended && $name !~ /^1[68]s/;
 	$name .= ".updated"
-	  if ( $updated || $Phylosift::Settings::updated ) && !$Phylosift::Settings::extended && $name !~ /^1[68]s/;
+	  if ( $updated || $Phylosift::Settings::updated ) && $name !~ /^1[68]s/;
 
 	# rna markers don't get pruned
 	$name .= ".sub".$sub_marker if defined($sub_marker);
@@ -1034,7 +1107,9 @@ sub get_gene_id_file {
 	my $bname       = get_marker_basename( marker => $marker );
 	my $decorated   = get_decorated_marker_name(%args);
 	my $deco        = "$marker_path/$decorated/$decorated.gene_map";
-	return $deco                                                 if -e $deco;
+	return $deco if -e $deco;
+	return "$marker_path/$marker/$bname.gene_map" if $Phylosift::Settings::extended && -e "$marker_path/$marker/$bname.gene_map";
+	return "$marker_path/$bname/$bname.gene_map" if -e "$marker_path/$bname/$bname.gene_map";
 	return "$Phylosift::Settings::marker_dir/gene_ids.codon.txt" if $dna;
 	return "$Phylosift::Settings::marker_dir/gene_ids.aa.txt";
 }
@@ -1114,8 +1189,10 @@ given by markerName
 
 sub get_read_placement_file {
 	my %args      = @_;
+	my $self      = $args{self};
 	my $marker    = $args{marker};
 	my $chunk     = $args{chunk};
+	my $bname     = get_marker_basename( marker => $marker );
 	my $decorated = get_decorated_marker_name( %args, base => 1 );
 	return "$decorated.$chunk.jplace";
 }
@@ -1388,12 +1465,15 @@ Writes the completed chunk information to the run_info_file
 =cut
 
 sub write_step_completion_to_run_info {
-	my %args = @_;
-	my $self = $args{self} || miss("PS Object");
-	my $chunk = $args{chunk} || miss("Chunk");
-	my $step = $args{step} || miss("Step");
-	my $RUNINFO = ps_open(">>".get_run_info_file(self => $self));
-	print $RUNINFO "Chunk $chunk $step completed\t".$self->{'run_info'}{$chunk}{$step}[0]."\t".$self->{'run_info'}{$chunk}{$step}[1]."\t".$self->{'run_info'}{$chunk}{$step}[2]."\n";
+	my %args    = @_;
+	my $self    = $args{self} || miss("PS Object");
+	my $chunk   = $args{chunk} || miss("Chunk");
+	my $step    = $args{step} || miss("Step");
+	my $RUNINFO = ps_open( ">>".get_run_info_file( self => $self ) );
+	print $RUNINFO "Chunk $chunk $step completed\t"
+	  .$self->{'run_info'}{$chunk}{$step}[0]."\t"
+	  .$self->{'run_info'}{$chunk}{$step}[1]."\t"
+	  .$self->{'run_info'}{$chunk}{$step}[2]."\n";
 	close($RUNINFO);
 }
 
@@ -1403,13 +1483,14 @@ Initializes the timer for a specific step for a specific chunk
 Also adds the value into the run_info data structure
 
 =cut
+
 sub start_step {
-	my %args = @_;
-	my $self = $args{self} || miss("PS Object");
-	my $step     = $args{step} || miss("Step to look for in run_info.txt\n");
-	my $chunk    = $args{chunk} || miss("Chunk");
-	my $start_search_time = start_timer( name => "start_$step"."_$chunk", silent=> 1);
-	push(@{$self->{'run_info'}{$chunk}{$step}}, $start_search_time);
+	my %args              = @_;
+	my $self              = $args{self} || miss("PS Object");
+	my $step              = $args{step} || miss("Step to look for in run_info.txt\n");
+	my $chunk             = $args{chunk} || miss("Chunk");
+	my $start_search_time = start_timer( name => "start_$step"."_$chunk", silent => 1 );
+	push( @{ $self->{'run_info'}{$chunk}{$step} }, $start_search_time );
 }
 
 =head2 end_step
@@ -1418,13 +1499,14 @@ Ends the timer for a specific step for a specific chunk
 Also adds the values into the run_info data structure
 
 =cut
+
 sub end_step {
-	my %args = @_;
-	my $self = $args{self} || miss("PS Object");
-	my $step     = $args{step} || miss("Step to look for in run_info.txt\n");
-	my $chunk    = $args{chunk} || miss("Chunk");
+	my %args            = @_;
+	my $self            = $args{self} || miss("PS Object");
+	my $step            = $args{step} || miss("Step to look for in run_info.txt\n");
+	my $chunk           = $args{chunk} || miss("Chunk");
 	my $end_search_time = start_timer( name => "end_$step"."_$chunk", silent => 1 );
-	push(@{$self->{'run_info'}{$chunk}{$step}}, $end_search_time , end_timer(name => "start_$step"."_$chunk", silent => 1));
+	push( @{ $self->{'run_info'}{$chunk}{$step} }, $end_search_time, end_timer( name => "start_$step"."_$chunk", silent => 1 ) );
 }
 
 =head2 load_run_info
@@ -1434,24 +1516,25 @@ Reads the run_info.txt file from a run and loads it into a data structure
 =cut
 
 sub load_run_info {
-	my %args = @_;
-	my $self = $args{self};
+	my %args        = @_;
+	my $self        = $args{self};
 	my %return_hash = ();
-	return \%return_hash unless -e get_run_info_file(self => $self);
-	my $RUN_INFO_FH = ps_open(get_run_info_file(self => $self));
-	while(<$RUN_INFO_FH>){
+	return \%return_hash unless -e get_run_info_file( self => $self );
+	my $RUN_INFO_FH = ps_open( get_run_info_file( self => $self ) );
+	while (<$RUN_INFO_FH>) {
 		chomp($_);
+
 		#debug $_."\n";
 		next unless $_ =~ m/^Chunk.*completed/;
-		my @line = split(/\t/,$_);
+		my @line = split( /\t/, $_ );
 		## data structure run_info{chunk}{}
 		$line[0] =~ m/Chunk\s+(\d+)\s+(\S+)\s+/;
-		my $chunk = $1;
-		my $mode = $2;
-		my $start = $line[1];
-		my $end = $line[2];
+		my $chunk    = $1;
+		my $mode     = $2;
+		my $start    = $line[1];
+		my $end      = $line[2];
 		my $duration = $line[3];
-		push(@{$return_hash{$chunk}{$mode}}, $start,$end,$duration);
+		push( @{ $return_hash{$chunk}{$mode} }, $start, $end, $duration );
 	}
 	return \%return_hash;
 }
@@ -1464,13 +1547,13 @@ Always return 0 if $Phylosift::Settings::force is set to 1
 =cut
 
 sub has_step_completed {
-	my %args     = @_;
-	my $self     = $args{self} || miss("PS object");
-	my $step     = $args{step} || miss("Step to look for in run_info.txt\n");
-	my $chunk    = $args{chunk} || miss("Chunk");
-	my $force  = $args{force};
-	if( defined ($self->{'run_info'}{$chunk}{$step}) && scalar(@{$self->{'run_info'}{$chunk}{$step}}) > 1){
-		cleanup_chunk( self => $self, step => $step, chunk => $chunk) if $force;
+	my %args  = @_;
+	my $self  = $args{self} || miss("PS object");
+	my $step  = $args{step} || miss("Step to look for in run_info.txt\n");
+	my $chunk = $args{chunk} || miss("Chunk");
+	my $force = $args{force};
+	if ( defined( $self->{'run_info'}{$chunk}{$step} ) && scalar( @{ $self->{'run_info'}{$chunk}{$step} } ) > 1 ) {
+		cleanup_chunk( self => $self, step => $step, chunk => $chunk ) if $force;
 		return 1 unless $force;
 	}
 	return 0;
@@ -1501,8 +1584,8 @@ sub cleanup_chunk {
 	} elsif ( $step eq 'Summarize' ) {
 		push( @files_list, get_taxa_90pct_HPD( self => $self ) );
 		push( @files_list, get_taxasummary( self => $self ) );
-		push( @files_list, get_summarize_output_all_sequence_taxa( self => $self ) );
-		push( @files_list, get_summarize_output_all_sequence_taxa_summary( self => $self ) );
+		push( @files_list, get_summarize_output_sequence_taxa( self => $self, chunk => $chunk ) );
+		push( @files_list, get_summarize_output_sequence_taxa_summary( self => $self, chunk => $chunk ) );
 	}
 	return if @files_list == 0;    # no need to do anything else if the list is empty
 	my $cmd = "rm ".join( ' ', @files_list );
@@ -1574,27 +1657,33 @@ sub get_place_output_all_jplace {
 	return @files_list;
 }
 
-=head2 get_summarize_output_all_sequence_taxa
+=head2 get_summarize_output_sequence_taxa
 return an array of all sequence_taxa files in the workingDir for a specific chunk
+if chunk isn't defined, return all sequence_taxa files
 =cut
 
-sub get_summarize_output_all_sequence_taxa {
-	my %args       = @_;
-	my $self       = $args{self} || miss("PS object");
+sub get_summarize_output_sequence_taxa {
+	my %args  = @_;
+	my $self  = $args{self} || miss("PS object");
+	my $chunk = $args{chunk};
+	$chunk = '*' unless ( defined $chunk );
 	my @files_list = ();
-	push( @files_list, glob( $Phylosift::Settings::file_dir."/sequence_taxa.*.txt" ) );
+	push( @files_list, glob( $Phylosift::Settings::file_dir."/sequence_taxa.$chunk.txt" ) );
 	return @files_list;
 }
 
-=head2 get_summarize_output_all_sequence_taxa_summary
+=head2 get_summarize_output_sequence_taxa_summary
 return an array of all sequence_taxa_summary files in the workingDir for a specific chunk
+if chunk isn't defined, return all sequence_taxa_summary files
 =cut
 
-sub get_summarize_output_all_sequence_taxa_summary {
-	my %args       = @_;
-	my $self       = $args{self} || miss("PS object");
+sub get_summarize_output_sequence_taxa_summary {
+	my %args  = @_;
+	my $self  = $args{self} || miss("PS object");
+	my $chunk = $args{chunk};
+	$chunk = '*' unless ( defined $chunk );
 	my @files_list = ();
-	push( @files_list, glob( $Phylosift::Settings::file_dir."/sequence_taxa_summary.*.txt" ) );
+	push( @files_list, glob( $Phylosift::Settings::file_dir."/sequence_taxa_summary.$chunk.txt" ) );
 	return @files_list;
 }
 
@@ -1625,20 +1714,20 @@ Concatenates a set of files not includin the header line for the first file only
 =cut
 
 sub concatenate_summary_files {
-	my %args = @_;
-	my $self = $args{self} || miss("PS Object");
-	my $output_file = $args{output_file} || miss("Output file");
+	my %args            = @_;
+	my $self            = $args{self} || miss("PS Object");
+	my $output_file     = $args{output_file} || miss("Output file");
 	my $files_array_ref = $args{files};
-	my $OUTPUT_FH = ps_open(">$output_file");
-	my @files = @{$files_array_ref};
-	my $header = "";
-	my $printed_header = 0;
-	foreach my $file (@files){
+	my $OUTPUT_FH       = ps_open(">$output_file");
+	my @files           = @{$files_array_ref};
+	my $header          = "";
+	my $printed_header  = 0;
+	foreach my $file (@files) {
 		my $FH = ps_open($file);
 		$header = <$FH>;
 		print $OUTPUT_FH $header unless $printed_header;
 		$printed_header = 1;
-		while(<$FH>){ #print the rest of the file
+		while (<$FH>) {    #print the rest of the file
 			print $OUTPUT_FH $_;
 		}
 		close($FH);
@@ -1717,10 +1806,10 @@ sub open_SeqIO_object {
 		$format = $args{format};
 	}
 	if ( $args{file} =~ /\.gz$/ ) {
-		$io_object = Bio::SeqIO->new(       -file   => "zcat \"$args{file}\" |",
+		$io_object = Bio::SeqIO->new( -file   => "gzip -cd \"$args{file}\" |",
 									  -format => $format );
 	} elsif ( $args{file} =~ /\.bz2$/ ) {
-		$io_object = Bio::SeqIO->new(       -file   => "bzcat \"$args{file}\" |",
+		$io_object = Bio::SeqIO->new( -file   => "bzcat \"$args{file}\" |",
 									  -format => $format );
 	} else {
 		$io_object = Bio::SeqIO->new( -file => $args{file}, -format => $format );
@@ -1740,7 +1829,7 @@ sub open_sequence_file {
 	my $file = $args{file} || miss("file");
 	my $F1IN;
 	if ( $file =~ /\.gz$/ ) {
-		$F1IN = ps_open("zcat \"$file\" |");
+		$F1IN = ps_open("gzip -cd \"$file\" |");
 	} elsif ( $file =~ /\.bz2$/ ) {
 		$F1IN = ps_open("bzcat \"$file\" |");
 	} elsif ( $file eq "STDIN" ) {
@@ -1859,7 +1948,8 @@ sub index_marker_db {
 	my $path    = $args{path};
 	my @markers = @{ $args{markers} };
 	debug "Indexing ".scalar(@markers)." in $path\n";
-	print "Inside index_marker_db\n";
+	debug "Inside index_marker_db\n";
+
 	# use alignments to make an unaligned fasta database containing everything
 	# strip gaps from the alignments
 	my $rna_db        = get_rna_db( path => $path );
@@ -1877,8 +1967,7 @@ sub index_marker_db {
 										   self    => $args{self},
 										   marker  => $marker,
 										   updated => 0
-		  )
-		  unless -e $marker_rep;
+		) unless -e $marker_rep;
 
 		#debug "marker $marker is protein\n"
 		#if is_protein_marker( marker => $marker );
@@ -1887,7 +1976,7 @@ sub index_marker_db {
 		$DBOUT = $PDBOUT if is_protein_marker( marker => $marker );
 		next if ( !is_protein_marker( marker => $marker ) && $marker =~ /\.short/ );
 		unless ( -f $marker_rep ) {
-			warn "$marker_rep not found.\n";
+			warn "$marker_rep not found.\n" unless $marker_rep =~ m/1[68]s_reps(_\w\w\w)?.short./;
 			warn "Warning: marker $marker appears to be missing data\n" if ( $marker !~ /\.short/ );
 			next;
 		}
@@ -1925,8 +2014,9 @@ sub index_marker_db {
 	foreach my $marker (@markers) {
 		my $hmm_file = get_marker_hmm_file( self => $args{self}, marker => $marker );
 		next if -e $hmm_file;
-		build_hmm( marker => $marker );
+		build_hmm( marker => $marker ) unless $marker =~ /1[68]s_reps(_\w\w\w)?.short/;
 	}
+	return 1;
 }
 
 sub build_hmm {
@@ -1958,6 +2048,7 @@ sub gather_markers {
 	my $force_gather = $args{force_gather} || 0;
 	my $path         = $args{path} || $Phylosift::Settings::marker_dir;
 	my @marks        = ();
+
 	# try to use a marker list file if it exists
 	if ( !defined($marker_file) && !$force_gather ) {
 		$marker_file = "$path/marker_list.txt" if -e "$path/marker_list.txt";
@@ -1992,7 +2083,8 @@ sub gather_markers {
 		my $MLIST = ps_open("find $path -maxdepth 2 -mindepth 1 -type d |");
 		while ( my $line = <$MLIST> ) {
 			chomp $line;
-			debug "$line\n";
+
+			#debug "$line\n";
 			next if $line =~ /PMPROK/;
 			next if $line =~ /concat/;
 			next if $line =~ /representatives/;
@@ -2096,7 +2188,6 @@ sub get_sequence_input_type {
 	$type{seqtype} = "protein" if ( $dnacount < $allcount * 0.75 );
 	$type{seqtype} = "dna"
 	  if ( $type{format} eq "fastq" );    # nobody using protein fastq (yet)
-	debug "TYPE : ".$type{seqtype}."\n";
 	$type{qtype} = "phred64" if $minq < 255;
 	$type{qtype} = "phred33" if $minq < 64;
 	$type{paired} = 0;                    # TODO: detect interleaved read pairing
@@ -2182,7 +2273,7 @@ sub print_citations {
 	print "PhyloSift -- Phylogenetic analysis of genomes and metagenomes\n";
 	print "(c) 2011, 2012 Aaron Darling and Guillaume Jospin\n";
 	print "\nCITATION:\n";
-	print "		PhyloSift. A. Darling, H. Bik, G. Jospin, J. A. Eisen. Manuscript in preparation\n";
+	print "		PhyloSift. A. E. Darling, G. Jospin, E. Lowe, F. A. Matsen, H. M. Bik, J. A. Eisen. Submitted to PeerJ\n";
 	print "\n\nPhyloSift incorporates several other software packages, please consider also citing the following papers:\n";
 	print qq{
 

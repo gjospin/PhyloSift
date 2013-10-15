@@ -15,7 +15,7 @@ use Phylosift::HTMLReport;
 use JSON;
 use Carp;
 
-use version; our $VERSION = version->declare("v1.0.0_01");
+our $VERSION = "v1.0.0_02";
 
 =head1 NAME
 
@@ -54,9 +54,13 @@ sub pplacer {
 	my $markRef = $args{marker_reference} || miss("marker_reference");
 	my $chunk   = $args{chunk};
 	directoryPrepAndClean( self => $self );
-	Phylosift::Utilities::start_step( self => $self, chunk => $chunk, step => "Place");
-	my $completed_chunk = Phylosift::Utilities::has_step_completed( self => $self, chunk => $chunk, step => "Place" , force => $Phylosift::Settings::force);
-	croak ("Previous step for chunk $chunk has did not complete. Aborting\n") unless Phylosift::Utilities::has_step_completed( self => $self, chunk => $chunk, step => "Align" );
+	Phylosift::Utilities::start_step( self => $self, chunk => $chunk, step => "Place" );
+	my $completed_chunk = Phylosift::Utilities::has_step_completed( self => $self, chunk => $chunk, step => "Place", force => $Phylosift::Settings::force );
+	croak("Previous step for chunk $chunk has did not complete. Aborting\n")
+	  unless Phylosift::Utilities::has_step_completed( self => $self, chunk => $chunk, step => "Align" );
+	my $html_report = $Phylosift::Settings::file_dir."/".$self->{"fileName"}.".html";
+	$self->{HTML} = Phylosift::HTMLReport::begin_report( self => $self, file => $html_report );
+
 	unless ($completed_chunk) {
 
 		# if we have a coverage map then weight the placements
@@ -64,10 +68,11 @@ sub pplacer {
 		if ( defined($Phylosift::Settings::coverage) && $Phylosift::Settings::coverage ne "" ) {
 			$covref = Phylosift::Summarize::read_coverage( file => $Phylosift::Settings::coverage );
 		}
-		unshift( @{$markRef}, 'concat' );    #adds the concatenation to the list of markers
+		unshift( @{$markRef}, 'concat' ) if -d "$Phylosift::Settings::marker_dir/concat.updated";    #adds the concatenation to the list of markers
 		my $long_rna_switch = -1;
 		my $short_rna_jplace;
 		for ( my $mI = 0; $mI < @{$markRef}; $mI++ ) {
+
 			my $marker = @$markRef[$mI];
 
 			# the PMPROK markers are contained in the concat above
@@ -108,12 +113,23 @@ sub pplacer {
 					`$merge_cl`;
 					unlink($place_file);
 					unlink($short_rna_jplace);
+
+				}
+				if ( -e $dest_jplace ) {
+					debug "Creating jnlp for RNA marker $marker\n";
+					my $sample_jplace = $Phylosift::Settings::file_dir."/".$self->{"fileName"}.".$marker.jplace";
+
+					`cp $dest_jplace $sample_jplace` unless -f $sample_jplace;
+					my $sample_fat_xml = $Phylosift::Settings::file_dir."/".$self->{"fileName"}.".$marker.xml";
+					`$Phylosift::Settings::guppy fat -o $sample_fat_xml $sample_jplace` if -f $sample_jplace;
+					Phylosift::HTMLReport::add_jnlp( self => $self, marker => "$marker", OUTPUT => $self->{HTML}, xml => $sample_fat_xml );
+					`rm $sample_jplace`;
 				}
 			}
 		}
 	}
-	Phylosift::Utilities::end_step( self => $self, chunk => $chunk, step => "Place");
-	Phylosift::Utilities::write_step_completion_to_run_info( self => $self, chunk => $chunk, step => "Place") unless $completed_chunk;
+	Phylosift::Utilities::end_step( self => $self, chunk => $chunk, step => "Place" );
+	Phylosift::Utilities::write_step_completion_to_run_info( self => $self, chunk => $chunk, step => "Place" ) unless $completed_chunk;
 	if ( defined($chunk) && $self->{"mode"} eq "all" ) {
 		Phylosift::Utilities::end_timer( name => "runPplacer" );
 		Phylosift::Utilities::start_timer( name => "runSummarize" );
@@ -179,7 +195,7 @@ sub set_tip_distance {
 }
 
 sub find_codon_reads {
-	my %args       = @_;
+	my %args = @_;
 	my $place_file = $args{place_file} || miss("place_file");
 
 	debug "codon read jplace\n";
@@ -230,10 +246,10 @@ sub find_codon_reads {
 		my %sub_prob;
 		my $avg_dist = 0;
 		for ( my $j = 0; $j < @{ $read->{p} }; $j++ ) {
-			my $edge    = $read->{p}->[$j]->[0];
-			my $distal  = $read->{p}->[$j]->[3];
+			my $edge    = $read->{p}->[$j]->[1];
+			my $distal  = $read->{p}->[$j]->[0];
 			my $pendant = $read->{p}->[$j]->[4];
-			my $lwr     = $read->{p}->[$j]->[1];
+			my $lwr     = $read->{p}->[$j]->[2];
 
 			my $td = get_tip_distance( edge => $edge );
 			$avg_dist += ( $td + $pendant + $distal ) * $lwr;
@@ -275,6 +291,9 @@ sub make_codon_placements {
 	my $subreads = find_codon_reads( place_file => $place_file );
 	debug "Found ".scalar( keys( %{$subreads} ) )." codon placeable reads\n";
 
+	# check whether any reads can be placed on codon trees
+	return if ( scalar( keys( %{$subreads} ) ) == 0 );
+
 	# convert to groups
 	my %groups;
 	foreach my $read ( keys %$subreads ) {
@@ -313,6 +332,7 @@ sub place_reads {
 	my $short_rna      = $args{short_rna} || 0;
 	my $marker_package = Phylosift::Utilities::get_marker_package( self => $self, marker => $marker, dna => $dna );
 
+	#debug "Place reads package $marker_package\n";
 	unless ( -d $marker_package ) {
 
 		# try not updated
@@ -322,11 +342,14 @@ sub place_reads {
 			$Phylosift::Settings::updated = 1;
 		}
 		unless ( -d $marker_package ) {
-			warn("Marker: $marker\nPackage: $marker_package\nPackage does not exist\nPlacement without a marker package is no longer supported");
+			warn(
+				"Marker: $marker\nPackage: $marker_package\nPackage does not exist\nPlacement without a marker package is no longer supported.\n Skipping $marker.\n"
+			);
 			return;
 		}
 	}
 
+	#debug "Place reads CHECK package $marker_package\n";
 	my $options = $marker eq "concat" ? "--groups $Phylosift::Settings::pplacer_groups" : "";
 	$options .= " --mmap-file abracadabra "
 	  if ( ( $marker =~ /18s/ || $marker =~ /16s/ || $marker eq "concat" ) && Phylosift::Utilities::get_available_memory() < 8000000 );
@@ -338,12 +361,12 @@ sub place_reads {
 	   "$Phylosift::Settings::pplacer $options -o $jplace --verbosity $Phylosift::Settings::pplacer_verbosity -j "
 	  .$Phylosift::Settings::threads
 	  ." -c $marker_package \"$reads\"";
-	debug "Running $pp\n";
-	system($pp);
+	debug "Running $pp\n" if -e "$marker_package";
+	system($pp) if -e "$marker_package";
 	unlink("$self->{\"treeDir\"}/abracadabra") if $options =~ /abracadabra/;    # remove the mmap file created by pplacer
 
 	debug "no output in $jplace\n" unless -e $jplace;
-	return                         unless -e $jplace;
+	return unless -e $jplace;
 
 	# remove placements on very long branches, they are unreliable due to LBA artifacts.
 	filter_placements( place_file => $jplace );
@@ -363,30 +386,31 @@ sub place_reads {
 		`cp $sample_jplace_naming $sample_jplace` unless -f $sample_jplace;
 		my $sample_fat_xml = $Phylosift::Settings::file_dir."/".$self->{"fileName"}.".xml";
 		`$Phylosift::Settings::guppy fat -o $sample_fat_xml $sample_jplace` if -f $sample_jplace;
-		my $html_report = $Phylosift::Settings::file_dir."/".$self->{"fileName"}.".html";
-		$self->{HTML} = Phylosift::HTMLReport::begin_report( self => $self, file => $html_report );
+
+		#my $html_report = $Phylosift::Settings::file_dir."/".$self->{"fileName"}.".html";
+		#$self->{HTML} = Phylosift::HTMLReport::begin_report( self => $self, file => $html_report );
 		Phylosift::HTMLReport::add_jnlp( self => $self, marker => "concat", OUTPUT => $self->{HTML}, xml => $sample_fat_xml );
 		`rm $sample_jplace_naming`;
 	}
-
 	if (    $self->{"dna"}
 		 && !$dna
 		 && $Phylosift::Settings::updated
-		 && Phylosift::Utilities::is_protein_marker( marker => $marker ))
+		 && Phylosift::Utilities::is_protein_marker( marker => $marker ) )
 	{
+
 		debug "Placing on codon markers: $marker\n";
 		make_codon_placements( self => $self, marker => $marker, chunk => $chunk, place_file => $jplace )
 		  if -e Phylosift::Utilities::get_marker_package( self => $self, marker => $marker, dna => $dna );
 	}
 
 	unless ($Phylosift::Settings::simple) {
-
-		# skip this if a simple summary if desired since it's slow.
+		## skip this if a simple summary if desired since it's slow.
 		debug "Naming taxa in marker $marker\n";
 
 		# read the tree edge to taxon map for this marker
 		my $markermapfile = Phylosift::Utilities::get_marker_taxon_map( self => $self, marker => $marker, dna => $dna );
-		return $jplace unless -e $markermapfile;        # can't summarize if there ain't no mappin'!
+		debug "Trying to use $markermapfile \n";
+		return $jplace unless -e $markermapfile;    # can't summarize if there ain't no mappin'!
 		my $taxonmap = Phylosift::Summarize::read_taxonmap( file => $markermapfile );
 
 		# rename nodes
@@ -484,7 +508,7 @@ sub directoryPrepAndClean {
 
 	#create a directory for the Reads file being processed.
 	`mkdir "$Phylosift::Settings::file_dir"` unless ( -e $Phylosift::Settings::file_dir );
-	`mkdir "$self->{"treeDir"}"`             unless ( -e $self->{"treeDir"} );
+	`mkdir "$self->{"treeDir"}"` unless ( -e $self->{"treeDir"} );
 }
 
 =head1 SUBROUTINES/METHODS
@@ -500,6 +524,7 @@ sub read_name_map {
 	my $marker = $args{marker} || miss("marker");
 	return \%namemap if %namemap;
 	my $id_file = Phylosift::Utilities::get_gene_id_file( marker => $marker );
+	debug "Trying to use id_file $id_file in read_name_map\n";
 	return unless -e $id_file;
 	my $NAMETABLE = ps_open($id_file);
 	while ( my $line = <$NAMETABLE> ) {
@@ -517,11 +542,14 @@ sub name_taxa_in_jplace {
 	my $output   = $args{output} || miss("output");
 	my $marker   = $args{marker} || miss("marker");
 	my $taxonmap = $args{taxonmap} || miss("taxonmap");
+	debug "Naming taxa in name_taxa_in_jplace for $marker\n";
 
 	# read in the taxon name map
 	my $namemap = read_name_map( marker => $marker );
-	return unless defined($namemap);
+
+	#return unless defined($namemap);
 	Phylosift::Summarize::read_ncbi_taxon_name_map();
+	debug "Done reading namemap\n";
 
 	# parse the tree file to get leaf node names
 	# replace leaf node names with taxon labels
@@ -529,7 +557,7 @@ sub name_taxa_in_jplace {
 	my @treedata   = <$JPLACEFILE>;
 	close $JPLACEFILE;
 
-	my $json_data   = decode_json( join( "", @treedata ) );
+	my $json_data = decode_json( join( "", @treedata ) );
 	my $tree_string = $json_data->{tree};
 
 	# get rid of the leaf numbers and some other mumbo jumbo
@@ -547,9 +575,12 @@ sub name_taxa_in_jplace {
 		$name =~ s/(\{\d+?\})//g;
 		my $branch_id = $1;
 		if ( defined( $namemap->{$name} ) ) {
-			my $taxon_id  = $namemap->{$name};
-			my @data      = Phylosift::Summarize::get_taxon_info( taxon => $taxon_id );
+			my $taxon_id = $namemap->{$name};
+			next if $taxon_id eq "" || $taxon_id eq "0";
+			my @data = Phylosift::Summarize::get_taxon_info( taxon => $taxon_id );
 			my $ncbi_name = Phylosift::Summarize::tree_name( name => $data[0] );
+			## if the name was not found, initialize it to empty
+			$ncbi_name = "" unless defined $ncbi_name;
 			$node->set_name( $ncbi_name."[$taxon_id]".$branch_id );
 			next;
 		}

@@ -18,7 +18,7 @@ use IO::File;
 use File::Basename;
 use Carp;
 
-use version; our $VERSION = version->declare("v1.0.0_01");
+our $VERSION = "v1.0.0_02";
 
 =head1 NAME
 
@@ -62,39 +62,45 @@ sub begin_report {
  <body>
   <img id="hiddenImage" src="img/hidden.png" style="display:none"/>
   <noscript>Javascript must be enabled to view this page.</noscript>
-  <div style="display:none"></div><div>	
+  <div style=\"position:absolute;bottom:0;\">\n
 
 EOF
 	return $OUTPUT;
 }
 
 sub add_jnlp {
-	my %args   = @_;
-	my $self   = $args{self} || miss("self");
-	my $marker = $args{marker} || miss("marker");
-	my $OUTPUT = $args{OUTPUT} || miss("OUTPUT");
-	my $xml    = $args{xml} || miss("xml");
-	my $jnlp   = $Phylosift::Settings::file_dir."/".$self->{"fileName"}.".jnlp";
+	my %args               = @_;
+	my $self               = $args{self} || miss("self");
+	my $marker             = $args{marker} || miss("marker");
+	my $OUTPUT             = $args{OUTPUT} || miss("OUTPUT");
+	my $xml                = $args{xml} || miss("xml");
+	my $skip_jnlp_writeout = $args{html_only};
+	$marker .= '.';
+	$marker = '' if $marker eq "concat";
+	my $jnlp     = $Phylosift::Settings::file_dir."/".$self->{"fileName"}.".$marker"."jnlp";
+	my $xml_name = basename($xml);
+
 	print $OUTPUT <<EOF;
-<a href="file://$jnlp">View phylogenetic placements</a>
+<script>
+var loc = window.location.pathname;
+var dir = loc.substring(0, loc.lastIndexOf('/') + 1);
+document.write('View phylogenetic placements for <a href="http://edhar.genomecenter.ucdavis.edu/cgi-bin/forester.jnlp?url='+dir+'$xml_name">marker $marker</a><br>');
+</script>
 EOF
-	write_jnlp( self => $self, marker => $marker, jnlp => $jnlp, xml => $xml );
+	write_jnlp( self => $self, marker => $marker, jnlp => $jnlp, xml => $xml ) unless $skip_jnlp_writeout;
 }
 
 sub write_jnlp {
-	my %args     = @_;
-	my $self     = $args{self} || miss("self");
-	my $marker   = $args{marker} || miss("marker");
-	my $xml      = $args{xml} || miss("xml");
-	my $jnlp     = $args{jnlp};
-	my $JOUT     = ps_open(">$jnlp");
-	my $forester = abs_path($0);
-	$forester = dirname($forester)."/forester.jar";
-	my $jnlp_base = dirname($jnlp);
-	my $jnlp_name = basename($jnlp);
+	my %args   = @_;
+	my $self   = $args{self} || miss("self");
+	my $marker = $args{marker} || miss("marker");
+	my $xml    = $args{xml} || miss("xml");
+	my $jnlp   = $args{jnlp};
+	my $JOUT   = ps_open(">$jnlp");
+	$xml = basename($xml);
 	print $JOUT <<EOF;
 <?xml version="1.0" encoding="UTF-8"?>
-<jnlp spec="1.5+" codebase="$jnlp_base" href="$jnlp_name">
+<jnlp spec="1.5+" codebase="http://edhar.genomecenter.ucdavis.edu/~koadman/phylosift/forester/">
     <information>
         <title>Archaeopteryx tree viewer</title>
         <vendor>Christian Zmasek, repackaged by Aaron Darling</vendor>
@@ -105,7 +111,7 @@ sub write_jnlp {
     </security>
     <resources>
         <j2se version="1.5+" href="http://java.sun.com/products/autodl/j2se" java-vm-args="-Xmx300m"/>
-        <jar href="$forester" main="true" />
+        <jar href="http://edhar.genomecenter.ucdavis.edu/~koadman/phylosift/forester/forester.jar" main="true" />
     </resources>
     <application-desc main-class="org.forester.archaeopteryx.Archaeopteryx">
 		<argument>$xml</argument>
@@ -127,7 +133,7 @@ sub add_krona {
 	my $KRONA_THRESHOLD = $Phylosift::Settings::krona_threshold;
 	%ncbi_summary = ();
 	%ncbi_summary = %$summary;
-
+	print $OUTPUT "</div><div style=\"display:none\">\n<br>";
 	$xml = new XML::Writer( OUTPUT => $OUTPUT );
 	$xml->startTag( "krona", "collapse" => "false", "key" => "true" );
 	$xml->startTag( "attributes", "magnitude" => "abundance" );
@@ -140,7 +146,6 @@ sub add_krona {
 	$xml->characters( $self->{"readsFile"} );
 	$xml->endTag("dataset");
 	$xml->endTag("datasets");
-
 	debug "parse ncbi\n";
 
 	# FIXME: work with other taxonomy trees
@@ -195,14 +200,14 @@ sub add_krona {
 
 	$xml->endTag("krona");
 	$xml->end();
-
+	print $OUTPUT "\n</div><br>";
 }
 
 sub add_run_info() {
 	my %args   = @_;
 	my $self   = $args{self} || miss("self");
 	my $OUTPUT = $args{OUTPUT};
-	print $OUTPUT "\n</div><div style=\"position:absolute;bottom:0;\">\n";
+	print $OUTPUT "<div style=\"position:absolute;bottom:0;\">\n";
 	Phylosift::Summarize::print_run_info( self => $self, OUTPUT => $OUTPUT, newline => "<br/>\n" );
 	print $OUTPUT "</div></body></html>\n";
 }

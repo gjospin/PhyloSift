@@ -9,11 +9,10 @@ use Phylosift::Settings;
 use Phylosift::Utilities;
 use Phylosift::MarkerBuild;
 use Bio::Phylo::IO qw(parse unparse);
-use LWP::Simple;
 use FindBin;
 use Scalar::Util qw(looks_like_number);
 
-use version; our $VERSION = version->declare("v1.0.0_01");
+our $VERSION = "v1.0.0_02";
 
 =head1 NAME
 
@@ -46,20 +45,20 @@ sub get_ebi_genomes {
 	my $directory = $args{directory} || miss("directory");
 	chdir($directory);
 
-	#	get_ebi_from_list( url => "http://www.ebi.ac.uk/genomes/organelle.details.txt" );
-	#	get_ebi_from_list( url => "http://www.ebi.ac.uk/genomes/virus.details.txt" );
-	#	get_ebi_from_list( url => "http://www.ebi.ac.uk/genomes/phage.details.txt" );
-	#	get_ebi_from_list( url => "http://www.ebi.ac.uk/genomes/archaea.details.txt" );
-	#	get_ebi_from_list( url => "http://www.ebi.ac.uk/genomes/archaealvirus.details.txt" );
-	#	get_ebi_from_list( url => "http://www.ebi.ac.uk/genomes/bacteria.details.txt" );
+	get_ebi_from_list( url => "http://www.ebi.ac.uk/genomes/organelle.details.txt" );
+	get_ebi_from_list( url => "http://www.ebi.ac.uk/genomes/virus.details.txt" );
+	get_ebi_from_list( url => "http://www.ebi.ac.uk/genomes/phage.details.txt" );
+	get_ebi_from_list( url => "http://www.ebi.ac.uk/genomes/archaea.details.txt" );
+	get_ebi_from_list( url => "http://www.ebi.ac.uk/genomes/archaealvirus.details.txt" );
+	get_ebi_from_list( url => "http://www.ebi.ac.uk/genomes/bacteria.details.txt" );
 	get_ebi_from_list( url => "http://www.ebi.ac.uk/genomes/eukaryota.details.txt" );
 }
 
 sub get_ebi_from_list {
 	my %args = @_;
 	my $list_url = $args{url} || miss("url");    # URL to EBI's table of genome characteristics
-	`wget $list_url -O "list.txt"`;
-	my $DETAILS = ps_open("list.txt");
+	`wget $list_url -O "ebi.list.txt"`;
+	my $DETAILS = ps_open("ebi.list.txt");
 	my $line    = <$DETAILS>;
 	my %taxa_details;    # {$taxon_id}{$accession} = [$date, $version, $size]
 	while ( $line = <$DETAILS> ) {
@@ -71,6 +70,12 @@ sub get_ebi_from_list {
 		next if $description =~ /hloroplas/;     # skip chloroplast
 		$taxa_details{$taxid}{$acc} = { dater => $date, version => $version };
 	}
+	eval {
+		require LWP::Simple;
+		LWP::Simple->import();
+	};
+	my $result = $@;
+	die "Unable to load LWP::Simple" unless $result;
 	foreach my $taxid ( keys(%taxa_details) ) {
 
 		# add up the accession sizes
@@ -137,7 +142,7 @@ sub get_ebi_from_list {
 		#			carp "Error processing $outfile.embl\n";
 		#		}
 	}
-	`rm "list.txt"`;
+	`rm "ebi.list.txt"`;
 }
 
 sub get_taxid_from_gbk {
@@ -160,6 +165,7 @@ sub get_ncbi_finished_genomes {
 	my %args = @_;
 	my $directory = $args{directory} || miss("directory");
 	`mkdir -p "$directory"`;
+	debug "CHANIGNG DIR : $directory\n";
 
 	# First download all finished bacterial genomes
 	# then for each genome, concatenate all replicons into a FastA file
@@ -167,13 +173,13 @@ sub get_ncbi_finished_genomes {
 	chdir($directory);
 	my $ncbi_wget_cmd = "wget -m --continue --timeout=20 --accept=gbk ftp://ftp.ncbi.nih.gov/genomes/Bacteria";
 
-	#	`$ncbi_wget_cmd`;
+	#		`$ncbi_wget_cmd`;
 	my $FINDER = ps_open("find ftp.ncbi.nih.gov/genomes/Bacteria -type d |");
 	while ( my $line = <$FINDER> ) {
 		chomp $line;
-		$line =~ /\/Bacteria\/(.+)/;
+		next unless $line =~ /\/Bacteria\/(.+)/;    #skipping if there is nothing after Bacteria
 		my $orgname = $1;
-		next if ( $orgname =~ /\// );    # could be a malformed genbank directory
+		next if ( $orgname =~ /\// );               # could be a malformed genbank directory
 		next unless length($1) > 1;
 		my $seq_out;
 		my $fasta_name;
@@ -181,7 +187,9 @@ sub get_ncbi_finished_genomes {
 
 		while ( my $gbk = <$LSSER> ) {
 			chomp $gbk;
+			debug "Looking at $gbk\n";
 			if ( !defined($fasta_name) ) {
+				debug "constructing fasta_name\n";
 				my $taxid = get_taxid_from_gbk( file => $gbk );
 				$fasta_name = "$orgname.$taxid.fasta";
 
@@ -193,9 +201,12 @@ sub get_ncbi_finished_genomes {
 				}
 				$seq_out = Phylosift::Utilities::open_SeqIO_object( file => ">$fasta_name", format => "FASTA" );
 			}
-			my $seq_in = Phylosift::Utilities::open_SeqIO_object( file => "$gbk" );
-			while ( my $inseq = $seq_in->next_seq ) {
-				$seq_out->write_seq($inseq);
+			if ( -s "$gbk" ) {
+				debug "Opening $gbk\n";
+				my $seq_in = Phylosift::Utilities::open_SeqIO_object( file => "$gbk", format => 'GENBANK' );
+				while ( my $inseq = $seq_in->next_seq ) {
+					$seq_out->write_seq($inseq);
+				}
 			}
 		}
 	}
@@ -212,12 +223,12 @@ sub get_ncbi_wgs_genomes {
 	chdir($directory);
 	my $ncbi_wget_cmd = "wget -m --continue --timeout=20 --limit-size=25000000 --accept=gbff.gz ftp://ftp.ncbi.nih.gov/genbank/wgs/";
 
-	#	`$ncbi_wget_cmd`;
+	`$ncbi_wget_cmd`;
 	my $FINDER = ps_open("find ftp.ncbi.nih.gov/genbank/wgs -name \"*.gz\" |");
 	while ( my $line = <$FINDER> ) {
 		next if $line =~ /\.mstr\.gbff\.gz/;
 		chomp $line;
-		`gunzip $line`;
+		`gunzip -f $line`;
 		$line =~ s/\.gz//g;
 		my $orgname = $1 if $line =~ /wgs\.(....)\./;
 		my $taxid = get_taxid_from_gbk( file => $line );
@@ -286,12 +297,12 @@ sub get_ncbi_draft_genomes {
 Sets default values for UpdateDB parameters
 
 =cut
-sub set_default_values{
-	Phylosift::Settings::set_default( parameter => \$Phylosift::Settings::MAX_SGE_JOBS,            value => 5000 );
-	Phylosift::Settings::set_default( parameter => \$Phylosift::Settings::WORKDIR_normal,            value => "/state/partition1/koadman/phylosift/" );
-	Phylosift::Settings::set_default( parameter => \$Phylosift::Settings::WORKDIR_fatnode,            value => "/data/scratch/koadman/phylosift/" );
-	
-	
+
+sub set_default_values {
+	Phylosift::Settings::set_default( parameter => \$Phylosift::Settings::MAX_SGE_JOBS,    value => 5000 );
+	Phylosift::Settings::set_default( parameter => \$Phylosift::Settings::WORKDIR_normal,  value => "/state/partition1/koadman/phylosift/" );
+	Phylosift::Settings::set_default( parameter => \$Phylosift::Settings::WORKDIR_fatnode, value => "/data/scratch/koadman/phylosift/" );
+
 }
 
 sub find_new_genomes {
@@ -324,9 +335,10 @@ sub qsub_updates {
 	my $files           = $args{files} || miss("files");
 	my $extended        = $args{extended} || 0;
 	my $params          = "";
-	$params = " --updated_markers=0 --extended " if $extended;
 
-	#$params = " --isolate --besthit " if !$extended;
+	#$params = " --updated_markers=0 --extended " if $extended;
+
+	$params = " --isolate --besthit " if !$extended;
 
 	# qsub a slew of phylosift jobs and have them report results to a local directory on this host for concatenation
 	my $hostname = `hostname`;
@@ -352,8 +364,8 @@ cd \$WORKDIR
 
 export PATH="\$PATH:$ps"
 $ps/phylosift search $params \$1
-$ps/phylosift align $params \$1
-$ps/phylosift name $params --isolate \$1
+$ps/phylosift align -f $params \$1
+$ps/phylosift name $params \$1
 rm -rf PS_temp/*/treeDir
 rm -rf PS_temp/*/blastDir
 rm -rf PS_temp/*/isolates.fasta
@@ -409,9 +421,16 @@ sub concat_marker_files {
 	$catline .= " ";
 	my $fasta = get_fasta_filename( marker => $marker, updated => 1 );
 	`cat $catline $cat_ch "$local_directory/$fasta" 2> /dev/null`;
-	$catline =~ s/updated\.fasta /codon\.updated\.fasta /g;
+
+	#print STDERR "\n\n\n\n\nnormal CATLINE\t $catline\n";
+	$catline =~ s/updated\.(\d+)\.fasta /codon\.updated\.$1\.fasta /g;
+
+	#print STDERR "\n\n\n\n\n\n\ncodon catline\t $catline\n";
+	#exit;
 	if ( Phylosift::Utilities::is_protein_marker( marker => $marker ) ) {
 		my $codon_fasta = get_fasta_filename( marker => $marker, updated => 1, dna => 1 );
+
+		#print "CODON cat line\n $catline\n";
 		`cat $catline $cat_ch "$local_directory/$codon_fasta" 2> /dev/null`;
 	}
 	unless ( $marker eq "concat" ) {
@@ -464,7 +483,7 @@ sub collate_markers {
 		# find all alignments with this marker
 		my @catfiles = ();
 		foreach my $file (@alldata) {
-			next unless $file =~ /(.+\.fasta)\/alignDir\/$marker.updated.fasta/;
+			next unless $file =~ /(.+\.fasta)\/alignDir\/$marker.updated.\d+.fasta/;
 			my $genome = $1;
 			my $taxon = $1 if $genome =~ /\.(\d+)\.fasta/;
 			next if ( defined($taxon) && defined( $ko_list{$taxon} ) );
@@ -593,7 +612,7 @@ sub update_ncbi_taxonomy {
 	unlink("$repository/ncbi/gencode.dmp");
 	unlink("$repository/ncbi/readme.txt");
 	system("cd $repository/; tar czf ncbi.tar.gz ncbi");
-	`cd $repository/markers ; rm taxdmp.zip ; taxit new_database`;
+	`cd $repository/markers ; rm taxdmp.zip ; taxit new_database `;
 }
 
 sub make_marker_taxon_map {

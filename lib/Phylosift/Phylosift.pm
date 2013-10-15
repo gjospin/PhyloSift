@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!/usr/bin/env perl
 package Phylosift::Phylosift;
 use 5.006;
 use strict;
@@ -8,6 +8,8 @@ use Bio::SeqIO;
 use Getopt::Long;
 use Cwd;
 use File::Basename;
+use File::NFSLock qw(uncache);
+use Fcntl qw(LOCK_EX LOCK_SH);
 use Carp;
 use Phylosift::Utilities qw(:all);
 use Phylosift::MarkerAlign;
@@ -21,7 +23,7 @@ use Phylosift::Comparison;
 use Phylosift::MarkerBuild;
 use Phylosift::Simulations;
 
-use version; our $VERSION = version->declare("v1.0.0_01");
+our $VERSION = "v1.0.0_02";
 
 =head2 new
 
@@ -78,15 +80,15 @@ sub initialize {
 	$self->{"treeDir"}  = $Phylosift::Settings::file_dir."/treeDir";
 	$self->{"dna"}      = 0;
 	%{ $self->{"read_names"} } = ();
-	$self->{"run_info"} = Phylosift::Utilities::load_run_info(self => $self) unless $self->{"mode"} eq 'all' && !$Phylosift::Settings::continue;
+	$self->{"run_info"} = Phylosift::Utilities::load_run_info( self => $self ) unless $self->{"mode"} eq 'all' && !$Phylosift::Settings::continue;
+
 	# process defaults again now that command-line params have been parsed,
 	# just in case any defaults depend on command-line settings
 	Phylosift::FastSearch::set_default_values( post => 1 );
 	Phylosift::MarkerAlign::set_default_values( post => 1 );
 	Phylosift::pplacer::set_default_values( post => 1 );
 	Phylosift::Summarize::set_default_values( post => 1 );
-	
-		
+
 	return $self;
 }
 
@@ -122,20 +124,10 @@ Perhaps a little code snippet.
     my $foo = Phylosift::Phylosift->new();
     ...
 
-=head1 EXPORT
-
-A list of functions that can be exported.  You can delete this section
-if you don't export anything, such as for a purely object-oriented module.
-
 =head1 SUBROUTINES/METHODS
 
 =head2 run
     
-    Args : $force - if used at hte same time as the all mode it removes the temp directory if it already exists
-           $custom - reads in marker names from a custom list. if "" then use all markers in the marker directory
-           $continue - if the mode != all and continue = 1 then finish the pipeline otherwise only execute the step specified
-           $isolateMode - allows sequences to hit multiple markers (used when running isolate genomes)
-
     Runs the PhyloSift pipeline according to the functions passed as arguments
 
 =cut
@@ -157,9 +149,13 @@ sub run {
 	Phylosift::Utilities::print_citations();
 	start_timer( name => "START" );
 
-	#read_phylosift_config( self => $self );
+	read_phylosift_config( self => $self );
 	run_program_check( self => $self );
 	Phylosift::Utilities::data_checks( self => $self );
+
+	#get shared lock for $marker_dir so nothing overrides the data while PS is running.
+	my $lock_shared_markers = File::NFSLock->new( $Phylosift::Settings::marker_dir, LOCK_SH );
+	my $lock_shared_ncbi    = File::NFSLock->new( $Phylosift::Settings::ncbi_dir,   LOCK_SH );
 	file_check( self => $self );
 	directory_prep( self => $self, force => $force, cont => $continue );
 
@@ -188,7 +184,8 @@ sub run {
 	} else {
 		run_later_stages( self => $self, cont => $continue, marker => \@markers );
 	}
-
+	$lock_shared_markers->unlock();
+	$lock_shared_ncbi->unlock();
 	Phylosift::Utilities::end_timer( name => "START" );
 }
 
@@ -218,6 +215,7 @@ sub run_later_stages {
 sub read_phylosift_config {
 	my %args          = @_;
 	my $custom_config = $Phylosift::Settings::configuration;
+	debug "Reading config file : $custom_config\n" if $custom_config;
 
 	# first get the install prefix of this script
 	my $scriptpath = dirname($0);
@@ -307,27 +305,18 @@ sub directory_prep {
 	my $force    = $args{force};
 	my $continue = $args{cont};
 	##remove the directory from a previous run
-	if ( $force && $self->{"mode"} eq 'all' ) {
-		debug( "deleting an old run\n", 0 );
-		debug "$Phylosift::Settings::file_dir\n";
-		`rm -rf "$Phylosift::Settings::file_dir"`;
-	} elsif ( -e $Phylosift::Settings::file_dir && $self->{"mode"} eq 'all' ) {
-		if ( !$continue ) {
-			croak(  "A previous run was found using the same file name aborting the current run\n"
-				   ."Either delete that run from "
-				   .$Phylosift::Settings::file_dir
-				   .", or force overwrite with the -f command-line option\n" );
-		} else {
-			debug "Found directory already existing, continuing a previous run\n";
-		}
+	if ( -e $Phylosift::Settings::file_dir && $self->{"mode"} eq 'all' ) {
+		Phylosift::Utilities::previous_run_handler( self => $self, dir => $Phylosift::Settings::file_dir, force => $force ) unless $continue;
+		debug "Found existing directory, continuing a previous run\n" if $continue;
 	}
-	
+
 	#create a directory for the Reads file being processed.
 	`mkdir -p "$Phylosift::Settings::file_dir"`
 	  unless ( -e $Phylosift::Settings::file_dir );
-	`mkdir -p "$self->{"blastDir"}"` unless ( -e $self->{"blastDir"} );
-	`mkdir -p "$self->{"alignDir"}"` unless ( -e $self->{"alignDir"} );
-	`mkdir -p "$self->{"treeDir"}"`  unless ( -e $self->{"treeDir"} );
+	debug "MODE : ".$self->{"mode"}."\n";
+	`mkdir -p "$self->{"blastDir"}"` if ( !-e $self->{"blastDir"} && $self->{"mode"} =~ /search|all/ );
+	`mkdir -p "$self->{"alignDir"}"` if ( !-e $self->{"alignDir"} && $self->{"mode"} =~ /align|all/ );
+	`mkdir -p "$self->{"treeDir"}"`  if ( !-e $self->{"treeDir"}  && $self->{"mode"} =~ /place|all/ );
 	return $self;
 }
 
