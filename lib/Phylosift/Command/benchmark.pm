@@ -25,6 +25,7 @@ sub options {
 			 [ "curve_path=s", "Path to write precision-recall curve data", { default => "./" } ],
 	);
 }
+
 sub validate {
 	my ( $self, $opt, $args ) = @_;
 

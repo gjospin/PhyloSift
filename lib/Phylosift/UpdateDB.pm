@@ -62,6 +62,7 @@ sub get_ebi_from_list {
 	my $line    = <$DETAILS>;
 	my %taxa_details;    # {$taxon_id}{$accession} = [$date, $version, $size]
 	while ( $line = <$DETAILS> ) {
+
 		# each line in the list file records a genome and some metadata
 		chomp $line;
 		my ( $acc, $version, $date, $taxid, $description ) = split( /\t/, $line );
@@ -70,11 +71,11 @@ sub get_ebi_from_list {
 		$taxa_details{$taxid}{$acc} = { dater => $date, version => $version };
 	}
 	eval {
-        require LWP::Simple;
-        LWP::Simple->import();
-    };
-    my $result          = $@;
-    die "Unable to load LWP::Simple" unless $result;
+		require LWP::Simple;
+		LWP::Simple->import();
+	};
+	my $result = $@;
+	die "Unable to load LWP::Simple" unless $result;
 	foreach my $taxid ( keys(%taxa_details) ) {
 
 		# add up the accession sizes
@@ -619,7 +620,7 @@ sub make_marker_taxon_map {
 	my $self      = $args{self} || miss("self");
 	my $markerdir = $args{marker_dir} || miss("marker_dir");
 
-	my $AAIDS          = ps_open( "$markerdir/".get_gene_id_file( dna => 0 ) );
+	my $AAIDS = ps_open( "$markerdir/".get_gene_id_file( dna => 0 ) );
 	my $MARKERTAXONMAP = ps_open(">$markerdir/marker_taxon_map.updated.txt");
 
 	while ( my $line = <$AAIDS> ) {
@@ -797,7 +798,7 @@ sub filter_short_and_unclassified_seqs_from_fasta {
 				#				print "TAXON : $taxon_id\n";
 				print $PRUNEDFASTA "$curhdr\n$curseq\n"
 				  if $known_pct > $min_pct
-				  && ( ( !is_unclassified( taxon_id => $taxon_id ) && !defined( $known{$curhdr} ) || $Phylosift::Settings::keep_paralogs ) );
+					  && ( ( !is_unclassified( taxon_id => $taxon_id ) && !defined( $known{$curhdr} ) || $Phylosift::Settings::keep_paralogs ) );
 				$known{$curhdr} = 1;
 				$curseq = "";
 			}
@@ -881,7 +882,7 @@ sub launch_marker_build {
 
 	my $marker_fasta = get_fasta_filename( marker => $marker, updated => 1, dna => $dna );
 	print STDERR "Couldnt find $marker_fasta\n" unless -e $marker_fasta;
-	return                                      unless -e $marker_fasta;
+	return unless -e $marker_fasta;
 	return if $marker =~ /^PMPROK/ || $marker =~ /^DNGNGWU/;    # skip these since they all go in the concat
 
 	my $qsub_args = $marker eq "concat" ? " -l mem_free=20G -v OMP_NUM_THREADS=6 " : "";
@@ -1025,7 +1026,7 @@ sub make_constrained_tree {
 		#
 		# now infer a target tree that respects protein tree constraints
 		my $target_constrained_tree = get_fasttree_tre_filename( marker => $target_marker, dna => 0, updated => 1, pruned => $target_pruned ).".constrained";
-		my $target_constrained_log  = get_fasttree_log_filename( marker => $target_marker, dna => 0, updated => 1, pruned => $target_pruned ).".constrained";
+		my $target_constrained_log = get_fasttree_log_filename( marker => $target_marker, dna => 0, updated => 1, pruned => $target_pruned ).".constrained";
 
 		my $data_type_args = "";
 		$data_type_args = "-nt -gtr" unless ( Phylosift::Utilities::is_protein_marker( marker => $target_marker ) );
@@ -1066,7 +1067,7 @@ Create protein & rna trees with compatible topologies
 =cut
 
 sub join_trees {
-	my %args       = @_;
+	my %args = @_;
 	my $marker_dir = $args{marker_dir} || miss("marker_dir");
 
 # first apply protein constraints to 16s

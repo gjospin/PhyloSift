@@ -442,7 +442,9 @@ sub marker_update_check {
 					warn "Warning: unable to connect to marker update server, please check your internet connection\n" if $skip_lock;
 				} elsif ( $modified_time > $m_timestamp ) {
 					debug "TEST REMOTE:".localtime($modified_time)."\n" if $skip_lock;
-					warn "A newer version of the marker data exists on the server. Move or remove the current marker DB at $marker_path to trigger a download.\n"     if $skip_lock;
+					warn
+					  "A newer version of the marker data exists on the server. Move or remove the current marker DB at $marker_path to trigger a download.\n"
+					  if $skip_lock;
 					$get_new_markers = 0;
 				} elsif ( $url ne $m_url ) {
 					warn "The marker update URL differs from the local marker DB copy, updating" if $skip_lock;
@@ -477,8 +479,7 @@ sub marker_update_check {
 												dir       => $marker_path,
 												url       => $url,
 												skip_lock => 1
-		  )
-		  unless $skip_lock;
+		) unless $skip_lock;
 		warn "Downloading from $url\n" if $skip_lock;
 		download_data( url => $url, destination => $marker_path ) if $skip_lock;
 		return $get_new_markers if $skip_lock;
@@ -563,10 +564,10 @@ sub data_checks {
 
 	#
 	# now check for the NCBI taxonomy data
-	Phylosift::Settings::set_default(    parameter => \$Phylosift::Settings::ncbi_dir,
+	Phylosift::Settings::set_default( parameter => \$Phylosift::Settings::ncbi_dir,
 									  value     => get_data_path( data_name => "ncbi", data_path => $Phylosift::Settings::ncbi_path ) );
 	debug "Skipping check for NCBI updates on server\n" if $Phylosift::Settings::disable_update_check;
-	return $indexed_markers                             if $Phylosift::Settings::disable_update_check;
+	return $indexed_markers if $Phylosift::Settings::disable_update_check;
 	ncbi_update_check(
 					   self => $self,
 					   dir  => $Phylosift::Settings::ncbi_dir,
@@ -595,15 +596,16 @@ sub ncbi_update_check {
 	eval {
 		require LWP::Simple;
 		LWP::Simple->import();
-		$have_lwp = 1;
+		$have_lwp   = 1;
 		@lwp_result = LWP::Simple::head("$url");
-	} or do {
-	};
+	  }
+	  or do {
+	  };
 	my ( $content_type, $document_length, $modified_time, $expires, $server ) = @lwp_result;
 
 	if ( -x $ncbi_dir ) {
 		my $ncbi_time = ( stat($ncbi_dir) )[9];
-		if ( !defined($modified_time)) {
+		if ( !defined($modified_time) ) {
 			warn "Warning: unable to connect to NCBI taxonomy update server, please check your internet connection\n" if $skip_lock && $have_lwp;
 		} elsif ( $modified_time > $ncbi_time ) {
 			warn "Found newer version of NCBI taxonomy data!\n" if $skip_lock;
@@ -642,7 +644,7 @@ sub previous_run_handler {
 	my %args  = @_;
 	my $self  = $args{self} || miss("PS Ojbect in Utilities::previous_run_handler");
 	my $force = $args{force};
-	my $dir = $args{dir} || miss("dir in Utilities::previous_run_handler");
+	my $dir   = $args{dir} || miss("dir in Utilities::previous_run_handler");
 	if ($force) {
 		debug( "deleting an old run\n", 0 );
 		debug "$dir\n";
@@ -882,7 +884,7 @@ Determines the filesystem path to a marker. Searches for the marker in the base 
 =cut
 
 sub get_marker_path {
-	my %args   = @_;
+	my %args = @_;
 	my $marker = $args{marker} || miss("marker");
 
 	# check for old-style marker first
@@ -1107,7 +1109,7 @@ sub get_gene_id_file {
 	my $deco        = "$marker_path/$decorated/$decorated.gene_map";
 	return $deco if -e $deco;
 	return "$marker_path/$marker/$bname.gene_map" if $Phylosift::Settings::extended && -e "$marker_path/$marker/$bname.gene_map";
-	return "$marker_path/$bname/$bname.gene_map"                 if -e "$marker_path/$bname/$bname.gene_map";
+	return "$marker_path/$bname/$bname.gene_map" if -e "$marker_path/$bname/$bname.gene_map";
 	return "$Phylosift::Settings::marker_dir/gene_ids.codon.txt" if $dna;
 	return "$Phylosift::Settings::marker_dir/gene_ids.aa.txt";
 }
@@ -1804,10 +1806,10 @@ sub open_SeqIO_object {
 		$format = $args{format};
 	}
 	if ( $args{file} =~ /\.gz$/ ) {
-		$io_object = Bio::SeqIO->new(       -file   => "gzip -cd \"$args{file}\" |",
+		$io_object = Bio::SeqIO->new( -file   => "gzip -cd \"$args{file}\" |",
 									  -format => $format );
 	} elsif ( $args{file} =~ /\.bz2$/ ) {
-		$io_object = Bio::SeqIO->new(       -file   => "bzcat \"$args{file}\" |",
+		$io_object = Bio::SeqIO->new( -file   => "bzcat \"$args{file}\" |",
 									  -format => $format );
 	} else {
 		$io_object = Bio::SeqIO->new( -file => $args{file}, -format => $format );
@@ -1965,8 +1967,7 @@ sub index_marker_db {
 										   self    => $args{self},
 										   marker  => $marker,
 										   updated => 0
-		  )
-		  unless -e $marker_rep;
+		) unless -e $marker_rep;
 
 		#debug "marker $marker is protein\n"
 		#if is_protein_marker( marker => $marker );
@@ -2165,11 +2166,13 @@ sub get_sequence_input_type {
 			$sequence = 0;
 			$type{format} = "fastq" if $type{format} eq "unknown";
 		} elsif ( $type{format} eq "fastq" && !$sequence ) {
+
 			# check whether qualities are phred33 or phred64
 			for my $q ( split( //, $line ) ) {
 				$minq = ord($q) if ord($q) < $minq;
 			}
 		} elsif ($sequence) {
+
 			#$sequence =~ s/[-\.]//g;    #removing gaps from the sequences
 			$line =~ s/[-\.]//g;
 			$counter  += length($line) - 1;

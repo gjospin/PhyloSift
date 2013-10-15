@@ -32,7 +32,6 @@ if you don't export anything, such as for a purely object-oriented module.
 =head2 build_marker
 
 =cut
-
 sub build_marker {
 	my %args        = @_;
 	my $opt         = $args{opt};
@@ -44,16 +43,17 @@ sub build_marker {
 	my $mapping     = $args{mapping};                          #not a required argument
 	my $destination = $args{destination};
 	my ( $core, $path, $ext ) = fileparse( $aln_file, qr/\.[^.]*$/ );
-	my $marker_dir = Phylosift::Utilities::get_data_path(    data_name => "markers",
+	my $marker_dir = Phylosift::Utilities::get_data_path( data_name => "markers",
 														  data_path => $Phylosift::Settings::marker_path );
 
 	$destination = $marker_dir unless defined($destination);
-	$target_dir  = $destination."/$core";
+	$target_dir = $destination."/$core";
 
 	# check that taxit is available
 	my $taxit = Phylosift::Utilities::get_program_path( prog_name => "taxit" );
 	if ( $taxit eq "" ) {
-		croak(    "Error: you must install pplacer's taxtastic and its dependencies prior to building markers. See https://github.com/fhcrc/taxtastic for more information.\n"
+		croak(
+			"Error: you must install pplacer's taxtastic and its dependencies prior to building markers. See https://github.com/fhcrc/taxtastic for more information.\n"
 		);
 	}
 
@@ -65,7 +65,8 @@ sub build_marker {
 
 	#$target_dir = $Phylosift::Settings::file_dir;
 	if ( -e $target_dir && !$force ) {
-		croak(    "Marker already exists in $destination. Delete Marker and restart the marker build.\nUse -f to force an override of the previous marker.\nUsage:\n>phylosift build_marker -f aln_file cutoff\n"
+		croak(
+			"Marker already exists in $destination. Delete Marker and restart the marker build.\nUse -f to force an override of the previous marker.\nUsage:\n>phylosift build_marker -f aln_file cutoff\n"
 		);
 	} else {
 		`rm -rf "$target_dir"` if $force;
@@ -124,8 +125,7 @@ sub build_marker {
 												   tree             => $fasttree_file,
 												   target_directory => $target_dir,
 												   reps_pd          => $reps_pd
-		  )
-		  unless -e "$target_dir/$core.pda";
+		) unless -e "$target_dir/$core.pda";
 
 		# need to read the representatives picked by PDA and generate a representative fasta file
 		my $rep_fasta = get_fasta_from_pda_representatives(
@@ -134,8 +134,7 @@ sub build_marker {
 															fasta_reference => $fasta_file,
 															id_map          => \%id_map,
 															core            => $core,
-		  )
-		  if -e $fasta_file;
+		) if -e $fasta_file;
 	} else {
 
 		#use all the sequences for representatives
@@ -151,7 +150,8 @@ sub build_marker {
 		my $id_taxon_map  = $target_dir."/".$core.".gene_map";
 		my $ncbi_sub_tree = $target_dir."/".$core.".subtree";
 		debug("Using the mapping stuff\n");
-		debug(    "taxit create -a \"Guillaume Jospin\" -d \"simple package for reconciliation only\" -l temp -f $clean_aln -t $fasttree_file -s $tree_log_file -P $target_dir/temp_ref"
+		debug(
+			"taxit create -a \"Guillaume Jospin\" -d \"simple package for reconciliation only\" -l temp -f $clean_aln -t $fasttree_file -s $tree_log_file -P $target_dir/temp_ref"
 		);
 
 		#make dummy placement reference package
@@ -182,11 +182,12 @@ sub build_marker {
 
 		`rm -rf "$tmpread_file" "$mangled" "$tmp_jplace" "$ncbi_sub_tree"  "$target_dir/temp_ref"`;
 	}
+
 	#use taxit to create a new reference package required for running PhyloSift
 	#needed are : 1 alignment file, 1 representatives fasta file, 1 hmm profile, 1 tree file, 1 log tree file.
 	my $taxdb_opts = "";    # add taxit-friendly taxon labels if available
 	                        #$taxdb_opts = "-i $target_dir/seq_ids.csv -T $target_dir/taxa.csv" if -e "$target_dir/taxa.csv" && -s "$target_dir/taxa.csv" > 0;
-	my $taxit_cmd  =
+	my $taxit_cmd =
 	  "cd \"$target_dir\";taxit create -c -d \"Creating a reference package for PhyloSift for the $core marker\" -l \"$core\" -f \"$clean_aln\" -t \"$fasttree_file\" $taxdb_opts -s \"$tree_log_file\" -P \"$core\"";
 	debug "Running $taxit_cmd\n";
 	`$taxit_cmd`;
@@ -700,9 +701,9 @@ sub get_fasta_from_pda_representatives {
 	my @lect = keys(%selected_taxa);
 
 	#reading the reference sequences and printing the selected representatives using BioPerl
-	my $reference_seqs = Phylosift::Utilities::open_SeqIO_object(    file   => $reference_fasta,
+	my $reference_seqs = Phylosift::Utilities::open_SeqIO_object( file   => $reference_fasta,
 																  format => "FASTA" );
-	my $representatives_fasta = Phylosift::Utilities::open_SeqIO_object(    file   => ">$target_dir/$core.rep",
+	my $representatives_fasta = Phylosift::Utilities::open_SeqIO_object( file   => ">$target_dir/$core.rep",
 																		 format => "FASTA" );
 	while ( my $ref_seq = $reference_seqs->next_seq ) {
 		if ( exists $selected_taxa{ $id_map{ $ref_seq->id } } ) {
@@ -810,10 +811,10 @@ sub martin_mask {
 	$self->{inputfile}  = $input_file;
 	$self->{cutoff}     = $cutoff;
 	$self->{gap_cutoff} = $opt_g;
-	$self = &read_matrix( self     => $self );
-	$self = &read_alignment( self  => $self );
+	$self = &read_matrix( self => $self );
+	$self = &read_alignment( self => $self );
 	$self = &calculate_score( self => $self );
-	$self = &mask( self            => $self );
+	$self = &mask( self => $self );
 	my $return_mask = &output( self => $self );
 	return $return_mask;
 }
@@ -1001,8 +1002,13 @@ sub mask {
 			$local_score{$i} = $column_score{$i};
 		} else {
 			$local_score{$i} =
-			  ( $column_score{ $i - 3 } + 2 * $column_score{ $i - 2 } + 3 * $column_score{ $i - 1 } + 4 * $column_score{$i} + 3 * $column_score{ $i + 1 } + 2 *
-				$column_score{ $i + 2 } + 1 * $column_score{ $i + 3 } ) / 16;
+			  ( $column_score{ $i - 3 } +
+				2 * $column_score{ $i - 2 } +
+				3 * $column_score{ $i - 1 } +
+				4 * $column_score{$i} +
+				3 * $column_score{ $i + 1 } +
+				2 * $column_score{ $i + 2 } +
+				1 * $column_score{ $i + 3 } ) / 16;
 		}
 		if ( $column_score{$i} == 0 ) { $local_score{$i} = 0; }
 		elsif ( $local_score{$i} / $column_score{$i} > 3 ) {

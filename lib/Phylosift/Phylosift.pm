@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!/usr/bin/env perl
 package Phylosift::Phylosift;
 use 5.006;
 use strict;
@@ -305,18 +305,18 @@ sub directory_prep {
 	my $force    = $args{force};
 	my $continue = $args{cont};
 	##remove the directory from a previous run
-	if( -e $Phylosift::Settings::file_dir && $self->{"mode"} eq 'all'){
-		Phylosift::Utilities::previous_run_handler(self=>$self,dir=>$Phylosift::Settings::file_dir, force=>$force) unless $continue;
+	if ( -e $Phylosift::Settings::file_dir && $self->{"mode"} eq 'all' ) {
+		Phylosift::Utilities::previous_run_handler( self => $self, dir => $Phylosift::Settings::file_dir, force => $force ) unless $continue;
 		debug "Found existing directory, continuing a previous run\n" if $continue;
-	} 
+	}
 
 	#create a directory for the Reads file being processed.
 	`mkdir -p "$Phylosift::Settings::file_dir"`
 	  unless ( -e $Phylosift::Settings::file_dir );
-	  debug "MODE : ".$self->{"mode"}."\n";
-	`mkdir -p "$self->{"blastDir"}"` if ( !-e $self->{"blastDir"}  && $self->{"mode"} =~ /search|all/ );
+	debug "MODE : ".$self->{"mode"}."\n";
+	`mkdir -p "$self->{"blastDir"}"` if ( !-e $self->{"blastDir"} && $self->{"mode"} =~ /search|all/ );
 	`mkdir -p "$self->{"alignDir"}"` if ( !-e $self->{"alignDir"} && $self->{"mode"} =~ /align|all/ );
-	`mkdir -p "$self->{"treeDir"}"`  if ( !-e $self->{"treeDir"} && $self->{"mode"} =~ /place|all/ );
+	`mkdir -p "$self->{"treeDir"}"`  if ( !-e $self->{"treeDir"}  && $self->{"mode"} =~ /place|all/ );
 	return $self;
 }
 

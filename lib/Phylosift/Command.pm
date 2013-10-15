@@ -13,17 +13,20 @@ sub description {
 
 sub opt_spec {
 	my ( $class, $app ) = @_;
-	return ( [ 'help' => "This usage screen" ],
-			 [ "debug",           "Print debugging messages" ],
-			 [ "disable_updates", "Disables automated check and download of Phylosift databases" ],
-			 [ "config=s",        "Provides a custom configuration file to Phylosift" ],
-			 $class->options($app), );
+	return (
+		[ 'help' => "This usage screen" ],
+		[ "debug",           "Print debugging messages" ],
+		[ "disable_updates", "Disables automated check and download of Phylosift databases" ],
+		[ "config=s",        "Provides a custom configuration file to Phylosift" ],
+		$class->options($app),
+	);
 }
 
 sub config {
 	my $app = shift;
 	Phylosift::read_phylosift_config();
 }
+
 sub sanity_check {
 	unless ( (POSIX::uname)[4] =~ /64/ || $^O =~ /arwin/ ) {
 		print STDERR (POSIX::uname)[4]."\n";

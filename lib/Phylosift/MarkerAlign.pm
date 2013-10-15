@@ -69,65 +69,67 @@ sub MarkerAlign {
 		my @allmarkers = gather_chunky_markers( self => $self, chunk => $chunk );
 		$markersRef = \@allmarkers;
 	}
-	Phylosift::Utilities::start_step( self => $self, chunk => $chunk, step => "Align");
-	my $completed_chunk = Phylosift::Utilities::has_step_completed( self => $self, chunk => $chunk, step => "Align" , force => $Phylosift::Settings::force);
+	Phylosift::Utilities::start_step( self => $self, chunk => $chunk, step => "Align" );
+	my $completed_chunk = Phylosift::Utilities::has_step_completed( self => $self, chunk => $chunk, step => "Align", force => $Phylosift::Settings::force );
 	my $previous_step = Phylosift::Utilities::has_step_completed( self => $self, chunk => $chunk, step => "Search" );
-	croak ("Previous step for chunk $chunk has did not complete. Aborting\n") unless Phylosift::Utilities::has_step_completed( self => $self, chunk => $chunk, step => "Search" );
-	unless ($completed_chunk){
-	directoryPrepAndClean( self => $self, marker_reference => $markersRef, chunk => $chunk );
-	my $index = -1;
-	markerPrep( self => $self, marker_reference => $markersRef, chunk => $chunk );
-	debug "after marker prep\n";
-	alignAndMask( self => $self, marker_reference => $markersRef, chunk => $chunk );
-	debug "AFTER ALIGN and MASK\n";
-	# produce a concatenate alignment for the base marker package
-	unless ($Phylosift::Settings::extended) {
-		my @markeralignments = get_noncore_alignment_files( self => $self, chunk => $chunk );
+	croak("Previous step for chunk $chunk has did not complete. Aborting\n")
+	  unless Phylosift::Utilities::has_step_completed( self => $self, chunk => $chunk, step => "Search" );
+	unless ($completed_chunk) {
+		directoryPrepAndClean( self => $self, marker_reference => $markersRef, chunk => $chunk );
+		my $index = -1;
+		markerPrep( self => $self, marker_reference => $markersRef, chunk => $chunk );
+		debug "after marker prep\n";
+		alignAndMask( self => $self, marker_reference => $markersRef, chunk => $chunk );
+		debug "AFTER ALIGN and MASK\n";
 
-		my $outputFastaAA = $self->{"alignDir"}."/".Phylosift::Utilities::get_aligner_output_fasta( marker => "concat", chunk => $chunk );
+		# produce a concatenate alignment for the base marker package
+		unless ($Phylosift::Settings::extended) {
+			my @markeralignments = get_noncore_alignment_files( self => $self, chunk => $chunk );
 
-		#		Phylosift::Utilities::concatenate_alignments(
-		concatenate_alignments(
-								self           => $self,
-								output_fasta   => $outputFastaAA,
-								output_bayes   => $self->{"alignDir"}."/mrbayes.nex",
-								gap_multiplier => 1,
-								alignments     => \@markeralignments
-		);
+			my $outputFastaAA = $self->{"alignDir"}."/".Phylosift::Utilities::get_aligner_output_fasta( marker => "concat", chunk => $chunk );
 
-		# now concatenate any DNA alignments
-		@markeralignments = get_noncore_alignment_files( self => $self, chunk => $chunk, dna => 1 );
-		my $output_fasta_DNA =
-		  $self->{"alignDir"}."/".Phylosift::Utilities::get_aligner_output_fasta( marker => "concat", dna => 1, chunk => $chunk );
-		concatenate_alignments(
-								self           => $self,
-								output_fasta   => $output_fasta_DNA,
-								output_bayes   => $self->{"alignDir"}."/mrbayes-dna.nex",
-								gap_multiplier => 3,
-								alignments     => \@markeralignments
-		);
+			#		Phylosift::Utilities::concatenate_alignments(
+			concatenate_alignments(
+									self           => $self,
+									output_fasta   => $outputFastaAA,
+									output_bayes   => $self->{"alignDir"}."/mrbayes.nex",
+									gap_multiplier => 1,
+									alignments     => \@markeralignments
+			);
 
-		# produce a concatenate with 16s + DNA alignments
-		push( @markeralignments, $self->{"alignDir"}."/".Phylosift::Utilities::get_aligner_output_fasta( marker => "16s_reps_bac", chunk => $chunk ) )
-		  if -e $self->{"alignDir"}."/".Phylosift::Utilities::get_aligner_output_fasta( marker => "16s_reps_bac", chunk => $chunk );
-		push( @markeralignments, $self->{"alignDir"}."/".Phylosift::Utilities::get_aligner_output_fasta( marker => "16s_reps_arc", chunk => $chunk ) )
-		  if -e $self->{"alignDir"}."/".Phylosift::Utilities::get_aligner_output_fasta( marker => "16s_reps_arc", chunk => $chunk );
-		push( @markeralignments, $self->{"alignDir"}."/".Phylosift::Utilities::get_aligner_output_fasta( marker => "18s_reps", chunk => $chunk ) )
-		  if -e $self->{"alignDir"}."/".Phylosift::Utilities::get_aligner_output_fasta( marker => "18s_reps", chunk => $chunk );
-		$output_fasta_DNA = $self->{"alignDir"}."/".Phylosift::Utilities::get_aligner_output_fasta( marker => "concat16", dna => 1, chunk => $chunk );
-		concatenate_alignments(
-								self           => $self,
-								output_fasta   => $output_fasta_DNA,
-								output_bayes   => $self->{"alignDir"}."/mrbayes-dna16.nex",
-								gap_multiplier => 3,
-								alignments     => \@markeralignments
-		);
-		debug "AFTER concatenateALI\n";
+			# now concatenate any DNA alignments
+			@markeralignments = get_noncore_alignment_files( self => $self, chunk => $chunk, dna => 1 );
+			my $output_fasta_DNA = $self->{"alignDir"}."/".Phylosift::Utilities::get_aligner_output_fasta( marker => "concat", dna => 1, chunk => $chunk );
+			concatenate_alignments(
+									self           => $self,
+									output_fasta   => $output_fasta_DNA,
+									output_bayes   => $self->{"alignDir"}."/mrbayes-dna.nex",
+									gap_multiplier => 3,
+									alignments     => \@markeralignments
+			);
+
+			# produce a concatenate with 16s + DNA alignments
+			push( @markeralignments, $self->{"alignDir"}."/".Phylosift::Utilities::get_aligner_output_fasta( marker => "16s_reps_bac", chunk => $chunk ) )
+			  if -e $self->{"alignDir"}."/".Phylosift::Utilities::get_aligner_output_fasta( marker => "16s_reps_bac", chunk => $chunk );
+			push( @markeralignments, $self->{"alignDir"}."/".Phylosift::Utilities::get_aligner_output_fasta( marker => "16s_reps_arc", chunk => $chunk ) )
+			  if -e $self->{"alignDir"}."/".Phylosift::Utilities::get_aligner_output_fasta( marker => "16s_reps_arc", chunk => $chunk );
+			push( @markeralignments, $self->{"alignDir"}."/".Phylosift::Utilities::get_aligner_output_fasta( marker => "18s_reps", chunk => $chunk ) )
+			  if -e $self->{"alignDir"}."/".Phylosift::Utilities::get_aligner_output_fasta( marker => "18s_reps", chunk => $chunk );
+			$output_fasta_DNA = $self->{"alignDir"}."/".Phylosift::Utilities::get_aligner_output_fasta( marker => "concat16", dna => 1, chunk => $chunk );
+			concatenate_alignments(
+									self           => $self,
+									output_fasta   => $output_fasta_DNA,
+									output_bayes   => $self->{"alignDir"}."/mrbayes-dna16.nex",
+									gap_multiplier => 3,
+									alignments     => \@markeralignments
+			);
+			debug "AFTER concatenateALI\n";
+		}
+		compute_hits_summary( self => $self, chunk => $chunk );
 	}
-	compute_hits_summary( self => $self, chunk => $chunk );
-	}
-	Phylosift::Utilities::end_step( self => $self, chunk => $chunk, step => "Align");
-	Phylosift::Utilities::write_step_completion_to_run_info( self => $self, chunk => $chunk, step => "Align") unless $completed_chunk;
+	Phylosift::Utilities::end_step( self => $self, chunk => $chunk, step => "Align" );
+	Phylosift::Utilities::write_step_completion_to_run_info( self => $self, chunk => $chunk, step => "Align" ) unless $completed_chunk;
+
 	# if we're chunking, feed the chunk to the next step
 	if ( defined($chunk) && $self->{"mode"} eq "all" ) {
 		Phylosift::Utilities::end_timer( name => "runAlign" );
@@ -196,7 +198,7 @@ sub gather_chunky_markers {
 	my $self              = $args{self} || miss("PS object");
 	my $chunk             = $args{chunk} || miss("Chunk");
 	my $type              = $args{type};
-	my @candidate_markers = Phylosift::Utilities::get_search_output_all_candidate(self=>$self,chunk=>$chunk);
+	my @candidate_markers = Phylosift::Utilities::get_search_output_all_candidate( self => $self, chunk => $chunk );
 	my %unique_markers;
 	foreach my $line (@candidate_markers) {
 		$line =~ m/\/blastDir\/([^\/\.]+)\.\S+.candidate/;
@@ -350,7 +352,8 @@ sub aa_to_dna_aln {
 			 && ref($aln)
 			 && $aln->isa('Bio::Align::AlignI') )
 	{
-		croak(    'Must provide a valid Bio::Align::AlignI object as the first argument to aa_to_dna_aln, see the documentation for proper usage and the method signature'
+		croak(
+			'Must provide a valid Bio::Align::AlignI object as the first argument to aa_to_dna_aln, see the documentation for proper usage and the method signature'
 		);
 	}
 	my $alnlen   = $aln->length;
@@ -455,9 +458,10 @@ sub alignAndMask {
 			$refcount = 0;
 			my $cmalign =
 			  "$Phylosift::Settings::cmalign -q --dna --mxsize $Phylosift::Settings::cm_align_long_mxsize --tau $Phylosift::Settings::cm_align_long_tau "
-			  .Phylosift::Utilities::get_marker_cm_file(          self   => $self,
-														 marker => $marker )
-			  ." $candidate | ";
+			  .Phylosift::Utilities::get_marker_cm_file(
+														 self   => $self,
+														 marker => $marker
+			  )." $candidate | ";
 			debug "Running $cmalign\n";
 			my $CMALIGN = ps_open($cmalign);
 			$fasta .= Phylosift::Utilities::stockholm2fasta( in => $CMALIGN );
@@ -489,7 +493,7 @@ sub alignAndMask {
 								 seq_count => 0
 				  )
 				  if $seqCount <= $refcount
-				  && $seqCount > 0;
+					  && $seqCount > 0;
 
 				writeAlignedSeq(
 								 self         => $self,
@@ -498,8 +502,7 @@ sub alignAndMask {
 								 prev_name    => $prev_name,
 								 prev_seq     => $prev_seq,
 								 seq_count    => $seqCount - $refcount - 1
-				  )
-				  if $seqCount > $refcount && $seqCount > 0;
+				) if $seqCount > $refcount && $seqCount > 0;
 				$seqCount++;
 				$prev_name = $new_name;
 				$prev_seq  = "";
@@ -516,8 +519,7 @@ sub alignAndMask {
 						 prev_name    => $prev_name,
 						 prev_seq     => $prev_seq,
 						 seq_count    => $seqCount - $refcount - 1
-		  )
-		  if $seqCount > $refcount;
+		) if $seqCount > $refcount;
 		$seqCount -= $refcount;
 		close $UNMASKEDOUT;
 		close $ALIOUT;

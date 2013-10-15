@@ -69,17 +69,17 @@ EOF
 }
 
 sub add_jnlp {
-	my %args   = @_;
-	my $self   = $args{self} || miss("self");
-	my $marker = $args{marker} || miss("marker");
-	my $OUTPUT = $args{OUTPUT} || miss("OUTPUT");
-	my $xml    = $args{xml} || miss("xml");
+	my %args               = @_;
+	my $self               = $args{self} || miss("self");
+	my $marker             = $args{marker} || miss("marker");
+	my $OUTPUT             = $args{OUTPUT} || miss("OUTPUT");
+	my $xml                = $args{xml} || miss("xml");
 	my $skip_jnlp_writeout = $args{html_only};
 	$marker .= '.';
 	$marker = '' if $marker eq "concat";
-	my $jnlp   = $Phylosift::Settings::file_dir."/".$self->{"fileName"}.".$marker"."jnlp";
+	my $jnlp     = $Phylosift::Settings::file_dir."/".$self->{"fileName"}.".$marker"."jnlp";
 	my $xml_name = basename($xml);
-	
+
 	print $OUTPUT <<EOF;
 <script>
 var loc = window.location.pathname;
@@ -91,12 +91,12 @@ EOF
 }
 
 sub write_jnlp {
-	my %args     = @_;
-	my $self     = $args{self} || miss("self");
-	my $marker   = $args{marker} || miss("marker");
-	my $xml      = $args{xml} || miss("xml");
-	my $jnlp     = $args{jnlp};
-	my $JOUT     = ps_open(">$jnlp");
+	my %args   = @_;
+	my $self   = $args{self} || miss("self");
+	my $marker = $args{marker} || miss("marker");
+	my $xml    = $args{xml} || miss("xml");
+	my $jnlp   = $args{jnlp};
+	my $JOUT   = ps_open(">$jnlp");
 	$xml = basename($xml);
 	print $JOUT <<EOF;
 <?xml version="1.0" encoding="UTF-8"?>

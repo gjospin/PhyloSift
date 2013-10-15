@@ -19,11 +19,11 @@ our $VERSION = "v1.0.0_02";
 eval {
 	require Digest::MD5;
 	Digest::MD5->import();
-} or do {
+  }
+  or do {
 	unshift( @INC, "$FindBin::Bin/../legacy/md5lib" );
 	use Digest::MD5;
-};
-
+  };
 
 =head1 NAME
 
@@ -126,9 +126,11 @@ sub run_search {
 
 		#reads the marker_summary.txt from blastDir
 
-		my $completed_chunk = Phylosift::Utilities::has_step_completed( self => $self, chunk => $chunkI, step => "Search", force => $Phylosift::Settings::force );
+		my $completed_chunk =
+		  Phylosift::Utilities::has_step_completed( self => $self, chunk => $chunkI, step => "Search", force => $Phylosift::Settings::force );
 		$completed_chunk = 1 if $start_chunk > $chunkI;
-		Phylosift::Utilities::start_step( self => $self, chunk => $chunkI, step => "Search");
+		Phylosift::Utilities::start_step( self => $self, chunk => $chunkI, step => "Search" );
+
 		# need to run this even if chunk is done so that we advance through the input file
 		# TODO: don't launch lastal on RNA unless really needed
 		my $finished = launch_searches(
@@ -142,8 +144,8 @@ sub run_search {
 										chunk_completion_status => $completed_chunk
 		);
 		compute_hits_summary( self => $self, chunk => $chunkI );
-		Phylosift::Utilities::end_step( self => $self, chunk => $chunkI, step => "Search");
-		Phylosift::Utilities::write_step_completion_to_run_info( self => $self, chunk => $chunkI, step => "Search") unless $completed_chunk;
+		Phylosift::Utilities::end_step( self => $self, chunk => $chunkI, step => "Search" );
+		Phylosift::Utilities::write_step_completion_to_run_info( self => $self, chunk => $chunkI, step => "Search" ) unless $completed_chunk;
 		if ( !$completed_chunk && ( $self->{"mode"} eq "all" || $self->{"continue"} ) ) {
 
 			# fire up the next step!
@@ -253,6 +255,7 @@ sub launch_searches {
 	my @last_pipe_array = ();
 	$chunk_completion_status = Phylosift::Utilities::has_step_completed( self => $self, chunk => $chunk, step => "Search" )
 	  unless defined $chunk_completion_status;
+
 	for ( my $i = 0; $i <= $Phylosift::Settings::threads - 1; $i++ ) {
 		push( @last_pipe_array, $dir."/last_$i.pipe" );
 		`mkfifo "$dir/last_$i.pipe"`;
@@ -295,7 +298,7 @@ sub launch_searches {
 					`rm -f $last_rna_pipe`;
 					exit 0;
 				} else {
-					$hitstream = lastal_table_rna(                self       => $self,
+					$hitstream = lastal_table_rna( self       => $self,
 												   query_file => $last_rna_pipe );
 				}
 				$candidate_type = ".lastal.rna";
@@ -335,15 +338,15 @@ sub launch_searches {
 	# child processes run the search on incoming sequences
 	debug "Octopus is handing out sequences\n";
 	my $finished = demux_sequences(
-									lastal_pipes            => \@LAST_PIPE_ARRAY,
-									LAST_RNA_PIPE           => $LAST_RNA_PIPE,
-									dna                     => $self->{"dna"},
-									FILE1                   => $FILE1,
-									FILE2                   => $FILE2,
-									reads_pipe              => $READS_PIPE,
-									readtype                => $readtype,
-									chunk                   => $chunk,
-									self                    => $self,
+									lastal_pipes    => \@LAST_PIPE_ARRAY,
+									LAST_RNA_PIPE   => $LAST_RNA_PIPE,
+									dna             => $self->{"dna"},
+									FILE1           => $FILE1,
+									FILE2           => $FILE2,
+									reads_pipe      => $READS_PIPE,
+									readtype        => $readtype,
+									chunk           => $chunk,
+									self            => $self,
 									completed_chunk => $chunk_completion_status
 	);
 
@@ -410,6 +413,7 @@ sub demux_sequences {
 	my $lastal_threads     = scalar(@LAST_PIPE_ARRAY);
 	my $completed_chunk    = $args{completed_chunk};
 	$completed_chunk = Phylosift::Utilities::has_step_completed( self => $self, chunk => $chunk, step => "Search" ) unless defined $completed_chunk;
+
 	# the following two variables track how far we are through a chunk
 	my $seq_count    = 0;
 	my $seq_size     = 0;
@@ -447,19 +451,19 @@ sub demux_sequences {
 			#add the reads to file lookup
 
 			#			if ( $lines1[0] =~ m/^@(\S+)(\/\d)/ && $paired ) {
-			
+
 			chomp( $lines1[0] );
 			$lines1[0] =~ s/^@//;
 			print $IDFILE "$lines1[0]\t$seq_count/1\n" unless $completed_chunk;
-			$md5_object->add( $lines1[0] )             unless $completed_chunk;
-			
+			$md5_object->add( $lines1[0] ) unless $completed_chunk;
+
 			#			} elsif ( $lines1[0] =~ m/^@(.+)/ ) {
-			
+
 			if ( defined( $lines2[0] ) ) {
 				chomp( $lines2[0] );
 				$lines2[0] =~ s/^@//;
 				print $IDFILE "$lines2[0]\t$seq_count/2\n" unless $completed_chunk;
-				$md5_object->add( $lines2[0] )             unless $completed_chunk;
+				$md5_object->add( $lines2[0] ) unless $completed_chunk;
 			}
 
 			$lines1[0] = "\@$seq_count/1\n";
@@ -533,14 +537,14 @@ sub demux_sequences {
 			$lines1[0] =~ s/^>//;
 			chomp( $lines1[0] );
 			print $IDFILE "$lines1[0]\t$seq_count/1\n" unless $completed_chunk;
-			$md5_object->add( $lines1[0] )             unless $completed_chunk;
+			$md5_object->add( $lines1[0] ) unless $completed_chunk;
 
 			#			} elsif ( $lines1[0] =~ m/^>(.+)/ ) {
 			if ( defined $lines2[0] ) {
 				$lines2[0] =~ s/^>//;
 				chomp( $lines2[0] );
 				print $IDFILE "$lines2[0]\t$seq_count/2\n" unless $completed_chunk;
-				$md5_object->add( $lines2[0] )             unless $completed_chunk;
+				$md5_object->add( $lines2[0] ) unless $completed_chunk;
 			}
 
 			$lines1[0] = ">$seq_count/1\n";
@@ -643,7 +647,7 @@ sub qtrim_read {
 	}
 
 	# Clip the read
-	@$read[1] = substr( $seq, 0, $endpoint )."\n";
+	@$read[1] = substr( $seq,      0, $endpoint )."\n";
 	@$read[3] = substr( @$read[3], 0, $endpoint )."\n";
 }
 
@@ -651,7 +655,7 @@ sub read_marker_lengths {
 	my %args = @_;
 	my $self = $args{self};
 	foreach my $marker ( keys(%markers) ) {
-		$markerLength{$marker} = Phylosift::Utilities::get_marker_length(       self   => $self,
+		$markerLength{$marker} = Phylosift::Utilities::get_marker_length( self   => $self,
 																		  marker => $marker );
 	}
 }
@@ -717,31 +721,34 @@ sub translate_frame {
 	my $seq               = $args{seq} || miss("seq");
 	my $frame             = $args{frame} || miss("frame");
 	my $marker            = $args{marker} || miss("marker");
-	my $bitscore = $args{bitscore} || miss("bitScore");
+	my $bitscore          = $args{bitscore} || miss("bitScore");
 	my $reverse_translate = $args{reverse_translate}
 	  || miss("reverse_translate");
 	my $return_seq = "";
-	my @push_array=();
-	my $new_seq = Bio::LocatableSeq->new( -seq => $seq, -id => 'temp', -verbose => 0 );
+	my @push_array = ();
+	my $new_seq    = Bio::LocatableSeq->new( -seq => $seq, -id => 'temp', -verbose => 0 );
 	$new_seq = $new_seq->revcom() if ( $frame < 0 );
+
 	if ($reverse_translate) {
-#		#$id = Phylosift::Summarize::tree_name( name => $id );
-#	    if($Phylosift::Settings::besthit){
-#		@push_array = [">".$id."\n".$new_seq->seq."\n", $bitscore];
-#		if( exists $markerNuc{$marker} && !defined($markerNuc{$marker})){
-#		    push(@{$markerNuc{$marker}} ,@push_array);
-#		}elsif(  exists $markerNuc{$marker}&& defined($markerNuc{$marker}) && $bitscore > $markerNuc{$marker}[1]){
-#		    $markerNuc{$marker}=();
-#		    push(@{$markerNuc{$marker}} ,(">".$id."\n".$new_seq->seq."\n", $bitscore));
-#		    push(@{$markerNuc{$marker}},@push_array);
-#		}
-#	    }else{
+
+		#		#$id = Phylosift::Summarize::tree_name( name => $id );
+		#	    if($Phylosift::Settings::besthit){
+		#		@push_array = [">".$id."\n".$new_seq->seq."\n", $bitscore];
+		#		if( exists $markerNuc{$marker} && !defined($markerNuc{$marker})){
+		#		    push(@{$markerNuc{$marker}} ,@push_array);
+		#		}elsif(  exists $markerNuc{$marker}&& defined($markerNuc{$marker}) && $bitscore > $markerNuc{$marker}[1]){
+		#		    $markerNuc{$marker}=();
+		#		    push(@{$markerNuc{$marker}} ,(">".$id."\n".$new_seq->seq."\n", $bitscore));
+		#		    push(@{$markerNuc{$marker}},@push_array);
+		#		}
+		#	    }else{
 		if ( exists $markerNuc{$marker} ) {
-		    $markerNuc{$marker} .= ">".$id."\n".$new_seq->seq."\n";
+			$markerNuc{$marker} .= ">".$id."\n".$new_seq->seq."\n";
 		} else {
-		    $markerNuc{$marker} = ">".$id."\n".$new_seq->seq."\n";
+			$markerNuc{$marker} = ">".$id."\n".$new_seq->seq."\n";
 		}
-#	    }
+
+		#	    }
 	}
 	$return_seq = $new_seq->translate();
 	return $return_seq->seq();
@@ -812,6 +819,7 @@ sub get_hits_contigs {
 		my @marker = split( /\_\_/, $subject );    # this is soooo ugly
 		my $markerName = $marker[0];
 		next unless ( exists $markers{$markerName} );
+
 		# running on long reads or an assembly
 		# allow each region of a sequence to have a top hit
 		# do not allow overlap
@@ -1000,7 +1008,7 @@ sub write_candidates {
 											frame             => $strand,
 											marker            => $markerHit,
 											reverse_translate => $self->{"dna"},
-				    bitscore => $cur_hit->[1],
+											bitscore          => $cur_hit->[1],
 				);
 
 				# bioperl uses * for stop codons but we want to give X to hmmer later
@@ -1011,19 +1019,22 @@ sub write_candidates {
 				$new_seq =~ tr/ACGTacgt/TGCAtgca/;
 				$new_seq = reverse($new_seq);
 			}
+
 			#$markerHits{$markerHit} = "" unless defined( $markerHits{$markerHit} );
-			if($Phylosift::Settings::besthit){
+			if ($Phylosift::Settings::besthit) {
+
 				#push(@{$markerHits{$markerHit}} ,(undef, 0)) if $Phylosift::Settings::besthit;
 				#debug "$markerHit \t CURRENT : $cur_hit->[1]\t$markerHits{$markerHit}[1]\t";
-				if(!defined($markerHits{$markerHit})){
-				    push(@{$markerHits{$markerHit}} ,(">".$new_id."\n".$new_seq."\n", $cur_hit->[1]));
-				}elsif(defined($markerHits{$markerHit}) && $cur_hit->[1] > $markerHits{$markerHit}[1]){
-				    $markerHits{$markerHit}=();
-				    push(@{$markerHits{$markerHit}} ,(">".$new_id."\n".$new_seq."\n", $cur_hit->[1]));
+				if ( !defined( $markerHits{$markerHit} ) ) {
+					push( @{ $markerHits{$markerHit} }, ( ">".$new_id."\n".$new_seq."\n", $cur_hit->[1] ) );
+				} elsif ( defined( $markerHits{$markerHit} ) && $cur_hit->[1] > $markerHits{$markerHit}[1] ) {
+					$markerHits{$markerHit} = ();
+					push( @{ $markerHits{$markerHit} }, ( ">".$new_id."\n".$new_seq."\n", $cur_hit->[1] ) );
 				}
+
 #				push(@{$markerHits{$markerHit}} ,(">".$new_id."\n".$new_seq."\n", $cur_hit->[1])) if !defined($markerHits{$markerHit}) || $cur_hit->[1] > $markerHits{$markerHit}[1];
-				#debug "$markerHit\tCURRENT : $markerHits{$markerHit}[1]\n";
-			}else{
+#debug "$markerHit\tCURRENT : $markerHits{$markerHit}[1]\n";
+			} else {
 				$markerHits{$markerHit} .= ">".$new_id."\n".$new_seq."\n";
 			}
 		}
@@ -1036,6 +1047,7 @@ sub write_candidates {
 	}
 	debug "$type Got ".scalar( keys %markerHits )." markers with hits\n";
 	debug "$type Got ".scalar( keys %markerNuc )." nucleotide markers with hits\n";
+
 	#write the read+ref_seqs for each markers in the list
 	foreach my $marker ( keys %markerHits ) {
 
@@ -1047,7 +1059,7 @@ sub write_candidates {
 																	   chunk  => $chunk
 		);
 		my $FILE_OUT = ps_open( ">$candidate_file".".".$process_id );
-		print $FILE_OUT $markerHits{$marker}unless $Phylosift::Settings::besthit;
+		print $FILE_OUT $markerHits{$marker} unless $Phylosift::Settings::besthit;
 		print $FILE_OUT $markerHits{$marker}[0] if $Phylosift::Settings::besthit;
 		close($FILE_OUT);
 		if ( $self->{"dna"} && $type !~ /\.rna/ ) {
@@ -1059,20 +1071,23 @@ sub write_candidates {
 																		chunk  => $chunk
 			);
 			my $FILE_OUT = ps_open( ">$candidate_file".".".$process_id );
-#			debug "Working on $marker to print nucleotides\n";
-#			debug "testing :" .scalar(keys(%markerNuc))."\n";
-			if(defined $markerNuc{$marker}){
-#			    debug "Inside\n";
-#			    if($Phylosift::Settings::besthit){
-#				debug "Printing $marker with besthit nucleotides\n";
-#				print $FILE_OUT $markerNuc{$marker}[0];
-#			    }else{
+
+			#			debug "Working on $marker to print nucleotides\n";
+			#			debug "testing :" .scalar(keys(%markerNuc))."\n";
+			if ( defined $markerNuc{$marker} ) {
+
+				#			    debug "Inside\n";
+				#			    if($Phylosift::Settings::besthit){
+				#				debug "Printing $marker with besthit nucleotides\n";
+				#				print $FILE_OUT $markerNuc{$marker}[0];
+				#			    }else{
 				print $FILE_OUT $markerNuc{$marker};
-#			    }
+
+				#			    }
 			}
 			close($FILE_OUT);
 		}
-		
+
 		# force memory free
 		$markerHits{$marker} = undef;
 		$markerNuc{$marker}  = undef;
@@ -1102,7 +1117,7 @@ sub prep_and_clean {
 
 	#create a directory for the Reads file being processed.
 	`mkdir "$Phylosift::Settings::file_dir"` unless ( -e $Phylosift::Settings::file_dir );
-	`mkdir "$self->{"blastDir"}"`            unless ( -e $self->{"blastDir"} );
+	`mkdir "$self->{"blastDir"}"` unless ( -e $self->{"blastDir"} );
 	return $self;
 }
 

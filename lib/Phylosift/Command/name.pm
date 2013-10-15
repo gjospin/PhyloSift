@@ -20,8 +20,8 @@ sub usage_desc { "name <sequence file> [pair sequence file]" }
 
 sub name_opts {
 	my %opts = (
-			 besthit => [ "besthit", "When there are multiple hits to the same read, keeps only the best hit to that read", { default => 0 } ],
-			 isolate => [ "isolate", "Use this mode if you are running data from an isolate genome",                        { default => 0 } ],
+				 besthit => [ "besthit", "When there are multiple hits to the same read, keeps only the best hit to that read", { default => 0 } ],
+				 isolate => [ "isolate", "Use this mode if you are running data from an isolate genome",                        { default => 0 } ],
 	);
 	return %opts;
 }

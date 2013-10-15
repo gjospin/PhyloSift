@@ -72,9 +72,9 @@ sub pplacer {
 		my $long_rna_switch = -1;
 		my $short_rna_jplace;
 		for ( my $mI = 0; $mI < @{$markRef}; $mI++ ) {
-			
+
 			my $marker = @$markRef[$mI];
-			
+
 			# the PMPROK markers are contained in the concat above
 			next if ( $marker =~ /PMPROK/  && $Phylosift::Settings::updated );
 			next if ( $marker =~ /DNGNGWU/ && $Phylosift::Settings::updated );
@@ -195,7 +195,7 @@ sub set_tip_distance {
 }
 
 sub find_codon_reads {
-	my %args       = @_;
+	my %args = @_;
 	my $place_file = $args{place_file} || miss("place_file");
 
 	debug "codon read jplace\n";
@@ -290,8 +290,9 @@ sub make_codon_placements {
 	# determine which reads go to codon alignment
 	my $subreads = find_codon_reads( place_file => $place_file );
 	debug "Found ".scalar( keys( %{$subreads} ) )." codon placeable reads\n";
+
 	# check whether any reads can be placed on codon trees
-	return if(scalar( keys( %{$subreads} ) ) == 0);
+	return if ( scalar( keys( %{$subreads} ) ) == 0 );
 
 	# convert to groups
 	my %groups;
@@ -341,7 +342,8 @@ sub place_reads {
 			$Phylosift::Settings::updated = 1;
 		}
 		unless ( -d $marker_package ) {
-			warn(        "Marker: $marker\nPackage: $marker_package\nPackage does not exist\nPlacement without a marker package is no longer supported.\n Skipping $marker.\n"
+			warn(
+				"Marker: $marker\nPackage: $marker_package\nPackage does not exist\nPlacement without a marker package is no longer supported.\n Skipping $marker.\n"
 			);
 			return;
 		}
@@ -360,11 +362,11 @@ sub place_reads {
 	  .$Phylosift::Settings::threads
 	  ." -c $marker_package \"$reads\"";
 	debug "Running $pp\n" if -e "$marker_package";
-	system($pp)           if -e "$marker_package";
+	system($pp) if -e "$marker_package";
 	unlink("$self->{\"treeDir\"}/abracadabra") if $options =~ /abracadabra/;    # remove the mmap file created by pplacer
 
 	debug "no output in $jplace\n" unless -e $jplace;
-	return                         unless -e $jplace;
+	return unless -e $jplace;
 
 	# remove placements on very long branches, they are unreliable due to LBA artifacts.
 	filter_placements( place_file => $jplace );
@@ -506,7 +508,7 @@ sub directoryPrepAndClean {
 
 	#create a directory for the Reads file being processed.
 	`mkdir "$Phylosift::Settings::file_dir"` unless ( -e $Phylosift::Settings::file_dir );
-	`mkdir "$self->{"treeDir"}"`             unless ( -e $self->{"treeDir"} );
+	`mkdir "$self->{"treeDir"}"` unless ( -e $self->{"treeDir"} );
 }
 
 =head1 SUBROUTINES/METHODS
@@ -541,6 +543,7 @@ sub name_taxa_in_jplace {
 	my $marker   = $args{marker} || miss("marker");
 	my $taxonmap = $args{taxonmap} || miss("taxonmap");
 	debug "Naming taxa in name_taxa_in_jplace for $marker\n";
+
 	# read in the taxon name map
 	my $namemap = read_name_map( marker => $marker );
 
@@ -554,7 +557,7 @@ sub name_taxa_in_jplace {
 	my @treedata   = <$JPLACEFILE>;
 	close $JPLACEFILE;
 
-	my $json_data   = decode_json( join( "", @treedata ) );
+	my $json_data = decode_json( join( "", @treedata ) );
 	my $tree_string = $json_data->{tree};
 
 	# get rid of the leaf numbers and some other mumbo jumbo
@@ -574,8 +577,8 @@ sub name_taxa_in_jplace {
 		if ( defined( $namemap->{$name} ) ) {
 			my $taxon_id = $namemap->{$name};
 			next if $taxon_id eq "" || $taxon_id eq "0";
-			my @data      = Phylosift::Summarize::get_taxon_info( taxon => $taxon_id );
-			my $ncbi_name = Phylosift::Summarize::tree_name( name       => $data[0] );
+			my @data = Phylosift::Summarize::get_taxon_info( taxon => $taxon_id );
+			my $ncbi_name = Phylosift::Summarize::tree_name( name => $data[0] );
 			## if the name was not found, initialize it to empty
 			$ncbi_name = "" unless defined $ncbi_name;
 			$node->set_name( $ncbi_name."[$taxon_id]".$branch_id );

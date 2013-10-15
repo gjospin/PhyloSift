@@ -6,7 +6,6 @@ use Phylosift::Phylosift;
 use Fcntl qw(LOCK_EX);
 use Carp;
 use Phylosift::Utilities qw(debug);
-
 our $VERSION = "v1.0.0_02";
 
 sub description {
@@ -42,7 +41,7 @@ sub execute {
 	my $lock_ex;
 	unless ($indexed_markers) {
 		debug "Requesting ";
-		$lock_ex = File::NFSLock->new($Phylosift::Settings::marker_dir,LOCK_EX);
+		$lock_ex = File::NFSLock->new( $Phylosift::Settings::marker_dir, LOCK_EX );
 		debug "Indexed_markers : $indexed_markers\n";
 		Phylosift::Utilities::index_marker_db( self => $self, markers => \@markers, path => $Phylosift::Settings::marker_dir );
 		$lock_ex->unlock();
@@ -55,7 +54,7 @@ sub execute {
 																	 allow_missing_hmm => 1
 		);
 		unless ($indexed_markers) {
-			$lock_ex = File::NFSLock->new($Phylosift::Settings::markers_extended_dir,LOCK_EX);
+			$lock_ex = File::NFSLock->new( $Phylosift::Settings::markers_extended_dir, LOCK_EX );
 			$indexed_markers = Phylosift::Utilities::index_marker_db(
 																	  self    => $self,
 																	  markers => \@extended_markers,
