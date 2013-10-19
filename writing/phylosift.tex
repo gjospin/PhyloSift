@@ -115,22 +115,21 @@ $\ast$ E-mail: aarondarling@ucdavis.edu
 
 \section*{Introduction}
 
-In just a few years, metagenomics - the sequencing of DNA isolated directly from the environment - has gone from being a rarity to the routine.
-Used primarily in the study of microorganisms, some amount of metagenome sequencing has now been done for a wide variety of environments where one finds microbes - from every nook and cranny of diverse plants and animals including humans to every kind of natural and unnatural site found across the globe.
+Metagenomics - the sequencing of DNA isolated directly from the environment - is rapidly becoming a routine tool with a diversity of applications (add citation: Thomas, Torsten, Jack Gilbert, and Folker Meyer. "Metagenomics-a guide from sampling to data analysis." Microb Inform Exp 2.3 (2012)). Used primarily in the study of microorganisms, metagenome sequencing has now been carried out for a wide variety of environments where one finds microbes - from every nook and cranny of diverse plants and animals including humans to every kind of natural and unnatural site found across the globe.
 Such sequencing has provided novel and fundamental insights into the diversity of kinds of microbes and their functions in these diverse ecosystems.
 Initially, metagenomics was used largely as a way of getting information about organisms that were not cultured (i.e., nobody had figured out how to grow them in isolation in a controlled environment).
 However, due to decreases in the cost and the difficulty of sequencing, metagenomics has become a tool for studying any microbial community, regardless of cultivability.
 
-The strength of metagenomic approaches come from their ability to randomly sample the genomes of the organisms in a particular environment approximately uniformly.
-From such data one can make inferences about what organisms are present in a sample (i.e., who is there) as well as what their functional potential is (i.e., what are they doing).
+The strength of metagenomic approaches come from the ability to, with some caveats, randomly sample the genomes of the organisms in a particular environment approximately uniformly.
+From such data one can make inferences about what organisms are present in a sample (i.e., who is there?) as well as what is their functional potential (i.e., what are they doing?).
 In addition, by comparing across samples one can study larger scale issues such as ecology and biogeography and also attempt to correlate particular organisms or functions with ``metadata" about samples (e.g., health status, nutrient cycling rates, etc).
 Furthermore, by sampling a community directly one can avoid certain problems inherent in culturing such as contamination, population bottlenecking, and taxonomic bias.
 Thus metagenomics has begun to be applied in diverse fields from medicine to agriculture, law enforcement, biodefense, ecology, evolution, and industry.
 
 Athough there is enormous potential for metagenomics to provide diverse insights, there are many challenges with realizing this potential.
-Perhaps the biggest challenge lies in analysis of the data, as follows.
-First, metagenomic samples reflect entire communities of organisms, unlike ``traditional'' genome sequencing which reflects a single individual of a population.
-The large number of taxa in some microbial communities can be a challenge for some types of analysis.
+Perhaps the biggest challenges lie in analysis of the data (add citation to Chen K, Pachter L (2005) Bioinformatics for Whole-Genome Shotgun Sequencing of Microbial Communities. PLoS Comput Biol 1(2): e24. doi:10.1371/journal.pcbi.0010024), as follows.
+First, metagenomic samples reflect entire communities of organisms, unlike "traditional'' genome sequencing of individual organisms or clones (i.e., from cultures of a single isolate).
+The large number of microbial taxa in many environmental samples can be a challenge for many types of analysis.
 More vexing is when (as is usually the case) each species in a community is heterogenous with extensive polymorphisms within the genome.
 A related problem is that in its current form, metagenomic sequencing protocols destroy some of the most valuable information present in a sample: genetic linkage.
 Loss of linkage information occurs in two ways: during sample extraction and size selection of fragments for sequencing.
@@ -142,7 +141,8 @@ Such shearing results in further loss of genetic linkage information, since this
 
 The lack of linkage information limits the ability to use metagenomic data for evolutionary analysis, since most current methods assume complete linkage information is available.
 In practice, improved sample processing methods could potentially retain the genetic linkage information of a microbial community throughout the sequencing process.
-High throughput single-cell genomics (e.g. applied to thousands of cells) offers an alternative to the standard metagenomics workflow that preserves information about the compartmentalization of genetic material into cells ~\cite{Woyke2010}.
+High throughput single-cell genomics (e.g. applied to thousands of cells) offers an alternative to the standard metagenomics workflow that preserves information about the compartmentalization of genetic material into cells ~\cite{Woyke2010} (also cite Rinke, C., Schwientek, P., Sczyrba, A., Ivanova, N. N., Anderson, I. J., Cheng, J. F., ... & Woyke, T. (2013). Insights into the phylogeny and coding potential of microbial dark matter. Nature.).
+
 However, single cell approaches are still limited in their utility by a number of technical issues including contamination, expensive and extensive equipment needs, missing data, and the creation of chimeras; they will always be more limited in throughput than their standard metagenomics counterparts.
 
 Thus the research community is left with developing and using computational methods to sift through and make sense out of random shotgun metagenomic data.
@@ -285,7 +285,7 @@ PhyloSift includes the guppy program from pplacer, which in addition to edge PCA
 
 \subsection*{PhyloSift database update workflow}\label{sec:dbupdate}
 An integral component of PhyloSift is an automated means to update the gene family database with newly sequenced genomes.
-Genome databases continue to grow quickly, with dozens of new genome sequences becoming available every week.
+Genome databases continue to grow quickly, with, on average, dozens of new genome sequences becoming available every week.
 The quality of these genomes can be highly variable, ranging from low-quality drafts to nearly finished sequence.
 PhyloSift's database update mechanism incorporates some basic quality control measures.
 \subsubsection*{Acquiring new genome data}
@@ -293,7 +293,7 @@ The PhyloSift database update module maintains a local repository of all known a
 Upon initiating a new update, the database update module identifies any new genomes available in the NCBI finished, NCBI draft, NCBI WGS, and EBI viral, organelle, bacterial, archaeal, and eukaryal databases.
 Any new genomes are fetched and stored in the local repository.
 \subsubsection*{Gene family search and alignment workflow on each genome}
-In this stage, we run the search and alignment stages of the previously described PhyloSift client workflow for each new genome.
+In this stage, the search and alignment stages of the previously described PhyloSift client workflow are run for each new genome.
 After this stage, the regions from each new genome that are highly similar to gene families in the database are identified, extracted, and aligned using the family's profile-HMM.
 A complete multiple alignment for each family is then created by adding the aligned regions from each genome to a single multiple alignment file.
 Because each region has been aligned to the same profile-HMM (or covarion model for noncoding genes) and non-aligning sites in the query genome removed, generation of a new multiple alignment is a simple matter of concatenating the individual alignments.
@@ -305,7 +305,7 @@ Currently PhyloSift employs FastTree 2.1~\cite{Price2010} to generate approximat
 PhyloSift also infers separate trees for the codon and amino acid alignments of each gene family.
 
 Reference databases frequently contain genomes for a multitude of closely related strains.
-In many gene families, the gene sequences present in genomes of closely related strains may be indistinguishable from one another.
+In many gene families, the gene sequences present in genomes of closely related strains may be identical to each another.
 Identical gene sequences would create uncertainty in the placement of reads in a strain group.
 In order to reduce compute time and memory requirements, closely related sequences are pruned from the PhyloSift reference database.
 Pruning is done with an algorithm that maximizes phylogenetic diversity of the sequence set without including any sequence pairs separated by fewer than $X$ amino acid (or nucleotide) substitutions per site, where $X$ is a configurable variable with default value 0.01.
