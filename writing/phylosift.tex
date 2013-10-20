@@ -135,9 +135,8 @@ A related problem is that in general shotgun metagenomic sequencing protocols de
 Loss of linkage information occurs in two ways: during sample extraction and size selection of fragments for sequencing.
 In nearly all metagenomic sample processing methods, cells from the microbial community are lysed together to obtain a common pool of DNA.
 This practice causes DNA from many different cells to mix together, so that the cellular compartmentalization of individual genotypes is destroyed.
-Subsequently, long chromosome-scale DNA fragments are typically broken by mechanical or enzymatic means into fragments small enough for processing with current sequencing chemistries.
-The resulting sequenced fragments are usually less than 1Kbp (though  sometimes 10-20kbp).
-Such shearing results in further loss of genetic linkage information, since this method removes our ability to infer how short DNA fragments were arranged into chromosome-scale molecules.
+Subsequently, long chromosome-scale DNA fragments are typically broken by mechanical or enzymatic means into fragments small enough for processing with current sequencing protocols.
+The resulting sequenced fragments are usually less than 1 Kbp in length.  It is possible to generate data for much larger fragments such as by cloning large DNA fragments as was done in the early stages of the field of metagenomics (add citation to Beja et al.) or using Pacific Biosciences sequencing (add citation).  However, most metagenomic data that is currently being generated is via short read/short insert sequencing such as using Illumina sequencing machines.  Though short read methods are cheaper, quicker and easier than large fragment approaches, they come at a cost.  The shearing results in further loss of genetic linkage information, since this method removes our ability to infer how short DNA fragments were arranged into chromosome-scale molecules.
 
 The lack of linkage information limits the ability to use metagenomic data for evolutionary analysis, since most current methods assume complete linkage information is available.
 In practice, improved sample processing methods could potentially retain the genetic linkage information of a microbial community throughout the sequencing process.
@@ -145,7 +144,7 @@ High throughput single-cell genomics (e.g. applied to thousands of cells) offers
 
 However, single cell approaches are still limited in their utility by a number of technical issues including contamination, expensive and extensive equipment needs, missing data, and the creation of chimeras; they will always be more limited in throughput than their standard metagenomics counterparts.
 
-Thus the research community is left with developing and using computational methods to sift through and make sense out of random shotgun metagenomic data.
+Thus the research community is left with developing and using computational methods to sift through and make sense out of short read, random shotgun metagenomic data.
 Though there are many important steps in analyzing metagenomic data, we believe that a critical component is phylogenetic analysis of the sequences.
 Among the uses of phylogenetic analysis in metagenomics are: improved classification of sequences as to their taxonomic origin, functional prediction for genes, alternative metrics of alpha and beta diversity, improved identification of operational taxonomic units (OTUs), and sequence binning ~\cite{meyer2008metagenomics, Matsen2010, Evans2010, Kembel2011, Matsen2012, Stark2010, Wu2012, Brady2009, Brady2011, Sharpton2011}.
 
