@@ -115,42 +115,41 @@ $\ast$ E-mail: aarondarling@ucdavis.edu
 
 \section*{Introduction}
 
-Metagenomics - the sequencing of DNA isolated directly from the environment - is rapidly becoming a routine tool with a diversity of applications (add citation: Thomas, Torsten, Jack Gilbert, and Folker Meyer. "Metagenomics-a guide from sampling to data analysis." Microb Inform Exp 2.3 (2012)). Used primarily in the study of microorganisms, metagenome sequencing has now been carried out for a wide variety of environments where one finds microbes - from every nook and cranny of diverse plants and animals to every kind of natural and unnatural site found across the globe.
-Such sequencing has provided novel and fundamental insights into the diversity of kinds of microbes and their functions in these diverse ecosystems.
-Initially, metagenomics was used largely as a way of simply obtaining some genomic information about organisms that were not cultured (i.e., nobody had figured out how to grow them in isolation in a controlled environment) (e.g., see O Béja, L Aravind, EV Koonin, MT Suzuki, A Hadd, LP Nguyen, SB Jovanovich. 2000. Science 289 (5486), 1902-1906)
+Metagenomics - the sequencing of DNA isolated directly from the environment - has quickly become a routinely used tool with wide application~\cite{thomas2012metagenomics}. Used primarily in the study of microorganisms, metagenome sequencing has now been carried out on a variety of environments where one finds microbes - from plants and animals to every kind of natural and man-made environment around the globe.
+Metagenomic sequencing has provided fundamental insight into the diversity of microbes and their function and roles in ecosystems.
+Initially, metagenomics was used largely as a way of simply obtaining some genomic information about organisms that were not cultured (i.e., nobody had figured out how to grow them in isolation in a controlled environment) (e.g., \cite{beja2000bacterial}).
 However, due to decreases in the cost and the difficulty of sequencing, metagenomics has become a tool for studying any microbial community, regardless of cultivability.
 
-One of the key strengths of metagenomic approaches comes being able to, with some caveats, randomly sample the genomes of the organisms in a particular environment approximately uniformly.  This is achieved via utilizing the random "shotgun" sequencing methods originally applied to the genomes of individual organisms (Venter, JC, et al. "Environmental genome shotgun sequencing of the Sargasso Sea." Science 304.5667 (2004): 66-74.) (Tyson, et al. 2004. "Community structure and metabolism through reconstruction of microbial genomes from the environment." Nature 428.6978 (2004): 37-43.).
+One strength of metagenomic approaches arises from the ability to sample the genomes of organisms in a particular environment approximately uniformly at random.  This effect is achieved with the random ``shotgun'' sequencing methods originally applied for \textit{de novo} genomes sequencing of individual organisms~\cite{venter2004environmental,tyson2004community}.
 From random shotgun sequence data of DNA isolated from environmental samples, one can make inferences about what organisms are present in a sample (i.e., who is there?) as well as what is their functional potential (i.e., what are they doing?).
-In addition, by comparing shotgun metagenomic data across samples one can study larger scale issues such as ecology and biogeography and also attempt to correlate particular organisms or functions with ``metadata" about samples (e.g., health status, nutrient cycling rates, etc) (e.g., Tringe SG et al. 2005. "Comparative metagenomics of microbial communities." Science 308.5721 (2005): 554-557.)
-Furthermore, by sampling a community directly one can avoid certain problems inherent in culturing such as contamination, population bottlenecking, and taxonomic bias (Eisen JA (2007) Environmental Shotgun Sequencing: Its Potential and Challenges for Studying the Hidden World of Microbes. PLoS Biol 5(3): e82. doi:10.1371/journal.pbio.0050082).  In this sense metagenomics can be considered an extension of "culture-independent" ribosomal RNA gene surveys (Hugenholtz, P., Goebel, B. M., & Pace, N. R. (1998). Impact of culture-independent studies on the emerging phylogenetic view of bacterial diversity. Journal of bacteriology, 180(18), 4765-4774.) 
-Due to its potential for revealing insights into microbial communities, metagenomics has begun to be applied in diverse fields from medicine to agriculture, law enforcement, biodefense, ecology, evolution, and industry.
+In addition, by comparing shotgun metagenomic data across samples one can study larger scale issues such as ecology and biogeography and also attempt to correlate particular organisms or functions with ``metadata'' about samples (e.g., health status, nutrient cycling rates, etc) (e.g.\cite{tringe2005comparative}).
+Furthermore, by sampling a community directly one can avoid certain problems inherent in culturing such as contamination, population bottlenecking, and taxonomic bias~\cite{eisen2007environmental}.  In this sense metagenomics can be considered an extension of ``culture-independent'' ribosomal RNA gene surveys~\cite{hugenholtz1998impact}. 
+The great potential for novel insight into microbial communities has led researchers in diverse fields from medicine to agriculture, law enforcement, biodefense, ecology, evolution, and industry to apply metagenomic methods.
 
-Athough there is enormous potential for metagenomics to provide diverse insights, there are many challenges with realizing this potential.
-Perhaps the biggest challenges lie in analysis of the data (Chen K, Pachter L (2005) Bioinformatics for Whole-Genome Shotgun Sequencing of Microbial Communities. PLoS Comput Biol 1(2): e24. doi:10.1371/journal.pcbi.0010024), as follows.
-First, metagenomic samples reflect entire communities of organisms, unlike "traditional'' genome sequencing of individual organisms or clones (i.e., from cultures of a single isolate).
-The large number of microbial taxa in many environmental samples can be a challenge for many types of analysis.
-More vexing is when (as is usually the case) each species in a community is heterogenous with extensive polymorphisms within the genome (Kunin, V., Copeland, A., Lapidus, A., Mavromatis, K., & Hugenholtz, P. (2008). A bioinformatician's guide to metagenomics. Microbiology and Molecular Biology Reviews, 72(4), 557-578).
-A related problem is that in general shotgun metagenomic sequencing protocols destroy some of the most valuable information present in a sample: genetic linkage.
-Loss of linkage information occurs in two ways: during sample extraction and size selection of fragments for sequencing.
+Athough great potential exists for metagenomics to yield insight into the hidden world of microbes, many challenges remain before this potential can be realized.
+Perhaps the biggest challenges lie in analysis of the data~\cite{chen2005bioinformatics}.
+First, metagenomic samples reflect entire communities of organisms, unlike ``traditional'' genome sequencing of individual organisms or clones (i.e., from cultures of a single isolate).
+The large number of microbial taxa in environmental samples can be a challenge for some types of analysis.
+More vexing is when each species in a community is heterogenous with extensive genomic polymorphisms within the species~\cite{kunin2008bioinformatician}.
+A related issue is that shotgun metagenomic sequencing protocols destroy some of the most valuable information present in a sample: genetic linkage.
+Loss of linkage information occurs in two ways: during sample extraction and size selection of DNA fragments for sequencing.
 In nearly all metagenomic sample processing methods, cells from the microbial community are lysed together to obtain a common pool of DNA.
 This practice causes DNA from many different cells to mix together, so that the cellular compartmentalization of individual genotypes is destroyed.
 Subsequently, long chromosome-scale DNA fragments are typically broken by mechanical or enzymatic means into fragments small enough for processing with current sequencing protocols.
-The resulting sequenced fragments are usually less than 1 Kbp in length.  It is possible to generate data for much larger fragments such as by cloning large DNA fragments as was done in the early stages of the field of metagenomics (add citation to Beja et al.) or using Pacific Biosciences sequencing (add citation).  However, most metagenomic data that is currently being generated is via short read/short insert sequencing such as using Illumina sequencing machines.  Though short read methods are cheaper, quicker and easier than large fragment approaches, they come at a cost.  The shearing results in further loss of genetic linkage information, since this method removes our ability to infer how short DNA fragments were arranged into chromosome-scale molecules.
+The resulting sequenced fragments are usually less than 1 Kbp in length.  Although it is possible to generate data for larger fragments via cloning~\cite{beja2000bacterial} or using Pacific Biosciences sequencing, most metagenomic data is currently being generated with short read/short insert sequencing chemistry such as that offered by Illumina.  Though short read methods are cheaper, quicker and easier than large fragment approaches, they come at a cost.  The shearing results in further loss of genetic linkage information, since we no longer have direct information on how short DNA fragments are arranged into chromosome-scale molecules.
 
 The lack of linkage information limits the ability to use metagenomic data for evolutionary analysis, since most current methods assume complete linkage information is available.
 In practice, improved sample processing methods could potentially retain the genetic linkage information of a microbial community throughout the sequencing process.
-High throughput single-cell genomics (e.g. applied to thousands of cells) offers an alternative to the standard metagenomics workflow that preserves information about the compartmentalization of genetic material into cells ~\cite{Woyke2010} (Rinke, C., Schwientek, P., Sczyrba, A., Ivanova, N. N., Anderson, I. J., Cheng, J. F., ... & Woyke, T. (2013). Insights into the phylogeny and coding potential of microbial dark matter. Nature.)(Lasken, R. S. (2012). Genomic sequencing of uncultured microorganisms from single cells. Nature Reviews Microbiology, 10(9), 631-640.)
+High throughput single-cell genomics (e.g. applied to thousands of cells) offers an alternative to the standard metagenomics workflow that preserves information about the compartmentalization of genetic material into cells ~\cite{Woyke2010,lasken2012genomic,rinke2013insights}
+However, single cell approaches are still limited in their utility by a number of technical issues including contamination, expensive and extensive equipment needs, missing data, and the creation of chimeras~\cite{blainey2013future}; they will always be more limited in throughput than their standard metagenomics counterparts.
 
-However, single cell approaches are still limited in their utility by a number of technical issues including contamination, expensive and extensive equipment needs, missing data, and the creation of chimeras (Blainey, P. C. (2013). The future is now: single‐cell genomics of bacteria and archaea. FEMS microbiology reviews); they will always be more limited in throughput than their standard metagenomics counterparts.
-
-Thus the research community is left with developing and using computational methods to sift through and make sense out of short read, random shotgun metagenomic data.
+Thus the research community is left with developing and using computational methods to sift through and make sense of short read, random shotgun metagenomic data.
 Though there are many important steps in analyzing metagenomic data, we believe that a critical component is phylogenetic analysis of the sequences.
-Among the uses of phylogenetic analysis in metagenomics are: improved classification of sequences as to their taxonomic origin, functional prediction for genes, alternative metrics of alpha and beta diversity, improved identification of operational taxonomic units (OTUs), and sequence binning ~\cite{meyer2008metagenomics, Matsen2010, Evans2010, Kembel2011, Matsen2012, Stark2010, Wu2012, Brady2009, Brady2011, Sharpton2011}.
+Among the uses of phylogenetic analysis in metagenomics are: improved classification of sequences as to their taxonomic origin, functional prediction for genes, alternative metrics of alpha and beta diversity, improved identification of operational taxonomic units (OTUs), and sequence binning ~\cite{meyer2008metagenomics, Matsen2010, Evans2010, Kembel2011, Matsen2012, Stark2010, Wu2012, Brady2009, Brady2011, Sharpton2011, Jolley2012, sunagawa2013metagenomic}.
 
-In the present manuscript, we introduce PhyloSift, a new method for reconstructing the genetic architecture of a metagenomic sample and for comparison of community structure among multiple related samples.
+In the present manuscript, we introduce PhyloSift, a new method for phylogenetic analysis of metagenomic samples and for comparison of community structure among multiple related samples.
 The new method leverages phylogenetic models of molecular evolution to provide high resolution detection of organisms in a metagenome.
-Our approach is based on well known statistical phylogenetic models, is amenable to Bayesian hypothesis testing, and uses name-independent analyses to provide higher resolution about microbial community assemblages (versus methods that rely on taxonomy).
+Our approach is based on well known statistical phylogenetic models, is amenable to Bayesian hypothesis testing, and uses name-independent and OTU-free analyses to provide higher resolution about microbial community assemblages (versus methods that rely on taxonomy or OTUs).
 These methods can be applied to any single phylogeny at a time, and expand on our previous experience building AMPHORA \cite{WuEisen2008}.
 We additionally propose a set of 40 ``elite'' marker gene families that have largely congruent phylogenetic histories, thus improving the limit of detection for rare organisms in microbial communities.
 We contribute an open-source implementation of the method that has been engineered for ease-of-use on 64-bit Linux and Mac platforms.
@@ -178,7 +177,7 @@ Most small viral genomes lack homologs of these gene families.
 
 In addition to the elite 40 families, the PhyloSift database also includes four additional sets of gene families:
 \begin{itemize}
-\item 16s and 18s ribosomal {RNA} genes
+\item 16S and 18s ribosomal {RNA} genes
 \item mitochondrial gene families
 \item Eukaryote-specific gene families
 \item Viral gene families
@@ -224,7 +223,7 @@ In this stage, each candidate sequence is added to an amino acid or {RNA} multip
 If the input sequences were {DNA}, a codon multiple sequence alignment congruent to the amino acid alignment is also generated.
 
 PhyloSift applies the \texttt{hmmalign} program from the HMMER 3.0 software package~\cite{Eddy2011} to add the candidate sequences to reference multiple sequence alignments.
-During construction of the PhyloSift reference database (described elsewhere) a profile-HMM is generated from a multiple alignment of the gene family reference sequences.
+During construction of the PhyloSift reference database (described in section~\ref{sec:dbupdate}) a profile-HMM is generated from a multiple alignment of the gene family reference sequences.
 When processing candidate sequences, PhyloSift then uses the profile-HMM to map the input sequence to the reference multiple alignment.
 We acknowledge that application of a profile-HMM to align highly divergent sequences suffers some documented shortcomings, and this is one avenue for future improvement of PhyloSift~\cite{Loytynoja2012}.
 
@@ -298,6 +297,9 @@ A complete multiple alignment for each family is then created by adding the alig
 Because each region has been aligned to the same profile-HMM (or covarion model for noncoding genes) and non-aligning sites in the query genome removed, generation of a new multiple alignment is a simple matter of concatenating the individual alignments.
 
 PhyloSift also generates codon alignments for each protein-coding gene family at this stage.
+
+The PhyloSift reference database is available independently of the software at the following location: http://edhar.genomecenter.ucdavis.edu/~koadman/phylosift\_markers
+
 \subsubsection*{Phylogenetic inference and pruning}
 The next step of database update involves constructing a phylogenetic tree for each gene family.
 Currently PhyloSift employs FastTree 2.1~\cite{Price2010} to generate approximate maximum likelihood trees for this task.
@@ -386,7 +388,7 @@ In the current revision of PhyloSift, Bayesian hypothesis tests can be applied t
 \subsection*{Community structure comparison: application to human microbiome data}
 
 In addition to hypothesis testing for lineages, PhyloSift also provides a platform to conduct comparative analysis of microbial community structure directly from metagenomic data.
-To understand how community structure analysis with PhyloSift compares to similar analysis based on 16s rRNA amplicon sequencing we study a recently published human microbiome dataset where samples were sequenced both by a 16s amplicon and a shotgun metagenome approach~\cite{Yatsunenko2012}.
+To understand how community structure analysis with PhyloSift compares to similar analysis based on 16S rRNA amplicon sequencing we study a recently published human microbiome dataset where samples were sequenced both by a 16S amplicon and a shotgun metagenome approach~\cite{Yatsunenko2012}.
 In that study, fecal material was collected from infants and adults at diverse geographical locations and subjected to sequencing.
 Over 600 samples were sequenced using the 16S amplicon protocol.
 Of those 106 were also subjected to metagenomic shotgun sequencing using 454 pyrosequencing chemistry.
@@ -394,7 +396,7 @@ Here we apply PhyloSift to the 106 metagenomic samples and conduct a community s
 
 All QIIME analyses were carried out using release 1.5.0 of the QIIME software toolkit, using the workflow and parameters reported by Yatsunenko \textit{et al}. The Greengenes reference database (collapsed at 97\% identity) was used to carry out a closed-reference OTU picking protocol at 97\% sequence identity with uclust. All reads which matched database sequences at this level were retained for downstream processing, while non-matching sequences were excluded from further analyses. Parameters for the pick\_otus.py script were as follows: --max\_accepts 1 --max\_rejects 8 --stepwords 8 --word\_length 8. Taxonomic assignments for OTUs were given by the Greengenes database. Rarefaction and PCoA analyses were carried out using the alpha\_diversity.py and beta\_diversity\_through\_plots.py workflows. A full list of these QIIME commands and output files have been publicly deposited in Figshare (DOI: XXXXX) .
 
-PhyloSift processed each of the 106 samples, requiring an average of 35 minutes CPU time per sample.
+PhyloSift processed each of the 106 samples, requiring an average of 2.5 hours per sample on a single 2.27GHz Intel Xeon E5520 core (circa 2008 model).
 The majority of CPU time is spent in phylogenetic placement of reads.
 These samples have 154,485 non-human sequence reads on average, for an average of 52 Mbp of sequence data per sample.
 
@@ -402,7 +404,7 @@ We then conducted Edge Principal Components Analysis (PCA) using the reads place
 Edge PCA identifies the combination of phylogenetic lineages that explain the greatest extent of variation in the microbial communities in each sample.
 The resulting PCA plot is shown in Figure~\ref{fig:agepca}, with each sample colored according to the age of the human host at the time of sampling.
 The PCA reveals a strong association between age and microbial community structure.
-This relationship was also identified by Yastunenko \textit{et al} using 16s rRNA analysis on a set of $>$600 samples which included the 106 studied here.
+This relationship was also identified by Yastunenko \textit{et al} using 16S rRNA analysis on a set of $>$600 samples which included the 106 studied here. In order to quantify the degree of similarity between the PhyloSift Edge PCA and QIIME PCoA results, we calculated Procrustes distances among each pair of analyses, the results are given in Table 1. In general we find that QIIME's PCoA analysis of metagenomic 16S reads produces results that are very different to all other methods, whereas results produced by QIIME PCoA analysis of 16S amplicon data are more similar to results produced by PhyloSift on metagenomic data.
 
 The nature of edge PCA lends itself to an intuitive inspection of the phylogenetic lineages explaining the difference in community structures.
 PhyloSift, by using pplacer's guppy program and the Archaeopteryx tree viewer, can produce a visualization of the lineages most strongly associated with each principal component.
@@ -410,7 +412,23 @@ Figure~\ref{fig:pcaphylo} shows this visualization for the edge PCA analysis of 
 In that figure, lineages are thickened proportionally to their contribution to the principal component, and are colored according to whether they increase (red) or decrease (turqoise) in abundance along the principal component axis.
 As we can see from Figure~\ref{fig:pcaphylo} left, the first principal component is defined by an increase in Ruminococcacae, Clostridiales, and Bacteroides, with a decrease in Bifidobacteria.
 The association with age suggests that as communities develop in aging children, the Bifidobacteria become less abundant and members of those other lineages grow in abundance.
-The analysis of Yatsunenko \textit{et al} on 16s rRNA data also identified age-associated increases in Ruminococcacae and Bacteroides and a decrease in Bifidobacteria.
+The analysis of Yatsunenko \textit{et al} on 16S rRNA data also identified age-associated increases in Ruminococcacae and Bacteroides and a decrease in Bifidobacteria.
+
+\begin{table}
+\begin{tabular}{|r||c|c|c|}
+  \hline
+   & QIIME 16S Meta & PhyloSift 16S Meta & PhyloSift Elite Meta \\
+  \hline
+  \hline
+  QIIME 16S Amp & 0.5134279 & 0.3873677 & 0.4062175 \\
+  \hline
+  QIIME 16S Meta & - & 0.5406786 & 0.6351224 \\
+  \hline
+  PhyloSift 16S Meta & - & - & 0.2450837 \\
+  \hline 
+\end{tabular}
+\caption{Procrustes distances between microbial community analysis methods. Analysis of 16S amplicon sequences with QIIME (QIIME 16S Amp) produces results more similar to PhyloSift analyzing either 16S or elite protein sequences from metagenomic data than to QIIME analysis of 16S sequences from metagenomic data. PhyloSift results for 16S and elite proteins are more similar to each other than to either QIIME method, possibly due to differences between Edge PCA and the QIIME-generated PCoA on UniFrac distances.}
+\end{table}
 
 Whereas the first principal component agrees strongly with the analysis reported by Yastunenko \textit{et al}, the second principal component appears to identify a previously unreported aspect of variation in these samples.
 Extreme samples on the 2nd principal component (PC2) are very young infants whose fecal microbiota appear to be dominated not by Bifidobacteria, but instead by members of the genus Enterobacter and family Lactobacillales (see Figure~\ref{fig:pcaphylo}, right).
@@ -428,12 +446,12 @@ More recently, phylogenetic diversity (PD)~\cite{Faith1992} has been applied to 
 In the present work we compute phylogenetic diversity on the placed reads, using the attachment points of reads to the reference tree as the basis for the diversity calculation.
 Figure~\ref{fig:agediversity} shows the phylogenetic diversity present in the fecal samples as a function of age.
 We observe a general trend where phylogenetic diversity grows quickly with age, presumably due to colonization of the infant gut, then continues to grow slowly throughout adult life.
-There is a significant log-linear relationship of phylogenetic diversity with age (Pearson's product-moment correlation, $p<10^-15$).
+There is a significant log-linear relationship of phylogenetic diversity with age (Pearson's product-moment correlation, $p<10^{-15}$).
 We also plot a variant of the PD metric called balance-weighted phylogenetic diversity (McCoy and Matsen, under preparation), where diversity contributed by each lineage is weighted by its relative abundance.
 Balance-weighted PD exhibits a similar growth in early life, but values for individual samples shift relative to population median values.
 Notably, balance-weighted PD declines in old age, suggesting that a smaller number of divergent lineages may come to dominate the adult human gut.
 The maximum balance-weighted PD value observed among any sample in the dataset was at the 7th month of life.
-When samples from before and after the 7th month of life are tested separately, balance-weighted PD exhibits significant age-associated growth before the 7th month ($p=0.009$, Spearman's rank correlation) and age-associated decline after the 7th month ($p<10^-5$, Spearman's rank correlation).
+When samples from before and after the 7th month of life are tested separately, balance-weighted PD exhibits significant age-associated growth before the 7th month ($p=0.009$, Spearman's rank correlation) and age-associated decline after the 7th month ($p<10^{-5}$, Spearman's rank correlation).
 It is not clear what drives the reduction in balance-weighted PD after the 7th month of life, though we note that solid food is commonly introduced to the infant's diet around this time.
 
 PhyloSift provides a means to visualize the relative abundance of taxonomic groups present in a sample.
@@ -453,7 +471,7 @@ In many cases, phylogenies will also offer a higher resolution representation of
 Phylogenetic analysis of metagenome sequence could in principle offer several advantages in the area of microbial forensics.
 First, by studying an uncultured community, some potential pitfalls of culture bias and sample contamination can be avoided entirely.
 Second, the environmental shotgun sequencing approach can avoid problems related to PCR primer bias, though issues related to DNA extraction bias remain a problem~\cite{Morgan2010} and might be especially relevant for sporulating organisms such as \textit{Bacillus}.
-Third, the metagenomic approach can be applied without prior knowledge of which genes to target in the sample, and permits interrogation of both slow-evolving genes such as 16s rRNA and fast evolving genes that might offer greater resolution among closely related organisms.
+Third, the metagenomic approach can be applied without prior knowledge of which genes to target in the sample, and permits interrogation of both slow-evolving genes such as 16S rRNA and fast evolving genes that might offer greater resolution among closely related organisms.
 Finally, phylogenetics can be applied to any gene of interest regardless of whether its evolutionary history is concordant with a taxonomic hierarchy.
 
 Here we have introduced a means to statistically test for lineages of interest directly from an uncultured DNA sample.
@@ -472,11 +490,11 @@ One limitation of this test is that it does not currently provide a means to acc
 Future work might develop tests that employ many technical replicates of samples to account for such variation in the hypothesis test.
 
 PhyloSift can also be applied to explore the variation in community structure present in a collection metagenomic samples.
-In recent years it has become standard practice to explore microbial community structure variation using amplicon sequencing of highly conserved genes such as 16s rRNA, 18s rRNA and ITS regions followed by analysis with a pipeline such as QIIME ~\cite{Caporaso2010}, VAMPS (http://vamps.mbl.edu), or mothur ~\cite{schloss2009}.
+In recent years it has become standard practice to explore microbial community structure variation using amplicon sequencing of highly conserved genes such as 16S rRNA, 18s rRNA and ITS regions followed by analysis with a pipeline such as QIIME ~\cite{Caporaso2010}, VAMPS (http://vamps.mbl.edu), or mothur ~\cite{schloss2009}.
 Analysis of community structure using metagenome sequence has some potential advantages, such as avoiding issues related to PCR primer bias and distinguishing between erroneous PCR chimeras and sequences representing the "rare biosphere"~\cite{Bik2012}.
 However, there are also shortcomings, such as the relatively sparse phylogenetic diversity of available reference genomes relative to amplicon databases.
 The reference-based approach taken by PhyloSift will suffer this database resolution limitation when processing metagenomic data, although not when processing amplicon data.
-Efforts to increase the phylogenetic diversity of available genome sequences are ongoing~\cite{Wu2009} (Rinke, C., Schwientek, P., Sczyrba, A., Ivanova, N. N., Anderson, I. J., Cheng, J. F., ... & Woyke, T. (2013). Insights into the phylogeny and coding potential of microbial dark matter. Nature.)(Shih, P. M., Wu, D., Latifi, A., Axen, S. D., Fewer, D. P., Talla, E., ... & Kerfeld, C. A. (2013). Improving the coverage of the cyanobacterial phylum using diversity-driven genome sequencing. Proceedings of the National Academy of Sciences, 110(3), 1053-1058.).
+Efforts to increase the phylogenetic diversity of available genome sequences are ongoing~\cite{Wu2009,rinke2013insights,shih2013improving}
 
 Advances in the preparation of high throughput samples will make comparative metagenomics more tractable.
 The analysis we describe of human fecal microbial communities was possible with a median of only 50 Mbp sequence data per sample.
