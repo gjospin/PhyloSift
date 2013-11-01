@@ -14,7 +14,8 @@ color_legend <- function(x, y, xlen, ylen, main, tiks){
 }
 
 
-phypro<-read.table("try3.trans",sep=",")
+#phypro<-read.table("try3.trans",sep=",")
+phypro<-read.table("pcapro.proj.csv")
 meta <- read.table("human_micro_meta.csv",sep="\t",head=T)
 
 ages <- trunc(1 + 12*meta$Age.of.host..years.[match(phypro$V1,as.integer(meta$MG.RAST.ID))])
@@ -32,7 +33,8 @@ color_legend( -6.5, 3.5, 3.5, 1.5, "age in months:", trunc(legvec)-1)
 dev.off()
 
 
-phy16<-read.table("try3_16s.trans",sep=",")
+#phy16<-read.table("try3_16s.trans",sep=",")
+phy16<-read.table("pca16.proj.csv")
 ages <- trunc(1 + 12*meta$Age.of.host..years.[match(phy16$V1,as.integer(meta$MG.RAST.ID))])
 logagesphy16 <- log(ages)
 logagesphy16 <- logagesphy16 * scaler
@@ -94,21 +96,46 @@ amp16s$pc.vector.number
 rastids
 meta$Metagenome
 
+# not present in Holly's amplicon data analysis
+#       and excluded from metagenomic analysis:
+# USinfTw17.2		4461196.3
+# h10B.2		4461146.3
+# 371		4461168.3
+
+# missing from Holly's QIIME metagenomic analysis:
+# 4461121.3 (too few reads?)
+# 
+
+# equivalent samples due to Yatsunenko upload problem 
+# 4461120.3	4461119.3
+
+amplookup <-read.table("amp_lookup_table.csv")
+amp_rastid <- amplookup$V2[match(amp16s$pc.vector.number, amplookup$V1)]
+amp_rastid <- amp_rastid[1:(length(amp_rastid)-2)]
+amp_rastid[amp_rastid==4461119] <- 4461120
+amp_rastid <- amp_rastid[2:length(amp_rastid)]
+
 library("shapes")
-amp16_mat <- cbind(-amp16s$X1[1:ll],amp16s$X2[1:ll])
-meta16_mat <- cbind(-meta16s$X1[1:ll],-meta16s$X2[1:ll])
-phy16_mat <- cbind(-phy16$V2,phy16$V3)
-phypro_mat <- cbind(-phypro$V2,phypro$V3)
+amp16_mat <- cbind(-amp16s$X1[2:107],amp16s$X2[2:107]) # skip first element b/c that sample is missing from others
+
+meta16_inds <- match(amp_rastid, meta16s$pc.vector.number)
+meta16_mat <- cbind(-meta16s$X1[meta16_inds],-meta16s$X2[meta16_inds])
+phy16_inds <- match(amp_rastid, phy16$V1)
+phy16_mat <- cbind(-phy16$V2[phy16_inds],phy16$V3[phy16_inds])
+phypro_inds <- match(amp_rastid, phypro$V1)
+phypro_mat <- cbind(-phypro$V2[phypro_inds],phypro$V3[phypro_inds])
 dim(amp16_mat)
 dim(phy16_mat)
 "QIIME amplicon vs. QIIME meta"
 sin(riemdist(amp16_mat,meta16_mat)) 
 "QIIME amplicon vs. Phylosift meta 16"
-#sin(riemdist(amp16_mat,phy16_mat)) 
+sin(riemdist(amp16_mat,phy16_mat)) 
 "QIIME amplicon vs. Phylosift prot"
 sin(riemdist(amp16_mat,phypro_mat)) 
 "QIIME meta vs. Phylosift prot"
 sin(riemdist(meta16_mat,phypro_mat)) 
+"QIIME meta vs. Phylosift meta 16"
+sin(riemdist(meta16_mat,phy16_mat)) 
 "Phylosift meta 16s vs. Phylosift prot"
 sin(riemdist(phy16_mat,phypro_mat)) 
 
@@ -117,5 +144,5 @@ par(mfrow=c(2,2))
 plot(-amp16s$X1[1:ll],amp16s$X2[1:ll],pch=16,col=colors[logages+1],xlab="PC1 (50.8%)",ylab="PC2 (9.72%)", main="QIIME on 16S rRNA amplicons")
 plot(-meta16s$X1[1:ll],-meta16s$X2[1:ll],pch=16,col=colors[logagesqiimeta+1],xlab="PC1 (38.9%)",ylab="PC2 (17.9%)", main="QIIME on metagenomic 16S rRNA")
 plot(-phy16$V2,phy16$V3,pch=16,col=colors[logagesphy16+1],xlab="PC1 (63.4%)",ylab="PC2 (12.8%)", main="phylosift on metagenomic 16S rRNA")
-plot(-phypro$V2,phypro$V3,pch=16,col=colors[logagesphy+1],xlab="PC1 (62.7%)",ylab="PC2 (14.5%)", main="phylosift on metagenomic proteins")
+plot(-phypro$V2,phypro$V3,pch=16,col=colors[logagesphy+1],xlab="PC1 (55.8%)",ylab="PC2 (16.1%)", main="phylosift on metagenomic proteins")
 
