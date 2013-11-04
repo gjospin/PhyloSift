@@ -9,7 +9,7 @@ colors = rainbow(60*12, end=0.7, alpha=0.5)
 library(plotrix)
 
 color_legend <- function(x, y, xlen, ylen, main, tiks){
-    text(x, y+2*ylen/3, main, adj=c(0,0), cex=0.85)
+    text(x, y+2*ylen/3, main, adj=c(0,0), cex=1.3)
     color.legend(x, y, x+xlen, y+ylen/4, legend=tiks, rect.col=colors, cex=0.7)
 }
 
@@ -139,10 +139,15 @@ sin(riemdist(meta16_mat,phy16_mat))
 "Phylosift meta 16s vs. Phylosift prot"
 sin(riemdist(phy16_mat,phypro_mat)) 
 
-pdf("allofem.pdf")
-par(mfrow=c(2,2))
+pdf("allofem.pdf",width=9,height=6)
+par(mfrow=c(2,3))
 plot(-amp16s$X1[1:ll],amp16s$X2[1:ll],pch=16,col=colors[logages+1],xlab="PC1 (50.8%)",ylab="PC2 (9.72%)", main="QIIME on 16S rRNA amplicons")
 plot(-meta16s$X1[1:ll],-meta16s$X2[1:ll],pch=16,col=colors[logagesqiimeta+1],xlab="PC1 (38.9%)",ylab="PC2 (17.9%)", main="QIIME on metagenomic 16S rRNA")
+
+#par(mar=rep(0, 4), xpd = NA)
+plot(1,1,bty="n",type="n",xaxt="n",yaxt="n",xlab="",ylab="",xlim=c(0,1),ylim=c(0,1))
+color_legend( 0, 0.375, 0.75, 0.40, "age in months:", trunc(legvec)-1)
 plot(-phy16$V2,phy16$V3,pch=16,col=colors[logagesphy16+1],xlab="PC1 (63.4%)",ylab="PC2 (12.8%)", main="phylosift on metagenomic 16S rRNA")
 plot(-phypro$V2,phypro$V3,pch=16,col=colors[logagesphy+1],xlab="PC1 (55.8%)",ylab="PC2 (16.1%)", main="phylosift on metagenomic proteins")
+dev.off()
 
