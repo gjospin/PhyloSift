@@ -128,11 +128,11 @@ The great potential for novel insight into microbial communities has led researc
 
 Athough great potential exists for metagenomics to yield insight into the hidden world of microbes, many challenges remain before this potential can be realized.
 Perhaps the biggest challenges lie in analysis of the data~\cite{chen2005bioinformatics}.
-First, metagenomic samples reflect entire communities of organisms, unlike ``traditional'' genome sequencing of individual organisms or clones (i.e., from cultures of a single isolate).
+First, metagenomic samples reflect entire communities of organisms, unlike ``traditional'' genome sequencing of individual organisms or clones (i.e., from cultures of a single isolate where genetic diversity has been bottlenecked).
 The large number of microbial taxa in environmental samples can be a challenge for some types of analysis.
 More vexing is when each species in a community is heterogenous with extensive genomic polymorphisms within the species~\cite{kunin2008bioinformatician}.
 A related issue is that shotgun metagenomic sequencing protocols destroy some of the most valuable information present in a sample: genetic linkage.
-Loss of linkage information occurs in two ways: during sample extraction and size selection of DNA fragments for sequencing.
+Loss of linkage information occurs in two ways: during sample extraction and fragmentation of DNA for sequencing.
 In nearly all metagenomic sample processing methods, cells from the microbial community are lysed together to obtain a common pool of DNA.
 This practice causes DNA from many different cells to mix together, so that the cellular compartmentalization of individual genotypes is destroyed.
 Subsequently, long chromosome-scale DNA fragments are typically broken by mechanical or enzymatic means into fragments small enough for processing with current sequencing protocols.
@@ -215,7 +215,7 @@ These representatives are chosen to span the phylogenetic diversity of the gene 
 This is important because it reduces the volume of sequence to search and because part of LAST's fast heuristic to identify candidate regions to align involves eliminating redundant and repetitive $k$-mers from the search space~\cite{Kiełbasa2011}.
 Thus, a database constructed with all sequences (and not just divergent representatives) could in principle reduce sensitivity in aligning reads to those database sequences.
 
-The result of the search stage is a set of candidate amino acid sequences that are similar to each gene family in the database and if {DNA} was used as input the corresponding untranslated {DNA} sequences.
+The search stage identifies a set of candidate amino acid sequences from the input data that are similar to reference gene families. If {DNA} was provided as input the corresponding {DNA} sequences are also reported.
 
 \subsubsection*{Alignment to reference multiple alignment}
 Prior to the alignment stage all input sequence regions with putative homology to reference gene families have been identified and extracted.
@@ -225,9 +225,12 @@ If the input sequences were {DNA}, a codon multiple sequence alignment congruent
 PhyloSift applies the \texttt{hmmalign} program from the HMMER 3.0 software package~\cite{Eddy2011} to add the candidate sequences to reference multiple sequence alignments.
 During construction of the PhyloSift reference database (described in section~\ref{sec:dbupdate}) a profile-HMM is generated from a multiple alignment of the gene family reference sequences.
 When processing candidate sequences, PhyloSift then uses the profile-HMM to map the input sequence to the reference multiple alignment.
-We acknowledge that application of a profile-HMM to align highly divergent sequences suffers some documented shortcomings, and this is one avenue for future improvement of PhyloSift~\cite{Loytynoja2012}.
+Application of a profile-HMM to align highly divergent sequences suffers some documented shortcomings, in particular that alignment accuracy decreases with divergence of source sequences used to construct the profile-HMM~\cite{Loytynoja2012}. 
+This is one avenue for future improvement of PhyloSift and protein evolution models in general.
 
 Finally, PhyloSift concatenates the alignments of the 40 elite markers to a single multiple sequence alignment.
+When a single input sequence aligns to multiple genes, the aligned sequence becomes a single row in the concatenated alignment.
+All other sequences are represented in separate alignment rows.
 
 PhyloSift treats input sequences with similarity to non-coding {RNA}s differently than protein genes.
 Sequences longer than 600nt are aligned using Infernal's \texttt{cmalign} program with the global alignment option.
@@ -434,7 +437,7 @@ Whereas the first principal component agrees strongly with the analysis reported
 Extreme samples on the 2nd principal component (PC2) are very young infants whose fecal microbiota appear to be dominated not by Bifidobacteria, but instead by members of the genus Enterobacter and family Lactobacillales (see Figure~\ref{fig:pcaphylo}, right).
 One possible explanation for this observation may be an association with breast-feeding status of the infants.
 However, inspection of publicly available metadata did not reveal any clear assocation of PC2 with breastfeeding status or other recorded metadata.
-Another possibile explanation is mode of birth, vaginal or caesarian, however we have no information on mode of delivery for newborns in this dataset.
+Another possibile explanation is mode of birth, vaginal or caesarian, however we have no information on mode of delivery for newborns in this dataset (Jeffrey Gordon, personal communication).
 We note that members of the Lactobacillales are abundant in the human vaginal tract, suggesting that newborns high on the 2nd principal component axis may be vaginally delivered if the two groups of newborns do indeed reflect differences in mode of delivery.
 Interestingly, the dimensions of community structure variation identified in the current set of 106 samples differ from those identified by Yatsunenko \textit{et al} in the larger set of 600 samples for which amplicon data are available.
 Geography and age were associated with most variation in their analysis of $>$600 samples, and the 106 metagenome samples are primarily from infants and do not equally represent that variation.
@@ -461,11 +464,11 @@ Figure~\ref{fig:kronaplots} shows two such plots for samples from a 1 month old 
 \section*{Discussion}
 We have presented a new approach for phylogenetic analysis of genomes and uncultured microbial communities.
 The software implementation of our method, called PhyloSift, also provides a platform for comparison of community structure among many samples.
-Phylogenetic analysis (insertion of short sequences into reference phylogenies) offers a number of conceptual advantages over taxonomic analysis (interpreting sequence data on the basis of hierarchal classification information) for metagenomic data.
+Phylogenetic analysis (placement of short sequences onto reference phylogenies) offers a number of conceptual advantages over OTU-based or taxonomic analysis (interpreting sequence data on the basis of hierarchal classification information) for metagenomic data.
 Without applying phylogenetic analysis, taxonomic analysis can produce results that are difficult to interpret, particularly when an unknown environmental sequence contains many high scoring hits to reference database sequences as is common in BLAST-based approaches.
 Alternatively, taxonomic information can be misleading for sequences from species lacking close relatives in public sequence databases; these sequences may recover no match at all, or be assigned taxonomic annotations which do not accurately reflect phylogenetic relationships (e.g. the closest match is still a distant relative, as reflected by low BLAST scores).
 Phylogenetic analysis avoids both of these problems, relying instead on evolutionary models to accurately place unknown sequences within a known topology.
-In many cases, phylogenies will also offer a higher resolution representation of genetic ancestry than taxonomies.
+In many cases, phylogenies will also offer a higher resolution representation of genetic ancestry than taxonomies. For these reasons, we focus on types of phylogenetic analysis enabled by PhyloSift and forgo a discussion of previous taxonomy-based metagenome analysis methods.
 
 
 Phylogenetic analysis of metagenome sequence could in principle offer several advantages in the area of microbial forensics.
@@ -481,6 +484,18 @@ However, this method can be applied to any protein-coding or noncoding gene fami
 Certain gene families will yield more sensitive tests than others, for example the 16S rRNA gene is slow-evolving and can not usually distinguish within-species relationships where some protein-coding genes might have greater resolution.
 We emphasize that the Bayes factor is not a test of homology -- homology tests exist as e-value and related score statistics in aligners such as BLAST, LAST, and HMMER.
 Given sequences homologous to a gene family, the Bayes factor tests from which lineage they diverged.
+The limit of detection for this method will depend on how deeply a sample has been sequenced.
+This value will depend on several factors specific to the sequencing chemistry and currently must be calculated independently by the user.
+
+The 40 elite gene families were selected because they are universally present and almost always in single copy, but there are some exceptions.
+For example the gene EF-Tu was found to have a partial homolog in \textit{Bacteroides}, which has apparently been recently acquired from a \textit{Vibrio}-like lineage. 
+This means that a test of the null hypothesis that no sequence derives from the Vibrio EF-Tu lineage would be rejected when Bacteroides is present in the sample.
+Because the issue could happen with other genes in as-yet-unsampled lineages, excluding EF-Tu or any other particular gene from the elite families does not yield a general solution. 
+Thus one must exercise appropriate caution when interpreting the results of the lineage test. 
+It is a test of whether the sample is void of DNA predicted to have derived from a particular lineage in the phylogeny. 
+For applications like medical diagnostics a more elaborate Bayesian hypothesis test might be appropriate. 
+Such a test might check for a collection of genes that are diagnostic of the organism rather than seeking a single gene, based on prior knowledge that most of the 40 genes are present in most lineages. 
+Such an approach would be less sensitive to sporadic lateral gene transfer events in any single gene family and represents a direction for future work.
 
 Although we do not provide examples, it is possible to test the hypothesis that two microbial communities have equal composition using the phylogenetic Kantorovich-Rubenstein distance~\cite{Evans2010}.
 In a bioforensics context this approach could be applied to test whether two uncultured communities of interest ``match'' each other.
@@ -490,7 +505,7 @@ One limitation of this test is that it does not currently provide a means to acc
 Future work might develop tests that employ many technical replicates of samples to account for such variation in the hypothesis test.
 
 PhyloSift can also be applied to explore the variation in community structure present in a collection metagenomic samples.
-In recent years it has become standard practice to explore microbial community structure variation using amplicon sequencing of highly conserved genes such as 16S rRNA, 18s rRNA and ITS regions followed by analysis with a pipeline such as QIIME ~\cite{Caporaso2010}, VAMPS (http://vamps.mbl.edu), or mothur ~\cite{schloss2009}.
+In recent years it has become standard practice to explore microbial community structure variation using amplicon sequencing of highly conserved genes such as 16S rRNA, 18s rRNA and ITS regions followed by analysis with a pipeline such as QIIME ~\cite{Caporaso2010}, VAMPS (http://vamps.mbl.edu), or mothur~\cite{schloss2009}.
 Analysis of community structure using metagenome sequence has some potential advantages, such as avoiding issues related to PCR primer bias and distinguishing between erroneous PCR chimeras and sequences representing the "rare biosphere"~\cite{Bik2012}.
 However, there are also shortcomings, such as the relatively sparse phylogenetic diversity of available reference genomes relative to amplicon databases.
 The reference-based approach taken by PhyloSift will suffer this database resolution limitation when processing metagenomic data, although not when processing amplicon data.
@@ -500,13 +515,13 @@ Advances in the preparation of high throughput samples will make comparative met
 The analysis we describe of human fecal microbial communities was possible with a median of only 50 Mbp sequence data per sample.
 Current Illumina HiSeq 2000 instruments generate up to 40 Gbp per lane, suggesting that up to 800 samples could be processed in a single Illumina lane and yield similar findings.
 Based on current Illumina sequencing service provider costs this suggests large-scale gut metagenome surveys could be conducted for as little as to \$2.50 to \$5 per sample in sequencing costs.
-Library preparation reagents would dominate the overall cost of such studies, as current kits from Illumina require about \$40 per sample.
+Library preparation would dominate the overall cost of such studies, as current kits from Illumina require about \$40 per sample.
 
 Although we focus on phylogenetic analysis in this work, PhyloSift also provides a basic mechanism to attach taxonomic labels to branches of the phylogenetic trees.
-Our approach for taxonomic labeling of the phylogeny does not enforce a strict 1:1 mapping between taxonomic labels and  branches in the phylogeny.
+Our approach for taxonomic labeling of the phylogeny does not enforce a strict 1:1 mapping between taxonomic labels and branches in the phylogeny.
 Rather, each branch in the phylogeny is labeled with the entire set of most topologically consistent taxonomic labels.
 In cases where gene trees may be discordant with the taxonomic tree, this approach allows PhyloSift to represent some of this ambiguity in its results.
-A systematic study investigating the relationship between rates and patterns of LGT and the effectiveness of our approach for taxonomic labeling remains as future work.
+A systematic study investigating the relationship between rates and patterns of LGT and the effectiveness of our approach for taxonomic labeling remains as future work, as does extension of the taxonomic labeling method to gene families for which duplication and loss is prevalent.
 
 One major limitation of the current approach is that all phylogenetic analysis is conducted independently on each gene.
 However, genes do not evolve in isolation but rather co-evolve with each other in genomes.
@@ -546,7 +561,7 @@ The source code has been licensed under the GNU Public License (GPL) v3.0.
 %\includegraphics[trim=0 5.25in 0.5in 1.25in,clip,width=6.5in]{figures/Phylosift_overview_vector.pdf}
 \includegraphics[width=6.5in]{figures/Phylosift_overview_oct2012_vector.pdf}
 \end{center}
-\caption{\textbf{PhyloSift client workflow.} This workflow is applied to the user's sequence data.}
+\caption{\textbf{PhyloSift client workflow.} This workflow is applied to the user's sequence data. DNA input sequences are processed via both the rRNA and protein parts of the workflow.}
 \label{fig:overview}
 \end{figure}
 
