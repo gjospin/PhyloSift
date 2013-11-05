@@ -155,6 +155,55 @@ We additionally propose a set of 40 ``elite'' marker gene families that have lar
 We contribute an open-source implementation of the method that has been engineered for ease-of-use on 64-bit Linux and Mac platforms.
 Finally, we compare the features of PhyloSift to some related methods to provide readers with insight into when use of our approach is and is not appropriate.
 
+\subsection*{Previous work}
+
+\subsubsection*{Estimating community composition from amplicon data}
+High throughput sequencing of marker gene amplicons (homologous loci such as 16S/18S rRNA) has emerged as a powerful and straightforward means to analyze microbial community structure.
+In contrast to shotgun metagenomics, amplicon approaches currently make the detection of rare taxa easier and require less starting genomic material than some metagenomic approaches, although transposon-catalyzed libraries have been generated from as little as 30pg total material~\cite{Adey2010}.
+By design rRNA surveys offer a ``standardized'' snapshot of microbial communities with reads from a single or small number of genes, considerably simplifying the tasks of alignment and analysis. 
+Amplicon studies generally focus on characterizing and comparing microbial community structure without much analysis of functional gene repertoire. 
+
+A variety of software pipelines can be used to process and analyze rRNA amplicon data ~\cite{Bik2012}. 
+Inferring microbial assemblages typically relies on clustering of Operational Taxonomic Units (e.g. at a 97\% sequence identity cutoff, using either de novo or reference-based clustering), where taxonomy is assigned to representative sequences using either BLAST searches or the RDP classifier (a Naive Bayesian Classifier ~\cite{Wang2007} ).
+Users can subsequently carry out a suite of downstream ecological and diversity analyses, including rarefaction (e.g. analyses for Chao1 estimation, OTU richness, or phylogenetic diversity as implemented in QIIME ~\cite{Caporaso2010}), and Principal Component Analysis and Jackknife cluster analysis (e.g. using phylogeny-derived UniFrac distances ~\cite{Lozupone2005}).
+
+Amplicon approaches are now relatively cheap and easy to carry out. 
+However some computational bottlenecks hinder fine-scale analysis of amplicon data. 
+Analysis pipelines can not readily distinguish rare members of a microbial community from noise in data caused by sequencing errors or chimeric reads ~\cite{Bik2012}. 
+% I don't understand what motivates the following assertion. citation?
+%
+% BLAST-based approaches are also not ideal for conveying accurate taxonomic analyses at the strain or species level, particularly for ecologically important groups with sparse coverage in reference database. 
+The RDP classifier~\cite{Wang2007} provides a statistical method for assessing confidence in taxonomic classifications.
+Any of these methods are limited relative to phylogenetic methods, in that they can only distinguish named groups of organisms and are limited to the resolution of the taxonomy.
+%% 
+%%, for biologists there is often no substitute for inspecting environmental sequence data within a phylogenetic tree.
+% Because this exploration is currently carried out manually, there is a pressing need for scaleable, computationally robust tree-based methods for high-throughput datasets.
+      
+\subsubsection*{Community composition from metagenomes}
+
+Methods have also been developed to estimate and analyze community composition from metagenomic data sets.
+These methods typically focus on a small subset of widely conserved marker genes mined from metagenomic sequence reads, usually representing ~1\% of any given shotgun dataset. 
+Marker genes include well-characterized protein coding genes (e.g. ribosomal proteins or elongation factor genes) or conserved noncoding regions (e.g. rRNA). 
+A wide variety of computational approaches are now available to investigate the community composition of metagenome datasets, including: AMPHORA (bacterial protein markers and tree insertion via parsimony)~\cite{WuEisen2008} and AMPHORA2 (bacterial/archael protein and DNA markers and tree insertion via likelihood or parsimony)~\cite{Wu2012}, MLTreeMap (reference gene families with taxonomic and functional information and tree insertion via maximum likelihood)~\cite{Stark2010}, MetaPhyler (taxonomic classifiers for each of the reference marker genes published in the AMPHORA set)~\cite{Liu2010}, EMIRGE (an expectation-maximization method to reconstruct rRNA genes from metagenome data and estimate taxon abundance)~\cite{Miller2011}, and PhylOTU (probabilistic models used to mine rRNA and define OTUs from metagenome data)\cite{Sharpton2011}.
+
+An interesting alternative approach is employed by the software MetaPHlan~\cite{Segata2012}, which instead of using universally conserved genes, employs a database of clade-specific genes to estimate abundance of known taxonomic groups. This approach may work well in environments where the genomic diversity is very well characterized.
+
+Community composition analysis from metagenomes has some potential advantages over amplicon studies.
+For example, metagenome sequencing might avoid bias introduced by preferential binding of PCR primers to DNA from some organisms in amplicon studies and can also capture organisms which lack amplicon target genes, such as viruses.
+Whole-metagenome surveys also have the potential to provide insight into enzymatic and other functional processes in microbial communities, and so a single dataset can provide both community composition and functional information. 
+One major limiting factor is that reference genome databases have narrow phylogenetic breadth relative to marker genes (e.g. rRNA). 
+
+\subsubsection*{Taxonomic classification of metagenome sequences}
+Current methods for taxonomic classification of metagenomic sequences generally leverage one or two information sources: sequence composition and/or sequence identity to reference databases. 
+Some existing composition classifiers include TACOA (supervised classification using k-nearest neighbors)~\cite{Diaz2009}, PhyloPythia~\cite{Mchardy2006} and PhyloPythiaS (multiclass support vector machine classifier using oligonucleotide frequencies)~\cite{Patil2011}, NBC (Naive Bayesian Classifier)~\cite{Rosen2011}, and Eu-Detect (oligonucleotide binning to separate eukaryote sequences in feature vector space)~\cite{Mohammed2011}, although this is not an exhaustive list. 
+Related methods such as Self-Organizing Maps (e.g. eSOMS ~\cite {Dick2009}) can be applied to tetranucleotide frequencies in combination with other information sources such as contig coverage/abundance information to produce visual "maps" displaying different bins, although this does not result in taxonomic assignment. 
+
+Identity-based classification methods compare metagenome sequences against reference databases to identify putative homologs. 
+Examples of current identity-based classification tools include MEGAN (a Lowest Common Ancestor algorithm that summarizes BLAST outputs to assign taxonomy)~\cite{Huson2007}, SORT-Items (reciprocal BLAST approach to detect significant orthology)~\cite{Haque2009}, MTR (a variation on Lowest Common Ancestor approaches that uses multiple taxonomic ranks)~\cite{Gori2011}, and ProViDE (analysis of alignment parameter thresholds, specifically customized for classifying viral sequences)~\cite{Ghosh2011}. Some approaches are able to combine both sequence identity and composition when classifying PhymmBL~\cite{Brady2009}~\cite{Brady2011}.
+Again, this is not an exhaustive list.
+
+As the focus of our current work is on phylogenetic analysis rather than taxonomic classification, we do not discuss the relative merits of each approach to taxonomic classification in detail.
+
 
 % You may title this section "Methods" or "Models".
 % "Models" is not a valid title for PLoS ONE authors. However, PLoS ONE
@@ -528,6 +577,14 @@ However, genes do not evolve in isolation but rather co-evolve with each other i
 Recent studies have demonstrated that large parts of the phylogenetic history in different microbial genes are congruent even though they have undergone lateral gene transfer, duplication, and loss~\cite{Szollosi2012,Boussau2012}.
 Large-scale statistical inference of phylogenetic networks (e.g. on $>$ 1000 microbial genomes) that account for duplication, transfer, and loss histories have not yet been described in the literature, however if such a network could be constructed it might provide a means to co-analyze all genes and yield a corresponding increase in sensitivity and power for statistical tests.
 
+When processing large metagenomic datasets, computational efficiency and resources can become a logistical challenge.
+For Illumina data, PhyloSift can process sequence reads on a single CPU core at least as quickly as they can be generated by current instruments.
+Figure~\ref{fig:scalability} gives memory and running time requirements for some test Illumina datasets.
+The majority of PhyloSift's running time is spent in phylogenetic read placement (data not shown).
+Most stages of the workflow implemented by PhyloSift are amenable to both fine and coarse-grain parallelism, thus parallel implementations of the workflow could be created should future data volumes demand it.
+Finally, the peak memory usage recorded during each run remains roughly constant at 6-9GB across all data set sizes. 
+As such, PhyloSift is memory-efficient enough to process metagenomic datasets on modern laptop hardware, wherein configurations with 8GB RAM are readily available.
+
 \section*{Availability}
 Software for Linux and Mac OS X, along with source code is freely available from http://github.com/gjospin/PhyloSift
 Extensive user documentation is available at http://phylosift.wordpress.com
@@ -597,6 +654,14 @@ The source code has been licensed under the GNU Public License (GPL) v3.0.
 \label{fig:kronaplots}
 \end{figure}
 
+
+\begin{figure}[hp]
+\begin{center}
+\includegraphics[width=6.5in]{figures/scalability.pdf}
+\end{center}
+\caption{\textbf{PhyloSift performance and scaling behavior.} PhyloSift v1.0 was used to process Illumina sequence data from a human gut microbiome dataset subsampled to varying numbers of reads. The program was run single-threaded on an Intel Xeon E5520 CPU core (circa 2009 model).}
+\label{fig:scalability}
+\end{figure}
 
 \clearpage
 
