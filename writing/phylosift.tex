@@ -115,23 +115,23 @@ $\ast$ E-mail: aarondarling@ucdavis.edu
 
 \section*{Introduction}
 
-Metagenomics - the sequencing of DNA isolated directly from the environment - has quickly become a routinely used tool with wide applications~\cite{thomas2012metagenomics}. Used primarily in the study of microorganisms, metagenome sequencing has now been carried out on a variety of environments where one finds microbes - from plants and animals to every kind of natural and man-made environment around the globe.
+Metagenomics - the sequencing of DNA isolated directly from the environment - has become a routinely used tool with wide applications~\cite{thomas2012metagenomics}. Used primarily in the study of microorganisms, metagenome sequencing has now been carried out on a variety of environments where one finds microbes - from plants and animals to every kind of natural and man-made environment around the globe.
 Metagenomic sequencing has provided fundamental insight into the diversity of microbes and their function and roles in ecosystems.
 Initially, metagenomics was used largely as a way of simply obtaining some genomic information about organisms for which culturing technique was unknown\cite{beja2000bacterial}.
 However, due to decreases in the cost and the difficulty of sequencing, metagenomics has become a tool for studying any microbial community, regardless of cultivability.
 
-One strength of metagenomic approaches arises from the ability to sample the genomes of organisms in a particular environment approximately uniformly at random.  This effect is achieved with the random ``shotgun'' sequencing methods originally applied for \textit{de novo} genomes sequencing of individual organisms~\cite{venter2004environmental,tyson2004community}.
-From random shotgun sequence data of DNA isolated from environmental samples, one can make inferences about what organisms are present in a sample (i.e., who is there?) as well as what is their functional potential (i.e., what are they doing?).
-In addition, by comparing shotgun metagenomic data across samples one can study larger scale issues such as ecology and biogeography and also attempt to correlate particular organisms or functions with ``metadata'' about samples (e.g., health status, nutrient cycling rates, etc) (e.g.\cite{tringe2005comparative}).
+One strength of metagenomic approaches arises from the ability to sample the genomes of organisms in a particular environment approximately uniformly at random.  This effect is achieved with the random ``shotgun'' sequencing methods originally applied for \textit{de novo} genome sequencing of individual organisms~\cite{venter2004environmental,tyson2004community}.
+From random shotgun sequence data of DNA isolated from environmental samples, one can make inferences about what organisms are present in a sample (i.e., who is there?) as well as their functional potential (i.e., what are they doing?).
+In addition, by comparing shotgun metagenomic data across samples one can study larger scale issues such as ecology and biogeography and also attempt to correlate particular organisms or functions with ``metadata'' about samples (e.g., health status, nutrient cycling rates, etc \cite{tringe2005comparative}).
 Furthermore, by sampling a community directly one can avoid certain problems inherent in culturing such as contamination, population bottlenecking, and taxonomic bias~\cite{eisen2007environmental}.  In this sense metagenomics can be considered an extension of ``culture-independent'' ribosomal RNA gene surveys~\cite{hugenholtz1998impact}. 
-The great potential for novel insight into microbial communities has led researchers in diverse fields from medicine to agriculture, law enforcement, biodefense, ecology, evolution, and industry to apply metagenomic methods.
+The great potential for novel insight into microbial communities has led researchers in fields as diverse as medicine and agriculture, law enforcement, biodefense, ecology, evolution, and industry to apply metagenomic methods.
 
 Athough great potential exists for metagenomics to yield insight into the hidden world of microbes, many challenges remain before this potential can be realized.
 Perhaps the biggest challenges lie in analysis of the data~\cite{chen2005bioinformatics}.
 First, metagenomic samples reflect entire communities of organisms, unlike ``traditional'' genome sequencing of individual organisms or clones (i.e., from cultures of a single isolate where genetic diversity has undergone a bottleneck).
 The large number of microbial taxa in environmental samples can be a challenge for some types of analysis.
-More vexing is when each species in a community is heterogenous with extensive genomic polymorphisms within the species~\cite{kunin2008bioinformatician}.
-A related issue is that shotgun metagenomic sequencing protocols destroy some of the most valuable information present in a sample: genetic linkage.
+Within-species genomic polymorphism presents an even greater challenge~\cite{kunin2008bioinformatician}.
+This challenge arises largely because shotgun metagenomic sequencing protocols destroy some of the most valuable information present in a sample: genetic linkage.
 Loss of linkage information occurs in two ways: during sample extraction and fragmentation of DNA for sequencing.
 In nearly all metagenomic sample processing methods, cells from the microbial community are lysed together to obtain a common pool of DNA.
 This practice causes DNA from many different cells to mix together, so that the cellular compartmentalization of individual genotypes is destroyed.
@@ -145,7 +145,7 @@ However, single cell approaches are still limited in their utility by a number o
 
 Thus the research community is left with developing and using computational methods to sift through and make sense of short read, random shotgun metagenomic data.
 Though there are many important steps in analyzing metagenomic data, we believe that a critical component is phylogenetic analysis of the sequences.
-Among the uses of phylogenetic analysis in metagenomics are: improved classification of sequences as to their taxonomic origin, functional prediction for genes, alternative metrics of alpha and beta diversity, improved identification of operational taxonomic units (OTUs), and sequence binning ~\cite{meyer2008metagenomics, Matsen2010, Evans2010, Kembel2011, Matsen2012, Stark2010, Wu2012, Brady2009, Brady2011, Sharpton2011, Jolley2012, sunagawa2013metagenomic}.
+Among the uses of phylogenetic analysis in metagenomics are: improved classification of sequences using phylogenetic methods, functional prediction for genes, alternative metrics of alpha and beta diversity, improved identification of operational taxonomic units (OTUs), and sequence binning ~\cite{meyer2008metagenomics, Matsen2010, Evans2010, Kembel2011, Matsen2012, Stark2010, Wu2012, Brady2009, Brady2011, Sharpton2011, Jolley2012, sunagawa2013metagenomic, eisen2012}.
 
 In the present manuscript, we introduce PhyloSift, a new method for phylogenetic analysis of metagenomic samples and for comparison of community structure among multiple related samples.
 The new method leverages phylogenetic models of molecular evolution to provide high resolution detection of organisms in a metagenome.
@@ -164,7 +164,7 @@ By design rRNA surveys offer a ``standardized'' snapshot of microbial communitie
 Amplicon studies generally focus on characterizing and comparing microbial community structure without much analysis of functional gene repertoire. 
 
 A variety of software pipelines can be used to process and analyze rRNA amplicon data ~\cite{Bik2012}. 
-Inferring microbial assemblages typically relies on clustering of Operational Taxonomic Units (e.g. at a 97\% sequence identity cutoff, using either de novo or reference-based clustering), where taxonomy is assigned to representative sequences using either BLAST searches or the RDP classifier (a Naive Bayesian Classifier ~\cite{Wang2007} ).
+Inferring microbial assemblages typically relies on clustering of Operational Taxonomic Units (e.g. at a 97\% sequence identity cutoff, using either \textit{de novo} or reference-based clustering), where taxonomy is assigned to representative sequences using either BLAST searches or the RDP classifier (a Naive Bayesian Classifier ~\cite{Wang2007} ).
 Users can subsequently carry out a suite of downstream ecological and diversity analyses, including rarefaction (e.g. analyses for Chao1 estimation, OTU richness, or phylogenetic diversity as implemented in QIIME ~\cite{Caporaso2010}), and Principal Component Analysis and Jackknife cluster analysis (e.g. using phylogeny-derived UniFrac distances ~\cite{Lozupone2005}).
 
 Amplicon approaches are now relatively cheap and easy to carry out. 
@@ -184,7 +184,7 @@ Any of these methods are limited relative to phylogenetic methods, in that they 
 Methods have also been developed to estimate and analyze community composition from metagenomic data sets.
 These methods typically focus on a small subset of widely conserved marker genes mined from metagenomic sequence reads, usually representing ~1\% of any given shotgun dataset. 
 Marker genes include well-characterized protein coding genes (e.g. ribosomal proteins or elongation factor genes) or conserved noncoding regions (e.g. rRNA). 
-A wide variety of computational approaches are now available to investigate the community composition of metagenome datasets, including: AMPHORA (bacterial protein markers and tree insertion via parsimony)~\cite{WuEisen2008} and AMPHORA2 (bacterial/archael protein and DNA markers and tree insertion via likelihood or parsimony)~\cite{Wu2012}, MLTreeMap (reference gene families with taxonomic and functional information and tree insertion via maximum likelihood)~\cite{Stark2010}, MetaPhyler (taxonomic classifiers for each of the reference marker genes published in the AMPHORA set)~\cite{Liu2010}, EMIRGE (an expectation-maximization method to reconstruct rRNA genes from metagenome data and estimate taxon abundance)~\cite{Miller2011}, and PhylOTU (probabilistic models used to mine rRNA and define OTUs from metagenome data)\cite{Sharpton2011}.
+A variety of computational approaches are now available to investigate the community composition of metagenome datasets, including: AMPHORA (bacterial protein markers and tree insertion via parsimony)~\cite{WuEisen2008} and AMPHORA2 (bacterial/archael protein and DNA markers and tree insertion via likelihood or parsimony)~\cite{Wu2012}, MLTreeMap (reference gene families with taxonomic and functional information and tree insertion via maximum likelihood)~\cite{Stark2010}, MetaPhyler (taxonomic classifiers for each of the reference marker genes published in the AMPHORA set)~\cite{Liu2010}, EMIRGE (an expectation-maximization method to reconstruct rRNA genes from metagenome data and estimate taxon abundance)~\cite{Miller2011}, and PhylOTU (phylogenetic methods to mine rRNA and define OTUs from metagenome data)\cite{Sharpton2011}.
 
 An interesting alternative approach is employed by the software MetaPHlan~\cite{Segata2012}, which instead of using universally conserved genes, employs a database of clade-specific genes to estimate abundance of known taxonomic groups. This approach may work well in environments where the genomic diversity is very well characterized.
 
@@ -199,10 +199,10 @@ Some existing composition classifiers include TACOA (supervised classification u
 Related methods such as Self-Organizing Maps (e.g. eSOMS ~\cite {Dick2009}) can be applied to tetranucleotide frequencies in combination with other information sources such as contig coverage/abundance information to produce visual "maps" displaying different bins, although this does not result in taxonomic assignment. 
 
 Identity-based classification methods compare metagenome sequences against reference databases to identify putative homologs. 
-Examples of current identity-based classification tools include MEGAN (a Lowest Common Ancestor algorithm that summarizes BLAST outputs to assign taxonomy)~\cite{Huson2007}, SORT-Items (reciprocal BLAST approach to detect significant orthology)~\cite{Haque2009}, MTR (a variation on Lowest Common Ancestor approaches that uses multiple taxonomic ranks)~\cite{Gori2011}, and ProViDE (analysis of alignment parameter thresholds, specifically customized for classifying viral sequences)~\cite{Ghosh2011}. Some approaches are able to combine both sequence identity and composition when classifying PhymmBL~\cite{Brady2009}~\cite{Brady2011}.
+Examples of current identity-based classification tools include MEGAN (a Lowest Common Ancestor algorithm that summarizes BLAST outputs to assign taxonomy)~\cite{Huson2007}, SORT-Items (reciprocal BLAST approach to detect significant orthology)~\cite{Haque2009}, MTR (a variation on Lowest Common Ancestor approaches that uses multiple taxonomic ranks)~\cite{Gori2011}, and ProViDE (analysis of alignment parameter thresholds, specifically customized for classifying viral sequences)~\cite{Ghosh2011}. Some approaches are able to combine both sequence identity and composition when classifying~\cite{Brady2009,Brady2011}.
 Again, this is not an exhaustive list.
 
-As the focus of our current work is on phylogenetic analysis rather than taxonomic classification, we do not discuss the relative merits of each approach to taxonomic classification in detail.
+As the focus of our current work is on phylogenetic analysis rather than taxonomic classification, we do not discuss the relative merits of each approach to taxonomic classification in detail, nor do we provide benchmarks of taxonomic classification methods.
 
 
 % You may title this section "Methods" or "Models".
@@ -219,7 +219,7 @@ The analysis can be decomposed into four stages: 1. searching input sequences fo
 
 The standard PhyloSift database includes a set of 40 ``elite'' gene families previously identified as nearly universal and present in single-copy~\cite{DongyingWu2012}.
 These ``elite'' families represent about 1\% of an average bacterial genome, as estimated from current genome databases.
-In other work we have demonstrated that phylogenetic trees reconstructed on individual genes in this set are generally congruent with each other~\cite{Lang2012}, suggesting that concatenating alignments of these families will yield a valid and more powerful estimate of their phylogenetic history.
+In other work we have demonstrated that phylogenetic trees reconstructed on individual genes in this set are generally congruent with each other~\cite{Lang2012,rinke2013insights}, suggesting that concatenating alignments of these families will yield a valid and more powerful estimate of their phylogenetic history.
 Other groups have also demonstrated that trees inferred from concatenate alignments demonstrate the least conflict with trees inferred separately from other microbial amino acid sequences~\cite{Abby2012}.
 During the database update process (described below), these gene families are automatically extended to include putative homologs from eukarya and some viruses with large genomes such as the Mimivirus.
 Most small viral genomes lack homologs of these gene families.
@@ -272,7 +272,7 @@ In this stage, each candidate sequence is added to an amino acid or {RNA} multip
 If the input sequences were {DNA}, a codon multiple sequence alignment congruent to the amino acid alignment is also generated.
 
 PhyloSift applies the \texttt{hmmalign} program from the HMMER 3.0 software package~\cite{Eddy2011} to add the candidate sequences to reference multiple sequence alignments.
-During construction of the PhyloSift reference database (described in section~\ref{sec:dbupdate}) a profile-HMM is generated from a multiple alignment of the gene family reference sequences.
+During construction of the PhyloSift reference database (described in section ``Custom gene families'') a profile-HMM is generated from a multiple alignment of the gene family reference sequences.
 When processing candidate sequences, PhyloSift then uses the profile-HMM to map the input sequence to the reference multiple alignment.
 Application of a profile-HMM to align highly divergent sequences suffers some documented shortcomings, in particular that alignment accuracy decreases with divergence of source sequences used to construct the profile-HMM~\cite{Loytynoja2012}. 
 This is one avenue for future improvement of PhyloSift and protein evolution models in general.
@@ -292,7 +292,7 @@ In our experience a banding threshold (a parameter that determines the size of t
 At this stage, aligned input sequences are placed onto a phylogenetic tree of the reference sequences.
 PhyloSift employs pplacer~\cite{Matsen2010} for this task.
 pplacer can be run in either maximum likelihood (ML, the default) or Bayesian mode.
-When run in ML mode, pplacer identifies and reports a set of most likely attachment points for each aligned sequence to the reference phylogeny, as well as a ``likelihood weight ratio'' representing the relative amount of likelihood for the different attachment points.
+When run in ML mode, pplacer identifies and reports a set of most likely attachment points for each aligned sequence to the reference phylogeny, as well as a ``likelihood weight ratio'' representing the relative likelihood for the chosen attachment point over other possible attachment points.
 
 When run in Bayesian mode, pplacer calculates the posterior probability that the query sequence diverged from particular branches of the reference tree via direct integration.
 In contrast to ML placement which selects a single most likely attachment point, the branch posterior probability integrates over all possible attachment points for the query sequence on the branch.
@@ -350,6 +350,8 @@ Because each region has been aligned to the same profile-HMM (or covarion model 
 
 PhyloSift also generates codon alignments for each protein-coding gene family at this stage by replacing amino acids with their codons and replacing each gap with a gap triplet.
 
+We note that profile-HMMs are not recomputed during the database update, thereby avoiding problems with model drift.
+
 The PhyloSift reference database is available independently of the software at the following location: http://edhar.genomecenter.ucdavis.edu/~koadman/phylosift\_markers
 
 \subsubsection*{Phylogenetic inference and pruning}
@@ -406,7 +408,7 @@ The new package will be automatically included in any future runs of the PhyloSi
 \section*{Results}
 
 \subsection*{Bayesian hypothesis testing for the presence of phylogenetic lineages}
-For various reasons (e.g. microbial forensics) a practicioner might want to test for the presence of a particular lineage of interest in a metagenomic sample.
+For various applications (e.g. microbial forensics) a practicioner might want to test for the presence of a particular lineage of interest in a metagenomic sample.
 Phylogenetic analysis of metagenomic reads has the potential to offer resolution beyond what would be available from taxonomic methods for metagenomics.
 Whereas taxonomic methods can provide resolution at specific levels in the taxonomic hierarchy, such as species, genus, etc., phylogenetic methods might be able to distinguish different subtypes of named species or novel lineages at higher taxonomic levels.
 Phylogenetic methods are limited only by the resolution of the reference genome phylogeny and not by the resolution of manually curated taxonomies.
@@ -448,7 +450,7 @@ Here we apply PhyloSift to the 106 metagenomic samples and conduct a community s
 
 All QIIME analyses were carried out using release 1.5.0 of the QIIME software toolkit, using the workflow and parameters reported by Yatsunenko \textit{et al}. The Greengenes reference database (collapsed at 97\% identity) was used to carry out a closed-reference OTU picking protocol at 97\% sequence identity with uclust. All reads which matched database sequences at this level were retained for downstream processing, while non-matching sequences were excluded from further analyses. Parameters for the pick\_otus.py script were as follows: --max\_accepts 1 --max\_rejects 8 --stepwords 8 --word\_length 8. Taxonomic assignments for OTUs were given by the Greengenes database. Rarefaction and PCoA analyses were carried out using the alpha\_diversity.py and beta\_diversity\_through\_plots.py workflows. A full list of these QIIME commands and output files have been publicly deposited in figshare (DOI: 10.6084/m9.figshare.650869) .
 
-PhyloSift processed each of the 106 samples, requiring an average of 2.5 hours per sample on a single 2.27GHz Intel Xeon E5520 core (circa 2008 model).
+PhyloSift processed each of the 106 samples, requiring an average of 2.5 hours per sample on a single 2.27GHz Intel Xeon E5520 core (circa 2009 model).
 The majority of CPU time is spent in phylogenetic placement of reads.
 These samples have 154,485 non-human sequence reads on average, for an average of 52 Mbp of sequence data per sample.
 
@@ -509,6 +511,15 @@ It is not clear what drives the reduction in balance-weighted PD after the 7th m
 PhyloSift provides a means to visualize the relative abundance of taxonomic groups present in a sample.
 Figure~\ref{fig:kronaplots} shows two such plots for samples from a 1 month old breastfeeding infant and a 45 year old mother from the Yatsunenko \textit{et al} data~\cite{Yatsunenko2012}.
 
+\subsection*{Computational efficiency}
+
+When processing large metagenomic datasets, computational efficiency and resources can become a logistical challenge.
+For Illumina data, PhyloSift can process sequence reads on a single CPU core at least as quickly as they can be generated by current instruments.
+Figure~\ref{fig:scalability} gives memory and running time requirements for some test Illumina datasets.
+The majority of PhyloSift's running time is spent in phylogenetic read placement (data not shown).
+Most stages of the workflow implemented by PhyloSift are amenable to both fine and coarse-grain parallelism, thus parallel implementations of the workflow could be created should future data volumes demand it.
+Finally, the peak memory usage recorded during each run remains roughly constant at 6-9 GB across all data set sizes. 
+As such, PhyloSift is memory-efficient enough to process metagenomic datasets on modern laptop hardware, wherein configurations with 8 GB RAM are readily available.
 
 \section*{Discussion}
 We have presented a new approach for phylogenetic analysis of genomes and uncultured microbial communities.
@@ -528,8 +539,7 @@ Finally, phylogenetics can be applied to any gene of interest regardless of whet
 
 Here we have introduced a means to statistically test for lineages of interest directly from an uncultured DNA sample.
 The test calculates a Bayes factor for the two competing hypotheses: zero sequences derive from the target lineage, versus one or more sequences in the sample derive from the target lineage.
-In this work we demonstrated application of the Bayes factor test using on phylogenies inferred from 40 elite protein families.
-However, this method can be applied to any protein-coding or noncoding gene family of interest.
+This method can be applied to any protein-coding or noncoding gene family of interest.
 Certain gene families will yield more sensitive tests than others, for example the 16S rRNA gene is slow-evolving and can not usually distinguish within-species relationships where some protein-coding genes might have greater resolution.
 We emphasize that the Bayes factor is not a test of homology -- homology tests exist as e-value and related score statistics in aligners such as BLAST, LAST, and HMMER.
 Given sequences homologous to a gene family, the Bayes factor tests from which lineage they diverged.
@@ -577,14 +587,6 @@ However, genes do not evolve in isolation but rather co-evolve with each other i
 Recent studies have demonstrated that large parts of the phylogenetic history in different microbial genes are congruent even though they have undergone lateral gene transfer, duplication, and loss~\cite{Szollosi2012,Boussau2012}.
 Large-scale statistical inference of phylogenetic networks (e.g. on $>$ 1000 microbial genomes) that account for duplication, transfer, and loss histories have not yet been described in the literature, however if such a network could be constructed it might provide a means to co-analyze all genes and yield a corresponding increase in sensitivity and power for statistical tests.
 
-When processing large metagenomic datasets, computational efficiency and resources can become a logistical challenge.
-For Illumina data, PhyloSift can process sequence reads on a single CPU core at least as quickly as they can be generated by current instruments.
-Figure~\ref{fig:scalability} gives memory and running time requirements for some test Illumina datasets.
-The majority of PhyloSift's running time is spent in phylogenetic read placement (data not shown).
-Most stages of the workflow implemented by PhyloSift are amenable to both fine and coarse-grain parallelism, thus parallel implementations of the workflow could be created should future data volumes demand it.
-Finally, the peak memory usage recorded during each run remains roughly constant at 6-9 GB across all data set sizes. 
-As such, PhyloSift is memory-efficient enough to process metagenomic datasets on modern laptop hardware, wherein configurations with 8 GB RAM are readily available.
-
 \section*{Availability}
 Software for Linux and Mac OS X, along with source code is freely available from http://github.com/gjospin/PhyloSift
 Extensive user documentation is available at http://phylosift.wordpress.com
@@ -626,7 +628,7 @@ The source code has been licensed under the GNU Public License (GPL) v3.0.
 \begin{center}
 \includegraphics[width=6in]{figures/allofem.pdf}
 \end{center}
-\caption{\textbf{Comparison of QIIME PCA and edge PCA analysis of human fecal samples.} Samples from 106 individuals were analyzed by PCA to evaluate trends in community composition with respect to host age. 16S rDNA amplicon data and metagenomic data from the same samples was processed using QIIME and PhyloSift. QIIME analyzed the amplicon data (top left) and 16S rDNA reads extracted from the metagenomic data (top right) using a reference-based OTU picking strategy. PhyloSift analyzed the same metagenomic 16S rDNA reads (bottom left) and reads matching the 40 elite gene families (bottom right). Each PCA approach gives qualitatively similar results.}
+\caption{\textbf{Comparison of QIIME PCA and edge PCA analysis of human fecal samples.} Samples from 106 individuals were analyzed by PCA to evaluate trends in community composition with respect to host age. 16S rDNA amplicon data and metagenomic data from the same samples was processed using QIIME and PhyloSift. QIIME analyzed the amplicon data (top left) and 16S rDNA reads extracted from the metagenomic data (top right) using a reference-based OTU picking strategy. PhyloSift analyzed the same metagenomic 16S rDNA reads (bottom left) and reads matching the 40 elite gene families (bottom right). Each PCA approach gives qualitatively similar results, differences as quantified by Procrustes analysis are given in Table 1.}
 \label{fig:agepca}
 \end{figure}
 
@@ -650,7 +652,7 @@ The source code has been licensed under the GNU Public License (GPL) v3.0.
 \begin{center}
 \includegraphics[width=6.5in]{figures/krona_two.pdf}
 \end{center}
-\caption{\textbf{Taxonomic visualization of two human gut samples.} Data analyzed by PhyloSift, visualized by Krona.}
+\caption{\textbf{Taxonomic visualization of two human gut samples.} Taxonomic plot at left shows an infant, plot at right shows a 45 year old mother. Data analyzed by PhyloSift, visualized by Krona.}
 \label{fig:kronaplots}
 \end{figure}
 
