@@ -14,13 +14,15 @@
 \usepackage{amsmath}
 % amssymb package, useful for mathematical symbols
 \usepackage{amssymb}
+\usepackage[numbers]{natbib}
+\usepackage{hyperref,doi}
 
 % graphicx package, useful for including eps and pdf graphics
 % include graphics with the command \includegraphics
 \usepackage{graphicx}
 
 % cite package, to clean up citations in the main text. Do not remove.
-\usepackage{cite}
+% \usepackage{cite}
 
 \usepackage{color}
 
@@ -44,12 +46,12 @@
 \usepackage[labelfont=bf,labelsep=period,justification=raggedright]{caption}
 
 % Use the PLoS provided bibtex style
-\bibliographystyle{plos2009}
+\bibliographystyle{plainnat}
 
 % Remove brackets from numbering in List of References
-\makeatletter
-\renewcommand{\@biblabel}[1]{\quad#1.}
-\makeatother
+% \makeatletter
+% \renewcommand{\@biblabel}[1]{\quad#1.}
+% \makeatother
 
 
 % Leave date blank
@@ -151,7 +153,7 @@ In the present manuscript, we introduce PhyloSift, a new method for phylogenetic
 The new method leverages phylogenetic models of molecular evolution to provide high resolution detection of organisms in a metagenome.
 Our approach is based on well known statistical phylogenetic models, is amenable to Bayesian hypothesis testing, and uses name-independent and OTU-free analyses to provide higher resolution about microbial community assemblages (versus methods that rely on taxonomy or OTUs).
 These methods can be applied to any single phylogeny at a time, and expand on our previous experience building AMPHORA \cite{WuEisen2008}.
-We additionally propose a set of 40 ``elite'' marker gene families that have largely congruent phylogenetic histories, thus improving the limit of detection for rare organisms in microbial communities.
+We additionally propose a set of 37 ``elite'' marker gene families that have largely congruent phylogenetic histories, thus improving the limit of detection for rare organisms in microbial communities.
 We contribute an open-source implementation of the method that has been engineered for ease-of-use on 64-bit Linux and Mac platforms.
 Finally, we compare the features of PhyloSift to some related methods to provide readers with insight into when use of our approach is and is not appropriate.
 
@@ -217,14 +219,15 @@ The analysis can be decomposed into four stages: 1. searching input sequences fo
 
 \subsection*{Reference gene families used by PhyloSift}
 
-The standard PhyloSift database includes a set of 40 ``elite'' gene families previously identified as nearly universal and present in single-copy~\cite{DongyingWu2012}.
+The standard PhyloSift database includes a set of 37 ``elite'' gene families previously identified as nearly universal and present in single-copy.
+These 37 gene families are a subset of the 40 previously reported~\cite{wu2013systematic}, with three families excluded because they frequently have partial length homologs in some lineages.
 These ``elite'' families represent about 1\% of an average bacterial genome, as estimated from current genome databases.
-In other work we have demonstrated that phylogenetic trees reconstructed on individual genes in this set are generally congruent with each other~\cite{Lang2012,rinke2013insights}, suggesting that concatenating alignments of these families will yield a valid and more powerful estimate of their phylogenetic history.
+In other work we have demonstrated that phylogenetic trees reconstructed on individual genes in this set are generally congruent with each other~\cite{lang2013phylogeny,rinke2013insights}, suggesting that concatenating alignments of these families will yield a valid and more powerful estimate of their phylogenetic history.
 Other groups have also demonstrated that trees inferred from concatenate alignments demonstrate the least conflict with trees inferred separately from other microbial amino acid sequences~\cite{Abby2012}.
 During the database update process (described below), these gene families are automatically extended to include putative homologs from eukarya and some viruses with large genomes such as the Mimivirus.
 Most small viral genomes lack homologs of these gene families.
 
-In addition to the elite 40 families, the PhyloSift database also includes four additional sets of gene families:
+In addition to the elite 37 families, the PhyloSift database also includes four additional sets of gene families:
 \begin{itemize}
 \item 16S and 18S ribosomal {RNA} genes
 \item mitochondrial gene families
@@ -277,7 +280,7 @@ When processing candidate sequences, PhyloSift then uses the profile-HMM to map 
 Application of a profile-HMM to align highly divergent sequences suffers some documented shortcomings, in particular that alignment accuracy decreases with divergence of source sequences used to construct the profile-HMM~\cite{Loytynoja2012}. 
 This is one avenue for future improvement of PhyloSift and protein evolution models in general.
 
-Finally, PhyloSift concatenates the alignments of the 40 elite markers to a single multiple sequence alignment.
+Finally, PhyloSift concatenates the alignments of the 37 elite markers to a single multiple sequence alignment.
 When a single input sequence aligns to multiple genes, the aligned sequence becomes a single row in the concatenated alignment.
 All other sequences are represented in separate alignment rows.
 
@@ -315,7 +318,7 @@ Finally, PhyloSift reports the summarized taxonomy probability mass distribution
 
 \subsubsection*{Visual presentation of taxonomic summary}
 
-For easy visualization and exploratory data analysis, PhyloSift produces Krona plots~\cite{Ondov2011} showing taxonomic probability mass in the 40 elite gene families, and a separate Krona plot showing taxonomic probability mass distribution summed across the elite families and all other families.
+For easy visualization and exploratory data analysis, PhyloSift produces Krona plots~\cite{Ondov2011} showing taxonomic probability mass in the 37 elite gene families, and a separate Krona plot showing taxonomic probability mass distribution summed across the elite families and all other families.
 
 Figure~\ref{fig:kronaplots} provides an example of PhyloSift's Krona reports.
 
@@ -437,7 +440,7 @@ K=\frac{P(D|M_0)}{P(D|M_1)}
 \end{equation}
 The Bayes factor $K$ can then be interpreted with respect to how strongly the null hypothesis is rejected by the data.
 
-The current version of PhyloSift supports application of Bayesian hypothesis tests to a concatenated alignment of the 40 elite gene families or any other single marker gene, and can be applied to phylogenies inferred either from amino acid or codon-aligned {DNA} sequences.
+The current version of PhyloSift supports application of Bayesian hypothesis tests to a concatenated alignment of the 37 elite gene families or any other single marker gene, and can be applied to phylogenies inferred either from amino acid or codon-aligned {DNA} sequences.
 
 \subsection*{Community structure comparison: application to human microbiome data}
 
@@ -474,9 +477,9 @@ The analysis of Yatsunenko \textit{et al} on 16S rRNA data also identified age-a
    & QIIME 16S Meta & PhyloSift 16S Meta & PhyloSift Elite Meta \\
   \hline
   \hline
-  QIIME 16S Amp & 0.5134279 & 0.3873677 & 0.4062175 \\
+  QIIME 16S Amp & 0.5134279 & 0.3873677 & 0.3762175 \\
   \hline
-  QIIME 16S Meta & - & 0.5406786 & 0.6351224 \\
+  QIIME 16S Meta & - & 0.5376786 & 0.6351224 \\
   \hline
   PhyloSift 16S Meta & - & - & 0.2450837 \\
   \hline 
@@ -546,14 +549,12 @@ Given sequences homologous to a gene family, the Bayes factor tests from which l
 The limit of detection for this method will depend on how deeply a sample has been sequenced.
 This value will depend on several factors specific to the sequencing chemistry and currently must be calculated independently by the user.
 
-The 40 elite gene families were selected because they are universally present and almost always in single copy, but there are some exceptions.
-For example the gene EF-Tu was found to have a partial homolog in \textit{Bacteroides}, which has apparently been recently acquired from a \textit{Vibrio}-like lineage. 
-This means that a test of the null hypothesis that no sequence derives from the Vibrio EF-Tu lineage would be rejected when Bacteroides is present in the sample.
-Because the issue could happen with other genes in as-yet-unsampled lineages, excluding EF-Tu or any other particular gene from the elite families does not yield a general solution. 
+The 37 elite gene families were selected because they are universally present and almost always in single copy, but there are some exceptions.
+When partial homologs exist interpretation of the lineage test can become complicated by paralogs or ancient lateral gene transfer events.  
 Thus one must exercise appropriate caution when interpreting the results of the lineage test. 
 It is a test of whether the sample is void of DNA predicted to have derived from a particular lineage in the phylogeny. 
 For applications like medical diagnostics a more elaborate Bayesian hypothesis test might be appropriate. 
-Such a test might check for a collection of genes that are diagnostic of the organism rather than seeking a single gene, based on prior knowledge that most of the 40 genes are present in most lineages. 
+Such a test might check for a collection of genes that are diagnostic of the organism rather than seeking a single gene, based on prior knowledge that most of the 37 genes are present in most lineages. 
 Such an approach would be less sensitive to sporadic lateral gene transfer events in any single gene family and represents a direction for future work.
 
 Although we do not provide examples, it is possible to test the hypothesis that two microbial communities have equal composition using the phylogenetic Kantorovich-Rubenstein distance~\cite{Evans2010}.
@@ -574,7 +575,7 @@ Advances in the preparation of high throughput samples will make comparative met
 The analysis we describe of human fecal microbial communities was possible with a median of only 50 Mbp sequence data per sample.
 Current Illumina HiSeq 2000 instruments generate up to 40 Gbp per lane, suggesting that up to 800 samples could be processed in a single Illumina lane and yield similar findings.
 Based on current Illumina sequencing service provider costs this suggests large-scale gut metagenome surveys could be conducted for as little as to \$2.50 to \$5 per sample in sequencing costs.
-Library preparation would dominate the overall cost of such studies, as current kits from Illumina require about \$40 per sample.
+Library preparation would dominate the overall cost of such studies, as current kits from Illumina require about \$37 per sample.
 
 Although we focus on phylogenetic analysis in this work, PhyloSift also provides a basic mechanism to attach taxonomic labels to branches of the phylogenetic trees.
 Our approach for taxonomic labeling of the phylogeny does not enforce a strict 1:1 mapping between taxonomic labels and branches in the phylogeny.
@@ -628,7 +629,7 @@ The source code has been licensed under the GNU Public License (GPL) v3.0.
 \begin{center}
 \includegraphics[width=6in]{figures/allofem.pdf}
 \end{center}
-\caption{\textbf{Comparison of QIIME PCA and edge PCA analysis of human fecal samples.} Samples from 106 individuals were analyzed by PCA to evaluate trends in community composition with respect to host age. 16S rDNA amplicon data and metagenomic data from the same samples was processed using QIIME and PhyloSift. QIIME analyzed the amplicon data (top left) and 16S rDNA reads extracted from the metagenomic data (top right) using a reference-based OTU picking strategy. PhyloSift analyzed the same metagenomic 16S rDNA reads (bottom left) and reads matching the 40 elite gene families (bottom right). Each PCA approach gives qualitatively similar results, differences as quantified by Procrustes analysis are given in Table 1.}
+\caption{\textbf{Comparison of QIIME PCA and edge PCA analysis of human fecal samples.} Samples from 106 individuals were analyzed by PCA to evaluate trends in community composition with respect to host age. 16S rDNA amplicon data and metagenomic data from the same samples was processed using QIIME and PhyloSift. QIIME analyzed the amplicon data (top left) and 16S rDNA reads extracted from the metagenomic data (top right) using a reference-based OTU picking strategy. PhyloSift analyzed the same metagenomic 16S rDNA reads (bottom left) and reads matching the 37 elite gene families (bottom right). Each PCA approach gives qualitatively similar results, differences as quantified by Procrustes analysis are given in Table 1.}
 \label{fig:agepca}
 \end{figure}
 
