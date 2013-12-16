@@ -442,10 +442,11 @@ sub marker_update_check {
 					warn "Warning: unable to connect to marker update server, please check your internet connection\n" if $skip_lock;
 				} elsif ( $modified_time > $m_timestamp ) {
 					debug "TEST REMOTE:".localtime($modified_time)."\n" if $skip_lock;
+					#only warning to be displayed in the first iteration of marker_update_check since we don't want to come back through it.
 					warn
 					  "A newer version of the marker data exists on the server. Move or remove the current marker DB at $marker_path to trigger a download.\n"
-					  if $skip_lock;
-					$get_new_markers = 0;
+					  unless $skip_lock;
+					$get_new_markers = 0; # we don't want to flag to get new markers, let the user remove their DB manually.
 				} elsif ( $url ne $m_url ) {
 					warn "The marker update URL differs from the local marker DB copy, updating" if $skip_lock;
 					warn "local url $m_url\n"                                                    if $skip_lock;
@@ -473,6 +474,10 @@ sub marker_update_check {
 	if ($get_new_markers) {
 		`mkdir -p $marker_path`;
 		warn "Attempting to get exclusive rights to the marker DB. Possibly waiting for another PhyloSift to release the file lock\n" unless $skip_lock;
+		# Getting exclusive rights to the marker DB.
+		# Rights are released when we return from the function (where lock_excl_markers is declared)
+		# Skip_lock is used to let the function know to only print some error messages once. When the DB is tested when the lock is exclusive.
+		# This implies that when starting many PS at once without a DB will most lilely result in all PS running sequentially.
 		$lock_excl_markers = File::NFSLock->new( $marker_path, LOCK_EX ) unless $skip_lock;
 		$get_new_markers = marker_update_check(
 												self      => $self,
