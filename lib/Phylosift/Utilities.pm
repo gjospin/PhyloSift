@@ -771,13 +771,6 @@ sub stockholm2fasta {
 			$seq_line++;
 		}
 	}
-	$outbuffer .= printseq(
-							columns => $columns,
-							sorted  => $sorted,
-							seq     => \@seq,
-							names   => \@names,
-							out     => $args{out}
-	);
 	return $outbuffer;
 }
 
