@@ -80,9 +80,15 @@ $ncbi_url = "http://edhar.genomecenter.ucdavis.edu/~koadman/ncbi.tgz";
 
 #lastal parameters
 #$lastal_evalue = "-e75";
+#$lastal_long_evalue = "-e150";
 
 #lastal rna parameters
-#$lastal_rna_evalue = "-e300";
+#$lastal_rna_evalue = "-e75";
+#$lastal_long_rna_evalue = "-e150";
+
+#input sequence length parameters
+#$lastal_short_seq_length = 500;
+#$lastal_long_seq_length = 1000;
 
 #hit parsing parameters
 #$max_hit_overlap = 10;

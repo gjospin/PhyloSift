@@ -203,6 +203,10 @@ sub set_default_values {
 	Phylosift::Settings::set_default( parameter => \$Phylosift::Settings::CHUNK_MAX_SEQS,            value => $default_chunk_size );
 	Phylosift::Settings::set_default( parameter => \$Phylosift::Settings::lastal_evalue,             value => "-e75" );
 	Phylosift::Settings::set_default( parameter => \$Phylosift::Settings::lastal_rna_evalue,         value => "-e75" );
+	Phylosift::Settings::set_default( parameter => \$Phylosift::Settings::lastal_long_evalue,        value => "-e150" );
+	Phylosift::Settings::set_default( parameter => \$Phylosift::Settings::lastal_long_rna_evalue,    value => "-e150" );
+	Phylosift::Settings::set_default( parameter => \$Phylosift::Settings::lastal_short_seq_length,   value => 500 );
+	Phylosift::Settings::set_default( parameter => \$Phylosift::Settings::lastal_long_seq_length,    value => 1000 );
 	Phylosift::Settings::set_default( parameter => \$Phylosift::Settings::max_hit_overlap,           value => 10 );
 	Phylosift::Settings::set_default( parameter => \$Phylosift::Settings::discard_length,            value => 30 );
 	Phylosift::Settings::set_default( parameter => \$Phylosift::Settings::best_hits_bit_score_range, value => 30 );
@@ -298,7 +302,7 @@ sub launch_searches {
 					`rm -f $last_rna_pipe`;
 					exit 0;
 				} else {
-					$hitstream = lastal_table_rna( self       => $self,
+					$hitstream = lastal_table_rna(                self       => $self,
 												   query_file => $last_rna_pipe );
 				}
 				$candidate_type = ".lastal.rna";
@@ -455,7 +459,7 @@ sub demux_sequences {
 			chomp( $lines1[0] );
 			$lines1[0] =~ s/^@//;
 			print $IDFILE "$lines1[0]\t$seq_count/1\n" unless $completed_chunk;
-			$md5_object->add( $lines1[0] ) unless $completed_chunk;
+			$md5_object->add( $lines1[0] )             unless $completed_chunk;
 
 			#			} elsif ( $lines1[0] =~ m/^@(.+)/ ) {
 
@@ -463,7 +467,7 @@ sub demux_sequences {
 				chomp( $lines2[0] );
 				$lines2[0] =~ s/^@//;
 				print $IDFILE "$lines2[0]\t$seq_count/2\n" unless $completed_chunk;
-				$md5_object->add( $lines2[0] ) unless $completed_chunk;
+				$md5_object->add( $lines2[0] )             unless $completed_chunk;
 			}
 
 			$lines1[0] = "\@$seq_count/1\n";
@@ -537,14 +541,14 @@ sub demux_sequences {
 			$lines1[0] =~ s/^>//;
 			chomp( $lines1[0] );
 			print $IDFILE "$lines1[0]\t$seq_count/1\n" unless $completed_chunk;
-			$md5_object->add( $lines1[0] ) unless $completed_chunk;
+			$md5_object->add( $lines1[0] )             unless $completed_chunk;
 
 			#			} elsif ( $lines1[0] =~ m/^>(.+)/ ) {
 			if ( defined $lines2[0] ) {
 				$lines2[0] =~ s/^>//;
 				chomp( $lines2[0] );
 				print $IDFILE "$lines2[0]\t$seq_count/2\n" unless $completed_chunk;
-				$md5_object->add( $lines2[0] ) unless $completed_chunk;
+				$md5_object->add( $lines2[0] )             unless $completed_chunk;
 			}
 
 			$lines1[0] = ">$seq_count/1\n";
@@ -647,7 +651,7 @@ sub qtrim_read {
 	}
 
 	# Clip the read
-	@$read[1] = substr( $seq,      0, $endpoint )."\n";
+	@$read[1] = substr( $seq, 0, $endpoint )."\n";
 	@$read[3] = substr( @$read[3], 0, $endpoint )."\n";
 }
 
@@ -655,7 +659,7 @@ sub read_marker_lengths {
 	my %args = @_;
 	my $self = $args{self};
 	foreach my $marker ( keys(%markers) ) {
-		$markerLength{$marker} = Phylosift::Utilities::get_marker_length( self   => $self,
+		$markerLength{$marker} = Phylosift::Utilities::get_marker_length(       self   => $self,
 																		  marker => $marker );
 	}
 }
@@ -891,6 +895,46 @@ sub get_marker_name {
 	return $marker_name;
 }
 
+=head2 get_variable_threshold
+
+Returns the bitscore threshold needed for the lastal results depending on the length of the query
+
+~~ Actual numbers subject to change in the function 
+Use 75 for seqs smaller than 500 bp.
+Use 150 for seqs larger then 1000 bp.
+Use a linear function for function in betwee 500 bp and 1000 bp.
+
+=cut
+
+sub get_variable_threshold {
+	my %args    = @_;
+	my $self    = $args{self} || miss("self");
+	my $seq_len = $args{seq_length} || miss("Length");
+	my $type    = $args{type} || miss("Type of search");
+
+	#identify the lastal thresholds.
+	$Phylosift::Settings::lastal_evalue =~ m/-e(\d+)/;
+	my $short_bound = $1;
+	$Phylosift::Settings::lastal_long_evalue =~ m/-e(\d+)/;
+	my $long_bound = $1;
+
+	#may be different for the RNA workflow
+	if ( $type =~ /\.rna/ ) {
+		$Phylosift::Settings::lastal_rna_evalue =~ m/-e(\d+)/;
+		$short_bound = $1;
+		$Phylosift::Settings::lastal_long_rna_evalue =~ m/-e(\d+)/;
+		$long_bound = $1;
+	}
+	my $short_len = $Phylosift::Settings::lastal_short_seq_length;
+	my $long_len  = $Phylosift::Settings::lastal_long_seq_length;
+	return $short_bound if $seq_len < $short_len;
+	return $long_bound  if $seq_len > $long_len;
+
+	# rise over run + Y intercept
+	my $variable_threshold = $short_bound + ( $seq_len * ( $long_bound - $short_bound ) / ( $long_len - $short_len ) );
+	return $variable_threshold;
+}
+
 =head2 write_candidates
 
 write out results
@@ -917,8 +961,9 @@ sub write_candidates {
 	# parsing is very simple, just alternate lines.
 	while ( my $idline = <$SEQIN> ) {
 		chomp $idline;
-		my $id = $1 if $idline =~ /^>(.+)/;
-		my $seq = <$SEQIN>;
+		my $id         = $1 if $idline =~ /^>(.+)/;
+		my $seq        = <$SEQIN>;
+		my $seq_length = length($seq);
 		chomp $seq;
 
 		# skip this one if there are no hits
@@ -927,9 +972,13 @@ sub write_candidates {
 		for ( my $i = 0; $i < $cur_hit_count; $i++ ) {
 			my $cur_hit   = $contig_hits{$id}->[$i];
 			my $markerHit = $cur_hit->[0];
+			my $bitscore  = $cur_hit->[1];
 			my $start     = $cur_hit->[2];
 			my $end       = $cur_hit->[3];
 			my $suff      = $cur_hit->[5];
+
+			next if $bitscore < get_variable_threshold( self => $self, type => $type, seq_length => $seq_length );
+			debug "BITSCORE : $bitscore\n";
 			( $start, $end ) = ( $end, $start ) if ( $start > $end );    # swap if start bigger than end
 
 			# check to ensure hit covers enough of the marker
@@ -1117,7 +1166,7 @@ sub prep_and_clean {
 
 	#create a directory for the Reads file being processed.
 	`mkdir "$Phylosift::Settings::file_dir"` unless ( -e $Phylosift::Settings::file_dir );
-	`mkdir "$self->{"blastDir"}"` unless ( -e $self->{"blastDir"} );
+	`mkdir "$self->{"blastDir"}"`            unless ( -e $self->{"blastDir"} );
 	return $self;
 }
 
