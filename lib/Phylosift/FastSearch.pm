@@ -978,7 +978,6 @@ sub write_candidates {
 			my $suff      = $cur_hit->[5];
 
 			next if $bitscore < get_variable_threshold( self => $self, type => $type, seq_length => $seq_length );
-			debug "BITSCORE : $bitscore\n";
 			( $start, $end ) = ( $end, $start ) if ( $start > $end );    # swap if start bigger than end
 
 			# check to ensure hit covers enough of the marker
