@@ -6,7 +6,7 @@ use Phylosift::Simulations;
 use Carp;
 use Phylosift::Utilities qw(debug);
 
-our $VERSION = "v1.0.0_02";
+our $VERSION = "v1.0.1";
 sub description {
 	return qq{phylosift simulate - simulate sequencing from a metagenomic sample
 Example: 

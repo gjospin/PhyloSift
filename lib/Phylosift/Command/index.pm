@@ -6,7 +6,7 @@ use Phylosift::Phylosift;
 use Fcntl qw(LOCK_EX);
 use Carp;
 use Phylosift::Utilities qw(debug);
-our $VERSION = "v1.0.0_02";
+our $VERSION = "v1.0.1";
 
 sub description {
 	return "phylosift index - index a phylosift database after changes have been made";

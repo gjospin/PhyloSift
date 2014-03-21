@@ -10,7 +10,7 @@ use Bio::Phylo::Forest::Tree;
 use IO::File;
 use JSON;
 use File::Basename;
-our $VERSION = "v1.0.0_02";
+our $VERSION = "v1.0.1";
 
 set_default_values();
 

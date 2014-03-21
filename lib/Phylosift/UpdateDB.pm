@@ -12,7 +12,7 @@ use Bio::Phylo::IO qw(parse unparse);
 use FindBin;
 use Scalar::Util qw(looks_like_number);
 
-our $VERSION = "v1.0.0_02";
+our $VERSION = "v1.0.1";
 
 =head1 NAME
 

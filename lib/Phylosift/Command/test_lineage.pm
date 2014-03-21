@@ -6,7 +6,7 @@ use JSON;
 use Carp;
 use Phylosift::Utilities qw(debug ps_open);
 
-our $VERSION = "v1.0.0_02";
+our $VERSION = "v1.0.1";
 sub description {
 	return "phylosift test_lineage - conduct a statistical test (a Bayes factor) for the presence of a particular lineage in a sample";
 }

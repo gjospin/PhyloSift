@@ -17,7 +17,7 @@ use POSIX ();
 use Carp;
 use Cwd;
 
-our $VERSION = "v1.0.0_02";
+our $VERSION = "v1.0.1";
 
 use Exporter;
 use vars qw[ @EXPORT @EXPORT_OK %EXPORT_TAGS @ISA ];

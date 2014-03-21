@@ -5,7 +5,7 @@ use Cwd;
 use Bio::SeqIO;
 use Bio::AlignIO;
 
-our $VERSION = "v1.0.0_02";
+our $VERSION = "v1.0.1";
 
 =head1 NAME
 

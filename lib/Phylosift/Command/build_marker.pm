@@ -6,7 +6,7 @@ use Phylosift::MarkerBuild;
 use Carp;
 use Phylosift::Utilities qw(debug);
 
-our $VERSION = "v1.0.0_02";
+our $VERSION = "v1.0.1";
 
 sub description {
 	return qq{phylosift build_marker - add a new marker the reference database based on a sequence alignment

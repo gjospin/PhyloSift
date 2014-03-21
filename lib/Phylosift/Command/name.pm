@@ -6,7 +6,7 @@ use Phylosift::Summarize;
 use Carp;
 use Phylosift::Utilities qw(debug);
 
-our $VERSION = "v1.0.0_02";
+our $VERSION = "v1.0.1";
 
 sub description {
 	return "phylosift name <filename>- Swap the original sequence names back into output files";

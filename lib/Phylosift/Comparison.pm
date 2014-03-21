@@ -6,7 +6,7 @@ use Phylosift::Phylosift;
 use Phylosift::Utilities;
 use Bio::Phylo::IO qw(parse unparse);
 
-our $VERSION = "v1.0.0_02";
+our $VERSION = "v1.0.1";
 
 =head1 NAME
 

@@ -7,7 +7,7 @@ use Phylosift::FastSearch;
 use Carp;
 use Phylosift::Utilities qw(debug);
 
-our $VERSION = "v1.0.0_02";
+our $VERSION = "v1.0.1";
 
 sub description {
 	return "phylosift search - search input sequence for homology to reference gene database";
