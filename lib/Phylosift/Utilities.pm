@@ -1651,7 +1651,7 @@ sub get_place_output_all_jplace {
 	my $self       = $args{self} || miss("PS object");
 	my $chunk      = $args{chunk} || miss("Chunk");
 	my @files_list = ();
-	push( @files_list, glob( $self->{'blastDir'}."/*.$chunk.jplace" ) );
+	push( @files_list, glob( $self->{'treeDir'}."/*.$chunk.jplace" ) );
 	return @files_list;
 }
 
