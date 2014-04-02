@@ -37,7 +37,7 @@ sub all_opts {
 		extended => [ "extended",  "Uses the extended set of markers", { default => 0 } ],
 		paired => [
 			"paired",
-			"Looks for 2 input files (paired end sequencing) in FastQ format. Reversing the sequences for the second file listed and appending to the corresponding pair from the first file listed."
+			"Indicates data are read pairs. This can be provided either as a single file with read pairs interleaved, or two files, one for each read."
 		],
 		cont        => [ "continue",      "Enables the pipeline to continue to subsequent steps when not using the 'all' mode" ],
 		updated     => [ "updated",       "Use the set of updated markers instead of stock markers", { default => 1 } ],
