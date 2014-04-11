@@ -524,8 +524,8 @@ sub merge_sequence_taxa {
 	foreach my $taxon ( sort { $ncbireads{$b} <=> $ncbireads{$a} } keys %ncbireads ) {
 		$taxasum += $ncbireads{$taxon};
 		my ( $taxon_name, $taxon_level, $taxon_id ) = get_taxon_info( taxon => $taxon );
-		$taxon_level = "" if undefined $taxon_level;
-		$taxon_name = "" if undefined $taxon_name;
+		$taxon_level = "" unless defined $taxon_level;
+		$taxon_name = "" unless defined $taxon_name;
 		print $TAXAHPDOUT join( "\t", $taxon_id, $taxon_level, $taxon_name, $ncbireads{$taxon} ), "\n";
 		last if $taxasum >= $totalreads * 0.9;
 	}
@@ -764,9 +764,8 @@ sub rename_sequences {
 	while (<$FH_MAP>) {
 		chomp($_);
 		my @line = split( /\t/, $_ );
+		$line[1] =~ s/\//./g;
 		$name_mapping{ $line[1] } = $line[0];
-
-		#		debug "$line[1]\t$line[0].\n";
 	}
 	close($FH_MAP);
 
@@ -789,33 +788,23 @@ sub rename_sequences {
 	push( @array_to_rename, glob( $Phylosift::Settings::file_dir."/*.jplace" ) );
 	push( @array_to_rename, glob( $Phylosift::Settings::file_dir."/sequence_taxa*.$chunk.txt" ) );
 	foreach my $file (@array_to_rename) {
-
-		#debug "Processing $file\n";
+		debug "Processing $file\n";
 		my $FH  = ps_open($file);
 		my $TMP = ps_open(">$file.tmp");
 		if ( $file =~ m/\.jplace/ ) {
-			my @treedata = <$FH>;
-			my $json_data = decode_json( join( "", @treedata ) );
-			## parse the tree
-			for ( my $i = 0; $i < @{ $json_data->{placements} }; $i++ ) {
-				my $placement = $json_data->{placements}->[$i];
-				for ( my $j = 0; $j < @{ $placement->{nm} }; $j++ ) {
-					if ( $placement->{nm}->[$j]->[0] =~ m/^(\d+)/ ) {
-						$placement->{nm}->[$j]->[0] =~ s/^(\d+)\.(\d)/$1\/$2/;            #formatting the ID to match the lookup table
-						$placement->{nm}->[$j]->[0] =~ s/^(\d+\/\d)/$name_mapping{$1}/;
-					}
+			my $chunk_size = 100000;	# process the file in chunks
+			while (my $bigfish = <$FH>) {
+				for(my $i=0; $i < length($bigfish); $i+=$chunk_size){
+					my $llama = substr($bigfish, $i, $chunk_size);
+					while ( $llama =~ s/"nm":\[\["(\d+\.\d)/"nm":\[\["$name_mapping{$1}/ ) {}
+					print $TMP $llama;
 				}
 			}
-			## write the renamed jplace
-			print $TMP encode_json($json_data);
 		} else {
 			while (<$FH>) {
-				if ( $_ =~ m/^>\d+/ ) {
-					$_ =~ s/^>(\d+)\.(\d)/>$1\/$2/;
-					$_ =~ s/^>(\d+\/\d)/>$name_mapping{$1}/g;                             #fasta files
-				} elsif ( $_ =~ m/^\d+\/\d/ ) {
-					$_ =~ s/^(\d+)\.(\d)/$1\/$2/;
-					$_ =~ s/^(\d+\/\d)/$name_mapping{$1}/g;                               #summary files
+				if(s/^>(\d+\.\d)/>$name_mapping{$1}/){}
+				else{
+					s/^(\d+\.\d)/$name_mapping{$1}/; #summary files
 				}
 				print $TMP $_;
 			}
