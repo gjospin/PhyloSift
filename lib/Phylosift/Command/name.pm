@@ -34,7 +34,6 @@ sub options {
 
 sub validate {
 	my ( $self, $opt, $args ) = @_;
-	print "args is ".join( " ", @$args )."\n";
 	$self->usage_error("phylosift name requires at least the filename as an argument") if @$args == 0;
 	$self->usage_error("phylosift name can only have the filename(s) as an argument")  if @$args > 2;
 }
