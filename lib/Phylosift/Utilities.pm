@@ -2269,9 +2269,10 @@ prints out suggested citations for the analysis
 
 sub print_citations {
 	print "PhyloSift -- Phylogenetic analysis of genomes and metagenomes\n";
-	print "(c) 2011, 2012 Aaron Darling and Guillaume Jospin\n";
+	print "(c) 2011-2014 Aaron Darling and Guillaume Jospin\n";
 	print "\nCITATION:\n";
-	print "		PhyloSift. A. E. Darling, G. Jospin, E. Lowe, F. A. Matsen, H. M. Bik, J. A. Eisen. Submitted to PeerJ\n";
+	print "		Darling AE, Jospin G, Lowe E, Matsen FA IV, Bik HM, Eisen JA (2014)\n";
+	print "		PhyloSift: phylogenetic analysis of genomes and metagenomes. PeerJ 2:e243 http://dx.doi.org/10.7717/peerj.243\n";
 	print "\n\nPhyloSift incorporates several other software packages, please consider also citing the following papers:\n";
 	print qq{
 
