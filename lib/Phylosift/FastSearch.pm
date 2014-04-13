@@ -481,8 +481,8 @@ sub demux_sequences {
 			$lines1[0] =~ s/^@/>/g;
 			$lines2[0] =~ s/^@/>/g if @lines2;
 
-			print $LAST_RNA_PIPE @lines1 unless $completed_chunk;
-			print $LAST_RNA_PIPE @lines2 if @lines2 && !$completed_chunk;
+			print $LAST_RNA_PIPE $lines1[0].$lines1[1] unless $completed_chunk;
+			print $LAST_RNA_PIPE $lines2[0].$lines2[1] if @lines2 && !$completed_chunk;
 
 			print $last_pipe $lines1[0].$lines1[1] unless $completed_chunk;
 			print $last_pipe $lines2[0].$lines2[1] if @lines2 && !$completed_chunk;
