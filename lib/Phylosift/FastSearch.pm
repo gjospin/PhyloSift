@@ -453,15 +453,10 @@ sub demux_sequences {
 			qtrim_read( read => \@lines2, quality => $Phylosift::Settings::quality_threshold, readtype => $readtype ) if defined( $lines2[0] );
 
 			#add the reads to file lookup
-
-			#			if ( $lines1[0] =~ m/^@(\S+)(\/\d)/ && $paired ) {
-
 			chomp( $lines1[0] );
 			$lines1[0] =~ s/^@//;
 			print $IDFILE "$lines1[0]\t$seq_count/1\n" unless $completed_chunk;
 			$md5_object->add( $lines1[0] )             unless $completed_chunk;
-
-			#			} elsif ( $lines1[0] =~ m/^@(.+)/ ) {
 
 			if ( defined( $lines2[0] ) ) {
 				chomp( $lines2[0] );
@@ -481,13 +476,13 @@ sub demux_sequences {
 			$lines1[1] =~ s/\./N/g;
 			$lines2[1] =~ s/\./N/g if @lines2;
 
-			print $LAST_RNA_PIPE @lines1 unless $completed_chunk;
-			print $LAST_RNA_PIPE @lines2 if @lines2 && !$completed_chunk;
-
 			#
 			# send the reads to lastal (convert to fasta)
 			$lines1[0] =~ s/^@/>/g;
 			$lines2[0] =~ s/^@/>/g if @lines2;
+
+			print $LAST_RNA_PIPE @lines1 unless $completed_chunk;
+			print $LAST_RNA_PIPE @lines2 if @lines2 && !$completed_chunk;
 
 			print $last_pipe $lines1[0].$lines1[1] unless $completed_chunk;
 			print $last_pipe $lines2[0].$lines2[1] if @lines2 && !$completed_chunk;
@@ -680,12 +675,8 @@ sub lastal_table {
 	$last_opts = "-F15" if $readtype->{seqtype} eq "dna";
 	my $db = Phylosift::Utilities::get_lastal_db( self => $self );
 
-	#my $lastal_cmd =
-	#  "$Phylosift::Settings::lastal $last_opts $Phylosift::Settings::lastal_evalue -f0 $db \"$query_file\" |";
-
 	my $lastal_cmd = "$Phylosift::Settings::lastal $last_opts $Phylosift::Settings::lastal_evalue ";
 
-	#$lastal_cmd .= "-Q2 " if $self->{readtype}{format} eq "fastq";
 	$lastal_cmd .= "-f0 $db \"$query_file\" |";
 	debug "Running $lastal_cmd";
 	my $HISTREAM = ps_open($lastal_cmd);
@@ -705,10 +696,8 @@ sub lastal_table_rna {
 	my $query_file = $args{query_file} || miss("query_file");
 	my $db         = Phylosift::Utilities::get_rna_db( self => $self );
 
-	#my $lastal_cmd =
-	#"$Phylosift::Settings::lastal $Phylosift::Settings::lastal_rna_evalue -f0 $db \"$query_file\" |";
 	my $lastal_cmd = "$Phylosift::Settings::lastal $Phylosift::Settings::lastal_rna_evalue ";
-	$lastal_cmd .= "-Q2 " if $self->{readtype}{format} eq "fastq";
+#	$lastal_cmd .= "-Q2 " if $self->{readtype}{format} eq "fastq";
 	$lastal_cmd .= "-f0 $db \"$query_file\" |";
 	debug "Running $lastal_cmd";
 	my $HISTREAM = ps_open($lastal_cmd);
