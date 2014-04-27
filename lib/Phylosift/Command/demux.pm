@@ -6,7 +6,6 @@ use JSON;
 use Carp;
 use Phylosift::Utilities qw(debug ps_open miss);
 use IO::Zlib;
-use String::Approx 'amatch';
 
 use strict;
 use warnings;
@@ -256,13 +255,16 @@ sub get_barcoded_read {
 		# look for linker sequence, if known
 		my $any_matched = 0;
 		if( defined( $barcode->{$rid}{$ecb} ) && defined( $barcode->{$rid}{$ecb}{linker} ) ) {
+			eval {
+			require String::Approx;
 			my $linker_start = $barcode->{$rid}{$ecb}{trim_len} - length($barcode->{$rid}{$ecb}{linker}) - 5;
-			$any_matched = amatch($barcode->{$rid}{$ecb}{linker}, [ "I2","D2","S25%" ], substr( $reads{$rid}[1], $linker_start, length($barcode->{$rid}{$ecb}{linker}) + 10 ));
+			$any_matched = String::Approx::amatch($barcode->{$rid}{$ecb}{linker}, [ "I2","D2","S25%" ], substr( $reads{$rid}[1], $linker_start, length($barcode->{$rid}{$ecb}{linker}) + 10 ));
 #			print STDERR "Found linker ".$barcode->{$rid}{$ecb}{linker}." in ".substr( $reads{$rid}[1], $linker_start, length($barcode->{$rid}{$ecb}{linker}) + 10 )."\n" if $any_matched;
 			$linker = $any_matched && $linker;
 			$defined_bc = 0 unless $any_matched;
 			$r1d = 0 if !$any_matched && $rid == 1;
 			$r2d = 0 if !$any_matched && $rid == 4;
+			}
 		}
 
 		# trim the read if the linker was found
