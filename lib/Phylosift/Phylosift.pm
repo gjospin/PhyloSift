@@ -184,8 +184,8 @@ sub run {
 	} else {
 		run_later_stages( self => $self, cont => $continue, marker => \@markers );
 	}
-	$lock_shared_markers->unlock();
-	$lock_shared_ncbi->unlock();
+	$lock_shared_markers->unlock() if defined($lock_shared_markers);
+	$lock_shared_ncbi->unlock() if defined($lock_shared_ncbi);
 	Phylosift::Utilities::end_timer( name => "START" );
 }
 
