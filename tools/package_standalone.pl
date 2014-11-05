@@ -53,9 +53,9 @@ add_package(url=>"http://search.cpan.org/CPAN/authors/id/M/MA/MAKAMAKA/JSON-2.53
 add_package(url=>"http://search.cpan.org/CPAN/authors/id/G/GA/GAAS/Encode-Locale-1.03.tar.gz");
 
 # add Locale::Maketext
-`curl -LO http://search.cpan.org/CPAN/authors/id/T/TO/TODDR/Locale-Maketext-1.19.tar.gz`;
-`tar xvzf Locale-Maketext-1.19.tar.gz`;
-chdir("Locale-Maketext-1.19");
+`curl -LO http://search.cpan.org/CPAN/authors/id/T/TO/TODDR/Locale-Maketext-1.25.tar.gz`;
+`tar xvzf Locale-Maketext-1.25.tar.gz`;
+chdir("Locale-Maketext-1.25");
 
 # remove the following files because they break Todd's ancient perldoc
 `rm lib/Locale/Maketext/*.pod`;
@@ -80,32 +80,32 @@ add_package(url=>"http://search.cpan.org/CPAN/authors/id/J/JP/JPEACOCK/version-0
 
 # Digest::MD5
 `mkdir -p PhyloSift/legacy/md5lib`;
-add_package(url=>"http://search.cpan.org/CPAN/authors/id/G/GA/GAAS/Digest-MD5-2.52.tar.gz", mv_cmd=>"mv blib/lib/* $prefix/legacy/md5lib/");
+add_package(url=>"http://search.cpan.org/CPAN/authors/id/G/GA/GAAS/Digest-MD5-2.53.tar.gz", mv_cmd=>"mv blib/lib/* $prefix/legacy/md5lib/");
 
 
 # support for App::Cmd
 add_package(url=>"http://search.cpan.org/CPAN/authors/id/A/AD/ADAMK/List-MoreUtils-0.33.tar.gz");
 add_package(url=>"http://search.cpan.org/CPAN/authors/id/D/DO/DOY/Package-Stash-0.35.tar.gz");
 add_package(url=>"http://search.cpan.org/CPAN/authors/id/R/RJ/RJBS/Data-OptList-0.108.tar.gz");
-add_package(url=>"http://search.cpan.org/CPAN/authors/id/R/RJ/RJBS/Getopt-Long-Descriptive-0.092.tar.gz");
+add_package(url=>"http://search.cpan.org/CPAN/authors/id/R/RJ/RJBS/Getopt-Long-Descriptive-0.097.tar.gz");
 add_package(url=>"http://search.cpan.org/CPAN/authors/id/R/RJ/RJBS/String-RewritePrefix-0.006.tar.gz");
-add_package(url=>"http://search.cpan.org/CPAN/authors/id/R/RJ/RJBS/App-Cmd-0.318.tar.gz");
+add_package(url=>"http://search.cpan.org/CPAN/authors/id/R/RJ/RJBS/App-Cmd-0.324.tar.gz");
 add_package(url=>"http://search.cpan.org/CPAN/authors/id/D/DR/DROLSKY/Class-Load-0.20.tar.gz");
 
 add_package(url=>"http://search.cpan.org/CPAN/authors/id/R/RJ/RJBS/Sub-Install-0.926.tar.gz", mv_cmd=>"mv blib/lib/Sub $prefix/lib");
 
 add_package(url=>"http://search.cpan.org/CPAN/authors/id/D/DR/DROLSKY/Module-Implementation-0.06.tar.gz");
 add_package(url=>"http://search.cpan.org/CPAN/authors/id/Z/ZE/ZEFRAM/Module-Runtime-0.013.tar.gz", mv_cmd=>"mv blib/lib/Module/* $prefix/lib/Module/");
-add_package(url=>"http://search.cpan.org/CPAN/authors/id/D/DO/DOY/Try-Tiny-0.16.tar.gz");
+add_package(url=>"http://search.cpan.org/CPAN/authors/id/D/DO/DOY/Try-Tiny-0.22.tar.gz");
 add_package(url=>"http://search.cpan.org/CPAN/authors/id/S/SI/SIMONW/Module-Pluggable-4.3.tar.gz", mv_cmd=>"mv blib/lib/Module/* $prefix/lib/Module/; mv blib/lib/Devel $prefix/lib/");
 add_package(url=>"http://search.cpan.org/CPAN/authors/id/D/DR/DROLSKY/Package-DeprecationManager-0.13.tar.gz", mv_cmd=>"mv blib/lib/Package/* $prefix/lib/Package");
-add_package(url=>"http://search.cpan.org/CPAN/authors/id/R/RJ/RJBS/Sub-Exporter-0.984.tar.gz", mv_cmd=>"mv blib/lib/Sub/* $prefix/lib/Sub");
+add_package(url=>"http://search.cpan.org/CPAN/authors/id/R/RJ/RJBS/Sub-Exporter-0.987.tar.gz", mv_cmd=>"mv blib/lib/Sub/* $prefix/lib/Sub");
 
 add_package(url=>"http://search.cpan.org/CPAN/authors/id/A/AD/ADAMK/Params-Util-1.07.tar.gz");
 
 # requires Build.pl
 # provides a pure perl impl
-add_package(url=>"http://search.cpan.org/CPAN/authors/id/D/DR/DROLSKY/Params-Validate-1.06.tar.gz", mv_cmd=>"mv blib/lib/Params/Validate* $prefix/lib/Params/", build_pl=>1);
+add_package(url=>"http://search.cpan.org/CPAN/authors/id/D/DR/DROLSKY/Params-Validate-1.13.tar.gz", mv_cmd=>"mv blib/lib/Params/Validate* $prefix/lib/Params/", build_pl=>1);
 
 # package everything up and datestamp it
 my @timerval = localtime();
