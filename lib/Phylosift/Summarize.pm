@@ -321,7 +321,7 @@ sub write_sequence_taxa_summary {
 						}
 					}
 					foreach my $mate ( keys %coords ) {
-						print $SEQUENCETAXA "$name_ref/$mate\t$coords{$mate}\t$taxon_id\t$taxon_level\t$taxon_name\t"
+						print $SEQUENCETAXA "$name_ref.$mate\t$coords{$mate}\t$taxon_id\t$taxon_level\t$taxon_name\t"
 						  .$placements->{$qname}{$taxon_id}."\t"
 						  .join( "\t", keys( %{ $sequence_markers->{$qname} } ) )."\n";
 					}
@@ -343,7 +343,7 @@ sub write_sequence_taxa_summary {
 					}
 				}
 				foreach my $mate ( keys %coords ) {
-					print $SEQUENCETAXA "$name_ref/$mate\t$coords{$mate}\tUnknown\tUnknown\tUnclassifiable\t".( $unclassifiable->{$qname} / $placecount )."\t"
+					print $SEQUENCETAXA "$name_ref.$mate\t$coords{$mate}\tUnknown\tUnknown\tUnclassifiable\t".( $unclassifiable->{$qname} / $placecount )."\t"
 					  ##.$unclassifiable->{$qname}."\t"
 					  .join( "\t", keys( %{ $sequence_markers->{$qname} } ) )."\n";
 				}
@@ -371,7 +371,7 @@ sub write_sequence_taxa_summary {
 						}
 					}
 					foreach my $mate ( keys %coords ) {
-						print $SEQUENCESUMMARY "$name_ref/$mate\t$coords{$mate}\t$taxon_id\t$taxon_level\t$taxon_name\t"
+						print $SEQUENCESUMMARY "$name_ref.$mate\t$coords{$mate}\t$taxon_id\t$taxon_level\t$taxon_name\t"
 						  .$readsummary->{$taxon_id}."\t"
 						  .join( "\t", keys( %{ $sequence_markers->{$qname} } ) )."\n";
 					}
@@ -766,6 +766,7 @@ sub rename_sequences {
 		my @line = split( /\t/, $_ );
 		$line[1] =~ s/\//./g;
 		$name_mapping{ $line[1] } = $line[0];
+		
 	}
 	close($FH_MAP);
 
@@ -788,7 +789,6 @@ sub rename_sequences {
 	push( @array_to_rename, glob( $Phylosift::Settings::file_dir."/*.jplace" ) );
 	push( @array_to_rename, glob( $Phylosift::Settings::file_dir."/sequence_taxa*.$chunk.txt" ) );
 	foreach my $file (@array_to_rename) {
-		debug "Processing $file\n";
 		my $FH  = ps_open($file);
 		my $TMP = ps_open(">$file.tmp");
 		if ( $file =~ m/\.jplace/ ) {
