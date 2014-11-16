@@ -356,12 +356,12 @@ sub cluster_molecular_tags {
 	open(CLUSTERSIZES, ">$output_base.cluster_sizes.txt");
 	print CLUSTERSIZES "Cluster_name\tCount\tMax with r1\tMax with_r2\tRecombinant1\tRecombinant2\n";
 	foreach my $group(keys(%groupings)){
-		my $r1_max = $combo_counts{1}{$groupings{$group}{r1_tag}}{$group} == max(values($combo_counts{1}{$groupings{$group}{r1_tag}}));
-		my $r2_max = $combo_counts{2}{$groupings{$group}{r2_tag}}{$group} == max(values($combo_counts{2}{$groupings{$group}{r2_tag}}));
+		my $r1_max = $combo_counts{1}{$groupings{$group}{r1_tag}}{$group} == max(values(%{ $combo_counts{1}{$groupings{$group}{r1_tag}} }));
+		my $r2_max = $combo_counts{2}{$groupings{$group}{r2_tag}}{$group} == max(values(%{ $combo_counts{2}{$groupings{$group}{r2_tag}} }));
 		my $is_max = $r1_max && $r2_max; 
 		$groupings{$group}{valid} = $is_max;
 		$recombinant++ unless $is_max;
-		print CLUSTERSIZES "$group\t".$combo_counts{1}{$groupings{$group}{r1_tag}}{$group}."\t".max(values($combo_counts{1}{$groupings{$group}{r1_tag}}))."\t".max(values($combo_counts{2}{$groupings{$group}{r2_tag}}))."\t".($r1_max?0:1)."\t".($r2_max?0:1)."\n";
+		print CLUSTERSIZES "$group\t".$combo_counts{1}{$groupings{$group}{r1_tag}}{$group}."\t".max(values(%{ $combo_counts{1}{$groupings{$group}{r1_tag}} }))."\t".max(values(%{ $combo_counts{2}{$groupings{$group}{r2_tag}} }))."\t".($r1_max?0:1)."\t".($r2_max?0:1)."\n";
 		next unless $groupings{$group}{valid};
 		print R1CR "$groupings{$group}{name}$groupings{$group}{r1_tag}\n";
 		print R2CR "$groupings{$group}{name}$groupings{$group}{r2_tag}\n";
