@@ -633,7 +633,7 @@ sub ncbi_update_check {
 		ncbi_update_check( self => $self, dir => $ncbi_dir, url => $url, skip_lock => 1 ) unless ($skip_lock);
 		download_data( url => $url, destination => $ncbi_dir ) if $skip_lock;
 		return if $skip_lock;
-		$lock_ex->unlock() unless $skip_lock;
+		$lock_ex->unlock() if defined $lock_ex;
 	}
 }
 
