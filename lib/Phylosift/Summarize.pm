@@ -763,9 +763,12 @@ sub rename_sequences {
 	my $FH_MAP       = ps_open( $self->{"blastDir"}."/lookup_ID.$chunk.tbl" );
 	while (<$FH_MAP>) {
 		chomp($_);
-		my @line = split( /\t/, $_ );
-		$line[1] =~ s/\//./g;
-		$name_mapping{ $line[1] } = $line[0];
+#		my @line = split( /\t/, $_ );
+		$_ =~ m/^(.*)\t([^\t]+)$/;
+		my $first_field = $1;
+		my $second_field = $2;
+		$second_field =~ s/\//./g;
+		$name_mapping{ $second_field } = $first_field;
 		
 	}
 	close($FH_MAP);
