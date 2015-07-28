@@ -11,7 +11,7 @@ use strict;
 use warnings;
 
 our $VERSION = "v1.0.1";
-my $USEARCH = "/home/koadman/Downloads/usearch7.0.1001_i86linux32";
+my $USEARCH = "usearch7.0.1001_i86linux32";
 my $CLUSTER_IDENTITY = "0.89";
 my $FLASH = "flash";
 my $RANDOM_LEN;
@@ -81,7 +81,14 @@ sub execute {
 	}
 	print "Barcode length is $barcode_length\n";
 	my $illumina_dir  = @$args[0];
-	my @files         = <$illumina_dir/*_R1_001.fastq.gz>;
+	my @files         = ();
+	for(my $i=1; $i<1000; $i++){
+		my $num = sprintf("%03d",$i);
+		my @newfiles = <$illumina_dir/*_R1_$num.fastq.gz>;
+		last if @newfiles == 0;
+		push(@files, @newfiles);
+	}
+
 	croak(
 		"Unable to locate any Illumina FastQ files in $illumina_dir\nPlease check that the directory contains FastQ files named according to Illumina's convention, e.g. names ending with R1_001.fastq.gz, R2_001.fastq.gz, etc"
 	) unless @files > 0;
