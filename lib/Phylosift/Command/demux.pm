@@ -596,6 +596,7 @@ sub get_barcoded_read {
 		my $arbc = "";
 		if ( defined( $barcode->{$rid}{$ecb} ) && defined( $barcode->{$rid}{$ecb}{random_pos} ) ) {
 			$arbc = substr( $reads{$rid}[1], $barcode->{$rid}{$ecb}{random_pos}, $barcode->{$rid}{$ecb}{random_len} );
+			chomp $arbc;
 		}
 
 		# look for linker sequence, if known
