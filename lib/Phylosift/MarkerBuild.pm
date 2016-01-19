@@ -296,7 +296,7 @@ sub check_sequence_integrity {
 	my ( $core, $path, $ext ) = fileparse( $file_input, qr/\.[^.]*$/ );
 	my $type_ref = Phylosift::Utilities::get_sequence_input_type( ps_open($file_input) );
 	my %type     = %{$type_ref};
-	croak("Input was detected as DNA.\n Terminating\n") if $type{seqtype} eq 'DNA';
+	croak("Input was detected as DNA.\n Terminating\n") if $type{seqtype} eq 'dna';
 	my $IN_HANDLE  = ps_open($file_input);
 	my $OUT_HANDLE = ps_open(">$output_dir/$core.checked");
 
@@ -312,7 +312,7 @@ sub check_sequence_integrity {
 				##should never reach this anymore but keeping this in in case we allow DNA in the Future.
 				croak("Input was detected as DNA and a bad character was found.\nTerminating.\n;");
 			}
-		} elsif ( $_ =~ m/U/ && $type{seqtype} eq 'DNA' ) {
+		} elsif ( $_ =~ m/U/ && $type{seqtype} eq 'dna' ) {
 			##should never reach this anymore but keeping this in in case we allow DNA in the Future.
 			croak("Input was detected as DNA and a Uracil character was found.\nTerminating.\n;");
 		}
